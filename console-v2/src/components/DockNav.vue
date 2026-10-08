@@ -32,9 +32,23 @@ const customerItems = [
 ]
 const adminItems = [
   { to: '/admin', icon: '🏠', label: '概览' },
+  { to: '/admin/agents', icon: '🤖', label: '智能体' },
+  { to: '/admin/chat', icon: '💬', label: '聊天' },
+  { to: '/admin/memory', icon: '🧠', label: '记忆' },
+  { to: '/admin/voices', icon: '🎙', label: '音色' },
   { to: '/admin/templates', icon: '🧩', label: '模板' },
   { to: '/admin/knowledge', icon: '📚', label: '知识库' },
-  { to: '/admin/users', icon: '👥', label: '用户' }
+  { to: '/admin/models', icon: '🧩', label: '模型' },
+  { to: '/admin/devices', icon: '📡', label: '设备' },
+  { to: '/admin/params', icon: '⚙️', label: '参数' },
+  { to: '/admin/users', icon: '👥', label: '用户' },
+  { to: '/admin/ota', icon: '📦', label: 'OTA' },
+  { to: '/admin/dicts', icon: '📖', label: '字典' },
+  { to: '/admin/correctwords', icon: '🔤', label: '替换词' },
+  { to: '/admin/servers', icon: '🖥', label: '服务器' },
+  { to: '/admin/mcp', icon: '🔗', label: 'MCP' },
+  { to: '/admin/linksim', icon: '🧪', label: '链路模拟' },
+  { to: '/admin/apis', icon: '🛠', label: 'API调试' }
 ]
 const items = computed(() => (props.role === 'admin' ? adminItems : customerItems))
 

@@ -47,7 +47,7 @@
 <script setup>
 import { computed, inject, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
-import { API_CATALOG } from '../../lib/apiCatalog'
+import API_CATALOG from '../../lib/apiCatalog'
 import { api } from '../../lib/api'
 
 const toast = inject('toast')

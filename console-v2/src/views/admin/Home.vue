@@ -19,8 +19,10 @@
           <p>用户、设备、模板与记忆数据</p>
         </div>
         <div class="blob-actions">
-          <button class="btn btn-primary" @click="$router.push('/admin/templates')">模板管理</button>
-          <button class="btn btn-ghost" @click="$router.push('/admin/knowledge')">知识库</button>
+          <button class="btn btn-primary" @click="$router.push('/admin/agents')">智能体管理</button>
+          <button class="btn btn-ghost" @click="$router.push('/admin/devices')">设备</button>
+          <button class="btn btn-ghost" @click="$router.push('/admin/chat')">聊天记录</button>
+          <button class="btn btn-ghost" @click="$router.push('/admin/templates')">模板</button>
         </div>
         <div class="blob-3d">📊</div>
       </div>
