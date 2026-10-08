@@ -10,6 +10,8 @@ class _Any:
     def __init__(self, *a, **k): pass
     def __getattr__(self, n): return _Any()
     def __call__(self, *a, **k): return _Any()
+    def __iter__(self): return iter(())
+    def __contains__(self, x): return False
 
 
 class _LazyMod(_t.ModuleType):
@@ -19,19 +21,30 @@ class _LazyMod(_t.ModuleType):
         return _Any()
 
 
-# 1) loguru 依赖 colorama（本地缺）
-_cm = _LazyMod("colorama")
-_cm.init = lambda *a, **k: None
-sys.modules["colorama"] = _cm
-sys.modules["colorama.win32"] = _LazyMod("colorama.win32")
+for name in ("colorama", "colorama.win32", "opuslib_next",
+             "opuslib_next.constants", "opuslib_next.classes",
+             "pydub", "yaml"):
+    sys.modules[name] = _LazyMod(name)
+sys.modules["colorama"].init = lambda *a, **k: None
 
-# 2) opus 编解码（本地缺原生库）
-sys.modules["opuslib_next"] = _LazyMod("opuslib_next")
-sys.modules["opuslib_next.constants"] = _LazyMod("opuslib_next.constants")
-sys.modules["opuslib_next.classes"] = _LazyMod("opuslib_next.classes")
+# 真 config 包 + 假 logger（避免 import 期触发远端拉配置）
+import config  # noqa: E402
 
-# 3) pydub（本项目 TTS 后处理用，这里不需要）
-sys.modules["pydub"] = _LazyMod("pydub")
+_sink = _t.SimpleNamespace(
+    info=lambda *a, **k: None, error=lambda *a, **k: None,
+    warning=lambda *a, **k: None, debug=lambda *a, **k: None,
+)
+_logger = _t.SimpleNamespace(
+    bind=lambda **k: _sink, info=lambda *a, **k: None,
+    error=lambda *a, **k: None, warning=lambda *a, **k: None,
+    debug=lambda *a, **k: None, add=lambda *a, **k: None,
+    remove=lambda *a, **k: None,
+)
+_cl = _t.ModuleType("config.logger")
+_cl.setup_logging = lambda *a, **k: _logger
+_cl.build_module_string = lambda *a, **k: "TEST"
+_cl.create_connection_logger = lambda *a, **k: _logger
+sys.modules["config.logger"] = _cl
 
 import asyncio  # noqa: E402
 from core.providers.tts.doubao_v3 import TTSProvider  # noqa: E402
@@ -44,6 +57,7 @@ CFG = {
     "sample_rate": "24000",
 }
 OUT_DIR = r"G:\demo\21_xiaozhi\code\.workbuddy"
+TEXT = "今天真是个好日子，我太开心啦！"
 
 
 def run(tag, instruction=None, **over):
@@ -51,17 +65,17 @@ def run(tag, instruction=None, **over):
     p = TTSProvider(cfg, False)
     if instruction:
         p.set_dynamic_instruction(instruction)
-    pl = p._build_payload("今天真是个好日子，我太开心啦！")
+    pl = p._build_payload(TEXT)
     ap = pl["req_params"]["audio_params"]
     print(f"\n--- {tag} ---")
     print("namespace :", pl.get("namespace"))
     print("speaker   :", pl["req_params"].get("speaker"))
-    print("emotion   :", ap.get("emotion"), "scale:", ap.get("emotion_scale"),
-          "enable:", ap.get("enable_emotion"))
+    print("emotion   :", ap.get("emotion"), "| scale:", ap.get("emotion_scale"),
+          "| enable:", ap.get("enable_emotion"))
     print("additions :", pl["req_params"].get("additions"))
     print("model     :", pl["req_params"].get("model"))
     out = os.path.join(OUT_DIR, f"v3_{tag}.mp3")
-    asyncio.run(p.text_to_speak("今天真是个好日子，我太开心啦！", out))
+    asyncio.run(p.text_to_speak(TEXT, out))
     print("音频字节  :", os.path.getsize(out))
 
 
