@@ -3,7 +3,7 @@
     <div class="brand">
       <div class="brand-logo">⚡</div>
       <div>
-        <span class="brand-name">小智 AIoT</span>
+        <span class="brand-name">屿禾工坊</span>
         <span class="brand-sub">{{ role === 'admin' ? '管理端' : '体验端' }}</span>
       </div>
     </div>

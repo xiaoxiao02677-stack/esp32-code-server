@@ -34,6 +34,12 @@ public class TimbreDetailsVO implements Serializable {
     @Schema(description = "音色级语气指令（doubao 2.0 指令遵循，下发时覆盖模型级指令）")
     private String voiceInstruction;
 
+    @Schema(description = "动态语气指令开关：开启后由 LLM 根据聊天记录定制指令")
+    private Boolean dynamicInstruction;
+
+    @Schema(description = "动态指令生成 LLM 模型ID")
+    private String instructionLlmId;
+
     @Schema(description = "排序")
     private Long sort;
 

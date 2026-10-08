@@ -100,6 +100,8 @@ public class ConfigServiceImpl implements ConfigService {
                 null,
                 null,
                 null,
+                null,
+                null,
                 agent.getVadModelId(),
                 agent.getAsrModelId(),
                 null,
@@ -151,12 +153,16 @@ public class ConfigServiceImpl implements ConfigService {
         String referenceText = null;
         String language = null;
         String timbreVoiceInstruction = null;
+        Boolean timbreDynamicInstruction = null;
+        String timbreInstructionLlmId = null;
         TimbreDetailsVO timbre = timbreService.get(agent.getTtsVoiceId());
         if (timbre != null) {
             voice = timbre.getTtsVoice();
             referenceAudio = timbre.getReferenceAudio();
             referenceText = timbre.getReferenceText();
             timbreVoiceInstruction = timbre.getVoiceInstruction();
+            timbreDynamicInstruction = Boolean.TRUE.equals(timbre.getDynamicInstruction());
+            timbreInstructionLlmId = timbre.getInstructionLlmId();
             // 优先使用用户选择的语言，如果没有则使用音色支持的第一个语言
             if (StringUtils.isNotBlank(agent.getTtsLanguage())) {
                 language = agent.getTtsLanguage();
@@ -258,6 +264,8 @@ public class ConfigServiceImpl implements ConfigService {
                 referenceText,
                 language,
                 timbreVoiceInstruction,
+                timbreDynamicInstruction,
+                timbreInstructionLlmId,
                 agent.getTtsVolume(),
                 agent.getTtsRate(),
                 agent.getTtsPitch(),
@@ -493,6 +501,8 @@ public class ConfigServiceImpl implements ConfigService {
             String referenceText,
             String language,
             String timbreVoiceInstruction,
+            Boolean timbreDynamicInstruction,
+            String timbreInstructionLlmId,
             Integer ttsVolume,
             Integer ttsRate,
             Integer ttsPitch,
@@ -544,6 +554,13 @@ public class ConfigServiceImpl implements ConfigService {
                     // 音色级语气指令：非空时覆盖模型级指令（doubao 2.0 指令遵循按音色生效）
                     if (StringUtils.isNotBlank(timbreVoiceInstruction)) {
                         ((Map<String, Object>) model.getConfigJson()).put("voice_instruction", timbreVoiceInstruction);
+                    }
+                    // 动态语气指令：开启时由 Python 端 LLM 按聊天记录定制（覆盖固定指令）
+                    if (Boolean.TRUE.equals(timbreDynamicInstruction)) {
+                        ((Map<String, Object>) model.getConfigJson()).put("dynamic_instruction", true);
+                        if (StringUtils.isNotBlank(timbreInstructionLlmId)) {
+                            ((Map<String, Object>) model.getConfigJson()).put("instruction_llm_id", timbreInstructionLlmId);
+                        }
                     }
                     if (ttsVolume != null)
                         ((Map<String, Object>) model.getConfigJson()).put("ttsVolume", ttsVolume);

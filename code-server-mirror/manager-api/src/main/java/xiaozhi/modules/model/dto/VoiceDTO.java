@@ -35,6 +35,9 @@ public class VoiceDTO implements Serializable {
     @Schema(description = "平台音色ID（tts_voice，试听合成用）")
     private String ttsVoice;
 
+    @Schema(description = "音色级语气指令（编辑回显用）")
+    private String voiceInstruction;
+
     // 添加双参数构造函数，保持向后兼容
     public VoiceDTO(String id, String name) {
         this.id = id;

@@ -9,7 +9,7 @@
     <div v-else-if="!token" class="login-wrap">
       <div class="kawaii-card login-card fade-in-up">
         <img class="login-logo" :src="logoUrl" alt="logo" />
-        <h1 class="login-title">小智控制台</h1>
+        <h1 class="login-title">屿禾工坊</h1>
         <p class="login-sub">可视化 · 点点鼠标就能管</p>
         <div class="login-form">
           <div class="field"><label>用户名</label>
@@ -30,7 +30,7 @@
       <aside class="kawaii-card sidebar slide-in-left" :class="{ 'is-open': sidebarOpen }">
         <div class="sidebar-head">
           <img :src="logoUrl" class="logo" alt="logo" />
-          <div class="sidebar-title">小智控制台</div>
+          <div class="sidebar-title">屿禾工坊</div>
           <button class="kawaii-pill kawaii-pill--ghost compact-toggle" :title="compactMode ? '切换宽松' : '切换紧凑'" @click="compactMode = !compactMode">{{ compactMode ? '🗗' : '🗗' }}</button>
         </div>
         <nav class="module-list">
