@@ -28,18 +28,48 @@ DOUBAO_V3_VOICES = {
     "zh_male_zhubo_jupiter_bigtts": "主播（新闻男声）",
 }
 
+# 语气指令关键词 -> 火山 emotion 官方枚举。
+# 说明：实测非法 emotion 值会被服务端「静默忽略」（照样返回 200 + 音频），
+#       所以这里只收录官方 2.0 文档列出的枚举，避免静默退化成无情感。
+EMOTION_KEYWORDS = {
+    "happy": ("开心", "高兴", "快乐", "愉快", "喜悦", "欢喜", "雀跃", "兴高采烈",
+              "笑", "乐", "甜", "happy", "joy"),
+    "sad": ("难过", "伤心", "悲伤", "沮丧", "失落", "低落", "哭", "哽咽", "忧郁",
+            "委屈", "消沉", "sad"),
+    "angry": ("生气", "愤怒", "气愤", "恼火", "发火", "愤怒", "暴躁", "怒", "愤",
+              "训斥", "angry"),
+    "scared": ("害怕", "恐惧", "惊慌", "紧张", "颤抖", "发抖", "吓", "scared", "fear"),
+    "surprised": ("惊讶", "震惊", "惊奇", "意外", "居然", "没想到", "不敢相信",
+                  "surprised"),
+    "hate": ("厌恶", "讨厌", "嫌弃", "鄙视", "不屑", "反感", "hate", "disgust"),
+    "excited": ("激动", "亢奋", "热血", "振奋", "迫不及待", "欢呼", "excited"),
+    "coldness": ("冷淡", "冷漠", "高冷", "冰冷", "敷衍", "无所谓", "漫不经心",
+                 "coldness"),
+    "neutral": ("平静", "平淡", "中性", "自然", "平稳", "客观", "neutral"),
+}
+
+# emotion_scale 实测有效区间：1~5。
+# 0 或 >=6 服务端会返回「空音频」（code 正常、data 全空），是静默失败坑，必须钳制。
+EMOTION_SCALE_MIN = 1
+EMOTION_SCALE_MAX = 5
+
 
 class TTSProvider(TTSProviderBase):
-    """豆包语音合成大模型（火山引擎 v3 HTTP 一次性合成端点）。
+    """豆包语音合成大模型（火山引擎 v3 HTTP 单向流式合成端点）。
 
     端点：POST https://openspeech.bytedance.com/api/v3/tts/unidirectional
-    鉴权：旧版控制台双头 X-Api-App-Id + X-Api-Access-Key（或新版单头 X-Api-Key）
-    响应：HTTP chunked，每个 chunk 是一个 JSON 对象 {"code","message","data"}，
-          data 为 Base64 音频分片（各自独立 base64，需逐片解码后拼接），
-          末片 data 为 null + code=20000000 结束标记。
+    通信方式（对齐火山官方 声音复刻 V3 脚本）：
+      - payload 顶层三件套：user / namespace("BidirectionalTTS") / req_params
+      - 复刻音色：prepaid 用 speaker=S_xxx；postpaid 用 speaker="custom_speaker_id"
+                  外加 req_params.custom_speaker_id
+      - 情感：audio_params.enable_emotion + emotion + emotion_scale(1~5)
+      - 指令：req_params.additions = JSON 字符串，含 explicit_language / context_texts
+      - 请求：requests.post(..., stream=True) + resp.iter_lines(decode_unicode=True)
+      - 终止：读到 code==20000000 结束；code 非 0/20000000 判错
     """
 
     DEFAULT_API_URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
+    DEFAULT_NAMESPACE = "BidirectionalTTS"
 
     def __init__(self, config, delete_audio_file):
         super().__init__(config, delete_audio_file)
@@ -50,13 +80,17 @@ class TTSProvider(TTSProviderBase):
         self.resource_id = config.get("resource_id", "seed-tts-2.0")
         self.api_url = config.get("api_url", self.DEFAULT_API_URL)
 
+        # 音色：优先复刻音色(private_voice)，其次 speaker / voice
         if config.get("private_voice"):
             self.voice = config.get("private_voice")
         else:
             self.voice = config.get("speaker") or config.get("voice")
+        # 声音复刻计费方式：prepaid(预付费，speaker=S_xxx) / postpaid(后付费，custom_speaker_id)
+        self.speaker_type = str(config.get("speaker_type", "prepaid")).lower()
+        self.custom_speaker_id = config.get("custom_speaker_id")
 
         self.audio_file_type = config.get("format", "wav")
-        self.sample_rate = int(config.get("sample_rate", 24000))
+        self.sample_rate = int(float(config.get("sample_rate", 24000)))
 
         # 音频参数（v3 语义：speech_rate/loudness_rate 范围 [-50,100]）
         self.speech_rate = int(float(config.get("speech_rate", 0)))
@@ -65,11 +99,61 @@ class TTSProvider(TTSProviderBase):
         # 语音风格指令（2.0 音色支持指令遵循，如「用标准大陆普通话说话，不要台湾腔」）
         self.voice_instruction = config.get("voice_instruction")
 
+        # 情感控制（对齐官方脚本 EMOTION / EMOTION_SCALE / ENABLE_EMOTION）
+        self.emotion = config.get("emotion")
+        self.enable_emotion = bool(config.get("enable_emotion", True))
+        self.emotion_scale = self._clamp_emotion_scale(
+            config.get("emotion_scale", 4)
+        )
+        # 是否允许从语气指令里自动推断 emotion（默认开）
+        self.auto_emotion = bool(config.get("auto_emotion", True))
+        # 显式语言（官方脚本 EXPLICIT_LANGUAGE）
+        self.explicit_language = config.get("explicit_language", "zh")
+        # namespace（官方脚本固定 BidirectionalTTS；实测复刻/非复刻均安全）
+        self.namespace = config.get("namespace", self.DEFAULT_NAMESPACE)
+
         model_key_msg = check_model_key(
             "TTS", self.api_key or self.access_token or ""
         )
         if model_key_msg:
             logger.bind(tag=TAG).error(model_key_msg)
+
+    # ------------------------------------------------------------------ #
+    # 参数处理
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _clamp_emotion_scale(value):
+        """把 emotion_scale 钳制到实测有效区间 [1,5]。
+
+        实测：scale=0 或 >=6 时火山返回「空音频」（code 正常但 data 全空），
+        属于静默失败，必须在发出请求前拦掉。
+        """
+        try:
+            scale = int(float(value))
+        except (TypeError, ValueError):
+            return 4
+        return max(EMOTION_SCALE_MIN, min(EMOTION_SCALE_MAX, scale))
+
+    @classmethod
+    def _infer_emotion(cls, instruction):
+        """从中文语气指令里推断官方 emotion 枚举；推断不出返回 None。
+
+        例：「用非常开心、兴奋的语气说话」-> "happy"
+        """
+        if not instruction:
+            return None
+        text = str(instruction).lower()
+        for emotion, keywords in EMOTION_KEYWORDS.items():
+            for kw in keywords:
+                if kw in text:
+                    return emotion
+        return None
+
+    def _is_clone_resource(self):
+        """声音复刻(克隆)资源：seed-icl-*，或音色为 S_ 前缀。"""
+        return str(self.resource_id).startswith("seed-icl") or str(
+            self.voice or ""
+        ).startswith("S_")
 
     def _build_headers(self):
         headers = {
@@ -87,40 +171,72 @@ class TTSProvider(TTSProviderBase):
         return headers
 
     def _build_payload(self, text):
+        """按火山官方 声音复刻 V3 脚本的结构组装请求体。"""
+        # 1) audio_params：格式/采样率/语速/音量 + 情感三件套
+        audio_params = {
+            "format": self.audio_file_type,
+            "sample_rate": self.sample_rate,
+            "speech_rate": self.speech_rate,
+            "loudness_rate": self.loudness_rate,
+        }
+
+        # 2) 指令与情感
+        #    优先用动态指令（由 connection 每轮注入），取不到再回落到固定指令
+        instruction = self._dynamic_instruction or self.voice_instruction
+        emotion = self.emotion
+        if not emotion and self.auto_emotion:
+            emotion = self._infer_emotion(instruction)
+        if emotion:
+            audio_params["enable_emotion"] = bool(self.enable_emotion)
+            audio_params["emotion"] = emotion
+            audio_params["emotion_scale"] = self._clamp_emotion_scale(
+                self.emotion_scale
+            )
+
+        # 3) additions：explicit_language + context_texts
+        #    官方唯一指令通道，见 docs/6561/1329505、docs/6561/2528925
+        #    - 仅「豆包语音合成模型 2.0」音色生效
+        #    - 官方明确「当前字符串列表只第一个值有效」→ 只放 1 条指令
+        additions = {}
+        if self.explicit_language:
+            additions["explicit_language"] = self.explicit_language
+        if instruction:
+            additions["context_texts"] = [instruction]
+
+        # 4) req_params
         req_params = {
             "text": text,
-            "speaker": self.voice,
-            "audio_params": {
-                "format": self.audio_file_type,
-                "sample_rate": self.sample_rate,
-                "speech_rate": self.speech_rate,
-                "loudness_rate": self.loudness_rate,
-            },
+            "audio_params": audio_params,
         }
-        # 指令遵循（火山官方唯一通道，见 docs/6561/1329505、docs/6561/2528925）：
-        #   req_params.additions = JSON 序列化后的字符串，内含 context_texts 数组
-        #   - 仅「豆包语音合成模型 2.0」官方音色生效（uranus/saturn 系）
-        #   - 官方明确「当前字符串列表只第一个值有效」→ 只放 1 条指令
-        #   - 复刻/克隆音色需同时传 req_params.model="seed-tts-2.0-expressive" 才生效
-        #   - seed-tts-2.0-standard 明确不支持 context_texts
-        # 重要：voice_instruction 只是本项目的配置项名，并非火山 API 字段。
-        #       早期实现直接写 req_params["voice_instruction"]，服务端对未知字段
-        #       静默忽略（请求照常 200、音频照常返回），表现为「指令不起作用」。
-        # 优先用动态指令（由 connection 每轮注入），取不到再回落到固定指令
-        instruction = self._dynamic_instruction or self.voice_instruction
-        if instruction:
+        if self.speaker_type == "postpaid":
+            # 后付费复刻：speaker 固定占位 + 真实音色走 custom_speaker_id
+            req_params["speaker"] = "custom_speaker_id"
+            if self.custom_speaker_id or self.voice:
+                req_params["custom_speaker_id"] = (
+                    self.custom_speaker_id or self.voice
+                )
+        else:
+            req_params["speaker"] = self.voice
+        if additions:
             req_params["additions"] = json.dumps(
-                {"context_texts": [instruction]}, ensure_ascii=False
+                additions, ensure_ascii=False
             )
-            # 复刻/克隆音色：官方要求 resource_id=seed-icl-2.0 且 model=seed-tts-2.0-expressive
-            # 才支持 context_texts。仅在识别到复刻资源时补 model，避免污染预置音色的请求。
-            if str(self.resource_id).startswith("seed-icl"):
-                req_params["model"] = "seed-tts-2.0-expressive"
-        return {
+        # 复刻/克隆音色：官方要求 model=seed-tts-2.0-expressive 才支持指令与情感
+        if self._is_clone_resource():
+            req_params["model"] = "seed-tts-2.0-expressive"
+
+        # 5) 顶层：user + namespace + req_params（对齐官方脚本）
+        payload = {
             "user": {"uid": "xiaozhi-esp32-server"},
             "req_params": req_params,
         }
+        if self.namespace:
+            payload["namespace"] = self.namespace
+        return payload
 
+    # ------------------------------------------------------------------ #
+    # 响应解析
+    # ------------------------------------------------------------------ #
     @staticmethod
     def _decode_base64_chunk(data):
         """解码单个 base64 分片（服务端分片长度非 4 对齐时不带填充符）。"""
@@ -129,25 +245,30 @@ class TTSProvider(TTSProviderBase):
         return base64.b64decode(clean + "=" * padding)
 
     def _parse_chunked_response(self, response):
-        """解析 chunked JSON 流：逐对象提取 data 分片，解码拼接为完整音频字节。"""
-        decoder = json.JSONDecoder()
-        text = response.text
+        """按官方脚本方式解析：iter_lines 逐行读，code==20000000 终止。
+
+        官方脚本判定：
+          - code == 20000000 且 message == "ok" -> 正常结束
+          - code 非 0 且非 20000000 -> 报错
+        实测火山返回的结束 message 是 "OK"（大写），故这里只判 code，
+        避免大小写差异导致误判为错误。
+        """
         audio = bytearray()
-        pos = 0
-        length = len(text)
-        while pos < length:
-            # 跳过分隔空白
-            while pos < length and text[pos] in " \r\n\t":
-                pos += 1
-            if pos >= length:
-                break
+        for line in response.iter_lines(decode_unicode=True):
+            if not line:
+                continue
             try:
-                obj, end = decoder.raw_decode(text, pos)
+                obj = json.loads(line)
             except json.JSONDecodeError as e:
                 raise Exception(f"响应包含无法解析的分片: {e}")
-            pos = end
             code = obj.get("code")
-            if code not in (0, 20000000):
+            if code == 20000000:
+                # 末片：data 为 null，结束
+                data = obj.get("data")
+                if isinstance(data, str) and data:
+                    audio.extend(self._decode_base64_chunk(data))
+                break
+            if code not in (0, None):
                 raise Exception(
                     f"code={code}, message={obj.get('message', '')}"
                 )
@@ -162,6 +283,7 @@ class TTSProvider(TTSProviderBase):
                 self.api_url,
                 json=self._build_payload(text),
                 headers=self._build_headers(),
+                stream=True,
                 timeout=self.tts_timeout,
             )
             if response.status_code != 200:
@@ -188,7 +310,7 @@ class TTSProvider(TTSProviderBase):
                 f"{msg} —— 该音色是「声音复刻(克隆)音色」(S_ 开头)，与当前模型配置的 "
                 f"resource(seed-tts-2.0，仅支持官方预置音色)不匹配。"
                 f"请改用官方音色，或为复刻音色单独配置 TTS 模型"
-                f"(resource_id=volc.megatts.default，且凭据需属于克隆该音色的应用)"
+                f"(resource_id=seed-icl-2.0，且凭据需属于克隆该音色的应用)"
             )
         if "45000030" in msg:
             return (
