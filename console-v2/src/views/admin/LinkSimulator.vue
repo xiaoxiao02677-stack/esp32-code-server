@@ -97,14 +97,9 @@ async function runTts() {
   if (!ttsModelId.value || !ttsText.value) { toast('请填写模型 ID 和文本', 'error'); return }
   ttsBusy.value = true; ttsStatus.value = '合成中…'
   try {
-    const res = await adminApi.ttsPreview(ttsModelId.value, ttsVoice.value, ttsText.value)
-    const b64 = res.data?.audio || res.data?.base64 || res.data
-    if (b64) {
-      audioUrl.value = 'data:audio/mp3;base64,' + b64
-      ttsStatus.value = '✓ 出声'
-    } else {
-      ttsStatus.value = '✗ 无音频'; toast('未返回音频数据', 'error')
-    }
+    const blob = await adminApi.ttsPreview(ttsModelId.value, ttsVoice.value, ttsText.value)
+    audioUrl.value = URL.createObjectURL(blob)
+    ttsStatus.value = '✓ 出声'
   } catch (e) { ttsStatus.value = '✗ 失败'; toast(e.msg || 'TTS 失败', 'error') }
   finally { ttsBusy.value = false }
 }

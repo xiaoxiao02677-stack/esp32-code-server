@@ -67,7 +67,13 @@ async function pickType(t) {
   activeType.value = t.dictType
   try {
     const res = await adminApi.dictData(t.dictType)
-    datas.value = res.data || []
+    // 契约：data 为 [{name, key}] 数组
+    datas.value = (res.data || []).map((d, i) => ({
+      id: d.id ?? d.key ?? i,
+      dictLabel: d.dictLabel ?? d.name ?? d.label,
+      dictValue: d.dictValue ?? d.key ?? d.value,
+      sort: d.sort ?? d.orderNum
+    }))
   } catch (e) { toast(e.msg || '字典数据加载失败', 'error'); datas.value = [] }
 }
 

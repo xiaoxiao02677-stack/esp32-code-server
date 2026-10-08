@@ -106,7 +106,8 @@ async function pickAgent(a) {
   currentAgentName.value = a.agentName
   memoryEngine.value = a.memoryEngine || ''
   try {
-    const res = await adminApi.memoryFacts({ agent_id: a.agentId, page: 1, limit: 50 })
+    // cc-console 契约：?agent_id=&page=&size=（非 limit）
+    const res = await adminApi.memoryFacts({ agent_id: a.agentId, page: 1, size: 50 })
     const data = res.data || {}
     facts.value = data.list || data.facts || []
   } catch (e) { toast(e.msg || '记忆加载失败', 'error'); facts.value = [] }
@@ -131,14 +132,14 @@ async function save() {
 
 async function feedback(f, helpful) {
   try {
-    await adminApi.factFeedback(f.fact_id, helpful)
+    await adminApi.factFeedback(f.fact_id, currentAgentId.value, helpful)
     toast(helpful ? '已反馈 👍' : '已反馈 👎')
   } catch (e) { toast(e.msg || '反馈失败', 'error') }
 }
 
 async function review(f, action) {
   try {
-    await adminApi.factReview(f.fact_id, action)
+    await adminApi.factReview(f.fact_id, currentAgentId.value, action)
     toast('已审核通过')
     pickAgent({ agentId: currentAgentId.value, agentName: currentAgentName.value, memoryEngine: memoryEngine.value })
   } catch (e) { toast(e.msg || '审核失败', 'error') }

@@ -63,11 +63,11 @@ async function load() {
   loading.value = true
   try {
     const res = await adminApi.ttsModels()
-    const list = res.data?.list || res.data || []
-    ttsModels.value = list.map(m => ({ id: m.modelId || m.id, modelName: m.modelName || m.name || m.modelId }))
-    if (ttsModels.value.length && !activeModelId.value) {
-      await pickModel(ttsModels.value[0], true)
-    }
+    const list = res.data?.list || []
+    ttsModels.value = list.map(m => ({ id: m.id, isDefault: m.isDefault, modelName: m.modelName || m.name || m.id }))
+    // cc-console 契约：优先选 isDefault 的模型
+    const def = ttsModels.value.find(m => m.isDefault) || ttsModels.value[0]
+    if (def) await pickModel(def, true)
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
 }
@@ -77,27 +77,23 @@ async function pickModel(m, silent) {
   if (!silent) toast(`切换到 ${m.modelName}`)
   try {
     const res = await adminApi.modelVoices(m.id)
-    const list = res.data?.voices || res.data || []
+    const list = res.data || []
     voices.value = list.map(v => ({
-      id: v.id || v.ttsVoice, name: v.name || v.voiceName || v.ttsVoice, desc: v.description || ''
+      id: v.id, ttsVoice: v.ttsVoice, name: v.name || v.voiceName || v.ttsVoice, desc: v.description || ''
     }))
   } catch (e) { toast(e.msg || '音色加载失败', 'error'); voices.value = [] }
 }
 
 async function preview(v) {
-  const voice = v.id || v.ttsVoice
+  // cc-console 契约：voice 参数用 ttsVoice（如 "Cherry"），无则回退 id
+  const voice = v.ttsVoice || v.id
   const modelId = activeModelId.value
   if (!modelId) { toast('请先选择模型', 'error'); return }
   currentVoiceId.value = voice
   try {
-    const res = await adminApi.ttsPreview(modelId, voice, '你好，这是试听文本')
-    const base64 = res.data?.audio || res.data?.base64 || res.data
-    if (base64) {
-      audioUrl.value = 'data:audio/mp3;base64,' + base64
-      playing.value = true
-    } else {
-      toast('试听接口未返回音频（该模型可能不支持）', 'error')
-    }
+    const blob = await adminApi.ttsPreview(modelId, voice, '你好，这是试听文本')
+    audioUrl.value = URL.createObjectURL(blob)
+    playing.value = true
   } catch (e) { toast(e.msg || '试听失败', 'error') }
 }
 

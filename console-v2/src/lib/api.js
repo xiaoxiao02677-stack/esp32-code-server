@@ -133,8 +133,12 @@ export const adminApi = {
   // ===== 音色 / TTS =====
   ttsModels: () => api.get('/models/list', { modelType: 'TTS', page: 1, limit: 50 }),
   modelVoices: (modelId) => api.get(`/models/${encodeURIComponent(modelId)}/voices`),
-  ttsPreview: (modelId, voice, text) => api.get('/models/ttsPreview', {
+  // cc-console 契约：ttsPreview 返回音频二进制流（blob），非 JSON
+  ttsPreview: (modelId, voice, text) => fetch(API_BASE + '/models/ttsPreview' + buildQuery({
     modelId, voice, text: text || '你好，这是试听文本'
+  }), { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => {
+    if (!r.ok) throw { code: r.status, msg: '试听失败 (HTTP ' + r.status + ')' }
+    return r.blob()
   }),
   ttsVoicePage: (params) => api.get('/ttsVoice', params),
   ttsVoiceCreate: (body) => api.post('/ttsVoice', body),
@@ -147,8 +151,8 @@ export const adminApi = {
   memoryFacts: (params) => api.get('/memory/facts', params),
   createFact: (body) => api.post('/memory/facts', body),
   deleteFact: (factId, agentId) => api.del(`/memory/facts/${factId}?agent_id=${agentId}`),
-  factFeedback: (factId, helpful) => api.post(`/memory/facts/${factId}/feedback`, { helpful }),
-  factReview: (factId, action) => api.post(`/memory/facts/${factId}/review`, { action }),
+  factFeedback: (factId, agentId, helpful) => api.post(`/memory/facts/${factId}/feedback`, { agent_id: agentId, helpful }),
+  factReview: (factId, agentId, action) => api.post(`/memory/facts/${factId}/review`, { agent_id: agentId, action }),
   memoryEngineConfig: (providerCode, engine) => api.put(`/models/Memory/${providerCode}/${engine}`),
 
   // ===== 模型 =====
