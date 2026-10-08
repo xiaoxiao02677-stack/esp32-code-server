@@ -1119,6 +1119,109 @@ class ConnectionHandler:
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
 
+    # ---- 动态语气指令（音色「动态更新」开关的 Python 侧消费方）----------------
+    # Java 下发的开关位于 config["TTS"][模型id]：
+    #   dynamic_instruction: bool —— 开启后按「短期聊天记录 + 长期记忆」定制指令
+    #   instruction_llm_id: str   —— 生成指令用的 LLM（为空则跟随智能体主 LLM）
+    #   voice_instruction: str    —— 固定指令（动态生成失败时的降级值）
+    # 生成结果经 tts.set_dynamic_instruction() 注入 provider，最终作为火山官方
+    # additions.context_texts[0] 下发。每轮只生成一次（见 chat() 内的调用点）。
+    DYNAMIC_INSTRUCTION_SYSTEM_PROMPT = (
+        "你是语音语气指令生成器。根据下面的短期聊天记录和长期记忆，"
+        "生成一条给 TTS 语音合成引擎的语气指令（不超过 40 字）。\n"
+        "要求：\n"
+        "1. 口语化、自然，符合用户与助手当下的聊天氛围；\n"
+        "2. 只描述说话方式（语气/语速/情绪/口癖），不要复述聊天内容；\n"
+        "3. 直接输出指令文本，不要任何解释或标点包裹。"
+    )
+
+    def _tts_config(self):
+        """当前生效的 TTS 模型配置（云端私有配置会整层替换 self.config["TTS"]）。"""
+        try:
+            selected = self.config.get("selected_module", {}).get("TTS")
+            return self.config.get("TTS", {}).get(selected) or {}
+        except Exception:
+            return {}
+
+    def _recent_chat_text(self, max_messages=8):
+        """取最近若干条真实对话，跳过 few-shot 示例（is_temporary）与工具噪声。"""
+        try:
+            msgs = [
+                m for m in self.dialogue.dialogue
+                if not getattr(m, "is_temporary", False)
+                and getattr(m, "role", None) in ("user", "assistant")
+                and getattr(m, "content", None)
+            ]
+        except Exception:
+            return "（暂无聊天记录）"
+        lines = []
+        for m in msgs[-max_messages:]:
+            who = "用户" if m.role == "user" else "助手"
+            lines.append(f"{who}：{m.content}")
+        return "\n".join(lines) if lines else "（暂无聊天记录）"
+
+    def _generate_voice_instruction(self, user_prompt):
+        """调用 LLM 生成一句语气指令；优先用 instruction_llm_id 指定的模型。"""
+        from core.utils import llm as llm_utils
+
+        llm_id = (self._tts_config().get("instruction_llm_id") or "").strip()
+        provider = None
+        if llm_id:
+            llm_cfg = self.config.get("LLM", {}).get(llm_id)
+            if llm_cfg:
+                # 与 intent / memory 专用 LLM 同一套取法
+                provider = llm_utils.create_instance(
+                    llm_cfg.get("type", llm_id), llm_cfg
+                )
+            else:
+                self.logger.bind(tag=TAG).warning(
+                    f"指令生成 LLM「{llm_id}」未在 LLM 配置中找到，改用智能体主 LLM"
+                )
+        if provider is None:
+            provider = getattr(self, "llm", None)
+        if provider is None:
+            return None
+
+        # LLM response() 是同步生成器；response_no_stream 已封装为一次性取全量
+        text = provider.response_no_stream(
+            self.DYNAMIC_INSTRUCTION_SYSTEM_PROMPT, user_prompt
+        )
+        if not text:
+            return None
+        text = text.strip().strip("「」\"'").strip()
+        # 防御性截断：火山官方未规定 context_texts 的长度上限，这里只是避免
+        # 模型跑飞时把一大段无关文本塞进指令通道。
+        return text[:120]
+
+    def _refresh_dynamic_voice_instruction(self, memory_str=None):
+        """每轮对话开始时刷新音色动态语气指令；任何失败都回落固定指令。"""
+        tts = getattr(self, "tts", None)
+        if tts is None or not hasattr(tts, "set_dynamic_instruction"):
+            return
+        try:
+            if not self._tts_config().get("dynamic_instruction"):
+                # 未开启动态指令：清空上一轮残留，回落到 provider 的固定指令
+                tts.set_dynamic_instruction(None)
+                return
+
+            user_prompt = (
+                f"[短期聊天记录]\n{self._recent_chat_text()}\n\n"
+                f"[长期记忆]\n{memory_str or '（暂无长期记忆）'}\n\n语气指令："
+            )
+            instruction = self._generate_voice_instruction(user_prompt)
+            if instruction:
+                tts.set_dynamic_instruction(instruction)
+                self.logger.bind(tag=TAG).info(f"动态语气指令已更新: {instruction}")
+            else:
+                tts.set_dynamic_instruction(None)
+        except Exception as e:
+            # 动态指令是增强项，失败不得影响本轮正常对话
+            self.logger.bind(tag=TAG).warning(f"动态语气指令生成失败，回落固定指令: {e}")
+            try:
+                tts.set_dynamic_instruction(None)
+            except Exception:
+                pass
+
     def chat(self, query, depth=0):
         # 保存当前任务的sentence_id到局部变量，避免被新任务覆盖
         current_sentence_id = None
@@ -1186,6 +1289,12 @@ class ConnectionHandler:
                     self.memory.query_memory(query), self.loop
                 )
                 memory_str = future.result()
+
+            # 动态语气指令：每轮生成一次（depth==0 保证工具递归 chat(None, depth+1) 不重复触发）。
+            # 放在这里是因为长期记忆刚取到（memory_str），可零额外开销地一起喂给 LLM；
+            # 且早于本轮首句 TTS 合成，不会漏掉第一句。
+            if depth == 0:
+                self._refresh_dynamic_voice_instruction(memory_str)
 
             # 仅在该说话人首次出现时把身份注入 system，之后靠对话历史首轮保留，
             # 避免每轮在 system 重复出现名字诱导模型反复称呼

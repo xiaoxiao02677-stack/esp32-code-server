@@ -150,6 +150,57 @@ def test_no_additions_field_when_unset():
 
 
 # ---------------------------------------------------------------------------
+# 动态语气指令（音色「动态更新」开关）
+# ---------------------------------------------------------------------------
+def test_dynamic_instruction_overrides_fixed():
+    """connection 每轮注入的动态指令应覆盖固定 voice_instruction。"""
+    provider = _make_provider(voice_instruction="固定指令：温柔女声")
+    provider.set_dynamic_instruction("用轻快俏皮的语气说")
+    post = _chunked_response([(0, "", base64.b64encode(b"AB").decode()),
+                              (20000000, "OK", None)])
+    with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
+        _run(provider.text_to_speak("你好", None))
+    additions = json.loads(p.call_args.kwargs["json"]["req_params"]["additions"])
+    assert additions["context_texts"] == ["用轻快俏皮的语气说"]
+
+
+def test_dynamic_instruction_none_falls_back_to_fixed():
+    """动态指令置空（未开启或生成失败）时回落固定指令。"""
+    provider = _make_provider(voice_instruction="固定指令：温柔女声")
+    provider.set_dynamic_instruction("上一轮的动态指令")
+    provider.set_dynamic_instruction(None)   # 本轮回落
+    post = _chunked_response([(0, "", base64.b64encode(b"AB").decode()),
+                              (20000000, "OK", None)])
+    with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
+        _run(provider.text_to_speak("你好", None))
+    additions = json.loads(p.call_args.kwargs["json"]["req_params"]["additions"])
+    assert additions["context_texts"] == ["固定指令：温柔女声"]
+
+
+def test_clone_resource_adds_expressive_model():
+    """复刻音色（seed-icl-*）需带 model=seed-tts-2.0-expressive，否则 context_texts 无效。"""
+    provider = _make_provider(resource_id="seed-icl-2.0",
+                              voice_instruction="用低沉沙哑的语气")
+    post = _chunked_response([(0, "", base64.b64encode(b"AB").decode()),
+                              (20000000, "OK", None)])
+    with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
+        _run(provider.text_to_speak("你好", None))
+    req = p.call_args.kwargs["json"]["req_params"]
+    assert req["model"] == "seed-tts-2.0-expressive"
+
+
+def test_preset_voice_has_no_model_field():
+    """官方预置音色不应被塞入 model 字段。"""
+    provider = _make_provider(resource_id="seed-tts-2.0",
+                              voice_instruction="用温柔的语气")
+    post = _chunked_response([(0, "", base64.b64encode(b"AB").decode()),
+                              (20000000, "OK", None)])
+    with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
+        _run(provider.text_to_speak("你好", None))
+    assert "model" not in p.call_args.kwargs["json"]["req_params"]
+
+
+# ---------------------------------------------------------------------------
 # chunked 分片解析
 # ---------------------------------------------------------------------------
 def test_chunked_audio_concatenation(tmp_path):

@@ -179,12 +179,11 @@ class TTSProvider(TTSProviderBase):
         self.additions = {**default_additions, **config.get("additions", {})}
         self.mix_speaker = {**default_mix_speaker, **config.get("mix_speaker", {})}
 
-        # 音色语气指令：火山官方唯一通道是 additions.context_texts（JSON 字符串内的数组，
-        # 且只有第一个元素生效）。仅 2.0 资源（seed-tts-2.0）支持，1.0 资源（volc.service_type.10029）
-        # 传未知字段会被服务端拒绝或忽略，故用 resource_type 门控。
+        # 音色语气指令（固定值；动态指令由 connection 每轮经 set_dynamic_instruction 注入）。
+        # 火山官方唯一通道是 additions.context_texts（JSON 字符串内的数组，且只有第一个元素生效）。
+        # 仅 2.0 资源（seed-tts-2.0）支持，1.0 资源（volc.service_type.10029）传未知字段会被
+        # 服务端拒绝或忽略 —— 资源门控在 get_payload_bytes 里做（此处 self.additions 是模板）。
         self.voice_instruction = config.get("voice_instruction")
-        if self.voice_instruction and self.resource_type:
-            self.additions["context_texts"] = [self.voice_instruction]
 
         # 应用百分比调整（如果存在），否则使用公有化配置
         if "ttsVolume" in config:
@@ -694,11 +693,18 @@ class TTSProvider(TTSProviderBase):
         audio_format="pcm",
     ):
         # 构建 req_params
+        # 语气指令：优先取动态指令（connection 每轮注入），回落固定指令；
+        # 仅 2.0 资源（seed-tts-2.0）支持 context_texts，1.0 资源不注入以免传非法字段。
+        additions = dict(self.additions)
+        instruction = self._dynamic_instruction or self.voice_instruction
+        if instruction and self.resource_type:
+            additions["context_texts"] = [instruction]
+
         req_params = {
             "text": text,
             "speaker": speaker,
             "audio_params": {**self.audio_params, "format": audio_format},
-            "additions": json.dumps(self.additions)
+            "additions": json.dumps(additions)
         }
         
         # 如果有 mix_speaker 配置，添加到 req_params

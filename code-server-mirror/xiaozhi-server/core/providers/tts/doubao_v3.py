@@ -106,10 +106,16 @@ class TTSProvider(TTSProviderBase):
         # 重要：voice_instruction 只是本项目的配置项名，并非火山 API 字段。
         #       早期实现直接写 req_params["voice_instruction"]，服务端对未知字段
         #       静默忽略（请求照常 200、音频照常返回），表现为「指令不起作用」。
-        if self.voice_instruction:
+        # 优先用动态指令（由 connection 每轮注入），取不到再回落到固定指令
+        instruction = self._dynamic_instruction or self.voice_instruction
+        if instruction:
             req_params["additions"] = json.dumps(
-                {"context_texts": [self.voice_instruction]}, ensure_ascii=False
+                {"context_texts": [instruction]}, ensure_ascii=False
             )
+            # 复刻/克隆音色：官方要求 resource_id=seed-icl-2.0 且 model=seed-tts-2.0-expressive
+            # 才支持 context_texts。仅在识别到复刻资源时补 model，避免污染预置音色的请求。
+            if str(self.resource_id).startswith("seed-icl"):
+                req_params["model"] = "seed-tts-2.0-expressive"
         return {
             "user": {"uid": "xiaozhi-esp32-server"},
             "req_params": req_params,

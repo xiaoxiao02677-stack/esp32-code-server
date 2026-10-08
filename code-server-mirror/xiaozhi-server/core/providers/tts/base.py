@@ -46,6 +46,9 @@ class TTSProviderBase(ABC):
         self.tts_audio_first_sentence = True
         self.before_stop_play_files = []
         self.report_on_last = False
+        # 动态语气指令：由上层（connection）在每轮对话开始时注入；None 表示未启用，
+        # 子类构造请求体时应回落自己的固定指令（如 doubao_v3 的 voice_instruction）。
+        self._dynamic_instruction = None
         # sentence_id 到文本的映射，用于流式TTS获取正确的字幕文本
         self._sentence_text_map = {}
         # 加载替换词，用于一次性正则替换
@@ -303,6 +306,16 @@ class TTSProviderBase(ABC):
                     content_file=content_file,
                 )
             )
+
+    def set_dynamic_instruction(self, instruction):
+        """由上层（connection）在每轮对话开始时注入本轮动态语气指令。
+
+        instruction 为 None 表示回到「固定指令 / 不带指令」的默认行为。
+        各 provider 在构造请求体时应优先取 ``self._dynamic_instruction``，
+        取不到再回落到自己的静态指令配置项。这样上层无需 isinstance 判断
+        就能给任意 TTS provider 注入指令。
+        """
+        self._dynamic_instruction = instruction
 
     async def open_audio_channels(self, conn):
         self.conn = conn
