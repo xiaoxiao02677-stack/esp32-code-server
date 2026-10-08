@@ -145,7 +145,7 @@ private:
         });
 
         asr_button_.OnClick([this]() {
-            std::string wake_word="你好小智";
+            std::string wake_word="嗨乐鑫";
             Application::GetInstance().WakeWordInvoke(wake_word);
         });
 
