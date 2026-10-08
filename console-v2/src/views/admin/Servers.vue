@@ -50,8 +50,13 @@ async function load() {
   loading.value = true
   try {
     const res = await adminApi.serverList()
-    const data = res.data || {}
-    servers.value = data.list || data || []
+    const data = res.data
+    // 契约：data 为字符串数组（WS 地址列表）
+    servers.value = (Array.isArray(data) ? data : (data?.list || [])).map((s, i) =>
+      typeof s === 'string'
+        ? { id: 'srv-' + i, name: '节点 ' + (i + 1), wsUrl: s, enable: true }
+        : { id: s.id || s.name, name: s.name || s.serverName, wsUrl: s.wsUrl || s.url || s.address, enable: s.enable }
+    )
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
 }

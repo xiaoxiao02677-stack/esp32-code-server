@@ -67,10 +67,10 @@ async function load() {
     const res = await adminApi.modelList(activeType.value)
     const data = res.data || {}
     models.value = (data.list || data || []).map(m => ({
-      id: m.modelId || m.id,
-      modelName: m.modelName || m.name || m.modelId,
-      providerCode: m.providerCode || m.provider,
-      enable: m.enable === undefined ? m.status === 1 : !!m.enable
+      id: m.id || m.modelId,
+      modelName: m.modelName || m.name || m.modelId || m.id,
+      providerCode: m.providerCode || m.provider || m.modelCode,
+      enable: m.isEnabled !== undefined ? !!m.isEnabled : (m.enable !== undefined ? !!m.enable : m.status === 1)
     }))
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }

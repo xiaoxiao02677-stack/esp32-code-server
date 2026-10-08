@@ -90,13 +90,13 @@ async function load() {
     const data = res.data || {}
     devices.value = (data.list || data || []).map(d => ({
       id: d.id || d.macAddress,
-      name: d.name || d.deviceName,
-      mac: d.macAddress || d.mac,
-      ip: d.ip,
+      name: d.alias || d.name || d.deviceName || (d.macAddress ? '设备 ' + d.macAddress.slice(-5) : '未命名'),
+      mac: d.macAddress || d.mac || d.id,
+      ip: d.ip || '',
       agentId: d.agentId,
-      agentName: d.agentName,
-      online: d.status === 1 || d.online,
-      lastSeen: d.lastSeen || d.updateDate
+      agentName: d.agentName || d.bindUserName,
+      online: d.status === 1 || d.online || !!d.lastConnectedAtTimestamp,
+      lastSeen: d.recentChatTime || d.lastSeen || d.updateDate
     }))
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
@@ -107,7 +107,8 @@ async function doRename() {
   if (!rename.name) { toast('请填写名称', 'error'); return }
   saving.value = true
   try {
-    await adminApi.deviceUpdate(rename.id, { name: rename.name })
+    // cc-console 契约：PUT /device/update/{id} body={alias}
+    await adminApi.deviceUpdate(rename.id, { alias: rename.name })
     toast('已改名'); rename.show = false; load()
   } catch (e) { toast(e.msg || '改名失败', 'error') }
   finally { saving.value = false }
@@ -117,7 +118,8 @@ async function doManualAdd() {
   if (!manual.mac) { toast('请填写 MAC 地址', 'error'); return }
   saving.value = true
   try {
-    await adminApi.deviceManualAdd({ macAddress: manual.mac, name: manual.name || undefined })
+    // cc-console 契约：POST /device/manual-add body={board,appVersion,macAddress}
+    await adminApi.deviceManualAdd({ board: manual.board || 'my-s3-tft', appVersion: manual.appVersion || '1.0.0', macAddress: manual.mac })
     toast('设备已添加'); manual.show = false; manual.mac = ''; manual.name = ''; load()
   } catch (e) { toast(e.msg || '添加失败', 'error') }
   finally { saving.value = false }
@@ -127,7 +129,7 @@ function unbind(d) {
   askConfirm({
     title: '解绑设备', message: `确定解绑「${d.name || d.mac}」吗？`, danger: true,
     onOk: async () => {
-      try { await adminApi.deviceUnbind({ macAddress: d.mac }); toast('已解绑'); load() }
+      try { await adminApi.deviceUnbind({ deviceId: d.id }); toast('已解绑'); load() }
       catch (e) { toast(e.msg || '解绑失败', 'error') }
     }
   })
