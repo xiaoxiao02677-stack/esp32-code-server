@@ -1,6 +1,21 @@
 # admincc 管理台全量迁移验收报告
 
-版本 v1.0 · 日期 2026-10-08 · 依据《将 /cc/ 控制台功能与 API 全量迁移至 admincc 管理台 需求说明 v1.0》
+版本 v1.1 · 日期 2026-10-08 · 依据《将 /cc/ 控制台功能与 API 全量迁移至 admincc 管理台 需求说明 v1.0》
+
+## v1.1 增量（智能体编辑弹窗全量配置）
+
+原控制台「编辑智能体」弹窗 12 项配置参数已全量复制到 admincc（Agents.vue 重写 560 行）：
+- 名字 / 人设提示词（textarea）
+- 大脑（LLM）/ 声音引擎（TTS）/ 音色（TTS 换引擎时音色列表联动刷新）
+- 记忆（5 选项+功能 hint）/ 意图配置（3 选项+功能 hint）/ 语音识别（ASR）
+- 聊天上报（不上报/仅文字/文字+音频）/ 语速（-50~100）
+- 设备绑定区：6 位验证码绑定 / 手动录入 MAC（板型+固件版本+MAC）/ 已绑定设备列表+解绑
+- 契约：payload 10 字段与 cc-console persistAgent 逐字段一致（agentName/llmModelId/ttsModelId/ttsVoiceId/memModelId/intentModelId/asrModelId/chatHistoryConf/systemPrompt/ttsRate）
+- 下拉数据源：/models/names?modelType={LLM,TTS,Memory,ASR,Intent}（与 cc-console loadModelOptions 一致）
+- 音色联动：/models/{ttsModelId}/voices（与 cc-console loadEditVoices 一致）
+- 新建→未保存直接绑定：先自动保存拿 id 再绑定（cc-console bindDeviceByCode 同逻辑）
+
+实测：新建智能体（混合记忆+函数调用）→ 数据库落库字段全部正确；编辑回填 7 下拉+提示词+绑定区全对；删除清理 code=0。
 
 ## 验收总表（对应需求 §8）
 
