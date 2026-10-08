@@ -38,6 +38,12 @@ public class VoiceDTO implements Serializable {
     @Schema(description = "音色级语气指令（编辑回显用）")
     private String voiceInstruction;
 
+    @Schema(description = "动态语气指令开关")
+    private Boolean dynamicInstruction;
+
+    @Schema(description = "动态指令生成 LLM 模型ID")
+    private String instructionLlmId;
+
     // 添加双参数构造函数，保持向后兼容
     public VoiceDTO(String id, String name) {
         this.id = id;
