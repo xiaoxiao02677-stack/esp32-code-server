@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "aoci-fw": {
+      "command": "D:/INSTALL/aoci/aoci.exe",
+      "args": ["--repo", "G:/demo/21_xiaozhi/code/xiaozhi-esp32", "mcp"]
+    },
+    "aoci-server": {
+      "command": "D:/INSTALL/aoci/aoci.exe",
+      "args": ["--repo", "G:/demo/21_xiaozhi/code-server-mirror", "mcp"]
+    },
+    "aoci-hermes": {
+      "command": "D:/INSTALL/aoci/aoci.exe",
+      "args": ["--repo", "G:/demo/21_xiaozhi/hermes-agent-main", "mcp"]
+    }
+  }
+}

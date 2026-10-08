@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="总览">
+  <!-- 总览组：小房子 + 爱心（kawaii 粉彩） -->
+  <rect x="2" y="2" width="44" height="44" rx="14" fill="#FFF7FA" stroke="#FFE3EA" stroke-width="1.5"/>
+  <path d="M24 10 L36.5 20 H33.5 V32.5 A3.5 3.5 0 0 1 30 36 H18 A3.5 3.5 0 0 1 14.5 32.5 V20 H11.5 Z" fill="#FFE3EA" stroke="#FF8FAB" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M24 33.2 C22.9 32.2 21.4 31.2 21.4 30 C21.4 29.2 22 28.7 22.7 28.7 C23.1 28.7 23.6 28.9 24 29.3 C24.4 28.9 24.9 28.7 25.3 28.7 C26 28.7 26.6 29.2 26.6 30 C26.6 31.2 25.1 32.2 24 33.2 Z" fill="#FF8FAB"/>
+</svg>

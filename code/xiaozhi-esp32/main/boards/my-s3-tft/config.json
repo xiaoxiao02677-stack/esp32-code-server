@@ -1,0 +1,17 @@
+{
+    "type": "my-s3-tft",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "my-s3-tft",
+            "sdkconfig_append": [
+                "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
+                "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\"",
+                "CONFIG_YH_PROTOCOL_ENABLED=y",
+                "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
+                "CONFIG_YH_SERVER_PORT=12399",
+                "CONFIG_OTA_URL=\"http://sandyun.top:8002/xiaozhi/ota/\""
+            ]
+        }
+    ]
+}

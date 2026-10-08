@@ -1,0 +1,150 @@
+//go:build linux
+
+package ui
+
+import (
+	"bufio"
+	"context"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"testing"
+	"time"
+)
+
+func TestDiscoverRunningServersResolvesRootFromServerDirectory(t *testing.T) {
+	serverDir := t.TempDir()
+	absoluteRoot := t.TempDir()
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"relative flag", []string{"--repo", "repository"}, filepath.Join(serverDir, "repository")},
+		{"relative equals", []string{"--repo=../repository"}, filepath.Join(serverDir, "..", "repository")},
+		{"current directory", []string{"--repo", "."}, serverDir},
+		{"absolute flag", []string{"--repo", absoluteRoot}, absoluteRoot},
+		{"no flag", nil, serverDir},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// The child stays in a different working directory from this scanner.
+			// Only argv[0] is changed: /proc still observes a real child process.
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			t.Cleanup(cancel)
+			cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestDiscoveryServerProcess$", "--", "mcp")
+			cmd.Args[0] = "aoci"
+			cmd.Args = append(cmd.Args, tc.args...)
+			cmd.Dir = serverDir
+			cmd.Env = append(os.Environ(), "AOCI_DISCOVERY_TEST_PROCESS=1")
+			stdin, err := cmd.StdinPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				_ = stdin.Close()
+				t.Fatal(err)
+			}
+			if err := cmd.Start(); err != nil {
+				_ = stdin.Close()
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				_ = stdin.Close()
+				_ = cmd.Process.Kill()
+				_ = cmd.Wait()
+			})
+			if ready, err := bufio.NewReader(stdout).ReadString('\n'); err != nil || ready != "ready\n" {
+				t.Fatalf("server readiness=%q, err=%v", ready, err)
+			}
+			for _, instance := range discoverRunningServers() {
+				if instance.PID != cmd.Process.Pid {
+					continue
+				}
+				if instance.Root != tc.want {
+					t.Fatalf("root=%q, want server-relative root %q", instance.Root, tc.want)
+				}
+				return
+			}
+			t.Fatal("running server was not discovered")
+		})
+	}
+}
+
+// A server whose working directory was removed reads back as "<dir> (deleted)"
+// from /proc; attaching it would present a repository that no longer exists,
+// so discovery skips it exactly like an unreadable directory.
+func TestDiscoverRunningServersSkipsADeletedWorkingDirectory(t *testing.T) {
+	serverDir := filepath.Join(t.TempDir(), "gone")
+	if err := os.MkdirAll(serverDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	t.Cleanup(cancel)
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestDiscoveryServerProcess$", "--", "mcp", "--repo", "repository")
+	cmd.Args[0] = "aoci"
+	cmd.Dir = serverDir
+	cmd.Env = append(os.Environ(), "AOCI_DISCOVERY_TEST_PROCESS=1")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		_ = stdin.Close()
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		_ = stdin.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = stdin.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	})
+	if ready, err := bufio.NewReader(stdout).ReadString('\n'); err != nil || ready != "ready\n" {
+		t.Fatalf("server readiness=%q, err=%v", ready, err)
+	}
+	if err := os.RemoveAll(serverDir); err != nil {
+		t.Fatal(err)
+	}
+	for _, instance := range discoverRunningServers() {
+		if instance.PID == cmd.Process.Pid {
+			t.Fatalf("a server whose working directory was deleted was attached to root %q", instance.Root)
+		}
+	}
+}
+
+func TestDiscoverRunningServersFiltersProcessOwners(t *testing.T) {
+	procRoot := t.TempDir()
+	processDir := filepath.Join(procRoot, strconv.Itoa(os.Getpid()+1))
+	if err := os.Mkdir(processDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(processDir, "cmdline"), []byte("aoci\x00mcp\x00--repo\x00/repository\x00"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/usr/local/bin/aoci", filepath.Join(processDir, "exe")); err != nil {
+		t.Fatal(err)
+	}
+
+	currentUID := uint32(os.Geteuid())
+	if instances := discoverRunningServersFrom(procRoot, currentUID); len(instances) != 1 {
+		t.Fatalf("current-user process count=%d, want 1", len(instances))
+	}
+	if instances := discoverRunningServersFrom(procRoot, currentUID+1); len(instances) != 0 {
+		t.Fatalf("different-user process count=%d, want 0", len(instances))
+	}
+}
+
+func TestDiscoveryServerProcess(t *testing.T) {
+	if os.Getenv("AOCI_DISCOVERY_TEST_PROCESS") != "1" {
+		return
+	}
+	_, _ = io.WriteString(os.Stdout, "ready\n")
+	_, _ = io.Copy(io.Discard, os.Stdin)
+}

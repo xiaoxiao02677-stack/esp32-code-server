@@ -1,0 +1,838 @@
+{
+  "suite": "sim-user-v1",
+  "design": "sim_test_design_v1.md（高见远 v1，2026-10-05）",
+  "device_id": "14:c1:9f:d1:33:48",
+  "ws_url": "ws://sandyun.top:8001/xiaozhi/v1/",
+  "started": "2026-10-05 04:27:10",
+  "ended": "2026-10-05 04:32:43",
+  "cases": [
+    {
+      "id": "P0-1",
+      "priority": "P0",
+      "verdict": "PASS",
+      "checks": {
+        "tts_stop": true,
+        "sentences>=1": true,
+        "frames>=40": true,
+        "ttfb_audio<=10s": true,
+        "total<=30s": true,
+        "no_fail_phrase": true,
+        "no_error": true,
+        "connect<=5s": true
+      },
+      "metrics": {
+        "ttfb_text_ms": 2091,
+        "ttfb_audio_ms": 2304,
+        "total_ms": 12083,
+        "audio_frames": 153,
+        "audio_bytes": 24105,
+        "sentences": 3,
+        "content_chars": 31
+      },
+      "notes": [],
+      "details": {
+        "turns": [
+          {
+            "query": "你好",
+            "sent_wall": "261005 04:27:13",
+            "stt": [
+              "你好"
+            ],
+            "answer_sentences": [
+              "哈喽~",
+              "我在呢，给你讲个故事还听不听啦？",
+              "童话、冒险还是搞笑的，随便挑一个嘛~"
+            ],
+            "llm_emotions": [
+              "happy"
+            ],
+            "other_msgs": [],
+            "audio_frames": 153,
+            "audio_bytes": 24105,
+            "tail_frames": 0,
+            "ttfb_text_s": 2.091,
+            "ttfb_audio_s": 2.304,
+            "total_s": 12.083,
+            "error": null,
+            "closed": null,
+            "verdict": "PASS",
+            "checks": {
+              "tts_stop": true,
+              "sentences>=1": true,
+              "frames>=40": true,
+              "ttfb_audio<=10s": true,
+              "total<=30s": true,
+              "no_fail_phrase": true,
+              "no_error": true
+            }
+          }
+        ]
+      },
+      "connect_s": 0.373
+    },
+    {
+      "id": "P0-2",
+      "priority": "P0",
+      "verdict": "PASS",
+      "checks": {
+        "T1": "PASS",
+        "T2": "PASS",
+        "T3": "PASS"
+      },
+      "metrics": {
+        "turns": 3
+      },
+      "notes": [
+        "T1: SLOW: total 15.449s > 期望15s"
+      ],
+      "details": {
+        "turns": [
+          {
+            "query": "我叫高见远，我最喜欢的水果是西瓜。",
+            "sent_wall": "261005 04:27:34",
+            "stt": [
+              "我叫高见远，我最喜欢的水果是西瓜"
+            ],
+            "answer_sentences": [
+              "高见远",
+              "西瓜控",
+              "记住了哈，夏天抱着半个瓜用勺子挖着吃，那叫一个爽",
+              "怎么突然自报家门，是要我记着以后给你留瓜吗？"
+            ],
+            "llm_emotions": [
+              "laughing"
+            ],
+            "other_msgs": [],
+            "audio_frames": 214,
+            "audio_bytes": 34155,
+            "tail_frames": 0,
+            "ttfb_text_s": 1.682,
+            "ttfb_audio_s": 1.87,
+            "total_s": 15.449,
+            "error": null,
+            "closed": null,
+            "verdict": "PASS",
+            "checks": {
+              "tts_stop": true,
+              "sentences>=1": true,
+              "frames>=20": true,
+              "ttfb_audio<=10s": true,
+              "total<=30s": true,
+              "no_fail_phrase": true,
+              "no_error": true
+            }
+          },
+          {
+            "query": "我叫什么名字？",
+            "sent_wall": "261005 04:27:53",
+            "stt": [
+              "我叫什么名字？"
+            ],
+            "answer_sentences": [
+              "高见远啊",
+              "刚刚才说的，我又不是金鱼，七秒就忘"
+            ],
+            "llm_emotions": [
+              "confident"
+            ],
+            "other_msgs": [],
+            "audio_frames": 94,
+            "audio_bytes": 14707,
+            "tail_frames": 0,
+            "ttfb_text_s": 1.955,
+            "ttfb_audio_s": 2.138,
+            "total_s": 8.111,
+            "error": null,
+            "closed": null,
+            "verdict": "PASS",
+            "checks": {
+              "tts_stop": true,
+              "sentences>=1": true,
+              "frames>=20": true,
+              "ttfb_audio<=10s": true,
+              "total<=30s": true,
+              "no_fail_phrase": true,
+              "no_error": true,
+              "content含'高见远'": true
+            }
+          },
+          {
+            "query": "我最喜欢的水果是什么？",
+            "sent_wall": "261005 04:28:05",
+            "stt": [
+              "我最喜欢的水果是什么？"
+            ],
+            "answer_sentences": [
+              "西瓜嘛",
+              "你自己讲的",
+              "抱着一整个挖着吃的那种人，对不对？"
+            ],
+            "llm_emotions": [
+              "cool"
+            ],
+            "other_msgs": [],
+            "audio_frames": 114,
+            "audio_bytes": 17197,
+            "tail_frames": 0,
+            "ttfb_text_s": 2.185,
+            "ttfb_audio_s": 2.362,
+            "total_s": 9.838,
+            "error": null,
+            "closed": null,
+            "verdict": "PASS",
+            "checks": {
+              "tts_stop": true,
+              "sentences>=1": true,
+              "frames>=20": true,
+              "ttfb_audio<=10s": true,
+              "total<=30s": true,
+              "no_fail_phrase": true,
+              "no_error": true,
+              "content含'西瓜'": true
+            }
+          }
+        ]
+      },
+      "connect_s": 0.321
+    },
+    {
+      "id": "P0-3",
+      "priority": "P0",
+      "verdict": "PASS",
+      "checks": {
+        "tts_stop": true,
+        "content>=100字(实249)": true,
+        "sentences>=2": true,
+        "frames>=150": true,
+        "total<=120s": true,
+        "no_fail_phrase": true,
+        "no_error": true
+      },
+      "metrics": {
+        "ttfb_text_ms": 1710,
+        "ttfb_audio_ms": 1900,
+        "total_ms": 65833,
+        "audio_frames": 1055,
+        "audio_bytes": 175506,
+        "sentences": 13,
+        "content_chars": 249
+      },
+      "notes": [
+        "SLOW: total 65.833s > 期望60s"
+      ],
+      "details": {
+        "turns": [
+          {
+            "query": "请讲一个关于小机器人第一次看海的小故事，至少讲100个字。",
+            "sent_wall": "261005 04:28:24",
+            "stt": [
+              "请讲一个关于小机器人第一次看海的小故事，至少讲100个字"
+            ],
+            "answer_sentences": [
+              "好嘞",
+              "给你讲一个小机器人看海的故事",
+              "有个小机器人，编号叫零七，它在仓库里出生，见过的天空永远是天花板",
+              "有天它偷溜出去，一路走了三天，终于听见一种很吵又很温柔的声音——哗啦，哗啦",
+              "它挤上最后一道沙丘，眼前一下子全是蓝色的，浪一层层推上来，白沫碎在沙上又退回去",
+              "零七愣了半天，低头看自己冰冷的手，忽然想",
+              "原来世界上有这么软的东西",
+              "它试着往前走，海水没过脚踝，又没过膝盖，咸咸的雾糊满了它的镜头",
+              "它没程序教过它什么叫“喜欢”，可它就那样站着，站到潮水把脚底悄悄埋掉",
+              "零七在日志里只写了一行",
+              "今天，我听见了地球的心跳",
+              "海很大，我很小，但好像没那么怕了",
+              "要继续听它第二天的故事吗？"
+            ],
+            "llm_emotions": [
+              "winking"
+            ],
+            "other_msgs": [],
+            "audio_frames": 1055,
+            "audio_bytes": 175506,
+            "tail_frames": 0,
+            "ttfb_text_s": 1.71,
+            "ttfb_audio_s": 1.9,
+            "total_s": 65.833,
+            "error": null,
+            "closed": null,
+            "verdict": "PASS",
+            "checks": {
+              "tts_stop": true,
+              "content>=100字(实249)": true,
+              "sentences>=2": true,
+              "frames>=150": true,
+              "total<=120s": true,
+              "no_fail_phrase": true,
+              "no_error": true
+            }
+          }
+        ]
+      },
+      "connect_s": 0.329
+    },
+    {
+      "id": "P0-4",
+      "priority": "P0",
+      "verdict": "PASS",
+      "checks": {
+        "no_protocol_error": true,
+        "recovery_pass": true,
+        "no_fail_phrase": true
+      },
+      "metrics": {
+        "ttfb_audio_ms": 2154,
+        "converge_s": 4.979,
+        "frames_after_signal": 75,
+        "audio_frames": 76,
+        "total_ms": null,
+        "recovery_ttfb_audio_ms": 37,
+        "recovery_total_ms": 10707,
+        "recovery_frames": 129
+      },
+      "notes": [
+        "打断分类: listen stop 未打断（观察项，不判 FAIL；5s 观察窗内音频未停）（converge_s=4.979, frames_after_signal=75）",
+        "恢复轮: PASS"
+      ],
+      "details": {
+        "interrupt": {
+          "query": "给我讲一个长长的睡前故事，越长越好。",
+          "signal": "listen stop",
+          "signal_wall": "261005 04:29:42",
+          "ttfb_audio_s": 2.154,
+          "frames_after_signal": 75,
+          "converge_s": 4.979,
+          "classification": "未收敛",
+          "natural_end": false,
+          "main_sentences": [
+            "好呀",
+            "那讲一个长长的，听着听着就睡着了啊"
+          ],
+          "stt": [
+            "给我讲一个长长的睡前故事，越长越好"
+          ],
+          "error": null,
+          "closed": null
+        },
+        "recovery": {
+          "query": "你好，你还在吗？",
+          "sent_wall": "261005 04:29:47",
+          "stt": [
+            "你好，你还在吗？"
+          ],
+          "answer_sentences": [
+            "我在呢",
+            "刚才那个故事还没讲完——小狐狸后来上山当了守钟人，你想接着听吗？"
+          ],
+          "llm_emotions": [
+            "happy"
+          ],
+          "other_msgs": [],
+          "audio_frames": 129,
+          "audio_bytes": 20898,
+          "tail_frames": 0,
+          "ttfb_text_s": 2.067,
+          "ttfb_audio_s": 0.037,
+          "total_s": 10.707,
+          "error": null,
+          "closed": null,
+          "verdict": "PASS",
+          "checks": {
+            "tts_stop": true,
+            "sentences>=1": true,
+            "frames>=20": true,
+            "total<=120s": true,
+            "no_fail_phrase": true,
+            "no_error": true
+          }
+        }
+      },
+      "connect_s": 0.321
+    },
+    {
+      "id": "P0-4b",
+      "priority": "P0-observation",
+      "verdict": "FAIL",
+      "checks": {
+        "no_protocol_error": true,
+        "recovery_pass": false,
+        "no_fail_phrase": true
+      },
+      "metrics": {
+        "ttfb_audio_ms": 1997,
+        "converge_s": 0.011,
+        "frames_after_signal": 3,
+        "audio_frames": 4,
+        "total_ms": null,
+        "recovery_ttfb_audio_ms": 2121,
+        "recovery_total_ms": null,
+        "recovery_frames": 961
+      },
+      "notes": [
+        "打断分类: 打断生效（converge_s=0.011, frames_after_signal=3）",
+        "恢复轮: FAIL ['ERROR: 60s 内未收到 tts stop']"
+      ],
+      "details": {
+        "interrupt": {
+          "query": "给我讲一个长长的睡前故事，越长越好。",
+          "signal": "type=abort",
+          "signal_wall": "261005 04:30:09",
+          "ttfb_audio_s": 1.997,
+          "frames_after_signal": 3,
+          "converge_s": 0.011,
+          "classification": "打断生效",
+          "natural_end": true,
+          "main_sentences": [
+            "行"
+          ],
+          "stt": [
+            "给我讲一个长长的睡前故事，越长越好"
+          ],
+          "error": null,
+          "closed": null
+        },
+        "recovery": {
+          "query": "你好，你还在吗？",
+          "sent_wall": "261005 04:30:14",
+          "stt": [
+            "你好，你还在吗？"
+          ],
+          "answer_sentences": [
+            "在的在的",
+            "我没走，正讲着呢",
+            "刚讲到那个程序员上楼敲了老太太的门，被当成收快递的",
+            "然后呢，他说了句特别憨的话——他说，阿姨，我在对面楼看您的窗户，看了三年了，这几天一直黑着，我有点慌",
+            "老太太愣了半天，眼眶就红了",
+            "她说，孩子，我摔了一跤，起不来，躺了两天才被邻居发现，是我儿女从外地赶回来送我去医院的",
+            "她顿了顿又问，你看了三年，那我阳台那盆花，你知道是什么花吗？",
+            "他说，月季，红的",
+            "每年五月开，开到十月，冬天就剩光秃秃的枝",
+            "老太太听完就哭了",
+            "因为那盆花，是她老伴儿留下的，走了六年了，没人注意过它开不开",
+            "后来他每周都上去一趟，帮她修修屋里坏掉的灯、松松花的土"
+          ],
+          "llm_emotions": [
+            "embarrassed"
+          ],
+          "other_msgs": [],
+          "audio_frames": 961,
+          "audio_bytes": 160192,
+          "tail_frames": 0,
+          "ttfb_text_s": 1.903,
+          "ttfb_audio_s": 2.121,
+          "total_s": null,
+          "error": "60s 内未收到 tts stop",
+          "closed": null,
+          "verdict": "FAIL",
+          "checks": {
+            "tts_stop": false,
+            "sentences>=1": true,
+            "frames>=20": true,
+            "total<=120s": false,
+            "no_fail_phrase": true,
+            "no_error": false
+          }
+        }
+      },
+      "connect_s": 0.32
+    },
+    {
+      "id": "P0-5",
+      "priority": "P0",
+      "verdict": "PASS",
+      "checks": {
+        "s1": "PASS",
+        "s2": "PASS",
+        "s3": "PASS",
+        "0异常断开": true
+      },
+      "metrics": {},
+      "notes": [],
+      "details": {
+        "sessions": [
+          {
+            "session": 1,
+            "connect_s": 0.329,
+            "turn": {
+              "query": "你好",
+              "sent_wall": "261005 04:31:21",
+              "stt": [
+                "你好"
+              ],
+              "answer_sentences": [
+                "哈喽",
+                "我在呢，咋啦？"
+              ],
+              "llm_emotions": [
+                "happy"
+              ],
+              "other_msgs": [],
+              "audio_frames": 55,
+              "audio_bytes": 7602,
+              "tail_frames": 0,
+              "ttfb_text_s": 1.907,
+              "ttfb_audio_s": 2.103,
+              "total_s": 6.181,
+              "error": null,
+              "closed": null,
+              "verdict": "PASS",
+              "checks": {
+                "tts_stop": true,
+                "sentences>=1": true,
+                "frames>=40": true,
+                "ttfb_audio<=10s": true,
+                "total<=30s": true,
+                "no_fail_phrase": true,
+                "no_error": true
+              }
+            },
+            "verdict": "PASS"
+          },
+          {
+            "session": 2,
+            "connect_s": 0.319,
+            "turn": {
+              "query": "你好",
+              "sent_wall": "261005 04:31:37",
+              "stt": [
+                "你好"
+              ],
+              "answer_sentences": [
+                "哈喽",
+                "我在呢，咋啦？"
+              ],
+              "llm_emotions": [
+                "happy"
+              ],
+              "other_msgs": [],
+              "audio_frames": 55,
+              "audio_bytes": 7602,
+              "tail_frames": 0,
+              "ttfb_text_s": 1.818,
+              "ttfb_audio_s": 2.028,
+              "total_s": 5.798,
+              "error": null,
+              "closed": null,
+              "verdict": "PASS",
+              "checks": {
+                "tts_stop": true,
+                "sentences>=1": true,
+                "frames>=40": true,
+                "ttfb_audio<=10s": true,
+                "total<=30s": true,
+                "no_fail_phrase": true,
+                "no_error": true
+              }
+            },
+            "verdict": "PASS"
+          },
+          {
+            "session": 3,
+            "connect_s": 0.316,
+            "turn": {
+              "query": "你好",
+              "sent_wall": "261005 04:31:52",
+              "stt": [
+                "你好"
+              ],
+              "answer_sentences": [
+                "哈喽",
+                "我在呢，咋啦？"
+              ],
+              "llm_emotions": [
+                "happy"
+              ],
+              "other_msgs": [],
+              "audio_frames": 55,
+              "audio_bytes": 7602,
+              "tail_frames": 0,
+              "ttfb_text_s": 1.984,
+              "ttfb_audio_s": 2.188,
+              "total_s": 6.226,
+              "error": null,
+              "closed": null,
+              "verdict": "PASS",
+              "checks": {
+                "tts_stop": true,
+                "sentences>=1": true,
+                "frames>=40": true,
+                "ttfb_audio<=10s": true,
+                "total<=30s": true,
+                "no_fail_phrase": true,
+                "no_error": true
+              }
+            },
+            "verdict": "PASS"
+          }
+        ]
+      }
+    },
+    {
+      "id": "P1-7",
+      "priority": "P1",
+      "verdict": "FAIL",
+      "checks": {
+        "no_protocol_error": true,
+        "audio_stopped<=3s": false,
+        "recovery_pass": true,
+        "no_fail_phrase": true
+      },
+      "metrics": {
+        "ttfb_audio_ms": 1744,
+        "converge_s": 4.955,
+        "frames_after_signal": 79,
+        "audio_frames": 80
+      },
+      "notes": [
+        "打断分类: listen start 未打断（观察项，不判 FAIL；5s 观察窗内音频未停）（converge_s=4.955, frames_after_signal=79）",
+        "恢复轮: PASS"
+      ],
+      "details": {
+        "interrupt": {
+          "query": "给我讲一个长长的睡前故事，越长越好。",
+          "signal": "listen start",
+          "signal_wall": "261005 04:32:09",
+          "ttfb_audio_s": 1.744,
+          "frames_after_signal": 79,
+          "converge_s": 4.955,
+          "classification": "不打断（观察项）",
+          "natural_end": false,
+          "main_sentences": [
+            "好嘞",
+            "那我给你讲个长的，你躺好哈",
+            "从前有个小镇，叫雾岛镇，镇上的人都说，这地方的海会叹气——每到半夜，浪花打上礁石，声音就像有人在轻声说“算了"
+          ],
+          "stt": [
+            "给我讲一个长长的睡前故事，越长越好"
+          ],
+          "error": null,
+          "closed": null
+        },
+        "recovery": {
+          "query": "你好，你还在吗？",
+          "sent_wall": "261005 04:32:14",
+          "stt": [
+            "你好，你还在吗？"
+          ],
+          "answer_sentences": [
+            "在的在的",
+            "一直没走开",
+            "故事刚讲到阿寻把钥匙揣进兜里、回到镇上每天偷偷调快一分钟，你要是想接着听她后来出海找第二间屋那一段，我马上开讲；",
+            "要是困了，也可以先眯着，明天再续"
+          ],
+          "llm_emotions": [
+            "winking"
+          ],
+          "other_msgs": [],
+          "audio_frames": 320,
+          "audio_bytes": 53327,
+          "tail_frames": 0,
+          "ttfb_text_s": 1.635,
+          "ttfb_audio_s": 0.004,
+          "total_s": 21.598,
+          "error": null,
+          "closed": null,
+          "verdict": "PASS",
+          "checks": {
+            "tts_stop": true,
+            "sentences>=1": true,
+            "frames>=20": true,
+            "total<=120s": true,
+            "no_fail_phrase": true,
+            "no_error": true
+          }
+        }
+      },
+      "connect_s": 0.318
+    },
+    {
+      "id": "P1-6",
+      "priority": "P1",
+      "verdict": "FAIL",
+      "checks": {},
+      "metrics": {
+        "error_count": 1,
+        "window": [
+          "261005 04:27:00",
+          "261005 04:33:13"
+        ]
+      },
+      "notes": [],
+      "details": {
+        "samples": [
+          "261005 04:31:14[0.9.7-00000000000000][core.providers.tts.base]-ERROR-audio_play_priority_thread: None received 1000 (OK); then sent 1000 (OK)"
+        ]
+      }
+    },
+    {
+      "id": "P1-8",
+      "priority": "P1",
+      "verdict": "OBSERVED",
+      "checks": {},
+      "metrics": {
+        "present_count": 0
+      },
+      "notes": [],
+      "details": {
+        "observed_connections": 9,
+        "present_count": 0,
+        "detail": [
+          {
+            "case": "P0-1",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-2",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-3",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-4",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-4b",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-5-s1",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-5-s2",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P0-5-s3",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          },
+          {
+            "case": "P1-7",
+            "present": false,
+            "texts": [],
+            "audio_frames": 0,
+            "audio_bytes": 0,
+            "tts_stop": false
+          }
+        ]
+      }
+    }
+  ],
+  "greetings": [
+    {
+      "case": "P0-1",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-2",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-3",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-4",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-4b",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-5-s1",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-5-s2",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P0-5-s3",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    },
+    {
+      "case": "P1-7",
+      "present": false,
+      "texts": [],
+      "audio_frames": 0,
+      "audio_bytes": 0,
+      "tts_stop": false
+    }
+  ],
+  "gate": {
+    "p0_pass": true,
+    "p0": "5/5",
+    "p1": {
+      "P1-6": "FAIL",
+      "P1-7": "FAIL",
+      "P1-8": "observed（0/9 连接有问候推送）"
+    }
+  }
+}

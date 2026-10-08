@@ -1,0 +1,444 @@
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  developerToolkitManifest,
+  type DeveloperToolkitManifest,
+} from "@/lib/developer-toolkit";
+
+export interface ProductTruthIssue {
+  code:
+    | "missing-api-route"
+    | "missing-redirect-target"
+    | "unpublished-package-command"
+    | "misleading-template-download"
+    | "retired-capability-claim"
+    | "stale-style-count"
+    | "toolkit-repository-version-mismatch"
+    | "toolkit-public-state-contradiction";
+  source: string;
+  message: string;
+}
+
+export interface ProductTruthReport {
+  issues: ProductTruthIssue[];
+}
+
+const PUBLIC_PACKAGE_CLAIM_FILES = [
+  "SKILL.md",
+  "app/developers/page.tsx",
+  "components/developers/developers-content.tsx",
+  "components/style-preview/style-use-panel.tsx",
+  "lib/styles/collections.ts",
+  "public/llms.txt",
+] as const;
+
+export async function auditProductTruth(rootDir: string): Promise<ProductTruthReport> {
+  const issues = [
+    ...(await auditApiClaims(rootDir)),
+    ...(await auditRedirectTargets(rootDir)),
+    ...(await auditDeveloperToolkitTruth(rootDir)),
+    ...(await auditUnpublishedPackageCommands(rootDir)),
+    ...(await auditTemplateDownloadClaim(rootDir)),
+    ...(await auditForbiddenPublicClaims(rootDir)),
+    ...(await auditStyleCountClaims(rootDir)),
+  ];
+
+  return {
+    issues: issues.sort((left, right) =>
+      `${left.source}:${left.code}:${left.message}`.localeCompare(
+        `${right.source}:${right.code}:${right.message}`,
+      ),
+    ),
+  };
+}
+
+const TOOLKIT_PACKAGE_FILES = {
+  core: "packages/core/package.json",
+  cli: "packages/cli/package.json",
+  mcp: "packages/mcp/package.json",
+} as const;
+
+export async function auditDeveloperToolkitTruth(
+  rootDir: string,
+  manifest: DeveloperToolkitManifest = developerToolkitManifest,
+): Promise<ProductTruthIssue[]> {
+  const issues: ProductTruthIssue[] = [];
+
+  for (const [capabilityId, source] of Object.entries(TOOLKIT_PACKAGE_FILES)) {
+    const capability = manifest.capabilities.find(
+      ({ id }) => id === capabilityId,
+    );
+    if (!capability?.repositoryVersion) continue;
+
+    const packageJson = JSON.parse(
+      await readFile(path.join(rootDir, source), "utf8"),
+    ) as { version?: unknown };
+
+    if (packageJson.version !== capability.repositoryVersion) {
+      issues.push({
+        code: "toolkit-repository-version-mismatch",
+        source,
+        message:
+          `${capabilityId} manifest repository version `
+          + `${capability.repositoryVersion} does not match package version `
+          + `${String(packageJson.version)}`,
+      });
+    }
+  }
+
+  const publicClaimFiles = [
+    "SKILL.md",
+    "app/developers/page.tsx",
+    "components/developers/developers-content.tsx",
+    "components/style-preview/style-use-panel.tsx",
+    "packages/cli/README.md",
+    "packages/mcp/README.md",
+    "public/llms.txt",
+  ] as const;
+  const publicStateContradiction =
+    /(?:not\s+(?:yet\s+)?published|unpublished|repository[- ]only|尚未发布)/i;
+  const publicPackageClaims = [
+    { id: "cli", pattern: /(?:\bCLI\b|stylekit-cli)/i },
+    { id: "mcp", pattern: /(?:\bMCP\b|stylekit-mcp)/i },
+  ] as const;
+
+  for (const source of publicClaimFiles) {
+    const content = await readFileIfExists(path.join(rootDir, source));
+    if (!content || !publicStateContradiction.test(content)) continue;
+
+    const contradictoryChannels = publicPackageClaims.filter(({ pattern }) =>
+      pattern.test(content),
+    );
+    for (const channel of contradictoryChannels) {
+      const capability = manifest.capabilities.find(
+        ({ id }) => id === channel.id,
+      );
+      if (capability?.publicVersion === null || !capability?.publicVersion) {
+        continue;
+      }
+
+      issues.push({
+        code: "toolkit-public-state-contradiction",
+        source,
+        message:
+          `${channel.id} is marked ${capability.state} at public version `
+          + `${capability.publicVersion}, but this file uses unpublished wording`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Files that can state an HTTP endpoint.
+ *
+ * These claims moved from README.md to docs/API.md, and README.md is now the
+ * Chinese document — pointing this at README.md alone meant the scan parsed
+ * zero claims and passed without checking anything. A guard that cannot fail
+ * is worse than no guard, so scan every file that can carry a claim.
+ */
+const API_CLAIM_SOURCES = ["docs/API.md", "README.md", "README.en.md"] as const;
+
+async function auditApiClaims(rootDir: string): Promise<ProductTruthIssue[]> {
+  const issues: ProductTruthIssue[] = [];
+
+  for (const source of API_CLAIM_SOURCES) {
+    const filePath = path.join(rootDir, source);
+    if (!(await fileExists(filePath))) continue;
+
+    const content = await readFile(filePath, "utf8");
+    const claims = [...content.matchAll(/^(GET|POST|PUT|PATCH|DELETE)\s+(\/api\/[^\s#]+)/gm)];
+
+    for (const claim of claims) {
+      const publicPath = claim[2];
+      const routePath = publicPath
+        .replace(/\{([^}]+)\}/g, "[$1]")
+        .replace(/\?.*$/, "");
+      const relativePath = `app${routePath}/route.ts`;
+
+      if (!(await fileExists(path.join(rootDir, relativePath)))) {
+        issues.push({
+          code: "missing-api-route",
+          source,
+          message: `${claim[1]} ${publicPath} has no ${relativePath}`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+async function auditRedirectTargets(rootDir: string): Promise<ProductTruthIssue[]> {
+  const source = "next.config.ts";
+  const content = await readFile(path.join(rootDir, source), "utf8");
+  const redirects = [
+    ...content.matchAll(
+      /\{\s*source:\s*"([^"]+)",\s*destination:\s*"([^"]+)",\s*permanent:\s*(?:true|false)\s*\}/g,
+    ),
+  ];
+  const issues: ProductTruthIssue[] = [];
+
+  for (const redirect of redirects) {
+    const destination = redirect[2];
+    if (/^https?:\/\//.test(destination)) continue;
+
+    const candidates = pageCandidates(destination);
+    const exists = (
+      await Promise.all(candidates.map((candidate) => fileExists(path.join(rootDir, candidate))))
+    ).some(Boolean);
+
+    if (!exists) {
+      issues.push({
+        code: "missing-redirect-target",
+        source,
+        message: `${redirect[1]} redirects to missing page ${destination}`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+function pageCandidates(publicPath: string): string[] {
+  const withoutQuery = publicPath.replace(/\?.*$/, "").replace(/\/$/, "") || "/";
+  const appPath = withoutQuery.replace(/:([A-Za-z][A-Za-z0-9_]*)/g, "[$1]");
+  const suffix = appPath === "/" ? "" : appPath;
+
+  return [
+    `app${suffix}/page.tsx`,
+    `app/[locale]${suffix}/page.tsx`,
+  ];
+}
+
+async function auditUnpublishedPackageCommands(rootDir: string): Promise<ProductTruthIssue[]> {
+  const packages = [
+    {
+      name: "stylekit-cli",
+      readme: "packages/cli/README.md",
+      commandPattern: /npx\s+(?:-y\s+)?stylekit-cli\b/,
+    },
+    {
+      name: "stylekit-mcp",
+      readme: "packages/mcp/README.md",
+      commandPattern: /npx\s+(?:-y\s+)?stylekit-mcp\b/,
+    },
+  ] as const;
+  const issues: ProductTruthIssue[] = [];
+
+  for (const packageInfo of packages) {
+    const packageReadme = await readFile(path.join(rootDir, packageInfo.readme), "utf8");
+    if (!/not yet published to npm/i.test(packageReadme)) continue;
+
+    for (const source of PUBLIC_PACKAGE_CLAIM_FILES) {
+      const content = await readFile(path.join(rootDir, source), "utf8");
+      if (packageInfo.commandPattern.test(content)) {
+        issues.push({
+          code: "unpublished-package-command",
+          source,
+          message: `${packageInfo.name} is advertised with npx but is not published to npm`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+async function auditTemplateDownloadClaim(rootDir: string): Promise<ProductTruthIssue[]> {
+  // The download route delegates project construction to a helper. Verify both
+  // sides of that contract: the route puts every returned file into the ZIP,
+  // and the helper adds the scaffold plus the template sources and license.
+  // Looking only for the scaffold builder in the route misses this valid split.
+  const downloadRoute = "app/api/templates/[slug]/download/route.ts";
+  const projectHelper = "lib/templates/project.ts";
+  let exportsCompleteProject = false;
+
+  if (
+    await fileExists(path.join(rootDir, downloadRoute)) &&
+    await fileExists(path.join(rootDir, projectHelper))
+  ) {
+    const [routeContent, helperContent] = await Promise.all([
+      readFile(path.join(rootDir, downloadRoute), "utf8"),
+      readFile(path.join(rootDir, projectHelper), "utf8"),
+    ]);
+    const routeBuildsZip =
+      /import\s+JSZip\s+from\s+["']jszip["']/.test(routeContent) &&
+      /getTemplateProject/.test(routeContent) &&
+      /await\s+getTemplateProject\(slug\)/.test(routeContent) &&
+      /Object\.entries\(project\.files\)/.test(routeContent) &&
+      /zip\.file\s*\(/.test(routeContent) &&
+      /binaryFiles\.has\(filePath\)/.test(routeContent);
+    const helperBuildsProject =
+      /collectSourceFiles\(templateRoot\)/.test(helperContent) &&
+      /buildScaffoldFiles\(projectMeta\(entry,\s*slug\)\)/.test(helperContent) &&
+      /withDependencies\(scaffold,\s*dependencies\)/.test(helperContent) &&
+      /files\[projectPath\]\s*=\s*content/.test(helperContent) &&
+      /files\["LICENSE"\]\s*=/.test(helperContent) &&
+      /return\s*\{[\s\S]*?files,[\s\S]*?dependencies,[\s\S]*?license,[\s\S]*?\};/.test(helperContent);
+
+    exportsCompleteProject = routeBuildsZip && helperBuildsProject;
+  }
+
+  if (exportsCompleteProject) return [];
+
+  const translationFiles = [
+    "lib/i18n/translations-en.ts",
+    "lib/i18n/translations-zh.ts",
+  ] as const;
+  const issues: ProductTruthIssue[] = [];
+
+  for (const source of translationFiles) {
+    const content = await readFile(path.join(rootDir, source), "utf8");
+    const label = content.match(/"templates\.download":\s*"([^"]+)"/)?.[1] ?? "";
+    if (!/page\.tsx|source|\u6e90\u7801/i.test(label)) {
+      issues.push({
+        code: "misleading-template-download",
+        source,
+        message: "Template download label \"" + label + "\" does not disclose that only page.tsx source is exported",
+      });
+    }
+  }
+
+  return issues;
+}
+
+/** The two public READMEs: README.md is Chinese, README.en.md is English. */
+const README_SOURCES = ["README.md", "README.en.md"] as const;
+
+/**
+ * Claims each README must never make. Both documents are scanned, in both
+ * languages: README.md is Chinese, so an English-only pattern list would read
+ * it, match nothing, and pass — the failure this guard exists to catch would
+ * have to arrive in English before anyone noticed.
+ *
+ * Product names tend to survive translation, so the English patterns still
+ * apply to the Chinese document; the Chinese patterns cover translated wording.
+ */
+const FORBIDDEN_PUBLIC_CLAIMS = [
+  {
+    patterns: [/\bPrompt builder\b/i, /提示词构建/],
+    message: "README advertises the retired Prompt builder as an active product",
+  },
+  {
+    patterns: [/\bStyle linter\b/i, /风格检查器/, /样式检查器/],
+    message: "README advertises the retired Style linter as an active product",
+  },
+  {
+    patterns: [/everything needed[^\n]*production-ready code/i, /开箱即用[^\n]*生产级代码/],
+    message: "README overstates current content as a production-complete delivery",
+  },
+] as const;
+
+async function auditForbiddenPublicClaims(rootDir: string): Promise<ProductTruthIssue[]> {
+  const issues: ProductTruthIssue[] = [];
+
+  for (const source of README_SOURCES) {
+    const content = await readFile(path.join(rootDir, source), "utf8");
+
+    for (const claim of FORBIDDEN_PUBLIC_CLAIMS) {
+      if (claim.patterns.some((pattern) => pattern.test(content))) {
+        issues.push({
+          code: "retired-capability-claim",
+          source,
+          message: claim.message,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Files that state how many styles the catalogue holds.
+ *
+ * Deliberately a short, hand-picked list rather than a repository-wide grep.
+ * A grep would also hit the changelog ("all 127 styles" was true in June), the
+ * community launch copy, and the GitHub-style demo page, which renders invented
+ * numbers on purpose. Those are records of a moment, not claims about today, and
+ * rewriting them to match would destroy the history the changelog exists to keep.
+ */
+const STYLE_COUNT_CLAIM_FILES = [
+  "README.md",
+  "README.en.md",
+  "SKILL.md",
+  "components/developers/developers-content.tsx",
+  "packages/cli/README.md",
+  "packages/cli/package.json",
+  "packages/mcp/README.md",
+  "packages/mcp/package.json",
+] as const;
+
+/**
+ * "148 design styles", "all 146 styles", and the Chinese "148 种风格".
+ *
+ * Each allows a short run of words between the number and the noun, because
+ * prose puts them there: "148 curated styles" and "148 套精选风格" are how both
+ * READMEs phrased it, and a pattern demanding adjacency matched neither — the
+ * number could have gone stale in either document with this check still green.
+ * Verified against every guarded file: the wider patterns add the missed claims
+ * and match nothing that is not a style count.
+ */
+const STYLE_COUNT_PATTERNS = [
+  /(\d{2,4})\s*\+?\s*(?:[\w-]+\s+){0,2}styles/gi,
+  /(\d{2,4})\s*\+?\s*(?:种|个|款|套)?\s*[^，。；\n]{0,4}?风格/g,
+] as const;
+
+/**
+ * The catalogue grows whenever a style is added, and the number is written into
+ * prose in half a dozen places. It has already drifted: three public surfaces
+ * said 146 and one said 130+ while the registry held 148, because adding a style
+ * updates no strings.
+ *
+ * The MCP tool description is the one that hurt most — it is injected into the
+ * model's context, so a stale number is one the agent quotes back to the user.
+ * That description now reads the count at runtime; this check covers the places
+ * that genuinely cannot: npm descriptions, READMEs, and marketing copy.
+ */
+async function auditStyleCountClaims(rootDir: string): Promise<ProductTruthIssue[]> {
+  const { styles } = await import("@/lib/styles/registry");
+  const actual = styles.length;
+  const issues: ProductTruthIssue[] = [];
+
+  for (const source of STYLE_COUNT_CLAIM_FILES) {
+    const content = await readFileIfExists(path.join(rootDir, source));
+    if (content === null) continue;
+
+    for (const pattern of STYLE_COUNT_PATTERNS) {
+      for (const match of content.matchAll(pattern)) {
+        const claimed = Number(match[1]);
+        const isMinimum = match[0].includes("+");
+        // "130+" claims a floor, so it stays true as the catalogue grows.
+        const ok = isMinimum ? claimed <= actual : claimed === actual;
+        if (ok) continue;
+
+        issues.push({
+          code: "stale-style-count",
+          source,
+          message: `claims ${match[1]}${isMinimum ? "+" : ""} styles but the registry holds ${actual} ("${match[0].trim()}")`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readFileIfExists(filePath: string): Promise<string | null> {
+  try {
+    return await readFile(filePath, "utf8");
+  } catch {
+    return null;
+  }
+}

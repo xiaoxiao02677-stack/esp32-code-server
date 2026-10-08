@@ -1,0 +1,16 @@
+import dynamicImport from "next/dynamic";
+
+export const dynamic = "force-static";
+
+export const metadata = {
+  title: "Masonry Flow Showcase - StyleKit",
+  description: "Live demonstration of Masonry Flow layout style with Pinterest-inspired waterfall card arrangements.",
+};
+
+const ShowcaseContent = dynamicImport(() => import("./_content"), {
+  loading: () => <div className="min-h-screen" />,
+});
+
+export default function MasonryFlowShowcasePage() {
+  return <ShowcaseContent />;
+}

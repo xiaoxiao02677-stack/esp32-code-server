@@ -1,0 +1,565 @@
+import type { DesignStyle } from "./types";
+
+export const cardStack: DesignStyle = {
+  slug: "card-stack",
+  name: "卡片堆叠布局",
+  nameEn: "Card Stack",
+  description:
+    "卡片前后重叠的立体布局，通过 Z 轴层叠和偏移创造深度感，适合轮播、步骤展示、卡组选择。",
+  descriptionEn:
+    "3D layout with overlapping cards, creating depth through Z-axis stacking and offsets. Ideal for carousels, step-by-step displays, and card deck selection.",
+  cover: "/styles/card-stack.svg",
+  styleType: "layout",
+  tags: [],
+  compatibleWith: ["glassmorphism", "neumorphism", "soft-ui", "modern-gradient", "neo-brutalist"],
+  category: "expressive",
+  colors: {
+    primary: "#1a1a2e",
+    secondary: "#f0f0f5",
+    accent: ["#6c5ce7", "#00cec9", "#fd79a8", "#ffeaa7"],
+  },
+  keywords: ["卡片", "堆叠", "立体", "层叠", "轮播", "3D", "expressive", "bold", "vibrant", "表现力"],
+  keywordsEn: ["card stack", "stacked cards", "card deck", "3D cards", "card carousel", "swipeable cards", "z-axis layering", "overlapping cards", "depth effect", "onboarding cards"],
+
+  philosophy: `Card Stack（卡片堆叠布局）是一种利用 Z 轴创造深度感的布局方式，多张卡片前后重叠，形成视觉层次。
+
+核心理念：
+- 深度感知：通过层叠暗示更多内容
+- 焦点引导：最前面的卡片获得最多关注
+- 交互预期：暗示可以翻阅或切换
+- 空间节省：在有限空间展示多个选项
+- 洗牌动感：hover 时牌堆像手持扑克般散开
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Card Stack is a layout approach that creates depth perception using the Z-axis, with multiple cards overlapping front to back to form visual layers.
+
+Core principles:
+- Depth perception: Layering implies more content beneath
+- Focus guidance: The frontmost card receives the most attention
+- Interaction expectation: Implies the ability to flip or switch cards
+- Space efficiency: Display multiple options in limited space
+- Shuffle dynamics: On hover, the deck fans out like holding a hand of cards`,
+
+  doList: [
+    "使用 transform 和 z-index 创建层叠效果",
+    "后方卡片缩小和偏移 scale-95 translate-y-4",
+    "添加渐进的透明度 opacity-80, opacity-60",
+    "支持拖拽或点击切换卡片",
+    "添加流畅的过渡动画 transition-all duration-[400ms]",
+    "限制可见卡片数量（通常 3-5 张）",
+    "提供视觉提示说明可以交互",
+    "group-hover 时底层卡片向两侧散开（不同 rotate 和 translate-x）",
+    "顶层卡片 hover 时显著上浮 + shadow-2xl，模拟揭牌感",
+  ],
+
+  doListEn: [
+    "Use transform and z-index to create stacking effects",
+    "Back cards scale down and offset scale-95 translate-y-4",
+    "Add progressive opacity opacity-80, opacity-60",
+    "Support drag or click to switch cards",
+    "Add smooth transition animations transition-all duration-[400ms]",
+    "Limit visible card count (typically 3-5 cards)",
+    "Provide visual hints indicating interactivity",
+    "On group-hover, back cards fan out to sides (different rotate and translate-x values)",
+    "Top card on hover significantly lifts + shadow-2xl, simulating card reveal feel",
+  ],
+
+  dontList: [
+    "禁止堆叠过多卡片导致混乱",
+    "禁止卡片完全重叠看不出层次",
+    "禁止忽略交互反馈",
+    "禁止动画过于复杂影响性能",
+    "禁止在移动端使用过于复杂的手势",
+    "禁止底层卡片在 hover 时静止不动（缺乏景深感）",
+  ],
+
+  dontListEn: [
+    "Do not stack too many cards causing clutter",
+    "Do not completely overlap cards hiding layer distinction",
+    "Do not ignore interaction feedback",
+    "Do not use overly complex animations affecting performance",
+    "Do not use overly complex gestures on mobile",
+    "Do not leave back cards static on hover (lacks depth perception)",
+  ],
+
+  components: {
+    button: {
+      name: "切换按钮",
+      description: "用于切换卡片的导航按钮，hover 时上浮",
+      code: `<div className="flex items-center gap-4">
+  <button className="
+    w-12 h-12
+    flex items-center justify-center
+    bg-white
+    rounded-full
+    shadow-lg
+    hover:shadow-xl hover:-translate-y-0.5
+    active:scale-90 active:shadow-md
+    transition-all duration-200 ease-out
+  ">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+  <button className="
+    w-12 h-12
+    flex items-center justify-center
+    bg-white
+    rounded-full
+    shadow-lg
+    hover:shadow-xl hover:-translate-y-0.5
+    active:scale-90 active:shadow-md
+    transition-all duration-200 ease-out
+  ">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </button>
+</div>`,
+    },
+    card: {
+      name: "堆叠卡片组",
+      description: "三层堆叠，hover 时底层向两侧散开，顶层揭起",
+      code: `<div className="relative w-80 h-96 group">
+  {/* 底层卡片 */}
+  <div className="absolute inset-0 bg-blue-100 rounded-2xl shadow-sm border border-blue-200 translate-y-8 scale-90 -rotate-3 group-hover:-rotate-6 group-hover:translate-x-5 group-hover:translate-y-12 transition-all duration-[400ms] ease-out" />
+  {/* 中层卡片 */}
+  <div className="absolute inset-0 bg-purple-100 rounded-2xl shadow-md border border-purple-200 translate-y-4 scale-95 rotate-2 group-hover:rotate-5 group-hover:-translate-x-5 group-hover:translate-y-6 transition-all duration-[400ms] ease-out" />
+  {/* 顶层卡片 */}
+  <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-gray-100 p-8 flex flex-col group-hover:-translate-y-6 group-hover:scale-105 group-hover:shadow-2xl transition-all duration-[400ms] ease-out z-10 cursor-grab active:cursor-grabbing">
+    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl mb-6" />
+    <h3 className="text-xl font-bold text-zinc-900 mb-3">Top Card</h3>
+    <p className="text-zinc-500 text-sm">Hover the stack to reveal the deck beneath.</p>
+  </div>
+</div>`,
+    },
+    input: {
+      name: "卡片搜索",
+      description: "在卡片堆中搜索",
+      code: `<div className="relative">
+  <input
+    type="text"
+    placeholder="Search cards..."
+    className="
+      w-full px-5 py-3
+      bg-white/80 backdrop-blur
+      border border-zinc-200
+      rounded-xl
+      text-zinc-900
+      placeholder-zinc-400
+      focus:outline-none focus:ring-2 focus:ring-purple-500/30
+      focus:border-purple-400
+      transition-all duration-200
+    "
+  />
+  <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+</div>`,
+    },
+    nav: {
+      name: "卡片指示器",
+      description: "显示当前卡片位置",
+      code: `<nav className="flex items-center justify-center gap-2">
+  <button className="w-2.5 h-2.5 rounded-full bg-purple-500 transition-all duration-200" />
+  <button className="w-2 h-2 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-all duration-200" />
+  <button className="w-2 h-2 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-all duration-200" />
+  <button className="w-2 h-2 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-all duration-200" />
+</nav>`,
+    },
+    hero: {
+      name: "卡片堆叠展示",
+      description: "完整的卡片堆叠布局，hover 散开",
+      code: `<section className="py-20 px-4 bg-gradient-to-br from-slate-900 to-slate-800 overflow-hidden">
+  <div className="max-w-6xl mx-auto">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl font-bold text-white mb-4">Choose Your Plan</h2>
+      <p className="text-slate-400">Tap or hover to browse, click to select</p>
+    </div>
+
+    <div className="relative h-[420px] flex items-center justify-center group" tabIndex={0}>
+      {/* Card 3 (Back) */}
+      <div className="
+        absolute w-64 sm:w-80 p-6 sm:p-8
+        bg-white rounded-2xl shadow-lg
+        scale-90 translate-y-8 -rotate-3 opacity-60
+        group-hover:rotate-6 group-hover:translate-x-5 sm:group-hover:translate-x-10 group-hover:translate-y-12 group-hover:opacity-80
+        group-focus-within:rotate-6 group-focus-within:translate-x-5 sm:group-focus-within:translate-x-10 group-focus-within:translate-y-12 group-focus-within:opacity-80
+        transition-all duration-[400ms] ease-out z-10
+      ">
+        <div className="w-10 h-10 bg-amber-100 rounded-lg mb-4" />
+        <h3 className="text-lg font-bold text-zinc-900">Enterprise</h3>
+      </div>
+
+      {/* Card 2 (Middle) */}
+      <div className="
+        absolute w-64 sm:w-80 p-6 sm:p-8
+        bg-white rounded-2xl shadow-xl
+        scale-95 translate-y-4 rotate-2 opacity-80
+        group-hover:-rotate-5 group-hover:-translate-x-5 sm:group-hover:-translate-x-10 group-hover:translate-y-8 group-hover:opacity-90
+        group-focus-within:-rotate-5 group-focus-within:-translate-x-5 sm:group-focus-within:-translate-x-10 group-focus-within:translate-y-8 group-focus-within:opacity-90
+        transition-all duration-[400ms] ease-out z-20
+      ">
+        <div className="w-10 h-10 bg-emerald-100 rounded-lg mb-4" />
+        <h3 className="text-lg font-bold text-zinc-900">Professional</h3>
+        <p className="text-zinc-600 text-sm mt-2">Most popular choice</p>
+      </div>
+
+      {/* Card 1 (Front) */}
+      <div className="
+        absolute w-64 sm:w-80 p-6 sm:p-8
+        bg-white rounded-2xl shadow-2xl z-30
+        group-hover:-translate-y-8 group-hover:scale-105 group-hover:shadow-[0_30px_60px_rgba(0,0,0,0.2)]
+        group-focus-within:-translate-y-8 group-focus-within:scale-105 group-focus-within:shadow-[0_30px_60px_rgba(0,0,0,0.2)]
+        transition-all duration-[400ms] ease-out
+        cursor-grab active:cursor-grabbing
+      ">
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg mb-4" />
+        <h3 className="text-xl font-bold text-zinc-900 mb-2">Starter</h3>
+        <p className="text-zinc-600 text-sm mb-4">Perfect for getting started</p>
+        <div className="text-3xl font-bold text-zinc-900 mb-4">
+          $9<span className="text-lg font-normal text-zinc-500">/mo</span>
+        </div>
+        <button className="w-full py-3 bg-zinc-900 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors">
+          Get Started
+        </button>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-center gap-8 mt-8">
+      <button className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full text-white hover:bg-white/20 hover:-translate-y-0.5 active:scale-90 transition-all duration-200">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <div className="flex gap-2">
+        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+        <div className="w-2 h-2 rounded-full bg-white/30" />
+        <div className="w-2 h-2 rounded-full bg-white/30" />
+      </div>
+      <button className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full text-white hover:bg-white/20 hover:-translate-y-0.5 active:scale-90 transition-all duration-200">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Card Stack Global Styles */
+
+/* Stack container */
+.card-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+}
+
+/* Base card in stack */
+.card-stack-item {
+  position: absolute;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stack positions */
+.card-stack-item:nth-child(1) {
+  z-index: 30;
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.card-stack-item:nth-child(2) {
+  z-index: 20;
+  transform: translateY(16px) scale(0.95) rotate(2deg);
+  opacity: 0.8;
+}
+
+.card-stack-item:nth-child(3) {
+  z-index: 10;
+  transform: translateY(32px) scale(0.9) rotate(-3deg);
+  opacity: 0.6;
+}
+
+.card-stack-item:nth-child(n+4) {
+  z-index: 0;
+  transform: translateY(48px) scale(0.85);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Fan out on hover — deck shuffle effect */
+.card-stack:hover .card-stack-item:nth-child(1) {
+  transform: translateY(-24px) scale(1.05);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.card-stack:hover .card-stack-item:nth-child(2) {
+  transform: translateY(32px) scale(0.95) rotate(6deg) translateX(-20px);
+  opacity: 0.9;
+}
+
+.card-stack:hover .card-stack-item:nth-child(3) {
+  transform: translateY(48px) scale(0.9) rotate(-6deg) translateX(20px);
+  opacity: 0.8;
+}
+
+/* Tinder-style swipe */
+.card-stack-swipe .card-stack-item.swiping-left {
+  transform: translateX(-100%) rotate(-10deg);
+  opacity: 0;
+}
+
+.card-stack-swipe .card-stack-item.swiping-right {
+  transform: translateX(100%) rotate(10deg);
+  opacity: 0;
+}
+/* Card Stack Design Tokens */
+:root {
+  --card-stack-primary: #1a1a2e;
+  --card-stack-secondary: #f0f0f5;
+  --card-stack-accent: #6c5ce7;
+  --card-stack-glow: rgba(26, 26, 46, 0.3);
+}
+
+@keyframes card-stack-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-stack-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.card-stack-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-stack-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.05), transparent);
+  pointer-events: none;
+}
+
+.card-stack-card:hover::before {
+  opacity: 1;
+}
+
+.card-stack-gradient {
+  background: linear-gradient(135deg, #1a1a2e, #6c5ce7);
+}
+
+.card-stack-gradient-text {
+  background: linear-gradient(135deg, #1a1a2e, #6c5ce7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-stack-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(26, 26, 46, 0.08);
+}
+
+.card-stack-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.card-stack-animate-in {
+  animation: card-stack-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一位专精于 Card Stack（卡片堆叠布局）的前端开发专家。生成的所有代码都必须严格遵守以下约束。
+
+## 绝对禁止
+
+- 禁止堆叠过多可见卡片（最多 3-5 张）
+- 禁止让卡片完全重叠（必须能看出层次差异）
+- 禁止忽略交互反馈
+- 禁止使用过于复杂的动画
+- 禁止在移动端使用复杂手势
+- 禁止 hover 时后方卡片保持静止不动（会破坏景深错觉）
+
+## 必须遵守
+
+- 使用 transform 处理定位：scale、translateY、rotate
+- 使用 z-index 分层：z-30、z-20、z-10
+- 渐进式透明度：100%、80%、60%
+- 平滑过渡：transition-all duration-[400ms] ease-out
+- 清晰的 hover/active 状态
+- 限制可见卡片数量：最多 3-5 张
+
+## 动效与交互规则
+
+- 洗牌散开：group-hover 时，后方卡片以不同的 rotate 与 translate-x 数值向两侧散开，如同洗一副扑克牌。
+- 立体揭牌：顶层卡片 hover 时应显著上浮（group-hover:-translate-y-6 group-hover:scale-105 group-hover:shadow-2xl），模拟实体卡片被拿起的手感。
+- 平滑回弹：使用 ease-out，让卡片以先快后慢的节奏自然归位。
+- 堆叠若现：hover 时轻微改变后方卡片的透明度，暗示它们仍然存在。
+
+## 堆叠结构
+
+容器：
+- relative 定位并配合 group 类，实现兄弟元素之间的联动
+- flex 居中对齐
+- 固定高度以保持布局稳定
+
+卡片（从前到后）：
+- 卡片 1（最前）：z-30、scale-100、opacity-100
+- 卡片 2（居中）：z-20、scale-95、translateY-4、rotate-2、opacity-80
+- 卡片 3（最后）：z-10、scale-90、translateY-8、rotate(-3)、opacity-60
+
+group-hover 时：
+- 卡片 1：-translate-y-6、scale-105、shadow-2xl
+- 卡片 2：rotate-6、translate-x-(-5)、translate-y-8
+- 卡片 3：-rotate-6、translate-x-5、translate-y-14
+
+## 自检清单
+
+生成代码后请核实：
+1. 卡片通过不同的 scale 与 opacity 呈现出清晰的视觉层次
+2. group-hover 时后方卡片向两侧散开
+3. 顶层卡片 hover 时有明显的上浮效果
+4. 可见卡片最多 3-5 张
+5. 移动端触控目标足够友好`,
+
+  aiRulesEn: `You are a frontend expert specializing in Card Stack layout. All generated code must strictly follow these constraints:
+
+## Absolute Prohibitions
+
+- Do NOT stack too many visible cards (max 3-5)
+- Do NOT overlap cards completely (need visual distinction)
+- Do NOT forget interaction feedback
+- Do NOT use overly complex animations
+- Do NOT use complex gestures on mobile
+- Do NOT leave back cards static during hover (kills depth illusion)
+
+## Must Follow
+
+- Use transform for positioning: scale, translateY, rotate
+- Use z-index for layering: z-30, z-20, z-10
+- Progressive opacity: 100%, 80%, 60%
+- Smooth transitions: transition-all duration-[400ms] ease-out
+- Clear hover/active states
+- Limit visible cards: 3-5 maximum
+
+## Animation & Interaction Rules
+
+- Deck Shuffling: On group-hover, back cards fan out sideways with different rotate + translate-x values, like shuffling a deck of cards.
+- 3D Peeling: Top card on hover should significantly lift (group-hover:-translate-y-6 group-hover:scale-105 group-hover:shadow-2xl), simulating physical card being raised.
+- Smooth Return: Use ease-out so cards snap back naturally from fast to slow.
+- Stack Peek: Slightly change back card opacity on hover to hint their presence.
+
+## Stack Structure
+
+Container:
+- relative position with group class for sibling interactions
+- flex center alignment
+- Fixed height for consistent layout
+
+Cards (front to back):
+- Card 1 (front): z-30, scale-100, opacity-100
+- Card 2 (mid): z-20, scale-95, translateY-4, rotate-2, opacity-80
+- Card 3 (back): z-10, scale-90, translateY-8, rotate(-3), opacity-60
+
+On group-hover:
+- Card 1: -translate-y-6, scale-105, shadow-2xl
+- Card 2: rotate-6, translate-x-(-5), translate-y-8
+- Card 3: -rotate-6, translate-x-5, translate-y-14
+
+## Self-Check
+
+After generating code, verify:
+1. Cards are visually layered with different scale + opacity
+2. group-hover fans back cards out to the sides
+3. Front card lifts dramatically on hover
+4. Max 3-5 visible cards
+5. Mobile-friendly touch targets`,
+
+  examplePrompts: [
+    {
+      title: "定价方案选择",
+      titleEn: "Pricing Plans",
+      description: "堆叠展示不同定价方案",
+      descriptionEn: "Stacked pricing plan cards",
+      prompt: `Create pricing cards with stack layout:
+1. 3 cards stacked: Starter, Pro, Enterprise
+2. Front card fully visible with details
+3. Back cards scaled down, offset, and slightly rotated
+4. On group-hover: back cards fan out sideways with different rotations
+5. Front card lifts with scale-105 and large shadow on hover
+6. Each card: plan name, price, features list, CTA
+7. Navigation arrows on sides with hover feedback
+Dark gradient background, white cards`,
+    },
+    {
+      title: "产品卡组",
+      titleEn: "Product Cards",
+      description: "类似 Tinder 的产品浏览",
+      descriptionEn: "Tinder-like product browsing",
+      prompt: `Create a Tinder-style product card stack:
+1. Stack of product cards (5 cards, 3 visible)
+2. Swipe right to like, left to pass
+3. Each card: product image, name, price, rating
+4. On hover: top card peels up (scale-105, shadow-2xl, -translate-y-6), back cards fan out
+5. Swipe animation with rotation + opacity fade
+6. Undo last action button
+7. Fun, interactive, mobile-friendly design`,
+    },
+    {
+      title: "步骤引导",
+      titleEn: "Step Guide",
+      description: "分步引导的卡片堆叠",
+      descriptionEn: "Step-by-step guide cards",
+      prompt: `Create an onboarding flow with card stack:
+1. 4 step cards stacked
+2. group-hover causes back cards to fan out with rotate + translate-x
+3. Front card lifts with scale-105 and shadow-2xl
+4. Click Next to advance (card slides out with rotation)
+5. Progress indicator dots
+6. Each card: step number, title, illustration, description
+7. Final card has CTA button
+Clean design with duration-[400ms] ease-out transitions`,
+    },
+  ],
+
+  variants: [
+    {
+      id: "card-stack-warm",
+      name: "卡片堆叠布局暖色版",
+      nameEn: "Card Stack Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#23172c",
+        secondary: "#f2f2f6",
+        accent: ["#aa4bd5", "#29baff", "#f78074", "#dbf5a5"],
+      },
+    },
+    {
+      id: "card-stack-cool",
+      name: "卡片堆叠布局冷色版",
+      nameEn: "Card Stack Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#111d2b",
+        secondary: "#d8d8dd",
+        accent: ["#2d70d7", "#02d673", "#e87ad8", "#ffdfbb"],
+      },
+    },
+  ],
+};

@@ -1,0 +1,94 @@
+{
+  "summary": {
+    "total_sessions": 1,
+    "session_errors": [],
+    "total_turns": 3,
+    "turns_pass": 3,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 2229,
+      "p95": 2288,
+      "min": 2107,
+      "max": 2288
+    },
+    "first_sentence_ms": {
+      "p50": 2007,
+      "p95": 2076
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "我爱吃苹果，请记住这句话",
+          "stt": "我爱吃苹果，请记住这句话",
+          "emotion": "relaxed",
+          "sentences": [
+            "记住啦",
+            "你爱吃苹果",
+            "下次聊到吃的我可不会忘咯"
+          ],
+          "audio_frames": 104,
+          "audio_bytes": 15435,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2076,
+          "latency_first_audio_ms": 2288,
+          "latency_total_ms": 8993,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 2,
+          "query": "我刚才说了我爱吃什么？",
+          "stt": "我刚才说了我爱吃什么？",
+          "emotion": "confident",
+          "sentences": [
+            "苹果呀",
+            "你说你爱吃苹果，我可记着呢"
+          ],
+          "audio_frames": 78,
+          "audio_bytes": 11854,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2007,
+          "latency_first_audio_ms": 2229,
+          "latency_total_ms": 7497,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 3,
+          "query": "再考考你：我第一句话说的完整内容是什么？",
+          "stt": "再考考你：我第一句话说的完整内容是什么？",
+          "emotion": "cool",
+          "sentences": [
+            "你第一句原话是\"我爱吃苹果",
+            "请记住这句话\"，一个字都没差吧"
+          ],
+          "audio_frames": 108,
+          "audio_bytes": 17321,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1883,
+          "latency_first_audio_ms": 2107,
+          "latency_total_ms": 8655,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 427,
+      "error": null
+    }
+  ]
+}

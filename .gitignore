@@ -1,0 +1,59 @@
+# ===== 构建产物 =====
+code/xiaozhi-esp32/build/
+code/xiaozhi-esp32/managed_components/
+code/xiaozhi-esp32/sdkconfig.old
+code-server-mirror/manager-api/target/
+code-server-mirror/manager-web/node_modules/
+code-server-mirror/manager-web/dist/
+code-server-mirror/manager-web/dist-*/
+cc-console/node_modules/
+cc-console/dist/
+网页后台/xiaozhi-esp32-server/manager-api/target/
+网页后台/xiaozhi-esp32-server/manager-web/node_modules/
+
+# ===== Python 运行时 =====
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ===== AOCI 运行时（认知资产 aoci.txt/aoci.*.txt 保留上传）=====
+**/.aoci/baseline.json
+**/.aoci/baseline.json.bak
+**/.aoci/ledger.jsonl
+**/.aoci/verify_history/
+**/.aoci/hooks/
+**/.aoci/transactions/
+**/.aoci/drafts/
+**/.aoci/governance/
+**/.aoci/scope-change/
+**/.aoci/local.config.json
+
+# ===== 本地工具与敏感区 =====
+.workbuddy/aoci_ai_key.txt
+.workbuddy/mcp_out/
+.workbuddy/aoci/cache/
+.workbuddy/aoci/results/
+.workbuddy/aoci/stage/
+.workbuddy/git-backup-20261008/
+.workbuddy/scope_*.json
+.workbuddy/ack*.json
+.workbuddy/smoke.log
+.workbuddy/batch1.log
+.workbuddy/full_server.log
+.workbuddy/full_hermes.log
+code/.workbuddy/__pycache__/
+code/.workbuddy/aoci_tmp/
+code/.workbuddy/deploy_tmp/
+code/.workbuddy/archive/
+
+# ===== 大文件/临时 =====
+*.log
+!code-server-mirror/xiaozhi-server/**/*.log
+sftp-test.txt
+node_modules/
+.DS_Store
+Thumbs.db
+
+# ===== 私钥/证书（避免泄露 & 绕过 GitHub push 保护拦截）=====
+aoci-code/third_party/openGauss-connector-go-pq/certs/*.key

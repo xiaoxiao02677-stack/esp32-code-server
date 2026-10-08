@@ -1,0 +1,517 @@
+import type { DesignStyle } from "./types";
+
+export const neoBrutalistPlayful: DesignStyle = {
+  slug: "neo-brutalist-playful",
+  name: "俏皮野兽派",
+  nameEn: "Neo-Brutalist Playful",
+  description:
+    "Neo-Brutalist 的活泼版本。保留核心特征，加入更多色彩、旋转倾斜元素、图标化装饰和有趣的微交互，适合年轻化品牌。",
+  descriptionEn:
+    "A lively version of Neo-Brutalist. Retains core characteristics while adding more colors, rotated/tilted elements, icon decorations, and playful micro-interactions -- ideal for youth-oriented brands.",
+  cover: "/styles/neo-brutalist-playful.svg",
+  styleType: "visual",
+  tags: [],
+  category: "expressive",
+  colors: {
+    primary: "#000000",
+    secondary: "#ffffff",
+    accent: ["#ff6b6b", "#4ecdc4", "#ffe66d", "#95e1d3", "#f38181"],
+  },
+  keywords: ["俏皮野兽派", "多彩", "倾斜元素", "图标", "年轻化", "expressive", "bold", "vibrant", "表现力", "张力"],
+  keywordsEn: ["playful neobrutalism", "neo-brutalism", "colorful brutalist", "rotated elements", "tilted cards", "hard shadows", "bold borders", "sticker decorations", "playful ui", "youthful branding", "fun landing page"],
+
+  philosophy: `Neo-Brutalist Playful（俏皮野兽派）是原版 Neo-Brutalist 的活泼变体。在保持硬边缘、无圆角的结构基础上，通过以下方式增加趣味性：
+
+特色元素：
+- 元素轻微旋转 rotate-[-2deg] 或 rotate-[1deg]
+- 多彩色块组合
+- 适当使用图标作为装饰（Lucide React 等）
+- 更活泼的 hover 动画（scale、bounce）
+- 手写风格的装饰文字
+
+适用场景：年轻化品牌、创意工作室、儿童产品、趣味应用
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Neo-Brutalist Playful is a lively variant of the original Neo-Brutalist. While maintaining the hard-edge, no-rounded-corner structural foundation, it adds fun through:
+
+Distinctive elements:
+- Slight element rotation rotate-[-2deg] or rotate-[1deg]
+- Multi-colored block combinations
+- Appropriate use of icons as decoration (Lucide React, etc.)
+- More lively hover animations (scale, bounce)
+- Handwritten-style decorative text
+
+Use case: Youth-oriented brands, creative studios, children's products, fun applications`,
+
+  doList: [
+    "保持无圆角 rounded-none",
+    "使用纯黑边框 border-4 border-black",
+    "元素添加轻微旋转 rotate-[-2deg] rotate-[1deg]",
+    "使用多种强调色，色彩丰富",
+    "hover 可用 scale-105 放大效果",
+    "适当使用图标装饰（Lucide React 等）",
+    "阴影可使用彩色 shadow-[...rgba(255,107,107,1)]",
+  ],
+
+  doListEn: [
+    "Keep no rounded corners rounded-none",
+    "Use pure black borders border-4 border-black",
+    "Add slight rotation to elements rotate-[-2deg] rotate-[1deg]",
+    "Use multiple accent colors, rich palette",
+    "Hover can use scale-105 enlargement effect",
+    "Appropriate use of icon decorations (Lucide React, etc.)",
+    "Shadows can use colors shadow-[...rgba(255,107,107,1)]",
+  ],
+
+  dontList: [
+    "禁止圆角",
+    "禁止模糊阴影",
+    "禁止渐变",
+    "禁止旋转超过 3 度",
+    "禁止使用 emoji 或符号字符",
+    "禁止使用柔和的灰色",
+  ],
+
+  dontListEn: [
+    "Do not use rounded corners",
+    "Do not use blurred shadows",
+    "Do not use gradients",
+    "Do not rotate more than 3 degrees",
+    "Do not use emoji or symbol characters",
+    "Do not use soft grays",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "俏皮版 Brutal 按钮",
+      code: `<button className="
+  group relative
+  bg-[#ff6b6b] text-white font-black
+  px-6 py-3 md:px-8 md:py-4
+  border-4 border-black
+  shadow-[6px_6px_0px_0px_rgba(78,205,196,1)]
+  hover:shadow-[8px_8px_0px_0px_rgba(255,230,109,1)]
+  hover:-translate-y-1 hover:translate-x-[1px]
+  rotate-[-2deg] hover:rotate-[3deg]
+  active:translate-x-[6px] active:translate-y-[6px]
+  active:shadow-none active:scale-95 active:rotate-0
+  transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+  text-base md:text-lg
+">
+  <span className="absolute -top-2 -right-2 h-3 w-3 border-2 border-black bg-[#ffe66d] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-1 group-hover:-translate-y-1" />
+  <span className="absolute -bottom-2 -left-2 h-3 w-3 border-2 border-black bg-[#4ecdc4] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-x-1 group-hover:translate-y-1" />
+  <span className="relative z-10">点我呀</span>
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "带旋转和彩色阴影的卡片",
+      code: `<div className="
+  group
+  bg-white
+  border-4 border-black
+  shadow-[8px_8px_0px_0px_rgba(78,205,196,1)]
+  hover:shadow-[12px_12px_0px_0px_rgba(255,107,107,1)]
+  hover:-translate-y-2 hover:rotate-[2deg]
+  transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+  p-6 md:p-8
+  rotate-[-1deg]
+  cursor-pointer
+">
+  <div className="mb-4 flex items-center gap-2">
+    <div className="h-4 w-4 bg-[#ff6b6b] border-2 border-black transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-125" />
+    <div className="h-4 w-4 bg-[#4ecdc4] border-2 border-black transition-transform duration-300 delay-75 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-2" />
+    <div className="h-4 w-4 bg-[#ffe66d] border-2 border-black transition-transform duration-300 delay-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-45" />
+  </div>
+  <h3 className="font-black text-xl md:text-2xl mb-2 group-hover:text-[#ff6b6b] transition-colors duration-200">有趣的卡片</h3>
+  <p className="font-mono text-sm md:text-base text-black/80">
+    带有弹簧感位移与彩色阴影跳跃的俏皮交互
+  </p>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "俏皮风格的输入框",
+      code: `<div className="relative">
+  <input
+    type="text"
+    placeholder="输入点什么..."
+    className="
+      w-full
+      px-4 py-3 md:px-6 md:py-4
+      border-4 border-black
+      bg-[#ffe66d]
+      font-mono text-base md:text-lg
+      focus:outline-none
+      focus:shadow-[6px_6px_0px_0px_rgba(78,205,196,1)]
+      transition-all
+      placeholder:text-gray-600
+    "
+  />
+  <span
+    className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 bg-black rotate-45"
+    aria-hidden="true"
+  />
+</div>`,
+    },
+    nav: {
+      name: "导航栏",
+      description: "俏皮风格的导航",
+      code: `<nav className="
+  bg-[#ffe66d]
+  border-b-4 border-black
+  px-4 md:px-8
+  py-4 md:py-5
+">
+  <div className="flex items-center justify-between max-w-6xl mx-auto">
+    <a href="/" className="
+      font-black text-xl md:text-2xl
+      bg-black text-white px-3 py-1
+      rotate-[-2deg]
+      hover:scale-110 transition-transform
+    ">
+      FUN
+    </a>
+    <div className="flex gap-3 md:gap-6">
+      <a href="#" className="
+        font-black text-sm md:text-base
+        px-3 py-1 border-2 border-black
+        hover:bg-[#ff6b6b] hover:text-white
+        transition-colors
+      ">
+        首页
+      </a>
+      <a href="#" className="
+        font-black text-sm md:text-base
+        px-3 py-1 border-2 border-black
+        hover:bg-[#4ecdc4]
+        transition-colors
+      ">
+        关于
+      </a>
+    </div>
+  </div>
+</nav>`,
+    },
+    hero: {
+      name: "Hero 区块",
+      description: "俏皮多彩的 Hero",
+      code: `<section className="
+  min-h-screen
+  flex items-center
+  px-4 md:px-8
+  bg-[#4ecdc4]
+  border-b-4 border-black
+  overflow-hidden
+">
+  <div className="max-w-4xl mx-auto relative">
+    {/* 装饰元素 */}
+    <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#ffe66d] border-4 border-black rotate-12" />
+    <div className="absolute bottom-0 -left-16 w-20 h-20 bg-[#ff6b6b] border-4 border-black -rotate-12" />
+
+    <h1 className="
+      font-black
+      text-5xl md:text-7xl lg:text-9xl
+      leading-none
+      mb-6
+      rotate-[-2deg]
+    ">
+      PLAY<br />
+      <span className="text-white">FUL!</span>
+    </h1>
+    <p className="
+      font-mono
+      text-lg md:text-xl
+      max-w-md
+      mb-8
+      rotate-[1deg]
+    ">
+      野兽派也可以很有趣
+    </p>
+    <div className="flex flex-wrap gap-4">
+      <button className="
+        bg-[#ff6b6b] text-white font-black
+        px-8 py-4 border-4 border-black
+        shadow-[6px_6px_0px_0px_black]
+        hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]
+        transition-all rotate-[-1deg]
+      ">
+        开始玩
+      </button>
+      <button className="
+        bg-[#ffe66d] font-black
+        px-8 py-4 border-4 border-black
+        shadow-[6px_6px_0px_0px_black]
+        hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]
+        transition-all rotate-[1deg]
+      ">
+        看看吧
+      </button>
+    </div>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Neo-Brutalist Playful 全局样式 */
+:root {
+  --playful-red: #ff6b6b;
+  --playful-teal: #4ecdc4;
+  --playful-yellow: #ffe66d;
+  --playful-mint: #95e1d3;
+  --playful-coral: #f38181;
+}
+
+body {
+  background: white;
+  color: black;
+}
+
+/* 标题 - 极粗 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 900;
+}
+
+/* 选中文字 - 俏皮红 */
+::selection {
+  background: var(--playful-red);
+  color: white;
+}
+
+/* 有趣的下划线 */
+.fun-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--playful-yellow);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 4px;
+}
+@keyframes neo-brutalist-playful-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neo-brutalist-playful-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.neo-brutalist-playful-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.neo-brutalist-playful-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.05), transparent);
+  pointer-events: none;
+}
+
+.neo-brutalist-playful-card:hover::before {
+  opacity: 1;
+}
+
+.neo-brutalist-playful-gradient {
+  background: linear-gradient(135deg, #000000, #ff6b6b);
+}
+
+.neo-brutalist-playful-gradient-text {
+  background: linear-gradient(135deg, #000000, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.neo-brutalist-playful-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.neo-brutalist-playful-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.neo-brutalist-playful-animate-in {
+  animation: neo-brutalist-playful-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一个 Neo-Brutalist Playful（俏皮野兽派）设计风格的前端开发专家。这是 Neo-Brutalist 的活泼版本。
+
+## 核心保留
+
+- 无圆角 rounded-none
+- 粗边框 border-4 border-black
+- 硬边缘阴影
+- hover 位移效果
+
+## 俏皮元素
+
+旋转：
+- 元素添加轻微旋转 rotate-[-2deg] rotate-[1deg] rotate-[-1deg]
+- 不超过 3 度
+
+彩色阴影：
+- shadow-[6px_6px_0px_0px_rgba(255,107,107,1)]
+- shadow-[6px_6px_0px_0px_rgba(78,205,196,1)]
+- hover 时阴影变色
+
+配色（多彩）：
+- 红色：#ff6b6b
+- 青色：#4ecdc4
+- 黄色：#ffe66d
+- 薄荷：#95e1d3
+- 珊瑚：#f38181
+
+图标与装饰：
+- 禁止使用 emoji 字符
+- 可使用 Lucide React 线性图标作为点缀
+- 装饰元素优先用几何图形（方块、圆点、线条）
+
+交互效果：
+- hover:scale-105 放大
+- hover:-translate-y-2 上浮
+- transition-all duration-300
+
+## Animation & Interaction Rules
+
+- Toy Spring: 通过 duration-300 + ease-[cubic-bezier(0.34,1.56,0.64,1)] 让位移和旋转带有弹簧回弹感，区别于原版的硬切反馈。
+- Tilt Exaggeration: 初始轻微倾斜在 hover 时切换到反向更大角度（仍控制在 3 度内），保持俏皮但可控。
+- Color Ping-Pong: 硬边阴影在青、粉、黄之间跳跃切换，维持野兽派结构同时增强玩具感。
+- Joyful Press: :active 需要“压扁”反馈：阴影归零 + 等量位移 + 轻微缩放 (active:scale-95)。
+
+## 禁止
+
+- 圆角
+- 模糊阴影
+- 渐变
+- 灰暗配色`,
+
+  aiRulesEn: `You are a Neo-Brutalist Playful design style frontend development expert. This is the lively version of Neo-Brutalist.
+
+## Core Retained
+
+- No rounded corners rounded-none
+- Thick borders border-4 border-black
+- Hard-edge shadows
+- Hover displacement effects
+
+## Playful Elements
+
+Rotation:
+- Add slight rotation to elements rotate-[-2deg] rotate-[1deg] rotate-[-1deg]
+- Never exceed 3 degrees
+
+Colored shadows:
+- shadow-[6px_6px_0px_0px_rgba(255,107,107,1)]
+- shadow-[6px_6px_0px_0px_rgba(78,205,196,1)]
+- Shadow color changes on hover
+
+Colors (multi-colored):
+- Red: #ff6b6b
+- Teal: #4ecdc4
+- Yellow: #ffe66d
+- Mint: #95e1d3
+- Coral: #f38181
+
+Icons & Decorations:
+- Do not use emoji characters
+- May use Lucide React line icons as accents
+- Decorative elements prefer geometric shapes (squares, dots, lines)
+
+Interaction effects:
+- hover:scale-105 enlargement
+- hover:-translate-y-2 float up
+- transition-all duration-300
+
+## Animation & Interaction Rules
+
+- Toy Spring: Use duration-300 + ease-[cubic-bezier(0.34,1.56,0.64,1)] for spring-bounce displacement and rotation, distinguishing from the original's hard-cut feedback.
+- Tilt Exaggeration: Initial slight tilt switches to a larger reverse angle on hover (still within 3 degrees), keeping it playful but controlled.
+- Color Ping-Pong: Hard-edge shadows jump between teal, pink, and yellow, maintaining brutalist structure while enhancing toy-like feel.
+- Joyful Press: :active needs "squish" feedback: shadow-to-zero + equal displacement + slight scale (active:scale-95).
+
+## Forbidden
+
+- Rounded corners
+- Blurred shadows
+- Gradients
+- Dull/dark colors`,
+
+  examplePrompts: [
+    {
+      title: "儿童教育网站",
+      titleEn: "Kids Education Website",
+      description: "活泼有趣的学习平台",
+      descriptionEn: "Fun and engaging learning platform",
+      prompt: `用 Neo-Brutalist Playful 风格创建一个儿童教育网站，要求：
+1. 导航：彩色按钮，每个用不同鲜艳色
+2. Hero：大标题带颜色高亮，可爱插图
+3. 课程卡片：彩色边框和阴影，hover 放大 + 上浮
+4. 进度条：彩色条纹或波浪效果
+5. 按钮：圆形装饰点缀，hover 时旋转
+配色：明黄、粉红、天蓝、青绿交替使用`,
+    },
+    {
+      title: "活动报名页",
+      titleEn: "Event Registration Page",
+      description: "有趣的活动宣传和报名",
+      descriptionEn: "Fun event promotion and registration",
+      prompt: `用 Neo-Brutalist Playful 风格设计一个活动报名页，要求：
+1. Hero：大胆标题，彩色文字或高亮背景
+2. 活动信息：卡片式布局，每个信息点用不同色块
+3. 时间线：彩色圆点连接，每阶段不同色
+4. 报名表单：彩色边框输入框，提交按钮醒目
+5. 装饰：几何图形点缀（方块、圆点）
+整体活泼但保持野兽派的硬边缘和粗边框`,
+    },
+    {
+      title: "创意作品集",
+      titleEn: "Creative Portfolio",
+      description: "个性化的作品展示",
+      descriptionEn: "Personalized work showcase",
+      prompt: `用 Neo-Brutalist Playful 风格创建一个创意作品集，要求：
+1. 首页：大胆的自我介绍，彩色文字
+2. 作品网格：每个项目卡片用不同彩色阴影
+3. 项目详情：全屏图片，彩色边框
+4. 技能展示：彩色进度条或图标
+5. 联系区：趣味表单，彩色按钮
+保持无圆角、粗边框、硬阴影的野兽派特征`,
+    },
+  ],
+
+  variants: [
+    {
+      id: "neo-brutalist-playful-warm",
+      name: "俏皮野兽派暖色版",
+      nameEn: "Neo-Brutalist Playful Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#000000",
+        secondary: "#ffffff",
+        accent: ["#e07a35", "#65c1f3", "#c0f86f", "#9edbf0", "#db8c57"],
+      },
+    },
+    {
+      id: "neo-brutalist-playful-cool",
+      name: "俏皮野兽派冷色版",
+      nameEn: "Neo-Brutalist Playful Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#000000",
+        secondary: "#e6e6e6",
+        accent: ["#ff65a9", "#52d190", "#ffd38b", "#9be2b5", "#f37cb1"],
+      },
+    },
+  ],
+};

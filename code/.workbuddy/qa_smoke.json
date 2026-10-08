@@ -1,0 +1,52 @@
+{
+  "summary": {
+    "total_sessions": 1,
+    "session_errors": [],
+    "total_turns": 1,
+    "turns_pass": 1,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 2194,
+      "p95": 2194,
+      "min": 2194,
+      "max": 2194
+    },
+    "first_sentence_ms": {
+      "p50": 1982,
+      "p95": 1982
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "冒烟测试，你好",
+          "stt": "冒烟测试，你好",
+          "emotion": "happy",
+          "sentences": [
+            "哈喽",
+            "我在呢，这不刚冒烟就冒出来了嘛，笑死",
+            "你这测试测得我都有点小紧张了，说吧，想让我干啥？"
+          ],
+          "audio_frames": 182,
+          "audio_bytes": 29449,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1982,
+          "latency_first_audio_ms": 2194,
+          "latency_total_ms": 13900,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 473,
+      "error": null
+    }
+  ]
+}

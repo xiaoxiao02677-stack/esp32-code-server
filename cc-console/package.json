@@ -1,0 +1,20 @@
+{
+  "name": "cc-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小智 API 控制台（独立版，Kawaii Minimal + stylekit 动效）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check:contract": "python scripts/check_contract.py --report contract/check-report.json"
+  },
+  "dependencies": {
+    "sm-crypto": "^0.3.13",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.2.0"
+  }
+}

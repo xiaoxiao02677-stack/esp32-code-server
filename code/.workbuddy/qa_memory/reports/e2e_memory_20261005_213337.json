@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "case": "A6",
+      "verdict": "FAIL",
+      "checks": {
+        "对话连接正常": true,
+        "两轮均有回复": false,
+        "无失败话术": true,
+        "/memory/agents 调用成功": true,
+        "QA Agent 引擎为 mem0ai": true,
+        "available=false 徽标": true
+      },
+      "notes": [
+        "mem0 日志尾部: iders.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key\n261005 05:13:47[0.9.7-00000000000000][core.providers.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key",
+        "QA Agent VO: {'agent_id': '21e2e000000000000000000000000001', 'name': 'QA-mem0-测试', 'engine': 'mem0ai', 'available': False, 'fact_count': 0, 'pending_count': 0}"
+      ],
+      "details": {
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "你好呀"
+              ],
+              "stt": [
+                "你好呀，跟我打个招呼吧"
+              ],
+              "audio_frames": 22,
+              "emotion": "happy",
+              "tts_stop": false,
+              "total_s": 6.19
+            },
+            {
+              "sentences": [],
+              "stt": [
+                "今天天气怎么样？"
+              ],
+              "audio_frames": 0,
+              "emotion": "neutral",
+              "tts_stop": false,
+              "total_s": 3.47
+            }
+          ]
+        },
+        "agents_vo": [
+          {
+            "agent_id": "21e2e000000000000000000000000001",
+            "name": "QA-mem0-测试",
+            "engine": "mem0ai",
+            "available": false,
+            "fact_count": 0,
+            "pending_count": 0
+          }
+        ]
+      }
+    }
+  ],
+  "started": "2026-10-05 21:31:34",
+  "ended": "2026-10-05 21:33:37"
+}

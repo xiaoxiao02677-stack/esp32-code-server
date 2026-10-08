@@ -1,0 +1,174 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { X, LogOut, ExternalLink } from "lucide-react";
+import { adminNavItems } from "@/lib/admin/nav";
+import { useAdminSidebar } from "./admin-sidebar-provider";
+import { prefetchAdminView, prefetchCommonAdminViews } from "@/lib/swr/admin-prefetch";
+
+export function AdminSidebar() {
+  const pathname = usePathname();
+  const { open, close } = useAdminSidebar();
+  const router = useRouter();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      close();
+      document.getElementById("admin-sidebar-toggle")?.focus();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, close]);
+
+  useEffect(() => {
+    void prefetchCommonAdminViews();
+  }, []);
+
+  // Unresolved reports are the one queue that needs answering rather than
+  // browsing, so the count comes to the maintainer instead of waiting to be
+  // discovered. Polled slowly: a report is not urgent to the minute, and the
+  // console stays open for long stretches.
+  const [openReports, setOpenReports] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetch("/api/admin/community-reports?status=open")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { total?: number } | null) => {
+          if (!cancelled && typeof data?.total === "number") {
+            setOpenReports(data.total);
+          }
+        })
+        .catch(() => {});
+
+    void load();
+    const timer = setInterval(load, 120_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/auth", { method: "DELETE" });
+    router.push("/admin-login");
+    router.refresh();
+  };
+
+  const itemClassName =
+    "group flex h-9 items-center gap-3 rounded-md px-3 text-sm font-normal transition-colors";
+
+  return (
+    <>
+      {open ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm lg:hidden"
+          onClick={close}
+          aria-label="关闭侧边栏"
+        />
+      ) : null}
+
+      <aside
+        id="admin-sidebar"
+        aria-label="管理后台"
+        className={`fixed left-0 top-0 z-50 flex h-full w-64 flex-col bg-[var(--admin-rail)] shadow-[1px_0_0_0_var(--admin-border-soft)] transition-[transform,visibility] duration-200 lg:visible lg:translate-x-0 ${
+          open ? "visible translate-x-0" : "invisible -translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between px-4 shadow-[0_1px_0_0_var(--admin-border-soft)]">
+          <Link
+            href="/admin/operations"
+            className="flex min-w-0 items-center gap-2.5 rounded-md px-1 py-1"
+            onClick={close}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-foreground text-[13px] font-semibold text-background shadow-[var(--admin-shadow-border)]">
+              S
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium leading-5">
+                StyleKit
+              </span>
+              <span className="block text-xs text-muted">管理后台</span>
+            </span>
+          </Link>
+          <button
+            ref={closeButtonRef}
+            onClick={close}
+            className="rounded-md p-2 text-muted transition-colors hover:bg-[var(--admin-hover)] hover:text-foreground lg:hidden"
+            aria-label="关闭侧边栏"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav aria-label="管理后台导航" className="flex-1 space-y-1 px-3 py-4">
+          {adminNavItems.map((item) => {
+            if (item.external) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={close}
+                  className={`${itemClassName} text-muted hover:bg-[var(--admin-hover)] hover:text-foreground`}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                </a>
+              );
+            }
+
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={close}
+                aria-current={isActive ? "page" : undefined}
+                onMouseEnter={() => { router.prefetch(item.href); void prefetchAdminView(item.href); }}
+                onFocus={() => { router.prefetch(item.href); void prefetchAdminView(item.href); }}
+                className={`${itemClassName} ${
+                  isActive
+                    ? "bg-[var(--admin-hover)] text-foreground"
+                    : "text-muted hover:bg-[var(--admin-hover)] hover:text-foreground"
+                }`}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {item.href === "/admin/community-reports" && openReports > 0 ? (
+                  <span
+                    className="shrink-0 rounded-full bg-foreground px-1.5 text-[10px] font-medium leading-4 text-background"
+                    aria-label={`${openReports} 条待处理`}
+                  >
+                    {openReports}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-3 shadow-[0_-1px_0_0_var(--admin-border-soft)]">
+          <button
+            onClick={handleLogout}
+            className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-sm font-normal text-muted transition-colors hover:bg-[var(--admin-hover)] hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            退出登录
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}

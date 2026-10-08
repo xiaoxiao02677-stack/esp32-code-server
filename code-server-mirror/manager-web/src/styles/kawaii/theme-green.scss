@@ -1,0 +1,59 @@
+// ============================================================
+// Kawaii 设计系统 —— 薄荷绿主题覆盖层（P1-7 双主题）
+// 依据：交付报告 P1 第 7 条「theme P1 绿/粉主题切换」
+//
+// 使用方式：
+//   - 由 ThemeToggle.vue（components/layout）在 <html>/<body> 上
+//     切换 .theme-green class；未挂载该 class 时本文件零作用，
+//     默认粉彩主题（tokens.scss :root）保持不变。
+//   - 覆盖语义：同名 --kawaii-* 变量按「主色 #7BC8A4 薄荷绿系」
+//     自拟取值，与粉彩主题保持同一饱和度档位（ pastel，
+//     无深色底 / 无霓虹发光 / 无荧光高饱和，PRD §4.1 约束不变）。
+//   - 作用域为 document 级 .theme-green（定义在 html 与 body 上，
+//     CSS 变量自然向下级联到全部组件）；class 选择器特异性高于
+//     :root，因此无论样式加载顺序均生效。
+//
+// 不在本文件重声明的 token（形状/字体/间距/动效/状态色）：
+//   - success/warning/danger/info/secondary/accent-*：状态色为
+//     语义色，跨主题不变（success 本就是薄荷绿，避免与绿主题
+//     主色撞车，保持原值）。
+//   - radius / space / duration / ease / font-*：与主题色无关。
+// ============================================================
+
+.theme-green {
+  // ---------- 背景与面板（奶白粉 → 奶白薄荷）----------
+  --kawaii-bg: #F2FBF6;                 // 页面底色（奶白薄荷）
+  --kawaii-surface: #FFFFFF;            // 卡片/面板/弹窗（不变，白底为 AA 基准）
+  --kawaii-surface-2: #E9F7EF;          // 表头/次级面板（对应粉彩 #FFF0F4 档）
+  --kawaii-surface-3: #D2EDDF;          // 选中项/悬浮更深态（对应 #FFE3EA 档）
+
+  // ---------- 主色（蜜桃粉 → 薄荷绿 #7BC8A4 系）----------
+  --kawaii-primary: #7BC8A4;            // 主按钮/选中/链接
+  --kawaii-primary-hover: #62B88F;      // 主色悬停（明度 -6% 档，同粉彩 hover 策略）
+  --kawaii-primary-active: #4FA57E;     // 主色按压
+  --kawaii-primary-light: #D2EDDF;      // 主色浅底（对应 #FFE3EA 档）
+  --kawaii-primary-focus: rgba(123, 200, 164, 0.25); // 主色焦点环
+  --kawaii-on-primary: #FFFFFF;         // 主色上的文字
+  // 对比度：#7BC8A4 上白字约 2.6:1 —— 与粉彩 #FF8FAB（白字约 2.4:1）
+  // 同档，Element 主按钮白字沿用既有约定，不单独加约束。
+
+  // ---------- 文字（灰粉 → 灰绿，保持 AA ≥ 4.5:1 对 #FFFFFF）----------
+  --kawaii-text: #3E4B45;               // 主文字（白底对比度 ≈ 10.5:1）
+  --kawaii-text-secondary: #5E6E64;     // 次文字（白底对比度 ≈ 5.4:1，AA 达标）
+  --kawaii-text-placeholder: #9FB0A6;   // 占位符（仅 placeholder，豁免 AA，同粉彩档）
+
+  // ---------- 边框与阴影（粉彩边框 → 薄荷边框，投影色随主色换绿）----------
+  --kawaii-border: #D8EDDF;             // 绿彩边框（对应 #F5D8E0 档）
+  --kawaii-border-strong: #C2E0CC;      // 输入框等更清晰边（对应 #F2C4D1 档）
+  --kawaii-shadow: 0 4px 16px rgba(123, 200, 164, 0.14);
+  --kawaii-shadow-md: 0 6px 24px rgba(123, 200, 164, 0.18);
+  --kawaii-shadow-hover: 0 6px 18px rgba(123, 200, 164, 0.2);
+  --kawaii-shadow-inset: inset 0 1px 2px rgba(123, 200, 164, 0.08);
+}
+
+// body 上的兜底背景色切换（布局根容器使用 var(--kawaii-bg)，
+// 此处仅保证滚动条外溢区域在切主题后即时跟色，避免 1 帧闪粉）
+html.theme-green,
+body.theme-green {
+  background-color: #F2FBF6;
+}

@@ -1,0 +1,357 @@
+import type { DesignStyle } from "./types";
+
+export const steampunk: DesignStyle = {
+  slug: "steampunk",
+  name: "蒸汽朋克",
+  nameEn: "Steampunk",
+  description:
+    "维多利亚时代工业机械美学，黄铜与铜质金属元素、齿轮机关装饰、蒸汽管道铆钉细节。适合复古科幻、工业风格、创意展示项目。",
+  descriptionEn:
+    "Victorian-era industrial machinery aesthetics with brass and copper metallic elements, gear mechanism decorations, and steam pipe rivet details. Ideal for retro sci-fi, industrial style, and creative showcase projects.",
+  cover: "/styles/steampunk.svg",
+  styleType: "visual",
+  tags: ["retro", "high-contrast"],
+  category: "expressive",
+  colors: {
+    primary: "#b5a642",
+    secondary: "#3d2b1f",
+    accent: ["#b87333", "#f5f0e1", "#4a4a4a", "#5a9025"],
+  },
+  keywords: ["蒸汽朋克", "齿轮", "黄铜", "铜质", "工业", "发条", "维多利亚", "铆钉", "expressive", "bold"],
+  keywordsEn: ["steampunk", "steampunk ui", "Victorian industrial", "brass and copper", "gears", "clockwork", "retro sci-fi", "retro futurism", "mechanical design", "rivets", "industrial aesthetic"],
+
+  philosophy: `Steampunk 风格源自维多利亚时代工业革命的美学想象，通过黄铜/铜质金属质感、齿轮机关元素和精密的机械细节创造复古未来感。
+
+核心理念：
+- 金属质感：黄铜与铜质为核心色调，呈现温暖的金属光泽
+- 机械装饰：齿轮、管道、铆钉等工业元素融入界面设计
+- 维多利亚优雅：使用衬线字体和装饰性边框保持古典优雅
+- 做旧纹理：深棕色背景与泛黄纸张色营造年代感
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Steampunk style originates from the aesthetic imagination of the Victorian-era Industrial Revolution, creating a retro-futuristic feel through brass/copper metallic textures, gear mechanism elements, and precision mechanical details.
+
+Core principles:
+- Metallic texture: Brass and copper as core color tones, presenting warm metallic luster
+- Mechanical decoration: Gears, pipes, rivets, and other industrial elements integrated into interface design
+- Victorian elegance: Serif fonts and ornamental borders maintain classical elegance
+- Aged texture: Dark brown backgrounds and yellowed paper tones create a period atmosphere`,
+
+  doList: [
+    "背景使用深棕色 bg-[#3d2b1f] 或 bg-[#2a1f15]",
+    "使用 shadow-[0_0_15px_rgba(181,166,66,0.3)] 创造黄铜光泽效果",
+    "边框使用铜色调 border border-[#b87333]/50",
+    "文字使用奶油色 text-[#f5f0e1] 或黄铜色 text-[#b5a642]",
+    "使用装饰性边框和铆钉样式圆点元素",
+    "按钮使用黄铜色渐变 bg-gradient-to-b from-[#b5a642] to-[#8a7d32]",
+    "使用 font-serif 衬线字体体现维多利亚风格",
+  ],
+
+  doListEn: [
+    "Use dark brown backgrounds bg-[#3d2b1f] or bg-[#2a1f15]",
+    "Use shadow-[0_0_15px_rgba(181,166,66,0.3)] for brass luster effects",
+    "Use copper-toned borders border border-[#b87333]/50",
+    "Use cream text text-[#f5f0e1] or brass text text-[#b5a642]",
+    "Use ornamental borders and rivet-style dot elements",
+    "Use brass gradient on buttons bg-gradient-to-b from-[#b5a642] to-[#8a7d32]",
+    "Use font-serif serif fonts for Victorian style",
+  ],
+
+  dontList: [
+    "禁止使用纯白色背景或现代极简风格",
+    "禁止使用霓虹色或高饱和度荧光色",
+    "禁止使用扁平无质感的设计",
+    "禁止使用现代无衬线字体作为标题",
+    "禁止使用过大圆角 rounded-2xl, rounded-3xl",
+    "禁止使用冷色调蓝色/紫色作为主色",
+  ],
+
+  dontListEn: [
+    "No pure white backgrounds or modern minimalist style",
+    "No neon or highly saturated fluorescent colors",
+    "No flat, textureless design",
+    "No modern sans-serif fonts for headings",
+    "No overly large rounded corners rounded-2xl, rounded-3xl",
+    "No cool-toned blue/purple as primary colors",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "蒸汽朋克风格的黄铜机械按钮",
+      code: `// Brass Primary
+<button className="px-6 py-3 bg-gradient-to-b from-[#b5a642] via-[#d4c85c] to-[#8a7d32] bg-[length:100%_180%] bg-[position:0_0] text-[#2a1f15] rounded-sm border border-[#d4c85c] shadow-[0_6px_0_#5c4a1f,inset_0_1px_1px_rgba(255,255,255,0.35)] hover:bg-[position:0_100%] hover:shadow-[0_6px_0_#5c4a1f,0_0_20px_rgba(181,166,66,0.55)] hover:-translate-y-[1px] active:translate-y-[6px] active:shadow-[0_0_0_#5c4a1f,inset_0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-100 ease-linear font-serif font-bold uppercase tracking-wider">
+  Engage
+</button>
+
+// Copper Outline
+<button className="px-6 py-3 bg-transparent border-2 border-[#b87333] text-[#b87333] rounded-sm shadow-[0_0_10px_rgba(184,115,51,0.2)] hover:bg-[#b87333]/10 hover:shadow-[0_0_20px_rgba(184,115,51,0.45)] hover:-translate-y-[1px] active:translate-y-[2px] transition-all duration-100 ease-linear font-serif font-bold uppercase tracking-wider">
+  Activate
+</button>
+
+// Iron Variant
+<button className="px-6 py-3 bg-gradient-to-b from-[#5a5a5a] to-[#3a3a3a] text-[#f5f0e1] rounded-sm border border-[#6a6a6a] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.3)] hover:from-[#6a6a6a] hover:to-[#4a4a4a] active:translate-y-[2px] transition-all duration-100 ease-linear font-serif font-bold uppercase tracking-wider">
+  Deploy
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "蒸汽朋克风格的机械面板卡片",
+      code: `<div className="group bg-[#2a1f15] border-2 border-[#b87333]/40 rounded-sm p-6 shadow-[0_0_15px_rgba(184,115,51,0.15)] hover:bg-[#241a12] hover:shadow-[0_0_24px_rgba(184,115,51,0.3)] hover:border-[#b5a642]/70 transition-all duration-150 ease-linear relative overflow-hidden">
+  {/* Corner rivets */}
+  <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-[linear-gradient(135deg,#d4c85c_0%,#8a7d32_45%,#d4c85c_100%)] bg-[length:200%_100%] bg-[position:0_0] group-hover:bg-[position:100%_0] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.45)] transition-all duration-300 ease-linear" />
+  <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[linear-gradient(135deg,#d4c85c_0%,#8a7d32_45%,#d4c85c_100%)] bg-[length:200%_100%] bg-[position:0_0] group-hover:bg-[position:100%_0] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.45)] transition-all duration-300 ease-linear" />
+  <div className="absolute bottom-2 left-2 w-2.5 h-2.5 rounded-full bg-[linear-gradient(135deg,#d4c85c_0%,#8a7d32_45%,#d4c85c_100%)] bg-[length:200%_100%] bg-[position:0_0] group-hover:bg-[position:100%_0] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.45)] transition-all duration-300 ease-linear" />
+  <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-[linear-gradient(135deg,#d4c85c_0%,#8a7d32_45%,#d4c85c_100%)] bg-[length:200%_100%] bg-[position:0_0] group-hover:bg-[position:100%_0] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.45)] transition-all duration-300 ease-linear" />
+
+  <div className="relative">
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-5 h-5 rounded-full border-2 border-[#b5a642] flex items-center justify-center">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#b5a642]" />
+      </div>
+      <h3 className="text-[#b5a642] font-serif uppercase tracking-wider text-sm">Mechanism Module</h3>
+    </div>
+    <h4 className="text-[#f5f0e1] text-xl font-serif font-bold mb-3">
+      Clockwork Engine
+    </h4>
+    <p className="text-[#b87333]/80 leading-relaxed font-serif">
+      Precision-engineered brass mechanism with steam-driven power core.
+    </p>
+  </div>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "蒸汽朋克风格的输入框",
+      code: `<div className="space-y-2">
+  <label className="block text-[#b5a642] font-serif text-xs uppercase tracking-wider">Access Cipher</label>
+  <div className="relative">
+    <input
+      type="text"
+      className="w-full px-4 py-3 bg-[#2a1f15] border-2 border-[#b87333]/30 rounded text-[#f5f0e1] font-serif placeholder:text-[#b87333]/30 focus:outline-none focus:border-[#b5a642] focus:shadow-[0_0_12px_rgba(181,166,66,0.25)] transition-all duration-300"
+      placeholder="Enter cipher key..."
+    />
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#d4c85c] to-[#8a7d32] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.3)]" />
+  </div>
+</div>`,
+    },
+  },
+
+  globalCss: `/* Steampunk Global Styles */
+@layer base {
+  body {
+    @apply bg-[#2a1f15] text-[#f5f0e1] antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  ::selection {
+    @apply bg-[#b5a642] text-[#2a1f15];
+  }
+}
+
+@keyframes gear-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+/* Steampunk Design Tokens */
+:root {
+  --steampunk-primary: #b5a642;
+  --steampunk-secondary: #3d2b1f;
+  --steampunk-accent: #b87333;
+  --steampunk-glow: rgba(181, 166, 66, 0.3);
+}
+
+.steampunk-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.steampunk-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(181, 166, 66, 0.05), transparent);
+  pointer-events: none;
+}
+
+.steampunk-card:hover::before {
+  opacity: 1;
+}
+
+.steampunk-gradient {
+  background: linear-gradient(135deg, #b5a642, #b87333);
+}
+
+.steampunk-gradient-text {
+  background: linear-gradient(135deg, #b5a642, #b87333);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.steampunk-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(181, 166, 66, 0.08);
+}
+
+.steampunk-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.steampunk-animate-in {
+  animation: steampunk-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `STYLE: Steampunk
+TYPE: Victorian industrial machinery aesthetic
+
+MUST USE:
+- Dark brown background: bg-[#2a1f15] or bg-[#3d2b1f]
+- Brass color: text-[#b5a642], bg-[#b5a642]
+- Copper color: text-[#b87333], border-[#b87333]
+- Cream text: text-[#f5f0e1]
+- Metallic gradients: bg-gradient-to-b from-[#b5a642] to-[#8a7d32]
+- Brass glow shadows: shadow-[0_0_15px_rgba(181,166,66,0.3)]
+- font-serif for Victorian feel
+- uppercase tracking-wider for labels
+- Rivet decorations: small gradient circles at corners
+- Ornate borders: border-2 with copper/brass colors
+
+MUST AVOID:
+- White/light backgrounds
+- Neon or fluorescent colors
+- Flat design without texture
+- Modern sans-serif fonts for headings
+- Large rounded corners (rounded-2xl+)
+- Cold blue/purple color schemes
+
+COLOR RULES:
+- Primary: Brass (#b5a642)
+- Secondary: Copper (#b87333)
+- Background: Dark Brown (#2a1f15, #3d2b1f)
+- Text: Cream (#f5f0e1)
+- Iron accent: (#4a4a4a)
+
+SPECIAL EFFECTS:
+- Corner rivet decorations (small brass circles)
+- Metallic inset shadows for depth
+- Warm glow on hover interactions
+- Gradient overlays for metal texture
+
+## Animation & Interaction Rules
+
+- Clockwork Grind: 动效节奏短促且线性，模拟齿轮和杠杆的机械咬合，不做柔软回弹。
+- Steam Release: active 时执行干脆下沉并压平阴影，释放时恢复黄铜高光，形成短促阀门反馈。
+- Rivet Glint: 铆钉使用滑动渐变制造慢速反光流转，强调金属工艺细节。
+- Brass Oxidation: hover 时深棕底色略加深，黄铜描边与文本同步提亮，拉开材质对比。`,
+
+  aiRulesEn: `STYLE: Steampunk
+TYPE: Victorian industrial machinery aesthetic
+
+MUST USE:
+- Dark brown background: bg-[#2a1f15] or bg-[#3d2b1f]
+- Brass color: text-[#b5a642], bg-[#b5a642]
+- Copper color: text-[#b87333], border-[#b87333]
+- Cream text: text-[#f5f0e1]
+- Metallic gradients: bg-gradient-to-b from-[#b5a642] to-[#8a7d32]
+- Brass glow shadows: shadow-[0_0_15px_rgba(181,166,66,0.3)]
+- font-serif for Victorian feel
+- uppercase tracking-wider for labels
+- Rivet decorations: small gradient circles at corners
+- Ornate borders: border-2 with copper/brass colors
+
+MUST AVOID:
+- White/light backgrounds
+- Neon or fluorescent colors
+- Flat design without texture
+- Modern sans-serif fonts for headings
+- Large rounded corners (rounded-2xl+)
+- Cold blue/purple color schemes
+
+COLOR RULES:
+- Primary: Brass (#b5a642)
+- Secondary: Copper (#b87333)
+- Background: Dark Brown (#2a1f15, #3d2b1f)
+- Text: Cream (#f5f0e1)
+- Iron accent: (#4a4a4a)
+
+SPECIAL EFFECTS:
+- Corner rivet decorations (small brass circles)
+- Metallic inset shadows for depth
+- Warm glow on hover interactions
+- Gradient overlays for metal texture
+
+## Animation & Interaction Rules
+
+- Clockwork Grind: Motion rhythm is short and linear, simulating gear and lever mechanical engagement, no soft bounce-back.
+- Steam Release: Active state performs a crisp press-down and flattens shadow, restoring brass highlight on release, forming a brief valve feedback.
+- Rivet Glint: Rivets use sliding gradients for slow reflective shimmer, emphasizing metallic craftsmanship detail.
+- Brass Oxidation: On hover, dark brown base slightly deepens while brass strokes and text brighten simultaneously, widening material contrast.`,
+
+  examplePrompts: [
+    {
+      title: "机械仪表盘",
+      titleEn: "Mechanical Dashboard",
+      description: "生成蒸汽朋克风格仪表盘界面",
+      descriptionEn: "Generate steampunk dashboard interface",
+      prompt: `Create a dashboard interface using Steampunk style:
+- Dark brown background with brass accents
+- Gauge and dial-style data displays
+- Cards with corner rivet decorations
+- Brass gradient buttons with metallic sheen
+- Victorian serif typography
+- Copper border accents and warm glow effects`,
+    },
+  {
+      title: "SaaS 着陆页",
+      titleEn: "SaaS Landing Page",
+      description: "生成 蒸汽朋克风格的 SaaS 产品着陆页",
+      descriptionEn: "Generate a SaaS product landing page in Steampunk style",
+      prompt: `Create a SaaS landing page using Steampunk style with hero section, feature grid, testimonials, pricing table, and footer.`,
+    },
+    {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 蒸汽朋克风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Steampunk style",
+      prompt: `Create a portfolio showcase page using Steampunk style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "steampunk-warm",
+      name: "蒸汽朋克暖色版",
+      nameEn: "Steampunk Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#82b545",
+        secondary: "#504035",
+        accent: ["#8b821f", "#edf2e1", "#4a4a4a"],
+      },
+    },
+    {
+      id: "steampunk-cool",
+      name: "蒸汽朋克冷色版",
+      nameEn: "Steampunk Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#e29658",
+        secondary: "#37271c",
+        accent: ["#d5665a", "#fceee6", "#4a4a4a"],
+      },
+    },
+  ],
+};

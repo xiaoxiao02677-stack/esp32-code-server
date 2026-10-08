@@ -1,0 +1,1525 @@
+#AOCI-CODE-VOLUME: 1
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/===
+.clang-format[FG5M]: F:定义全仓C/C++代码格式规则(Google风格基座) | R:code:docs/code_style.md | A:clang-format --dry-run -Werror 校验 | S:仓库CI与本地提交以本文件为唯一格式权威，改动会触发大面积重排，禁止随手修改
+.dockerignore[FO5T]: F:排除Docker构建上下文中与镜像无关的本地产物 | R:code:docker/firmware-builder/Dockerfile | A:docker build 读取 | S:excludes sdkconfig与managed_components，容器内由ESP-IDF组件管理器重新下载依赖
+.gitattributes[FO4T]: F:强制全仓文本文件以LF检出 | R:- | A:- | S:AOCI基线按原始字节哈希，LF强制防止Windows autocrlf使整树stale；二进制文件不受影响
+.gitignore[FO5T]: F:排除构建产物与本地/宿主配置 | R:- | A:- | S:AOCI init追加的宿主MCP配置条目(.mcp.json/.codex/)含本机绝对路径，禁止提交，按README要求忽略
+AGENTS.md[FS8M]: F:仓库级Agent工作守则——架构边界/改动规则/验证要求 | R:code:main/CMakeLists.txt,code:docs/code_style.md | A:所有Agent必须遵守 | S:尾部AOCI区块由init治理写入；禁改区含sdkconfig/managed_components/build；一次构建只能DECLARE_BOARD一次
+CMakeLists.txt[FV7M]: F:根构建入口，聚合main与components | R:code:main/CMakeLists.txt | A:idf.py build | S:ESP-IDF组件管理器解析managed_components；板型选择链起点
+HARDWARE_GUIDE.md[FS5T]: F:本项目硬件接线与开发环境指南(my-s3-tft) | R:code:main/boards/my-s3-tft/config.h,code:main/boards/my-s3-tft/README.md | A:- | S:与99固件信息.md对应；功放MAX98357A VIN=3.3V/GAIN=GND时增益12dB而非15dB
+LICENSE[FS4T]: F:项目许可证文本 | R:- | A:- | S:-
+README.md[FS8L]: F:项目魔改总纲——语音链路拆解与魔改入口 | R:code:main/application.cc,code:docs/websocket_zh.md | A:- | S:固件只是瘦客户端，ASR/LLM/TTS全在服务端；YH旁路通道独立于主链路
+build_log.txt[FO2T]: F:最近一次构建日志存档 | R:code:build_my_s3_tft.bat | A:- | S:旧路径迁移期曾留PermissionError记录，与当前构建无关；含陈旧esp32/4MB产物警示
+build_my_s3_tft.bat[FO6T]: F:my-s3-tft板卡一键构建脚本 | R:code:yh_flash.bat,code:scripts/build.py | A:双击执行 | S:内部设置ESP-IDF v6.1环境变量并cd到仓库；不负责烧录
+monitor.bat[XO3T]: F:Windows本地开发脚本 | R:code:build_my_s3_tft.bat | A:- | S:含ESP-IDF环境初始化
+sdkconfig.defaults[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32c3[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32c5[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32c6[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32p4[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32s3[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+sdkconfig.defaults.esp32s31[FV6S]: F:芯片默认配置覆盖 | R:code:main/Kconfig.projbuild | A:- | S:禁止手编sdkconfig生成物
+workflow.bat[XO3T]: F:Windows本地开发脚本 | R:code:build_my_s3_tft.bat | A:- | S:含ESP-IDF环境初始化
+yh_flash.bat[XO3T]: F:Windows本地开发脚本 | R:code:build_my_s3_tft.bat | A:- | S:含ESP-IDF环境初始化
+yh_monitor.py[XO3T]: F:YH协议串口监控工具 | R:code:main/yh/yh_protocol.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/.github/ISSUE_TEMPLATE/===
+01_build_flash_bug.yml[FG3T]: F:构建/烧录问题Issue模板 | R:code:.github/ISSUE_TEMPLATE/config.yml | A:GitHub Issue表单 | S:模板指引设备解绑等账号问题走邮件通道而非公开Issue
+02_runtime_bug.yml[FG3T]: F:运行时Bug报告模板 | R:code:.github/ISSUE_TEMPLATE/config.yml | A:GitHub Issue表单 | S:-
+03_feature_request.yml[FG3T]: F:功能建议Issue模板 | R:code:.github/ISSUE_TEMPLATE/config.yml | A:GitHub Issue表单 | S:-
+04_board_support_request.yml[FG3T]: F:新板卡支持请求模板 | R:code:docs/custom-board.md | A:GitHub Issue表单 | S:-
+05_technical_question.yml[FG3T]: F:技术问题Issue模板 | R:code:.github/ISSUE_TEMPLATE/config.yml | A:GitHub Issue表单 | S:-
+config.yml[FG2T]: F:Issue模板表单元配置 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/.github/===
+SUPPORT.md[FS3T]: F:账号与设备支持渠道说明 | R:- | A:- | S:设备解绑须私邮设备ID与MAC，禁止在公开Issue披露
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/.github/workflows/===
+build.yml[FV6M]: F:CI构建矩阵——多板卡变体编译验证 | R:code:scripts/build.py,code:main/CMakeLists.txt | A:push/PR/manual 触发 | S:容器用espressif/idf:v6.1镜像；本地无法复现的构建问题先查本工作流结果
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/.workbuddy/memory/===
+2026-09-30.md[FS3T]: F:2026-09-30板卡适配会话记忆 | R:- | A:- | S:记录my-s3-tft板卡创立与GAIN增益等硬件事实，仅历史参考
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/doc/project/===
+P19-R终局真实ESP32验收报告-2026-10-02.md[FS4T]: F:YH协议真实ESP32验收报告 | R:code:main/yh/yh_protocol.cc,code:docs/YH-测试报告.md | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/docker/firmware-builder/===
+Dockerfile[FO5T]: F:一次性固件构建镜像定义 | R:code:docker/firmware-builder/firmware_builder.py | A:docker build | S:基于espressif/idf:release-v6.1；构建上下文需完整源码
+README.md[FS3T]: F:云构建镜像使用说明 | R:code:docker/firmware-builder/Dockerfile | A:- | S:-
+entrypoint.sh[FO3T]: F:容器入口脚本 | R:code:docker/firmware-builder/firmware_builder.py | A:ENTRYPOINT | S:-
+firmware_builder.py[FO4S]: F:一次调用构建单板卡配置的构建编排 | R:code:scripts/build.py | A:python3 firmware_builder.py | S:job导向容器，一次运行只产一个板型变体
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/docs/===
+Xiaozhi-YH-通信架构审计报告.md[FS5T]: F:YH通信架构审计报告 | R:code:main/yh/yh_protocol.cc | A:- | S:旧路径信息保留不改(历史文档)；端口曾从3333迁至12399
+YH-Device-Protocol.md[FS6T]: F:YH设备协议v1说明——消息类型与通信机制 | R:code:main/yh/yh_protocol.h | A:- | S:YH是旁路设备管理通道(HELLO/ADVERTISEMENT/HEARTBEAT/COMMAND/ACK)，不承载AI语义
+YH-测试报告.md[FS4T]: F:YH协议功能测试报告 | R:code:main/yh/yh_protocol.cc | A:- | S:-
+audio-codec-input-audit.md[FS4T]: F:AudioCodec输入通道审计——各板卡单/多声道默认策略 | R:code:main/audio/codecs/no_audio_codec.cc | A:- | S:保留AFE多麦输入支持；T-CameraPlus V1.0/1.1修正错误的参考声道声明
+blufi.md[FS3T]: F:蓝牙配网(BluFi)协议文档 | R:code:main/boards/common/wifi_board.cc | A:- | S:-
+blufi_zh.md[FS3T]: F:蓝牙配网协议中文版 | R:code:docs/blufi.md | A:- | S:与英文版内容对应
+code_style.md[FS3T]: F:代码风格规范 | R:code:.clang-format | A:- | S:触碰的C/C++文件必须过clang-format校验
+code_style_zh.md[FS3T]: F:代码风格规范中文版 | R:code:docs/code_style.md | A:- | S:-
+custom-board.md[FS6S]: F:自定义板卡接入指南(配置链/DECLARE_BOARD/分区) | R:code:main/Kconfig.projbuild,code:main/CMakeLists.txt | A:- | S:板型选择是config.json->build.py->Kconfig->CMakeLists->config.h的耦合链，新增板须更新每一环
+custom-board_zh.md[FS6S]: F:自定义板卡指南中文版 | R:code:docs/custom-board.md | A:- | S:-
+glyph-push.md[FS3T]: F:字形推送(自定义表情字符)文档 | R:code:main/display/text_glyph.cc | A:- | S:-
+glyph-push_zh.md[FS3T]: F:字形推送中文版 | R:code:docs/glyph-push.md | A:- | S:-
+mcp-protocol.md[FS4S]: F:MCP设备侧工具协议文档 | R:code:main/mcp_server.cc | A:- | S:-
+mcp-protocol_zh.md[FS4S]: F:MCP协议中文版 | R:code:docs/mcp-protocol.md | A:- | S:-
+mcp-usage.md[FS3T]: F:MCP工具使用示例 | R:code:main/mcp_server.cc | A:- | S:-
+mcp-usage_zh.md[FS3T]: F:MCP使用示例中文版 | R:code:docs/mcp-usage.md | A:- | S:-
+mqtt-udp.md[FS5S]: F:MQTT+UDP传输协议文档(音频UDP/控制MQTT) | R:code:main/protocols/mqtt.cc | A:- | S:改Protocol契约须同时验证WebSocket与MQTT双传输
+mqtt-udp_zh.md[FS5S]: F:MQTT+UDP协议中文版 | R:code:docs/mqtt-udp.md | A:- | S:-
+notify.md[FS3T]: F:服务器主动通知消息文档 | R:code:main/notify/notify_player.cc | A:- | S:-
+websocket.md[FS5S]: F:WebSocket通信协议文档(hello握手/音频/控制消息) | R:code:main/protocols/websocket.cc | A:- | S:含二进制帧v1/v2/v3格式与畸形帧校验章节3.4；服务器的stt通道可携带工具指令
+websocket_zh.md[FS5S]: F:WebSocket协议中文版 | R:code:docs/websocket.md | A:- | S:新3.4节声明畸形帧丢弃行为与payload_size一致性契约
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/===
+CMakeLists.txt[FV7M]: F:main组件源文件聚合与板型/语言/资产条件编译 | R:code:main/Kconfig.projbuild,code:scripts/build.py | A:idf.py build | S:板型选择链核心环节；YH协议经CONFIG_YH_PROTOCOL_ENABLED条件收录yh/yh_protocol.cc与yh_ws2812_led.cc
+Kconfig.projbuild[FC7M]: F:menuconfig配置项定义(OTA_URL/YH协议/板型选择) | R:code:main/CMakeLists.txt,code:scripts/build.py | A:menuconfig | S:YH_SERVER_HOST/PORT默认sandyun.top:12399；改默认值影响OTA兼容性
+application.cc[EA9L]: F:应用主循环——事件驱动/协议生命周期/音频会话调度与设备配置接入 | R:code:main/application.h,code:main/device_state_machine.cc,code:main/protocols/websocket.cc,code:main/audio/audio_service.cc,code:main/boards/common/board.h | A:Schedule/SetDeviceState/ToggleChatState/OpenAudioChannel/ApplyDeviceConfig | S:回调可能不在主任务上下文，应用变更须经Schedule或事件位；新增device_config消息-Board::ApplyDeviceConfig(云端音量/亮度恢复)、goodbye服务端挥手(关通道避免ping-pong)、TTS起止计时日志、内部工具指令(% )旁路不覆盖字幕、解码队列满丢弃；SendAudio失败清空发送队列；开机播放OGG_SUCCESS提示音
+application.h[EA9M]: F:Application单例接口——状态机/事件位/调度入口 | R:code:main/application.cc | A:GetInstance() | S:修改头文件触发全仓重编译
+assets.cc[FP6M]: F:内置资源(提示音/表情/字体)的打包与访问 | R:code:main/assets.h,code:main/assets/lang_config.h | A:Lang::Sounds::OGG_SUCCESS等 | S:资产变更需同步assets分区大小
+assets.h[FP6S]: F:资源访问接口与语言资产声明 | R:code:main/assets.cc | A:- | S:-
+cjson_utils.h[CG7S]: F:cJSON辅助封装(局部根/安全取值) | R:code:main/protocols/protocol.cc | A:宏与工具函数 | S:cJSON所有权语义在此统一，防止泄漏
+device_state.h[EA8T]: F:设备状态枚举(idle/connecting/listening/speaking等) | R:code:main/device_state_machine.h | A:- | S:状态语义被服务器消息与固件UI共同依赖
+device_state_machine.cc[EA8M]: F:状态机实现——合法转换表与回调分发 | R:code:main/device_state_machine.h,code:main/device_state.h | A:TransitionTo | S:全部状态转换有I级日志(State: X -> Y)；非法转换拒绝并记录
+device_state_machine.h[EA8S]: F:DeviceStateMachine接口——严格转换规则+回调 | R:code:main/device_state_machine.cc | A:- | S:回调在调用者上下文执行，UI更新须Schedule
+idf_component.yml[FV4T]: F:main组件依赖清单(ESP-IDF组件管理器) | R:code:main/CMakeLists.txt | A:idf.py build解析 | S:依赖版本变更影响全仓构建
+main.cc[EA8S]: F:程序入口——板卡实例化/Application启动/主循环 | R:code:main/application.cc,code:main/boards/common/board.h | A:app_main | S:DECLARE_BOARD工厂在此接线，板型选择最终落点
+mcp_server.cc[EI7M]: F:设备侧MCP服务——工具注册与调用分发 | R:code:main/mcp_server.h,code:main/protocols/protocol.cc | A:AddTool | S:tools/call正常路径I级日志；MCP消息经协议层传输
+mcp_server.h[EI7S]: F:设备侧MCP服务接口 | R:code:main/mcp_server.cc | A:- | S:-
+ota.cc[EV7M]: F:OTA升级——版本检查/下载/校验/触发 | R:code:main/ota.h,code:main/application.cc | A:CheckNewVersion | S:OTA URL经服务器配置下发；升级前停止YH通道
+ota.h[EV7S]: F:OTA接口 | R:code:main/ota.cc | A:- | S:-
+sdkconfig.rename[FV4T]: F:配置项改名映射 | R:- | A:- | S:-
+settings.cc[CR5S]: F:设备设置持久化(NVS键值) | R:code:main/boards/common/board.h | A:- | S:NVS键名是持久API，改名需迁移
+settings.h[CR5S]: F:设备设置持久化(NVS键值) | R:code:main/boards/common/board.h | A:- | S:NVS键名是持久API，改名需迁移
+system_info.cc[CO4S]: F:系统信息(版本/内存/芯片)采集 | R:code:main/ota.cc | A:- | S:PrintHeapStats用于诊断
+system_info.h[CO4S]: F:系统信息(版本/内存/芯片)采集 | R:code:main/ota.cc | A:- | S:PrintHeapStats用于诊断
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ar-SA/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/bg-BG/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ca-ES/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/cs-CZ/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/da-DK/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/de-DE/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/el-GR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/en-US/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/es-ES/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/fa-IR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/fi-FI/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/fil-PH/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/fr-FR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/he-IL/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/hi-IN/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/hr-HR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/hu-HU/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/id-ID/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/it-IT/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ja-JP/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ko-KR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/mr-IN/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ms-MY/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/nb-NO/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/nl-NL/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/pl-PL/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/pt-BR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/pt-PT/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ro-RO/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/ru-RU/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/sk-SK/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/sl-SI/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/sr-RS/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/sv-SE/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/th-TH/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/tr-TR/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/uk-UA/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/vi-VN/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/zh-CN/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/locales/zh-TW/===
+language.json[FL2T]: F:提示音/文案的多语言资源清单 | R:code:main/assets/lang_config.h | A:Lang::索引访问 | S:与同名ogg音频资产配对，新增键需同步资产打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/audio/===
+README.md[FS5S]: F:音频子系统设计文档(数据流/任务/队列) | R:code:main/audio/audio_service.cc,code:main/audio/audio_codec.h | A:- | S:上行Mic->AFE->Opus编码->发送队列；下行WS opus->解码->重采样->播放队列
+audio_codec.cc[CU6M]: F:AudioCodec基类实现(音量/双工/编解码抽象) | R:code:main/audio/audio_codec.h,code:main/audio/codecs/no_audio_codec.cc | A:子类继承 | S:板卡编解码器必须实现此接口；SetOutputVolume含日志
+audio_codec.h[CU7M]: F:AudioCodec抽象接口(输入输出采样率/音量/读写) | R:code:main/audio/audio_codec.cc | A:- | S:-
+audio_debugger.cc[CO4S]: F:音频调试器实现(原始PCM导出) | R:code:main/audio/audio_debugger.h,code:main/audio/audio_service.cc | A:USE_AUDIO_DEBUGGER条件编译 | S:默认未启用
+audio_debugger.h[CO4T]: F:音频调试器接口 | R:code:main/audio/audio_debugger.cc | A:- | S:-
+audio_engine.h[CU6S]: F:音频引擎抽象(AFE/轻量引擎接口) | R:code:main/audio/engines/afe_audio_engine.cc,code:main/audio/engines/lite_audio_engine.cc | A:板卡选择引擎 | S:S3用AFE(唤醒词+AEC)，其他芯片用Lite
+audio_service.cc[CU9L]: F:音频服务核心——输入/编码/解码/播放任务与队列管理 | R:code:main/audio/audio_service.h,code:main/audio/audio_codec.h,code:main/application.cc | A:Initialize/EnableInput/EnableOutput | S:30秒AudioStats统计心跳(独立esp_timer)；DebugStatistics全字段atomic；send队列满丢最旧含1s节流日志；Opus 60ms帧；编码队列容量2发送队列40播放队列20
+audio_service.h[CU9M]: F:AudioService接口与统计结构 | R:code:main/audio/audio_service.cc | A:- | S:DebugStatistics八字段in/out/enc/dec/enc_drop/enc_err/dec_err/send_drop均为atomic
+fixed_queue.h[CU4S]: F:定长队列模板(音频/协议复用) | R:code:main/audio/audio_engine.h | A:- | S:-
+wake_word.h[CU5T]: F:唤醒词抽象接口 | R:code:main/audio/audio_engine.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/audio/codecs/===
+box_audio_codec.cc[CH5M]: F:Box板ES8311+ES7210编解码实现 | R:code:main/audio/codecs/box_audio_codec.h,code:main/audio/audio_codec.cc | A:板级声明 | S:-
+box_audio_codec.h[CH5S]: F:Box编解码器接口 | R:code:main/audio/codecs/box_audio_codec.cc | A:- | S:-
+dummy_audio_codec.cc[CH2T]: F:哑元编解码器(无硬件场景) | R:code:main/audio/audio_codec.h | A:无音频板型 | S:-
+dummy_audio_codec.h[CH2T]: F:哑元编解码器接口 | R:code:main/audio/codecs/dummy_audio_codec.cc | A:- | S:-
+es8311_audio_codec.cc[CH7M]: F:ES8311 DAC编解码实现(I2C配置+I2S) | R:code:main/audio/codecs/es8311_audio_codec.h,code:main/audio/audio_codec.cc | A:板级声明 | S:多数带编解码芯片的板卡用此或其变体
+es8311_audio_codec.h[CH7S]: F:ES8311接口 | R:code:main/audio/codecs/es8311_audio_codec.cc | A:- | S:-
+es8374_audio_codec.cc[CH4M]: F:ES8374编解码实现 | R:code:main/audio/codecs/es8374_audio_codec.h | A:板级声明 | S:-
+es8374_audio_codec.h[CH4S]: F:ES8374接口 | R:code:main/audio/codecs/es8374_audio_codec.cc | A:- | S:-
+es8388_audio_codec.cc[CH4M]: F:ES8388编解码实现 | R:code:main/audio/codecs/es8388_audio_codec.h | A:板级声明 | S:-
+es8388_audio_codec.h[CH4S]: F:ES8388接口 | R:code:main/audio/codecs/es8388_audio_codec.cc | A:- | S:-
+es8389_audio_codec.cc[CH4M]: F:ES8389编解码实现 | R:code:main/audio/codecs/es8389_audio_codec.h | A:板级声明 | S:-
+es8389_audio_codec.h[CH4S]: F:ES8389接口 | R:code:main/audio/codecs/es8389_audio_codec.cc | A:- | S:-
+no_audio_codec.cc[CH7M]: F:无芯片直连I2S编解码(Simplex/Duplex)——外接功放与麦克风的板卡用 | R:code:main/audio/codecs/no_audio_codec.h,code:main/audio/audio_service.cc | A:NoAudioCodecSimplex/NoAudioCodecDuplex | S:my-s3-tft板用Simplex(INMP441麦克风+MAX98357A功放)；I2S Read超时静默返回0(正常静音)，非超时错误E级+1s节流；Write含underrun LOGD
+no_audio_codec.h[CH7S]: F:无芯片编解码接口 | R:code:main/audio/codecs/no_audio_codec.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/audio/demuxer/===
+ogg_demuxer.cc[CU4S]: F:OGG提示音解封装 | R:code:main/audio/audio_engine.h | A:- | S:-
+ogg_demuxer.h[CU4S]: F:OGG提示音解封装 | R:code:main/audio/audio_engine.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/audio/engines/===
+afe_audio_engine.cc[CU7M]: F:AFE音频引擎(S3)——AEC回声消除/VAD/唤醒词 | R:code:main/audio/audio_engine.h | A:- | S:初始化含内存水位日志；fetch失败W级
+afe_audio_engine.h[CU7M]: F:AFE音频引擎(S3)——AEC回声消除/VAD/唤醒词 | R:code:main/audio/audio_engine.h | A:- | S:初始化含内存水位日志；fetch失败W级
+lite_audio_engine.cc[CU5M]: F:轻量音频引擎——无AFE芯片的音频处理 | R:code:main/audio/audio_engine.h | A:- | S:-
+lite_audio_engine.h[CU5M]: F:轻量音频引擎——无AFE芯片的音频处理 | R:code:main/audio/audio_engine.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/audio/wake_words/===
+custom_wake_word.cc[CU5S]: F:唤醒词组件(custom_wake_word.cc)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+custom_wake_word.h[CU5S]: F:唤醒词组件(custom_wake_word.h)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+esp_wake_word.cc[CU5S]: F:唤醒词组件(esp_wake_word.cc)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+esp_wake_word.h[CU5S]: F:唤醒词组件(esp_wake_word.h)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+wake_word_audio_cache.cc[CU5S]: F:唤醒词组件(wake_word_audio_cache.cc)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+wake_word_audio_cache.h[CU5S]: F:唤醒词组件(wake_word_audio_cache.h)——模型加载与检测回调 | R:code:main/audio/audio_engine.h | A:- | S:AFE唤醒词模型经SEND_WAKE_WORD_DATA上传服务器
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3-box/===
+atk_dnesp32s3_box.cc[CH4M]: F:atk-dnesp32s3-box板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型
+config.h[CH4S]: F:atk-dnesp32s3-box板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3-box板构建配置(目标芯片/变体) | R:code:main/boards/common/board.h | A:- | S:板型选择链首环，经build.py消费
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3-box0/===
+atk_dnesp32s3_box0.cc[CH4M]: F:atk-dnesp32s3-box0板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型
+config.h[CH4S]: F:atk-dnesp32s3-box0板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3-box0板构建配置(目标芯片/变体) | R:code:main/boards/common/board.h | A:- | S:板型选择链首环，经build.py消费
+power_manager.h[CH3S]: F:atk-dnesp32s3-box0板电源管理 | R:code:main/boards/common/board.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3-box2-4g/===
+atk_dnesp32s3_box2.cc[CH4M]: F:atk-dnesp32s3-box2-4g板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型
+config.h[CH4S]: F:atk-dnesp32s3-box2-4g板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3-box2-4g板构建配置(目标芯片/变体) | R:code:main/boards/common/board.h | A:- | S:板型选择链首环，经build.py消费
+power_manager.h[CH3S]: F:atk-dnesp32s3-box2-4g板电源管理 | R:code:main/boards/common/board.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3-box2-wifi/===
+atk_dnesp32s3_box2.cc[CH4M]: F:atk-dnesp32s3-box2-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型
+config.h[CH4S]: F:atk-dnesp32s3-box2-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3-box2-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:atk-dnesp32s3-box2-wifi板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3-box3/===
+atk_dnesp32s3_box3.cc[CH4M]: F:atk-dnesp32s3-box3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atk-dnesp32s3-box3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3-box3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:atk-dnesp32s3-box3板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3/===
+atk_dnesp32s3.cc[CH4M]: F:atk-dnesp32s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atk-dnesp32s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3m-4g/===
+atk_dnesp32s3m.cc[CH4M]: F:atk-dnesp32s3m-4g板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atk-dnesp32s3m-4g板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3m-4g板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/alientek/atk-dnesp32s3m-wifi/===
+atk_dnesp32s3m.cc[CH4M]: F:atk-dnesp32s3m-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atk-dnesp32s3m-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atk-dnesp32s3m-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-esp32-lcd/===
+config.h[CH4S]: F:bread-compact-esp32-lcd板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-esp32-lcd板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_bread_board_lcd.cc[CH4M]: F:bread-compact-esp32-lcd板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-esp32/===
+README.md[CS3T]: F:bread-compact-esp32板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:bread-compact-esp32板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-esp32板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_bread_board.cc[CH4M]: F:bread-compact-esp32板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-ml307/===
+compact_ml307_board.cc[CH4M]: F:bread-compact-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:bread-compact-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-nt26/===
+compact_nt26_board.cc[CH4M]: F:bread-compact-nt26板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:bread-compact-nt26板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-nt26板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-wifi-lcd/===
+compact_wifi_board_lcd.cc[CH4M]: F:bread-compact-wifi-lcd板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:bread-compact-wifi-lcd板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-wifi-lcd板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-wifi-s3cam/===
+README.md[CS3T]: F:bread-compact-wifi-s3cam板卡说明文档 | R:- | A:- | S:-
+compact_wifi_board_s3cam.cc[CH4M]: F:bread-compact-wifi-s3cam板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:bread-compact-wifi-s3cam板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-wifi-s3cam板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bread-compact-wifi/===
+compact_wifi_board.cc[CH4M]: F:bread-compact-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:bread-compact-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bread-compact-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/common/===
+adc_battery_monitor.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+adc_battery_monitor.h[CH4S]: F:common板辅助组件(adc_battery_monitor.h) | R:- | A:- | S:-
+axp2101.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+axp2101.h[CH4S]: F:common板辅助组件(axp2101.h) | R:- | A:- | S:-
+backlight.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+backlight.h[CH4S]: F:common板辅助组件(backlight.h) | R:- | A:- | S:-
+blufi.cpp[CH4S]: F:common板辅助组件(blufi.cpp) | R:- | A:- | S:-
+blufi.h[CH4S]: F:common板辅助组件(blufi.h) | R:- | A:- | S:-
+board.cc[CH7M]: F:板卡基类Board实现——板级初始化与设备配置应用 | R:code:main/boards/common/board.h,code:main/application.cc | A:ApplyDeviceConfig/GetAudioCodec/GetBacklight | S:新增ApplyDeviceConfig：仅识别0-100整数音量/亮度，音量经AudioCodec存NVS、亮度经Backlight设置，越界或小数忽略告警；每构建只DECLARE_BOARD一个板型
+board.h[CH7S]: F:板卡抽象接口Board——定义板级能力虚函数与设备配置应用 | R:code:main/boards/common/board.cc | A:GetInstance/ApplyDeviceConfig | S:新增ApplyDeviceConfig声明(基类非虚实现)；云端设备配置仅识别已知键且值变化才应用，主任务经Schedule，幂等；纯接口不持实现细节
+button.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+button.h[CH4S]: F:common板辅助组件(button.h) | R:- | A:- | S:-
+camera.h[CH4S]: F:common板辅助组件(camera.h) | R:- | A:- | S:-
+dual_network_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+dual_network_board.h[CH4S]: F:common板辅助组件(dual_network_board.h) | R:- | A:- | S:-
+esp32_camera.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+esp32_camera.h[CH4S]: F:common板辅助组件(esp32_camera.h) | R:- | A:- | S:-
+esp_video.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+esp_video.h[CH4S]: F:common板辅助组件(esp_video.h) | R:- | A:- | S:-
+ethernet_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+ethernet_board.h[CH4S]: F:common板辅助组件(ethernet_board.h) | R:- | A:- | S:-
+i2c_device.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+i2c_device.h[CH4S]: F:common板辅助组件(i2c_device.h) | R:- | A:- | S:-
+knob.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+knob.h[CH4S]: F:common板辅助组件(knob.h) | R:- | A:- | S:-
+lamp_controller.h[CH4S]: F:common板辅助组件(lamp_controller.h) | R:- | A:- | S:-
+ml307_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+ml307_board.h[CH4S]: F:common板辅助组件(ml307_board.h) | R:- | A:- | S:-
+nt26_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+nt26_board.h[CH4S]: F:common板辅助组件(nt26_board.h) | R:- | A:- | S:-
+power_save_timer.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_save_timer.h[CH4S]: F:common板辅助组件(power_save_timer.h) | R:- | A:- | S:-
+press_to_talk_mcp_tool.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+press_to_talk_mcp_tool.h[CH4S]: F:common板辅助组件(press_to_talk_mcp_tool.h) | R:- | A:- | S:-
+rndis_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rndis_board.h[CH4S]: F:common板辅助组件(rndis_board.h) | R:- | A:- | S:-
+sleep_timer.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sleep_timer.h[CH4S]: F:common板辅助组件(sleep_timer.h) | R:- | A:- | S:-
+sy6970.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sy6970.h[CH4S]: F:common板辅助组件(sy6970.h) | R:- | A:- | S:-
+system_reset.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+system_reset.h[CH4S]: F:common板辅助组件(system_reset.h) | R:- | A:- | S:-
+wifi_board.cc[CH4M]: F:common板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+wifi_board.h[CH4S]: F:common板辅助组件(wifi_board.h) | R:- | A:- | S:-
+xpower.h[CH4S]: F:common板辅助组件(xpower.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/dfrobot/df-k10/===
+README.md[CS3T]: F:df-k10板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:df-k10板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:df-k10板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+df_k10_board.cc[CH4M]: F:df-k10板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+k10_audio_codec.cc[CH4M]: F:df-k10板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+k10_audio_codec.h[CH4S]: F:df-k10板辅助组件(k10_audio_codec.h) | R:- | A:- | S:-
+led_control.cc[CH4M]: F:df-k10板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_control.h[CH4S]: F:df-k10板辅助组件(led_control.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/dfrobot/df-s3-ai-cam/===
+README.md[CS3T]: F:df-s3-ai-cam板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:df-s3-ai-cam板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:df-s3-ai-cam板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+df_s3_ai_cam.cc[CH4M]: F:df-s3-ai-cam板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/doit-s3-aibox/===
+README.md[CS3T]: F:doit-s3-aibox板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:doit-s3-aibox板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:doit-s3-aibox板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+doit_s3_aibox.cc[CH4M]: F:doit-s3-aibox板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/du-chatx/===
+config.h[CH4S]: F:du-chatx板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:du-chatx板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+du-chatx-wifi.cc[CH4M]: F:du-chatx板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:du-chatx板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/electron-bot/===
+README.md[CS3T]: F:electron-bot板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:electron-bot板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:electron-bot板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+electron_bot.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+electron_bot_controller.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+electron_emoji_display.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+electron_emoji_display.h[CH4S]: F:electron-bot板辅助组件(electron_emoji_display.h) | R:- | A:- | S:-
+movements.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+movements.h[CH4S]: F:electron-bot板辅助组件(movements.h) | R:- | A:- | S:-
+oscillator.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+oscillator.h[CH4S]: F:electron-bot板辅助组件(oscillator.h) | R:- | A:- | S:-
+otto_icon_font.c[CH4S]: F:electron-bot板辅助组件(otto_icon_font.c) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:electron-bot板电源管理 | R:- | A:- | S:-
+websocket_control_server.cc[CH4M]: F:electron-bot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+websocket_control_server.h[CH4S]: F:electron-bot板辅助组件(websocket_control_server.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-hi/===
+README.md[CS3T]: F:esp-hi板卡说明文档 | R:- | A:- | S:-
+adc_pdm_audio_codec.cc[CH4M]: F:esp-hi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+adc_pdm_audio_codec.h[CH4S]: F:esp-hi板辅助组件(adc_pdm_audio_codec.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp-hi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-hi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+emoji_display.cc[CH4M]: F:esp-hi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+emoji_display.h[CH4S]: F:esp-hi板辅助组件(emoji_display.h) | R:- | A:- | S:-
+esp_hi.cc[CH4M]: F:esp-hi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-mosaico/===
+README.md[CS3T]: F:esp-mosaico板卡说明文档 | R:- | A:- | S:-
+README_CN.md[CS3T]: F:esp-mosaico板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp-mosaico板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-mosaico板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_mosaico.cc[CH4M]: F:esp-mosaico板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-sensairshuttle/===
+README.md[CS3T]: F:esp-sensairshuttle板卡说明文档 | R:- | A:- | S:-
+adc_pdm_audio_codec.cc[CH4M]: F:esp-sensairshuttle板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+adc_pdm_audio_codec.h[CH4S]: F:esp-sensairshuttle板辅助组件(adc_pdm_audio_codec.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp-sensairshuttle板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-sensairshuttle板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp-sensairshuttle.cc[CH4M]: F:esp-sensairshuttle板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-sparkbot/===
+config.h[CH4S]: F:esp-sparkbot板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-sparkbot板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_sparkbot_board.cc[CH4M]: F:esp-sparkbot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-spot/===
+README.md[CS3T]: F:esp-spot板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp-spot板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-spot板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_spot_board.cc[CH4M]: F:esp-spot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-vocat/===
+README.md[CS3T]: F:esp-vocat板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp-vocat板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp-vocat板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_vocat.cc[CH4M]: F:esp-vocat板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+touch.h[CH4S]: F:esp-vocat板辅助组件(touch.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp-vocat/assets/360_360/===
+emote.json[FL2T]: F:360_360板资产清单(emote.json) | R:- | A:- | S:表情/字体等资源索引，随板型打包
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-p4-function-ev-board/===
+README.md[CS3T]: F:esp32-p4-function-ev-board板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-p4-function-ev-board板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-p4-function-ev-board板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-p4-function-ev-board.cc[CH4M]: F:esp32-p4-function-ev-board板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-box-3/===
+README.md[CS3T]: F:esp32-s3-box-3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-box-3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-box-3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_box3_board.cc[CH4M]: F:esp32-s3-box-3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-box-lite/===
+box_audio_codec_lite.cc[CH4M]: F:esp32-s3-box-lite板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+box_audio_codec_lite.h[CH4S]: F:esp32-s3-box-lite板辅助组件(box_audio_codec_lite.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-box-lite板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-box-lite板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_box_lite_board.cc[CH4M]: F:esp32-s3-box-lite板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-box/===
+config.h[CH4S]: F:esp32-s3-box板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-box板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_box_board.cc[CH4M]: F:esp32-s3-box板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-korvo-2-v3.0-rndis/===
+config.h[CH4S]: F:esp32-s3-korvo-2-v3.0-rndis板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-korvo-2-v3.0-rndis板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32s3_korvo2_v3_board.cc[CH4M]: F:esp32-s3-korvo-2-v3.0-rndis板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-s3-korvo-2-v3.0-rndis板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-korvo-2-v3.0/===
+config.h[CH4S]: F:esp32-s3-korvo-2-v3.0板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-korvo-2-v3.0板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32s3_korvo2_v3_board.cc[CH4M]: F:esp32-s3-korvo-2-v3.0板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-s3-korvo-2-v3.0板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-lcd-ev-board-2/===
+README.md[CS3T]: F:esp32-s3-lcd-ev-board-2板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-lcd-ev-board-2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-lcd-ev-board-2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-lcd-ev-board-2.cc[CH4M]: F:esp32-s3-lcd-ev-board-2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+esp_lcd_gc9503.c[CH4S]: F:esp32-s3-lcd-ev-board-2板辅助组件(esp_lcd_gc9503.c) | R:- | A:- | S:-
+esp_lcd_gc9503.h[CH4S]: F:esp32-s3-lcd-ev-board-2板辅助组件(esp_lcd_gc9503.h) | R:- | A:- | S:-
+pin_config.h[CH4S]: F:esp32-s3-lcd-ev-board-2板辅助组件(pin_config.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s3-lcd-ev-board/===
+README.md[CS3T]: F:esp32-s3-lcd-ev-board板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-lcd-ev-board板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-lcd-ev-board板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-lcd-ev-board.cc[CH4M]: F:esp32-s3-lcd-ev-board板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+esp_io_expander_tca9554.c[CH4S]: F:esp32-s3-lcd-ev-board板辅助组件(esp_io_expander_tca9554.c) | R:- | A:- | S:-
+esp_io_expander_tca9554.h[CH4S]: F:esp32-s3-lcd-ev-board板辅助组件(esp_io_expander_tca9554.h) | R:- | A:- | S:-
+esp_lcd_gc9503.c[CH4S]: F:esp32-s3-lcd-ev-board板辅助组件(esp_lcd_gc9503.c) | R:- | A:- | S:-
+esp_lcd_gc9503.h[CH4S]: F:esp32-s3-lcd-ev-board板辅助组件(esp_lcd_gc9503.h) | R:- | A:- | S:-
+pin_config.h[CH4S]: F:esp32-s3-lcd-ev-board板辅助组件(pin_config.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s31-function-coreboard-1/===
+README.md[CS3T]: F:esp32-s31-function-coreboard-1板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s31-function-coreboard-1板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s31-function-coreboard-1板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_s31_function_coreboard_1.cc[CH4M]: F:esp32-s31-function-coreboard-1板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/espressif/esp32-s31-korvo-1/===
+README.md[CS3T]: F:esp32-s31-korvo-1板卡说明文档 | R:- | A:- | S:-
+bsp_adc_calibration.h[CH4S]: F:esp32-s31-korvo-1板辅助组件(bsp_adc_calibration.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s31-korvo-1板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s31-korvo-1板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_s31_adc_calibration.c[CH4S]: F:esp32-s31-korvo-1板辅助组件(esp32_s31_adc_calibration.c) | R:- | A:- | S:-
+esp32_s31_korvo_1.cc[CH4M]: F:esp32-s31-korvo-1板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/folotoy/ai-passport/===
+README.md[CS3T]: F:ai-passport板卡说明文档 | R:- | A:- | S:-
+ai_passport_board.cc[CH4M]: F:ai-passport板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:ai-passport板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:ai-passport板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+cw2017_battery_monitor.cc[CH4M]: F:ai-passport板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+cw2017_battery_monitor.h[CH4S]: F:ai-passport板辅助组件(cw2017_battery_monitor.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/freenove-esp32s3-display-2.8-lcd/===
+ReadMe.md[CS3T]: F:freenove-esp32s3-display-2.8-lcd板卡说明文档(ReadMe.md) | R:- | A:- | S:-
+config.h[CH4S]: F:freenove-esp32s3-display-2.8-lcd板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:freenove-esp32s3-display-2.8-lcd板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+freenove-esp32s3-display-2.8-lcd.cc[CH4M]: F:freenove-esp32s3-display-2.8-lcd板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/genjutech-s3-1.54tft/===
+config.h[CH4S]: F:genjutech-s3-1.54tft板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:genjutech-s3-1.54tft板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+genjutech-s3-1.54tft.cc[CH4M]: F:genjutech-s3-1.54tft板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:genjutech-s3-1.54tft板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/guition/jc4827w543/===
+README.md[CS3T]: F:jc4827w543板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:jc4827w543板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:jc4827w543板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_nv3041a.c[CH4S]: F:jc4827w543板辅助组件(esp_lcd_nv3041a.c) | R:- | A:- | S:-
+esp_lcd_nv3041a.h[CH4S]: F:jc4827w543板辅助组件(esp_lcd_nv3041a.h) | R:- | A:- | S:-
+jc4827w543_board.cc[CH4M]: F:jc4827w543板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/hu-087/===
+README.md[CS3T]: F:hu-087板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:hu-087板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:hu-087板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+hu_087_board.cc[CH4M]: F:hu-087板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/jiuchuan-s3/===
+README.md[CS3T]: F:jiuchuan-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:jiuchuan-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:jiuchuan-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_panel_gc9301.c[CH4S]: F:jiuchuan-s3板辅助组件(esp_lcd_panel_gc9301.c) | R:- | A:- | S:-
+esp_lcd_panel_gc9301.h[CH4S]: F:jiuchuan-s3板辅助组件(esp_lcd_panel_gc9301.h) | R:- | A:- | S:-
+gpio_manager.h[CH4S]: F:jiuchuan-s3板辅助组件(gpio_manager.h) | R:- | A:- | S:-
+jiuchuan_dev_board.cc[CH4M]: F:jiuchuan-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_controller.h[CH4S]: F:jiuchuan-s3板辅助组件(power_controller.h) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:jiuchuan-s3板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/kevin/box-2/===
+config.h[CH4S]: F:box-2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:box-2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+kevin_box_board.cc[CH4M]: F:box-2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/kevin/c3/===
+config.h[CH4S]: F:c3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+kevin_c3_board.cc[CH4M]: F:c3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.cc[CH4M]: F:c3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.h[CH4S]: F:c3板辅助组件(led_strip_control.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/kevin/sp-v3-dev/===
+config.h[CH4S]: F:sp-v3-dev板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+kevin-sp-v3_board.cc[CH4M]: F:sp-v3-dev板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/kevin/sp-v4-dev/===
+config.h[CH4S]: F:sp-v4-dev板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:sp-v4-dev板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+kevin-sp-v4_board.cc[CH4M]: F:sp-v4-dev板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/kevin/yuying-313lcd/===
+config.h[CH4S]: F:yuying-313lcd板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:yuying-313lcd板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_gc9503.c[CH4S]: F:yuying-313lcd板辅助组件(esp_lcd_gc9503.c) | R:- | A:- | S:-
+esp_lcd_gc9503.h[CH4S]: F:yuying-313lcd板辅助组件(esp_lcd_gc9503.h) | R:- | A:- | S:-
+kevin_yuying_313lcd.cc[CH4M]: F:yuying-313lcd板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+pin_config.h[CH4S]: F:yuying-313lcd板辅助组件(pin_config.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/labplus/ledong-v2/===
+README.md[CS3T]: F:ledong-v2板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:ledong-v2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:ledong-v2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+labplus_ledong_v2.cc[CH4M]: F:ledong-v2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/labplus/mpython-v3/===
+README.md[CS3T]: F:mpython-v3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:mpython-v3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:mpython-v3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+mpython_pro.cc[CH4M]: F:mpython-v3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lcdwiki-es3c35p/===
+README.md[CS3T]: F:lcdwiki-es3c35p板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:lcdwiki-es3c35p板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:lcdwiki-es3c35p板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+lcdwiki-es3c35p.cc[CH4M]: F:lcdwiki-es3c35p板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lceda-course-examples/eda-robot-pro/===
+README.md[CS3T]: F:eda-robot-pro板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:eda-robot-pro板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:eda-robot-pro板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+eda_dog_controller.cc[CH4M]: F:eda-robot-pro板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+eda_dog_movements.cc[CH4M]: F:eda-robot-pro板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+eda_dog_movements.h[CH4S]: F:eda-robot-pro板辅助组件(eda_dog_movements.h) | R:- | A:- | S:-
+eda_robot_pro.cc[CH4M]: F:eda-robot-pro板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+oscillator.cc[CH4M]: F:eda-robot-pro板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+oscillator.h[CH4S]: F:eda-robot-pro板辅助组件(oscillator.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lceda-course-examples/eda-super-bear/===
+README.md[CS3T]: F:eda-super-bear板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:eda-super-bear板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:eda-super-bear板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+eda_super_bear.cc[CH4M]: F:eda-super-bear板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+eda_super_bear_controller.cc[CH4M]: F:eda-super-bear板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+eda_super_bear_movements.cc[CH4M]: F:eda-super-bear板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+eda_super_bear_movements.h[CH4S]: F:eda-super-bear板辅助组件(eda_super_bear_movements.h) | R:- | A:- | S:-
+oscillator.cc[CH4M]: F:eda-super-bear板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+oscillator.h[CH4S]: F:eda-super-bear板辅助组件(oscillator.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lceda-course-examples/eda-tv-pro/===
+README.md[CS3T]: F:eda-tv-pro板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:eda-tv-pro板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:eda-tv-pro板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+eda-tv-pro.cc[CH4M]: F:eda-tv-pro板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lckfb/szpi-esp32c3/===
+README.md[CS3T]: F:szpi-esp32c3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:szpi-esp32c3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:szpi-esp32c3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+lichuang_c3_dev_board.cc[CH4M]: F:szpi-esp32c3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lckfb/szpi-esp32s3/===
+config.h[CH4S]: F:szpi-esp32s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:szpi-esp32s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+lichuang_dev_board.cc[CH4M]: F:szpi-esp32s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lilygo/t-cameraplus-s3/===
+README.md[CS3T]: F:t-cameraplus-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:t-cameraplus-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:t-cameraplus-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+ir_filter_controller.h[CH4S]: F:t-cameraplus-s3板辅助组件(ir_filter_controller.h) | R:- | A:- | S:-
+lilygo-t-cameraplus-s3.cc[CH4M]: F:t-cameraplus-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+pin_config.h[CH4S]: F:t-cameraplus-s3板辅助组件(pin_config.h) | R:- | A:- | S:-
+tcamerapluss3_audio_codec.cc[CH4M]: F:t-cameraplus-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tcamerapluss3_audio_codec.h[CH4S]: F:t-cameraplus-s3板辅助组件(tcamerapluss3_audio_codec.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lilygo/t-circle-s3/===
+README.md[CS3T]: F:t-circle-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:t-circle-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:t-circle-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_gc9d01n.c[CH4S]: F:t-circle-s3板辅助组件(esp_lcd_gc9d01n.c) | R:- | A:- | S:-
+esp_lcd_gc9d01n.h[CH4S]: F:t-circle-s3板辅助组件(esp_lcd_gc9d01n.h) | R:- | A:- | S:-
+lilygo-t-circle-s3.cc[CH4M]: F:t-circle-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+pin_config.h[CH4S]: F:t-circle-s3板辅助组件(pin_config.h) | R:- | A:- | S:-
+tcircles3_audio_codec.cc[CH4M]: F:t-circle-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tcircles3_audio_codec.h[CH4S]: F:t-circle-s3板辅助组件(tcircles3_audio_codec.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lilygo/t-display-p4/===
+README.md[CS3T]: F:t-display-p4板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:t-display-p4板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+hi8561_driver.cc[CH4M]: F:t-display-p4板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+hi8561_driver.h[CH4S]: F:t-display-p4板辅助组件(hi8561_driver.h) | R:- | A:- | S:-
+lilygo-t-display-p4.cc[CH4M]: F:t-display-p4板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rm69a10_driver.cc[CH4M]: F:t-display-p4板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rm69a10_driver.h[CH4S]: F:t-display-p4板辅助组件(rm69a10_driver.h) | R:- | A:- | S:-
+t_display_p4_config.h[CH4S]: F:t-display-p4板辅助组件(t_display_p4_config.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/lilygo/t-display-s3-pro-mvsrlora/===
+README.md[CS3T]: F:t-display-s3-pro-mvsrlora板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:t-display-s3-pro-mvsrlora板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:t-display-s3-pro-mvsrlora板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+lilygo-t-display-s3-pro-mvsrlora.cc[CH4M]: F:t-display-s3-pro-mvsrlora板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+pin_config.h[CH4S]: F:t-display-s3-pro-mvsrlora板辅助组件(pin_config.h) | R:- | A:- | S:-
+tdisplays3promvsrlora_audio_codec.cc[CH4M]: F:t-display-s3-pro-mvsrlora板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tdisplays3promvsrlora_audio_codec.h[CH4S]: F:t-display-s3-pro-mvsrlora板辅助组件(tdisplays3promvsrlora_audio_codec.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atom-echos3r/===
+README.md[CS3T]: F:atom-echos3r板卡说明文档 | R:- | A:- | S:-
+atom_echos3r.cc[CH4M]: F:atom-echos3r板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atom-echos3r板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atom-echos3r板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atommatrix-echo-base/===
+README.md[CS3T]: F:atommatrix-echo-base板卡说明文档 | R:- | A:- | S:-
+atommatrix_echo_base.cc[CH4M]: F:atommatrix-echo-base板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atommatrix-echo-base板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atommatrix-echo-base板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atoms3-echo-base/===
+README.md[CS3T]: F:atoms3-echo-base板卡说明文档 | R:- | A:- | S:-
+atoms3_echo_base.cc[CH4M]: F:atoms3-echo-base板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atoms3-echo-base板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atoms3-echo-base板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atoms3r-cam-m12-echo-base/===
+README.md[CS3T]: F:atoms3r-cam-m12-echo-base板卡说明文档 | R:- | A:- | S:-
+atoms3r_cam_m12_echo_base.cc[CH4M]: F:atoms3r-cam-m12-echo-base板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atoms3r-cam-m12-echo-base板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atoms3r-cam-m12-echo-base板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atoms3r-echo-base/===
+README.md[CS3T]: F:atoms3r-echo-base板卡说明文档 | R:- | A:- | S:-
+atoms3r_echo_base.cc[CH4M]: F:atoms3r-echo-base板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atoms3r-echo-base板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atoms3r-echo-base板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/atoms3r-echo-pyramid/===
+README.md[CS3T]: F:atoms3r-echo-pyramid板卡说明文档 | R:- | A:- | S:-
+atoms3r_echo_pyramid.cc[CH4M]: F:atoms3r-echo-pyramid板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:atoms3r-echo-pyramid板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:atoms3r-echo-pyramid板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/cardputer-adv/===
+README.md[CS3T]: F:cardputer-adv板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:cardputer-adv板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:cardputer-adv板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+m5stack_cardputer_adv.cc[CH4M]: F:cardputer-adv板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tca8418_keyboard.cc[CH4M]: F:cardputer-adv板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tca8418_keyboard.h[CH4S]: F:cardputer-adv板辅助组件(tca8418_keyboard.h) | R:- | A:- | S:-
+wifi_config_ui.cc[CH4M]: F:cardputer-adv板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+wifi_config_ui.h[CH4S]: F:cardputer-adv板辅助组件(wifi_config_ui.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/core-s3/===
+README.md[CS3T]: F:core-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:core-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:core-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+cores3_audio_codec.cc[CH4M]: F:core-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+cores3_audio_codec.h[CH4S]: F:core-s3板辅助组件(cores3_audio_codec.h) | R:- | A:- | S:-
+m5stack_core_s3.cc[CH4M]: F:core-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/corep4/===
+README.md[CS3T]: F:corep4板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:corep4板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:corep4板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+m5stack_corep4.cc[CH4M]: F:corep4板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/stick-s3/===
+README.md[CS3T]: F:stick-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:stick-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:stick-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+m5stack_stick_s3.cc[CH4M]: F:stick-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/stopwatch/===
+README.md[CS3T]: F:stopwatch板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:stopwatch板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:stopwatch板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+m5stack_stopwatch.cc[CH4M]: F:stopwatch板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/m5stack/tab5/===
+README.md[CS3T]: F:tab5板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:tab5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:tab5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_st7121.c[CH4S]: F:tab5板辅助组件(esp_lcd_st7121.c) | R:- | A:- | S:-
+esp_lcd_st7121.h[CH4S]: F:tab5板辅助组件(esp_lcd_st7121.h) | R:- | A:- | S:-
+esp_lcd_st7123.c[CH4S]: F:tab5板辅助组件(esp_lcd_st7123.c) | R:- | A:- | S:-
+esp_lcd_st7123.h[CH4S]: F:tab5板辅助组件(esp_lcd_st7123.h) | R:- | A:- | S:-
+m5stack_tab5.cc[CH4M]: F:tab5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sdkconfig.tab5[FC4S]: F:tab5板构建默认配置片段 | R:code:scripts/build.py | A:- | S:变体构建参数
+tab5_audio_codec.cc[CH4M]: F:tab5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+tab5_audio_codec.h[CH4S]: F:tab5板辅助组件(tab5_audio_codec.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/magiclick/2p4/===
+config.h[CH4S]: F:2p4板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:2p4板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+magiclick_2p4_board.cc[CH4M]: F:2p4板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/magiclick/2p5/===
+config.h[CH4S]: F:2p5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:2p5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+magiclick_2p5_board.cc[CH4M]: F:2p5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:2p5板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/magiclick/c3-v2/===
+config.h[CH4S]: F:c3-v2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3-v2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+magiclick_c3_v2_board.cc[CH4M]: F:c3-v2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/magiclick/c3/===
+config.h[CH4S]: F:c3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+magiclick_c3_board.cc[CH4M]: F:c3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/maza-ai/esp32-s3/===
+README.md[CS3T]: F:esp32-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+maza_ai_esp32_s3.cc[CH4M]: F:esp32-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/maza-ai/esp32-s31/===
+README.md[CS3T]: F:esp32-s31板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s31板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s31板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+maza_ai_esp32_s31.cc[CH4M]: F:esp32-s31板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/minsi-k08-dual/===
+README.md[CS3T]: F:minsi-k08-dual板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:minsi-k08-dual板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:minsi-k08-dual板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+minsi_k08_dual.cc[CH4M]: F:minsi-k08-dual板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:minsi-k08-dual板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/mixgo-nova/===
+README.md[CS3T]: F:mixgo-nova板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:mixgo-nova板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:mixgo-nova板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+mixgo-nova.cc[CH4M]: F:mixgo-nova板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/movecall/cuican-esp32s3/===
+README.md[CS3T]: F:cuican-esp32s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:cuican-esp32s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:cuican-esp32s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+movecall_cuican_esp32s3.cc[CH4M]: F:cuican-esp32s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/movecall/moji-esp32s3/===
+README.md[CS3T]: F:moji-esp32s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:moji-esp32s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:moji-esp32s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+movecall_moji_esp32s3.cc[CH4M]: F:moji-esp32s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/movecall/moji2-esp32c5/===
+README.md[CS3T]: F:moji2-esp32c5板卡说明文档 | R:- | A:- | S:-
+README_zh.md[CS3T]: F:moji2-esp32c5板卡说明文档(README_zh.md) | R:- | A:- | S:-
+config.h[CH4S]: F:moji2-esp32c5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:moji2-esp32c5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+movecall_moji2_esp32s3.cc[CH4M]: F:moji2-esp32c5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/my-s3-tft/===
+README.md[CS3T]: F:my-s3-tft板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:my-s3-tft板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:my-s3-tft板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+my_s3_tft_board.cc[CH4S]: F:my-s3-tft板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:LCD复位/初始化加ESP_ERROR_CHECK防御；开机音量改由NVS/云端恢复不再硬编码50
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-abs-2.0/===
+README.md[CS3T]: F:xingzhi-abs-2.0板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:xingzhi-abs-2.0板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-abs-2.0板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+customlcddisplay.h[CH4S]: F:xingzhi-abs-2.0板辅助组件(customlcddisplay.h) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:xingzhi-abs-2.0板电源管理 | R:- | A:- | S:-
+xingzhi-abs-2.0.cc[CH4M]: F:xingzhi-abs-2.0板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-0.85tft-ml307/===
+config.h[CH4S]: F:xingzhi-cube-0.85tft-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-0.85tft-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xingzhi-cube-0.85tft-ml307.cc[CH4M]: F:xingzhi-cube-0.85tft-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-0.85tft-wifi/===
+config.h[CH4S]: F:xingzhi-cube-0.85tft-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-0.85tft-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xingzhi-cube-0.85tft-wifi.cc[CH4M]: F:xingzhi-cube-0.85tft-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-0.96oled-ml307/===
+config.h[CH4S]: F:xingzhi-cube-0.96oled-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-0.96oled-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xingzhi-cube-0.96oled-ml307.cc[CH4M]: F:xingzhi-cube-0.96oled-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-0.96oled-wifi/===
+config.h[CH4S]: F:xingzhi-cube-0.96oled-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-0.96oled-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xingzhi-cube-0.96oled-wifi.cc[CH4M]: F:xingzhi-cube-0.96oled-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-1.54tft-ml307/===
+config.h[CH4S]: F:xingzhi-cube-1.54tft-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-1.54tft-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xingzhi-cube-1.54tft-ml307.cc[CH4M]: F:xingzhi-cube-1.54tft-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-cube-1.54tft-wifi/===
+config.h[CH4S]: F:xingzhi-cube-1.54tft-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-cube-1.54tft-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:xingzhi-cube-1.54tft-wifi板电源管理 | R:- | A:- | S:-
+xingzhi-cube-1.54tft-wifi.cc[CH4M]: F:xingzhi-cube-1.54tft-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-metal-1.54-wifi/===
+README.md[CS3T]: F:xingzhi-metal-1.54-wifi板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:xingzhi-metal-1.54-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:xingzhi-metal-1.54-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+cst816x.cc[CH4M]: F:xingzhi-metal-1.54-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+cst816x.h[CH4S]: F:xingzhi-metal-1.54-wifi板辅助组件(cst816x.h) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:xingzhi-metal-1.54-wifi板电源管理 | R:- | A:- | S:-
+xingzhi-metal-1.54-wifi.cc[CH4M]: F:xingzhi-metal-1.54-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nulllab-ai-vox-v3/===
+README.md[CS3T]: F:nulllab-ai-vox-v3板卡说明文档 | R:- | A:- | S:-
+ai_vox3_audio_codec.h[CH4S]: F:nulllab-ai-vox-v3板辅助组件(ai_vox3_audio_codec.h) | R:- | A:- | S:-
+ai_vox3_board.cc[CH4M]: F:nulllab-ai-vox-v3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:nulllab-ai-vox-v3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:nulllab-ai-vox-v3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:nulllab-ai-vox-v3板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/otto-robot/===
+README.md[CS3T]: F:otto-robot板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:otto-robot板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:otto-robot板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+oscillator.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+oscillator.h[CH4S]: F:otto-robot板辅助组件(oscillator.h) | R:- | A:- | S:-
+otto_controller.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+otto_emoji_display.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+otto_emoji_display.h[CH4S]: F:otto-robot板辅助组件(otto_emoji_display.h) | R:- | A:- | S:-
+otto_icon_font.c[CH4S]: F:otto-robot板辅助组件(otto_icon_font.c) | R:- | A:- | S:-
+otto_movements.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+otto_movements.h[CH4S]: F:otto-robot板辅助组件(otto_movements.h) | R:- | A:- | S:-
+otto_robot.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:otto-robot板电源管理 | R:- | A:- | S:-
+websocket_control_server.cc[CH4M]: F:otto-robot板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+websocket_control_server.h[CH4S]: F:otto-robot板辅助组件(websocket_control_server.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/quandong-s3-dev/===
+HARDWARE_DIFF.md[CS3T]: F:quandong-s3-dev板卡说明文档(HARDWARE_DIFF.md) | R:- | A:- | S:-
+config.h[CH4S]: F:quandong-s3-dev板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:quandong-s3-dev板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+quandong_s3_dev_board.cc[CH4M]: F:quandong-s3-dev板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/rymcu/bigsmart/===
+README.md[CS3T]: F:bigsmart板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:bigsmart板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:bigsmart板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+rymcu_bigsmart_board.cc[CH4M]: F:bigsmart板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/sensecap-watcher/===
+README.md[CS3T]: F:sensecap-watcher板卡说明文档 | R:- | A:- | S:-
+README_en.md[CS3T]: F:sensecap-watcher板卡说明文档(README_en.md) | R:- | A:- | S:-
+config.h[CH4S]: F:sensecap-watcher板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:sensecap-watcher板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+sensecap_audio_codec.cc[CH4M]: F:sensecap-watcher板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sensecap_audio_codec.h[CH4S]: F:sensecap-watcher板辅助组件(sensecap_audio_codec.h) | R:- | A:- | S:-
+sensecap_watcher.cc[CH4M]: F:sensecap-watcher板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sscma_camera.cc[CH4M]: F:sensecap-watcher板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+sscma_camera.h[CH4S]: F:sensecap-watcher板辅助组件(sscma_camera.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/spotpear/sp-esp32-s3-1.28-box/===
+README.md[CS3T]: F:sp-esp32-s3-1.28-box板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:sp-esp32-s3-1.28-box板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:sp-esp32-s3-1.28-box板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:sp-esp32-s3-1.28-box板电源管理 | R:- | A:- | S:-
+sp-esp32-s3-1.28-box.cc[CH4M]: F:sp-esp32-s3-1.28-box板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/spotpear/sp-esp32-s3-1.54-muma/===
+README.md[CS3T]: F:sp-esp32-s3-1.54-muma板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:sp-esp32-s3-1.54-muma板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:sp-esp32-s3-1.54-muma板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:sp-esp32-s3-1.54-muma板电源管理 | R:- | A:- | S:-
+sp-esp32-s3-1.54-muma.cc[CH4M]: F:sp-esp32-s3-1.54-muma板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/surfer-c3-1.14tft/===
+README.md[CS3T]: F:surfer-c3-1.14tft板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:surfer-c3-1.14tft板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:surfer-c3-1.14tft板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:surfer-c3-1.14tft板电源管理 | R:- | A:- | S:-
+surfer-c3-1.14tft.cc[CH4M]: F:surfer-c3-1.14tft板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/taiji-pi-s3/===
+README.md[CS3T]: F:taiji-pi-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:taiji-pi-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:taiji-pi-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+taiji_pi_s3.cc[CH4M]: F:taiji-pi-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c5-touch-lcd-1.69/===
+README.md[CS3T]: F:esp32-c5-touch-lcd-1.69板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c5-touch-lcd-1.69板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c5-touch-lcd-1.69板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c5-touch-lcd-1.69.cc[CH4M]: F:esp32-c5-touch-lcd-1.69板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-epaper-1.54/===
+README.md[CS3T]: F:esp32-c6-epaper-1.54板卡说明文档 | R:- | A:- | S:-
+board_power_bsp.cc[CH4M]: F:esp32-c6-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+board_power_bsp.h[CH4S]: F:esp32-c6-epaper-1.54板辅助组件(board_power_bsp.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-epaper-1.54板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-epaper-1.54板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-c6-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-c6-epaper-1.54板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-c6-epaper-1.54.cc[CH4M]: F:esp32-c6-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-lcd-0.85/===
+README.md[CS3T]: F:esp32-c6-lcd-0.85板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-lcd-0.85板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-lcd-0.85板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-lcd-0.85.cc[CH4M]: F:esp32-c6-lcd-0.85板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.cc[CH4M]: F:esp32-c6-lcd-0.85板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.h[CH4S]: F:esp32-c6-lcd-0.85板辅助组件(led_strip_control.h) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:esp32-c6-lcd-0.85板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-lcd-1.69/===
+README.md[CS3T]: F:esp32-c6-lcd-1.69板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-lcd-1.69板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-lcd-1.69板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-lcd-1.69.cc[CH4M]: F:esp32-c6-lcd-1.69板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-c6-lcd-1.69板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-amoled-1.32/===
+README.md[CS3T]: F:esp32-c6-touch-amoled-1.32板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-amoled-1.32板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-amoled-1.32板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-amoled-1.32.cc[CH4M]: F:esp32-c6-touch-amoled-1.32板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-amoled-1.43/===
+README.md[CS3T]: F:esp32-c6-touch-amoled-1.43板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-amoled-1.43板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-amoled-1.43板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-amoled-1.43.cc[CH4M]: F:esp32-c6-touch-amoled-1.43板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-amoled-1.8/===
+README.md[CS3T]: F:esp32-c6-touch-amoled-1.8板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-amoled-1.8板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-amoled-1.8板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-amoled-1.8.cc[CH4M]: F:esp32-c6-touch-amoled-1.8板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-amoled-2.06/===
+README.md[CS3T]: F:esp32-c6-touch-amoled-2.06板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-amoled-2.06板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-amoled-2.06板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-amoled-2.06.cc[CH4M]: F:esp32-c6-touch-amoled-2.06板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-amoled-2.16/===
+README.md[CS3T]: F:esp32-c6-touch-amoled-2.16板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-amoled-2.16板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-amoled-2.16板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-amoled-2.16.cc[CH4M]: F:esp32-c6-touch-amoled-2.16板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-lcd-1.54/===
+README.md[CS3T]: F:esp32-c6-touch-lcd-1.54板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-lcd-1.54板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-lcd-1.54板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-lcd-1.54.cc[CH4M]: F:esp32-c6-touch-lcd-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-c6-touch-lcd-1.54板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-c6-touch-lcd-1.83/===
+README.md[CS3T]: F:esp32-c6-touch-lcd-1.83板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-c6-touch-lcd-1.83板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-c6-touch-lcd-1.83板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-c6-touch-lcd-1.83.cc[CH4M]: F:esp32-c6-touch-lcd-1.83板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-p4-nano/===
+README.md[CS3T]: F:esp32-p4-nano板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-p4-nano板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-p4-nano板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-p4-nano.cc[CH4M]: F:esp32-p4-nano板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+lcd_init_cmds.h[CH4S]: F:esp32-p4-nano板辅助组件(lcd_init_cmds.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-p4-wifi6-touch-lcd-3.5/===
+README.md[CS3T]: F:esp32-p4-wifi6-touch-lcd-3.5板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-p4-wifi6-touch-lcd-3.5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-p4-wifi6-touch-lcd-3.5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-p4-wifi6-touch-lcd-3.5.cc[CH4M]: F:esp32-p4-wifi6-touch-lcd-3.5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-p4-wifi6-touch-lcd/===
+README.md[CS3T]: F:esp32-p4-wifi6-touch-lcd板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-p4-wifi6-touch-lcd板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-p4-wifi6-touch-lcd板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-p4-wifi6-touch-lcd.cc[CH4M]: F:esp32-p4-wifi6-touch-lcd板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+lcd_init_cmds.h[CH4S]: F:esp32-p4-wifi6-touch-lcd板辅助组件(lcd_init_cmds.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-audio-board/===
+README.md[CS3T]: F:esp32-s3-audio-board板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-audio-board板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-audio-board板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-audio_board.cc[CH4M]: F:esp32-s3-audio-board板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+esp_lcd_jd9853.c[CH4S]: F:esp32-s3-audio-board板辅助组件(esp_lcd_jd9853.c) | R:- | A:- | S:-
+esp_lcd_jd9853.h[CH4S]: F:esp32-s3-audio-board板辅助组件(esp_lcd_jd9853.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-cam/===
+README.md[CS3T]: F:esp32-s3-cam板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-cam板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-cam板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-cam-xxxx.cc[CH4M]: F:esp32-s3-cam板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-epaper-1.54/===
+README.md[CS3T]: F:esp32-s3-epaper-1.54板卡说明文档 | R:- | A:- | S:-
+board_power_bsp.cc[CH4M]: F:esp32-s3-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+board_power_bsp.h[CH4S]: F:esp32-s3-epaper-1.54板辅助组件(board_power_bsp.h) | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-epaper-1.54板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-epaper-1.54板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-epaper-1.54板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-epaper-1.54.cc[CH4M]: F:esp32-s3-epaper-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-epaper-3.97/===
+README.md[CS3T]: F:esp32-s3-epaper-3.97板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-epaper-3.97板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-epaper-3.97板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-epaper-3.97板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-epaper-3.97板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-epaper-3.97.cc[CH4M]: F:esp32-s3-epaper-3.97板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-lcd-0.85/===
+README.md[CS3T]: F:esp32-s3-lcd-0.85板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-lcd-0.85板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-lcd-0.85板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-lcd-0.85.cc[CH4M]: F:esp32-s3-lcd-0.85板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.cc[CH4M]: F:esp32-s3-lcd-0.85板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+led_strip_control.h[CH4S]: F:esp32-s3-lcd-0.85板辅助组件(led_strip_control.h) | R:- | A:- | S:-
+power_manager.h[CH3S]: F:esp32-s3-lcd-0.85板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-rgb-matrix/===
+README.md[CS3T]: F:esp32-s3-rgb-matrix板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-rgb-matrix板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-rgb-matrix板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+rgb_matrix_board.cc[CH4M]: F:esp32-s3-rgb-matrix板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rgb_matrix_display.cc[CH4M]: F:esp32-s3-rgb-matrix板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rgb_matrix_display.h[CH4S]: F:esp32-s3-rgb-matrix板辅助组件(rgb_matrix_display.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-rlcd-4.2/===
+README.md[CS3T]: F:esp32-s3-rlcd-4.2板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-rlcd-4.2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-rlcd-4.2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-rlcd-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-rlcd-4.2板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-rlcd-4.2.cc[CH4M]: F:esp32-s3-rlcd-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-1.32/===
+README.md[CS3T]: F:esp32-s3-touch-amoled-1.32板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-amoled-1.32板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-1.32板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-1.32.cc[CH4M]: F:esp32-s3-touch-amoled-1.32板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-1.43c/===
+README.md[CS3T]: F:esp32-s3-touch-amoled-1.43c板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-amoled-1.43c板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-1.43c板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-1.43c.cc[CH4M]: F:esp32-s3-touch-amoled-1.43c板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-1.75/===
+README.md[CS3T]: F:esp32-s3-touch-amoled-1.75板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-amoled-1.75板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-1.75板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-1.75.cc[CH4M]: F:esp32-s3-touch-amoled-1.75板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-1.8-v2/===
+config.h[CH4S]: F:esp32-s3-touch-amoled-1.8-v2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-1.8-v2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-1.8-v2.cc[CH4M]: F:esp32-s3-touch-amoled-1.8-v2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-1.8/===
+config.h[CH4S]: F:esp32-s3-touch-amoled-1.8板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-1.8板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-1.8.cc[CH4M]: F:esp32-s3-touch-amoled-1.8板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-2.06/===
+README.md[CS3T]: F:esp32-s3-touch-amoled-2.06板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-amoled-2.06板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-2.06板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-2.06.cc[CH4M]: F:esp32-s3-touch-amoled-2.06板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-amoled-2.16/===
+README.md[CS3T]: F:esp32-s3-touch-amoled-2.16板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-amoled-2.16板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-amoled-2.16板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-amoled-2.16.cc[CH4M]: F:esp32-s3-touch-amoled-2.16板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.46/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.46板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.46板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.46板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.46.cc[CH4M]: F:esp32-s3-touch-lcd-1.46板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.54/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.54板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.54板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.54板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.54.cc[CH4M]: F:esp32-s3-touch-lcd-1.54板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-s3-touch-lcd-1.54板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.83/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.83板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.83板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.83板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.83.cc[CH4M]: F:esp32-s3-touch-lcd-1.83板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.85/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.85板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.85板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.85板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.85.cc[CH4M]: F:esp32-s3-touch-lcd-1.85板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.85b/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.85b板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.85b板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.85b板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.85b.cc[CH4M]: F:esp32-s3-touch-lcd-1.85b板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.85c/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-1.85c板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-1.85c板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-1.85c板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-1.85c.cc[CH4M]: F:esp32-s3-touch-lcd-1.85c板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-3.49-v2/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-3.49-v2板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-3.49-v2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-3.49-v2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-touch-lcd-3.49-v2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-touch-lcd-3.49-v2板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-touch-lcd-3.49-v2.cc[CH4M]: F:esp32-s3-touch-lcd-3.49-v2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-3.49/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-3.49板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-3.49板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-3.49板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-touch-lcd-3.49板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-touch-lcd-3.49板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-touch-lcd-3.49.cc[CH4M]: F:esp32-s3-touch-lcd-3.49板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-3.5/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-3.5板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-3.5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-3.5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-3.5.cc[CH4M]: F:esp32-s3-touch-lcd-3.5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-3.5b/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-3.5b板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-3.5b板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-3.5b板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:esp32-s3-touch-lcd-3.5b板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:esp32-s3-touch-lcd-3.5b板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+waveshare-s3-touch-lcd-3.5b.cc[CH4M]: F:esp32-s3-touch-lcd-3.5b板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-4.3c/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-4.3c板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-4.3c板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-4.3c板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_s3_touch_lcd_4.3c.cc[CH4M]: F:esp32-s3-touch-lcd-4.3c板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-4b/===
+README.md[CS3T]: F:esp32-s3-touch-lcd-4b板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-s3-touch-lcd-4b板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-4b板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-s3-touch-lcd-4b.cc[CH4M]: F:esp32-s3-touch-lcd-4b板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-7c/===
+config.h[CH4S]: F:esp32-s3-touch-lcd-7c板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-s3-touch-lcd-7c板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_s3_touch_lcd_7c.cc[CH4M]: F:esp32-s3-touch-lcd-7c板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+waveshare_audio_codec.cc[CH4M]: F:esp32-s3-touch-lcd-7c板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+waveshare_audio_codec.h[CH4S]: F:esp32-s3-touch-lcd-7c板辅助组件(waveshare_audio_codec.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/waveshare/esp32-touch-lcd-3.5/===
+README.md[CS3T]: F:esp32-touch-lcd-3.5板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-touch-lcd-3.5板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-touch-lcd-3.5板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32-touch-lcd-3.5.cc[CH4M]: F:esp32-touch-lcd-3.5板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/wdmomo/esp32-cgc-144/===
+README.md[CS3T]: F:esp32-cgc-144板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-cgc-144板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-cgc-144板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_cgc_144_board.cc[CH4M]: F:esp32-cgc-144板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:esp32-cgc-144板电源管理 | R:- | A:- | S:-
+power_manager_lite.h[CH4S]: F:esp32-cgc-144板辅助组件(power_manager_lite.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/wdmomo/esp32-cgc/===
+README.md[CS3T]: F:esp32-cgc板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:esp32-cgc板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:esp32-cgc板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp32_cgc_board.cc[CH4M]: F:esp32-cgc板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/wk-esp32s3-dev/===
+README.md[CS3T]: F:wk-esp32s3-dev板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:wk-esp32s3-dev板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:wk-esp32s3-dev板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+esp_lcd_ili9486.c[CH4S]: F:wk-esp32s3-dev板辅助组件(esp_lcd_ili9486.c) | R:- | A:- | S:-
+esp_lcd_ili9486.h[CH4S]: F:wk-esp32s3-dev板辅助组件(esp_lcd_ili9486.h) | R:- | A:- | S:-
+esp_lcd_nv3030b.c[CH4S]: F:wk-esp32s3-dev板辅助组件(esp_lcd_nv3030b.c) | R:- | A:- | S:-
+esp_lcd_nv3030b.h[CH4S]: F:wk-esp32s3-dev板辅助组件(esp_lcd_nv3030b.h) | R:- | A:- | S:-
+wk-esp32s3-dev.cc[CH4M]: F:wk-esp32s3-dev板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/xmini/c3-4g/===
+README.md[CS3T]: F:c3-4g板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:c3-4g板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3-4g板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xmini_c3_4g_board.cc[CH4M]: F:c3-4g板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/xmini/c3-v3/===
+README.md[CS3T]: F:c3-v3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:c3-v3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3-v3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xmini_c3_board.cc[CH4M]: F:c3-v3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/xmini/c3/===
+config.h[CH4S]: F:c3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:c3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+xmini_c3_board.cc[CH4M]: F:c3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/xorigin/aipi-lite/===
+README.md[CS3T]: F:aipi-lite板卡说明文档 | R:- | A:- | S:-
+README_en.md[CS3T]: F:aipi-lite板卡说明文档(README_en.md) | R:- | A:- | S:-
+aipi-lite.cc[CH4M]: F:aipi-lite板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+config.h[CH4S]: F:aipi-lite板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:aipi-lite板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:aipi-lite板电源管理 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/yunliao-s3/===
+README.md[CS3T]: F:yunliao-s3板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:yunliao-s3板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:yunliao-s3板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.cc[CH4M]: F:yunliao-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:yunliao-s3板电源管理 | R:- | A:- | S:-
+yunliao_s3.cc[CH4M]: F:yunliao-s3板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/zectrix/zectrix-s3-epaper-4.2/===
+board_power_bsp.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+board_power_bsp.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(board_power_bsp.h) | R:- | A:- | S:-
+charge_status.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+charge_status.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(charge_status.h) | R:- | A:- | S:-
+config.h[CH4S]: F:zectrix-s3-epaper-4.2板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:zectrix-s3-epaper-4.2板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+custom_lcd_display.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+custom_lcd_display.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(custom_lcd_display.h) | R:- | A:- | S:-
+i2c_power_hook.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rtc_pcf8563.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+rtc_pcf8563.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(rtc_pcf8563.h) | R:- | A:- | S:-
+sleep_manager_compat.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(sleep_manager_compat.h) | R:- | A:- | S:-
+zectrix-s3-epaper-4.2.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+zectrix_nfc.cc[CH4M]: F:zectrix-s3-epaper-4.2板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+zectrix_nfc.h[CH4S]: F:zectrix-s3-epaper-4.2板辅助组件(zectrix_nfc.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/zhengchen/1.54tft-ml307/===
+README.md[CS3T]: F:1.54tft-ml307板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:1.54tft-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:1.54tft-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+zhengchen-1.54tft-ml307.cc[CH4M]: F:1.54tft-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/zhengchen/1.54tft-wifi/===
+README.md[CS3T]: F:1.54tft-wifi板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:1.54tft-wifi板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:1.54tft-wifi板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+power_manager.h[CH3S]: F:1.54tft-wifi板电源管理 | R:- | A:- | S:-
+zhengchen-1.54tft-wifi.cc[CH4M]: F:1.54tft-wifi板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+zhengchen_lcd_display.h[CH4S]: F:1.54tft-wifi板辅助组件(zhengchen_lcd_display.h) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/zhengchen/cam-ml307/===
+README.md[CS3T]: F:cam-ml307板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:cam-ml307板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:cam-ml307板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+mcp_controller.cc[CH4M]: F:cam-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:cam-ml307板电源管理 | R:- | A:- | S:-
+zhengchen_cam_board_ml307.cc[CH4M]: F:cam-ml307板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/zhengchen/cam/===
+README.md[CS3T]: F:cam板卡说明文档 | R:- | A:- | S:-
+config.h[CH4S]: F:cam板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
+config.json[CH3S]: F:cam板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
+mcp_controller.cc[CH4M]: F:cam板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+power_manager.h[CH3S]: F:cam板电源管理 | R:- | A:- | S:-
+zhengchen_cam_board.cc[CH4M]: F:cam板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:一次构建只DECLARE_BOARD一个板型；板身份影响OTA兼容
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/display/===
+display.cc[DU6M]: F:Display基类实现(状态/聊天消息/表情接口) | R:code:main/display/display.h | A:子类继承 | S:核心代码只依赖此接口，不碰具体显示类
+display.h[DU7S]: F:显示抽象接口(SetStatus/SetChatMessage/SetEmotion) | R:code:main/display/display.cc | A:- | S:-
+emote_display.cc[DU5M]: F:表情显示实现(emoji渲染) | R:code:main/display/display.h,code:main/display/text_glyph.cc | A:板级选择 | S:-
+emote_display.h[DU5S]: F:表情显示接口 | R:code:main/display/emote_display.cc | A:- | S:-
+lcd_display.cc[DU7M]: F:LCD显示实现(SPI/I2C通用) | R:code:main/display/display.h | A:- | S:SpiLcdDisplay是ST7789等屏的通用基座
+lcd_display.h[DU7M]: F:LCD显示实现(SPI/I2C通用) | R:code:main/display/display.h | A:- | S:SpiLcdDisplay是ST7789等屏的通用基座
+lvgl_no_psram_pool.h[DU4T]: F:LVGL无PSRAM内存池策略 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:与lvgl_psram_pool.h二选一，由板型PSRAM有无决定
+lvgl_psram_pool.h[DU4T]: F:LVGL PSRAM内存池策略 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+oled_display.cc[DU5M]: F:OLED显示实现(SSD1306等) | R:code:main/display/display.h | A:- | S:-
+oled_display.h[DU5M]: F:OLED显示实现(SSD1306等) | R:code:main/display/display.h | A:- | S:-
+text_glyph.cc[DU5S]: F:文本字形渲染 | R:code:main/display/lvgl_display/lvgl_font.cc | A:- | S:-
+text_glyph.h[DU5S]: F:文本字形渲染 | R:code:main/display/lvgl_display/lvgl_font.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/display/epd_display/===
+epd_display.cc[DH5M]: F:墨水屏显示实现 | R:code:main/display/display.h | A:板级选择 | S:-
+epd_display.h[DU5S]: F:墨水屏显示实现(EPD) | R:code:main/display/display.h | A:- | S:-
+epd_display_2_9.cc[DU5S]: F:墨水屏显示实现(EPD) | R:code:main/display/display.h | A:- | S:-
+epd_display_2_9.h[DU5S]: F:墨水屏显示实现(EPD) | R:code:main/display/display.h | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/display/lvgl_display/===
+dynamic_glyph_cache.cc[DU4S]: F:LVGL字形/缓存组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+dynamic_glyph_cache.h[DU4S]: F:LVGL字形/缓存组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+emoji_collection.cc[DU4S]: F:LVGL表情集合 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+emoji_collection.h[DU4S]: F:LVGL表情集合 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_display.cc[DU6M]: F:LVGL显示核心(通用UI渲染) | R:code:main/display/display.h | A:- | S:含动态字形缓存与主题
+lvgl_display.h[DU6M]: F:LVGL显示核心(通用UI渲染) | R:code:main/display/display.h | A:- | S:含动态字形缓存与主题
+lvgl_font.cc[DU4S]: F:LVGL字体组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_font.h[DU4S]: F:LVGL字体组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_image.cc[DU4S]: F:LVGL图像组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_image.h[DU4S]: F:LVGL图像组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_theme.cc[DU4S]: F:LVGL主题定制 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_theme.h[DU4S]: F:LVGL主题定制 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/display/lvgl_display/gif/===
+LICENSE.txt[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+README.md[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+gifdec.c[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+gifdec.h[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+gifdec_mve.h[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_gif.cc[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+lvgl_gif.h[DU5S]: F:LVGL GIF动图解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/display/lvgl_display/jpg/===
+image_to_jpeg.cpp[DU5S]: F:LVGL JPEG解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+image_to_jpeg.h[DU5S]: F:LVGL JPEG解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+jpeg_to_image.c[DU5S]: F:LVGL JPEG解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+jpeg_to_image.h[DU5S]: F:LVGL JPEG解码组件 | R:code:main/display/lvgl_display/lvgl_display.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/led/===
+circular_strip.cc[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+circular_strip.h[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+gpio_led.cc[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+gpio_led.h[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+led.h[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+single_led.cc[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+single_led.h[DU4S]: F:LED实现(单灯/灯环/GPIO) | R:code:main/display/display.h | A:- | S:WS2812经RMT驱动
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/notify/===
+notify_player.cc[CU4S]: F:服务器通知播放器(提示音) | R:code:main/audio/demuxer/ogg_demuxer.cc | A:- | S:-
+notify_player.h[CU4S]: F:服务器通知播放器(提示音) | R:code:main/audio/demuxer/ogg_demuxer.cc | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/protocols/===
+mqtt_protocol.cc[EN7M]: F:MQTT+UDP传输实现(控制MQTT/音频UDP) | R:code:main/protocols/protocol.h | A:Protocol实现 | S:UDP下行有序号校验+乱序日志；与WS协议共享Protocol契约
+mqtt_protocol.h[EN7S]: F:MQTT传输接口 | R:code:main/protocols/mqtt_protocol.cc | A:- | S:-
+protocol.cc[EN8M]: F:协议基类——控制消息发送/会话管理 | R:code:main/protocols/protocol.h | A:SendStartListening等 | S:listen start/stop/abort/wake word四个控制消息含I级日志；改契约须验证WS与MQTT双传输
+protocol.h[EN8S]: F:传输无关协议抽象接口 | R:code:main/protocols/protocol.cc | A:- | S:共享消息语义在此定义
+text_glyph_payload.cc[EN4T]: F:字形推送payload编解码(服务器自定义字形) | R:code:main/protocols/text_glyph_payload.h | A:- | S:-
+text_glyph_payload.h[EN4T]: F:字形payload结构定义 | R:code:main/protocols/text_glyph_payload.cc | A:- | S:-
+websocket_protocol.cc[EN9L]: F:WebSocket传输实现——hello握手/音频收发/畸形帧校验 | R:code:main/protocols/protocol.h,code:main/application.cc | A:OpenAudioChannel/SendAudio | S:v2/v3二进制帧含长度校验(减法防回绕)与丢弃计数；SendAudio失败边沿触发日志；协商结果I级日志
+websocket_protocol.h[EN8M]: F:WebSocket传输接口 | R:code:main/protocols/websocket_protocol.cc | A:- | S:包含server_sample_rate协商字段与畸形帧计数成员
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/yh/===
+yh_protocol.cc[CI6M]: F:YH设备协议——旁路设备管理通道(HELLO/心跳/COMMAND/ACK) | R:code:main/boards/common/board.h | A:- | S:TCP+换行JSON至sandyun.top:12399；仅SET_LED；25s心跳；指数退避重连；不承载AI语义
+yh_protocol.h[CI6S]: F:YH设备协议——旁路设备管理通道(HELLO/心跳/COMMAND/ACK) | R:code:main/boards/common/board.h | A:- | S:TCP+换行JSON至sandyun.top:12399；仅SET_LED；25s心跳；指数退避重连；不承载AI语义
+yh_ws2812_led.cc[CI4S]: F:YH WS2812 LED驱动(RMT) | R:code:main/yh/yh_protocol.cc | A:- | S:GPIO48；lazy初始化；失败E级日志
+yh_ws2812_led.h[CI4S]: F:YH WS2812 LED驱动(RMT) | R:code:main/yh/yh_protocol.cc | A:- | S:GPIO48；lazy初始化；失败E级日志
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/partitions/v1/===
+16m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+16m_custom_wakeword.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+16m_echoear.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+32m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+4m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+4m_esp-hi.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+8m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/partitions/v2/===
+16m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+16m_c3.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+32m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+4m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+8m.csv[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+README.md[FV5S]: F:分区表定义 | R:code:main/boards/my-s3-tft/config.json | A:- | S:16m.csv含8MB assets分区
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/Image_Converter/===
+LVGLImage.py[XO4S]: F:开发辅助脚本(LVGLImage.py) | R:- | A:- | S:-
+README.md[XS3T]: F:图像转换工具说明 | R:- | A:- | S:-
+lvgl_tools_gui.py[XO4S]: F:开发辅助脚本(lvgl_tools_gui.py) | R:- | A:- | S:-
+requirements.txt[XO2T]: F:图像工具依赖清单 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/===
+audio_debug_server.py[XO4S]: F:开发辅助脚本(audio_debug_server.py) | R:- | A:- | S:-
+build.py[XV7M]: F:权威构建入口——板型/变体选择与构建编排 | R:code:main/Kconfig.projbuild | A:- | S:canonical构建命令 python scripts/build.py <board> --name <variant>；改动sdkconfig
+build_default_assets.py[XO4S]: F:开发辅助脚本(build_default_assets.py) | R:- | A:- | S:-
+download_github_runs.py[XO4S]: F:开发辅助脚本(download_github_runs.py) | R:- | A:- | S:-
+gen_lang.py[XO4S]: F:开发辅助脚本(gen_lang.py) | R:- | A:- | S:-
+mp3_to_ogg.sh[XO4S]: F:构建/工具脚本(mp3_to_ogg.sh) | R:code:scripts/build.py | A:- | S:-
+versions.py[XO4S]: F:开发辅助脚本(versions.py) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/ci/===
+blufi.sdkconfig.defaults[FV3T]: F:CI蓝灯配网构建默认配置 | R:code:scripts/build.py | A:- | S:-
+representative-variants.json[FV4S]: F:CI代表性板型变体清单 | R:code:.github/workflows/build.yml | A:- | S:CI矩阵从此选取
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/ogg_converter/===
+README.md[XS3T]: F:OGG音频转换工具说明 | R:- | A:- | S:-
+xiaozhi_ogg_converter.py[XO4S]: F:开发辅助脚本(xiaozhi_ogg_converter.py) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/p3_tools/===
+README.md[XS3T]: F:P3工具集说明 | R:- | A:- | S:-
+batch_convert_gui.py[XO4S]: F:开发辅助脚本(batch_convert_gui.py) | R:- | A:- | S:-
+convert_audio_to_p3.py[XO4S]: F:开发辅助脚本(convert_audio_to_p3.py) | R:- | A:- | S:-
+convert_p3_to_audio.py[XO4S]: F:开发辅助脚本(convert_p3_to_audio.py) | R:- | A:- | S:-
+p3_gui_player.py[XO4S]: F:开发辅助脚本(p3_gui_player.py) | R:- | A:- | S:-
+play_p3.py[XO4S]: F:开发辅助脚本(play_p3.py) | R:- | A:- | S:-
+requirements.txt[XO2T]: F:P3工具依赖 | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/scripts/spiffs_assets/===
+README.md[XS3T]: F:SPIFFS资产工具说明 | R:- | A:- | S:-
+build.py[XV7M]: F:权威构建入口——板型/变体选择与构建编排 | R:code:main/Kconfig.projbuild | A:- | S:canonical构建命令 python scripts/build.py <board> --name <variant>；改动sdkconfig
+build_all.py[XO4S]: F:开发辅助脚本(build_all.py) | R:- | A:- | S:-
+pack_model.py[XO4S]: F:开发辅助脚本(pack_model.py) | R:- | A:- | S:-
+spiffs_assets_gen.py[XO4S]: F:开发辅助脚本(spiffs_assets_gen.py) | R:- | A:- | S:-

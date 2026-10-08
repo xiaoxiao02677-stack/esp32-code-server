@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-10-08",
+  "principle": "例外必须登记：原因、替代方案、负责人（FR-15）。修掉例外后从此清单移除。",
+  "exceptions": [
+    {
+      "method": "POST",
+      "path": "/otaMag/upload",
+      "type": "raw-fetch",
+      "reason": "multipart 文件上传（FormData），统一封装 api() 原设计仅支持 JSON/二进制下载；上传需浏览器自动生成 multipart boundary",
+      "workaround": "复用 authHeaders() 保持认证一致；响应用同一 Result{code,msg,data} 结构解析",
+      "owner": "hermes-agent",
+      "since": "2026-10-08"
+    },
+    {
+      "method": "POST",
+      "path": "/models/asrRecognize",
+      "type": "raw-fetch",
+      "reason": "二进制音频 body 上传（Blob, Content-Type: audio/webm）；api() 的 json 参数约定会破坏 Content-Type",
+      "workaround": "复用 authHeaders()；响应 JSON 结构与 Result 一致，手动 res.code 判断",
+      "owner": "hermes-agent",
+      "since": "2026-10-08"
+    }
+  ]
+}

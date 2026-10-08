@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "case": "A1",
+      "verdict": "FAIL",
+      "checks": {
+        "远程含 mem_holographic 代码": true,
+        "/api/memory 路由已挂载": false,
+        "ai_model_config 含 Memory_mem_holographic": true
+      },
+      "notes": [
+        "线上未部署（{'providers': 'base.py\\nmem0ai\\nmem_holographic\\nmem_local_short\\nmem_report_only\\nnomem\\npowermem\\n__pycache__', 'route': '401'}）"
+      ],
+      "details": {}
+    }
+  ],
+  "started": "2026-10-05 20:43:37",
+  "ended": "2026-10-05 20:43:56"
+}

@@ -1,0 +1,173 @@
+{
+  "summary": {
+    "total_sessions": 3,
+    "session_errors": [],
+    "total_turns": 6,
+    "turns_pass": 6,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 2113,
+      "p95": 2301,
+      "min": 1963,
+      "max": 2301
+    },
+    "first_sentence_ms": {
+      "p50": 1926,
+      "p95": 2095
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "stt": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "emotion": "cool",
+          "sentences": [
+            "哈喽",
+            "初次见面",
+            "不过你这话说得有点绕——新开始的对话还要问第几轮，笑死我了"
+          ],
+          "audio_frames": 154,
+          "audio_bytes": 24295,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1782,
+          "latency_first_audio_ms": 1963,
+          "latency_total_ms": 11855,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 2,
+          "query": "现在几点了？你知道今天星期几吗？",
+          "stt": "现在几点了？你知道今天星期几吗？",
+          "emotion": "relaxed",
+          "sentences": [
+            "凌晨三点四十四分啦",
+            "这时候还没睡，是不是又在偷偷研究什么科技玩意儿？",
+            "今天星期一，十月五号，农历八月廿五"
+          ],
+          "audio_frames": 195,
+          "audio_bytes": 31593,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2095,
+          "latency_first_audio_ms": 2301,
+          "latency_total_ms": 14059,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 791,
+      "error": null
+    },
+    {
+      "session": 2,
+      "turns": [
+        {
+          "session": 2,
+          "turn": 1,
+          "query": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "stt": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "emotion": "happy",
+          "sentences": [
+            "哈喽～新的一轮",
+            "认识你刚好，咱这局从头开始算起～"
+          ],
+          "audio_frames": 100,
+          "audio_bytes": 15809,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1842,
+          "latency_first_audio_ms": 2041,
+          "latency_total_ms": 8382,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 2,
+          "turn": 2,
+          "query": "现在几点了？你知道今天星期几吗？",
+          "stt": "现在几点了？你知道今天星期几吗？",
+          "emotion": "happy",
+          "sentences": [
+            "现在凌晨三点四十四分",
+            "今天是十月五号，星期一哦",
+            "这个点还不睡，是夜猫子还是有啥心事呀？"
+          ],
+          "audio_frames": 166,
+          "audio_bytes": 26402,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1961,
+          "latency_first_audio_ms": 2182,
+          "latency_total_ms": 12213,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 365,
+      "error": null
+    },
+    {
+      "session": 3,
+      "turns": [
+        {
+          "session": 3,
+          "turn": 1,
+          "query": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "stt": "你好，连续会话测试第几轮了？我是新开始的对话，请用一句话打个招呼",
+          "emotion": "laughing",
+          "sentences": [
+            "哈喽",
+            "这是全新的一轮哦，之前那些都不算数，咱们从现在开始算第一轮~"
+          ],
+          "audio_frames": 125,
+          "audio_bytes": 20325,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1926,
+          "latency_first_audio_ms": 2113,
+          "latency_total_ms": 10720,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 3,
+          "turn": 2,
+          "query": "现在几点了？你知道今天星期几吗？",
+          "stt": "现在几点了？你知道今天星期几吗？",
+          "emotion": "surprised",
+          "sentences": [
+            "现在是凌晨3点45分啦",
+            "今天星期一哦——这么晚还没睡，是在追剧还是干大事呢？"
+          ],
+          "audio_frames": 144,
+          "audio_bytes": 23719,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1858,
+          "latency_first_audio_ms": 2061,
+          "latency_total_ms": 10772,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 413,
+      "error": null
+    }
+  ]
+}

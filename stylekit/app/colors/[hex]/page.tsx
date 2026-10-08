@@ -1,0 +1,331 @@
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { LocalizedLink } from "@/components/i18n/localized-link";
+import { CopyValueRow } from "@/components/colors/copy-value-row";
+import {
+  getAllDetailSwatches,
+  getCuratedColorDetail,
+  hexToSlug,
+  normalizeHexInput,
+  type ColorDetail,
+} from "@/lib/styles/color-detail";
+import { serializeJsonLd } from "@/lib/security/json-ld";
+import { buildColorDetailJsonLd, buildColorDetailMetadata, COLOR_REFERENCE_PALETTE, COLOR_REFERENCE_SOURCES, getColorAnswer, getColorFaq, getPreferredTextColor, isExactTailwindHex } from "@/lib/seo/color-detail-content";
+import { ColorPairings } from "@/components/colors/color-pairings";
+
+export const revalidate = 86400;
+// Only the curated swatches returned by generateStaticParams are public pages.
+// This prevents arbitrary HEX URLs from triggering on-demand SSR/ISR work.
+export const dynamicParams = false;
+
+export function generateStaticParams(): { hex: string }[] {
+  return getAllDetailSwatches().map((hex) => ({ hex: hexToSlug(hex) }));
+}
+
+interface PageProps {
+  params: Promise<{ hex: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { hex: slug } = await params;
+  const detail = getCuratedColorDetail(slug);
+  if (!detail) return { title: "Color not found" };
+
+  return buildColorDetailMetadata(detail);
+}
+
+function textOn(detail: ColorDetail): string {
+  return getPreferredTextColor(detail).hex;
+}
+
+function SectionHeading({ index, title }: { index: string; title: string }) {
+  return (
+    <div className="mb-6 flex items-baseline gap-4">
+      <span className="font-mono text-xs tracking-[0.2em] text-[#7aa2ff]">
+        {index}
+      </span>
+      <h2 className="text-xl md:text-2xl text-white/90">{title}</h2>
+      <span
+        aria-hidden="true"
+        className="hidden flex-1 self-center border-t border-white/10 md:block"
+      />
+    </div>
+  );
+}
+
+function SwatchLink({ hex }: { hex: string }) {
+  return (
+    <LocalizedLink
+      href={`/colors/${hexToSlug(hex)}`}
+      className="group flex flex-col gap-2 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#3b82f6]"
+    >
+      <span
+        className="block h-14 w-full border border-white/10 transition-transform duration-150 group-hover:-translate-y-0.5"
+        style={{ backgroundColor: hex }}
+      />
+      <span className="font-mono text-[11px] text-white/65 group-hover:text-white/85">
+        {hex}
+      </span>
+    </LocalizedLink>
+  );
+}
+
+/**
+ * Non-interactive swatch for computed color ladders.
+ *
+ * Tints and shades come from a lightness ladder (buildLadder), not the curated
+ * library, so a detail page almost never exists for them. Rendering them as
+ * links pointed every color page at ~8 hard 404s (dynamicParams=false), which
+ * fed Google's "Not found (404)" pile. They are illustrative color math, so
+ * they render as plain swatches. Only neighbors — which are drawn from
+ * getAllDetailSwatches() and always exist — stay clickable via SwatchLink.
+ */
+function Swatch({ hex }: { hex: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span
+        className="block h-14 w-full border border-white/10"
+        style={{ backgroundColor: hex }}
+      />
+      <span className="font-mono text-[11px] text-white/65">{hex}</span>
+    </div>
+  );
+}
+
+export default async function ColorDetailPage({ params }: PageProps) {
+  const { hex: slug } = await params;
+  const normalized = normalizeHexInput(slug);
+  if (!normalized) notFound();
+
+  // Canonicalize "FFF"/"667EEA" style slugs to the 6-digit lowercase form.
+  const canonicalSlug = normalized.slice(1);
+  if (slug !== canonicalSlug) {
+    permanentRedirect(`/colors/${canonicalSlug}`);
+  }
+
+  const detail = getCuratedColorDetail(normalized);
+  if (!detail) notFound();
+
+  const jsonLd = buildColorDetailJsonLd(detail);
+  const faqs = getColorFaq(detail);
+
+  const promptSnippet =
+    detail.usedBy.length > 0
+      ? `Use ${detail.hex} as the ${detail.usedBy[0].role} color, following the ${detail.usedBy[0].nameEn} style: ${detail.rgbCss}, nearest Tailwind token ${detail.tailwind.token}. Keep text contrast at least 4.5:1 (this color scores ${detail.contrast[0].ratio}:1 on white, ${detail.contrast[1].ratio}:1 on black).`
+      : `Use ${detail.hex} (${detail.rgbCss}, nearest Tailwind token ${detail.tailwind.token}) as an accent. Keep text contrast at least 4.5:1 — this color scores ${detail.contrast[0].ratio}:1 on white and ${detail.contrast[1].ratio}:1 on black.`;
+
+  return (
+    <div className="flex min-h-screen flex-col bg-[#0a0a0f]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
+      <Header />
+      <main lang="en" className="flex-1">
+        <div className="container mx-auto max-w-4xl px-4 py-10 md:py-14">
+          <nav className="mb-8 font-mono text-[11px] uppercase tracking-[0.15em] text-white/65">
+            <LocalizedLink href="/colors" className="hover:text-white/80">
+              Colors
+            </LocalizedLink>
+            <span aria-hidden="true" className="mx-2">
+              /
+            </span>
+            <span className="text-white/70">{detail.hex}</span>
+          </nav>
+
+          <header className="mb-12">
+            <div
+              className="flex h-40 items-end border border-white/10 p-4 md:h-52"
+              style={{ backgroundColor: detail.hex }}
+            >
+              <h1
+                className="font-mono text-3xl tracking-tight md:text-5xl"
+                style={{ color: textOn(detail) }}
+              >
+                {detail.hex}
+              </h1>
+            </div>
+            <p className="mt-5 max-w-2xl text-[15px] leading-[1.75] text-white/60">
+              {getColorAnswer(detail)}
+            </p>
+          </header>
+
+          <section className="mb-12">
+            <SectionHeading index="01" title="Conversions" />
+            <div className="border-t border-white/10">
+              <CopyValueRow label="hex" value={detail.hex} />
+              <CopyValueRow label="rgb" value={detail.rgbCss} />
+              <CopyValueRow label="hsl" value={detail.hslCss} />
+              <CopyValueRow label="oklch" value={detail.oklchCss} />
+              <CopyValueRow
+                label="tailwind"
+                value={
+                  isExactTailwindHex(detail)
+                    ? detail.tailwind.token
+                    : `${detail.tailwind.token} (nearest, ${detail.tailwind.hex})`
+                }
+              />
+            </div>
+          </section>
+
+          <section className="mb-12">
+            <SectionHeading index="02" title="WCAG contrast" />
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-white/15 text-left font-mono text-[11px] uppercase tracking-[0.15em] text-white/65">
+                    <th className="py-2 pr-4 font-normal">Background</th>
+                    <th className="py-2 pr-4 font-normal">Ratio</th>
+                    <th className="py-2 pr-4 font-normal">AA text</th>
+                    <th className="py-2 pr-4 font-normal">AA large</th>
+                    <th className="py-2 font-normal">AAA text</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.contrast.map((reading) => (
+                    <tr
+                      key={reading.background}
+                      className="border-b border-white/10 text-white/75"
+                    >
+                      <td className="py-3 pr-4 font-mono">
+                        {reading.background}
+                      </td>
+                      <td className="py-3 pr-4 font-mono">
+                        {reading.ratio.toFixed(2)}:1
+                      </td>
+                      <td className="py-3 pr-4 font-mono">
+                        {reading.passesAaNormal ? "pass" : "fail"}
+                      </td>
+                      <td className="py-3 pr-4 font-mono">
+                        {reading.passesAaLarge ? "pass" : "fail"}
+                      </td>
+                      <td className="py-3 font-mono">
+                        {reading.passesAaaNormal ? "pass" : "fail"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-white/65">
+              Ratios use WCAG relative luminance for opaque sRGB colors. Normal text
+              requires 4.5:1, or 7:1 at AAA. Large text requires 3:1: at least 24 CSS
+              pixels, or about 18.67 CSS pixels when bold. Pass/fail uses the unrounded
+              ratio. Contrast alone is not a full accessibility assessment.
+            </p>
+          </section>
+
+          <ColorPairings detail={detail} />
+
+          {detail.usedBy.length > 0 && (
+            <section className="mb-12">
+              <SectionHeading index="03" title="Design styles using this color" />
+              <ul className="border-t border-white/10">
+                {detail.usedBy.map((usage) => (
+                  <li key={usage.slug}>
+                    <LocalizedLink
+                      href={`/styles/${usage.slug}`}
+                      className="grid grid-cols-[1fr_auto] items-baseline gap-3 border-b border-white/10 py-4 transition-colors duration-150 hover:bg-white/[0.03] focus:outline-none focus-visible:ring-1 focus-visible:ring-[#3b82f6]"
+                    >
+                      <span className="text-[15px] text-white/85">
+                        {usage.nameEn}
+                        <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.12em] text-white/65">
+                          {usage.role} · {usage.category}
+                        </span>
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="font-mono text-sm text-white/65"
+                      >
+                        →
+                      </span>
+                    </LocalizedLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="mb-12">
+            <SectionHeading
+              index={detail.usedBy.length > 0 ? "04" : "03"}
+              title="Tints and shades"
+            />
+            <div className="grid grid-cols-4 gap-3 md:grid-cols-8 md:gap-4">
+              {[...detail.tints].reverse().map((hex) => (
+                <Swatch key={`tint-${hex}`} hex={hex} />
+              ))}
+              {detail.shades.map((hex) => (
+                <Swatch key={`shade-${hex}`} hex={hex} />
+              ))}
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-white/65">
+              Lightness ladder in HSL space, from the lightest tint to the
+              darkest shade of {detail.hex}.
+            </p>
+          </section>
+
+          {detail.neighbors.length > 0 && (
+            <section className="mb-12">
+              <SectionHeading
+                index={detail.usedBy.length > 0 ? "05" : "04"}
+                title="Similar colors in the library"
+              />
+              <div className="grid grid-cols-4 gap-3 md:grid-cols-8 md:gap-4">
+                {detail.neighbors.map((neighbor) => (
+                  <SwatchLink key={neighbor.hex} hex={neighbor.hex} />
+                ))}
+              </div>
+              <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-white/65">
+                Nearest swatches by perceptual OKLab distance across all
+                curated style palettes.
+              </p>
+            </section>
+          )}
+
+          <section className="mb-12">
+            <SectionHeading
+              index={detail.usedBy.length > 0 ? "06" : "05"}
+              title="AI prompt snippet"
+            />
+            <div className="border border-white/10 bg-white/[0.02] p-5">
+              <p className="font-mono text-sm leading-[1.8] text-white/75">
+                {promptSnippet}
+              </p>
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-white/65">
+              Paste this into ChatGPT, Claude, Cursor, or v0 to use {detail.hex}
+              {" "}with correct contrast constraints.{" "}
+              <LocalizedLink
+                href="/colors"
+                className="text-[#7aa2ff] hover:text-white/90"
+              >
+                Browse all palette colors
+              </LocalizedLink>
+              .
+            </p>
+          </section>
+          <section className="mb-12" aria-labelledby="color-questions">
+            <h2 id="color-questions" className="mb-5 text-xl text-white/90 md:text-2xl">Questions about {detail.hex}</h2>
+            <div className="divide-y divide-white/10 border-y border-white/10">
+              {faqs.map((faq) => (
+                <details key={faq.question} className="py-4">
+                  <summary className="cursor-pointer text-sm font-medium leading-7 text-white/90">{faq.question}</summary>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">{faq.answer}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+          <section className="mb-6" aria-labelledby="color-sources">
+            <h2 id="color-sources" className="text-lg text-white/90">Sources and calculation limits</h2>
+            <p className="mt-3 text-sm leading-7 text-white/65">Reference palette: {COLOR_REFERENCE_PALETTE}. Named tokens are versioned approximations; use the exact hex utilities when matching an existing design. Palette pairings come from the linked StyleKit definitions, not external popularity or preference data.</p>
+            <ul className="mt-4 space-y-3 text-sm">{COLOR_REFERENCE_SOURCES.map((source) => <li key={source.href}><a href={source.href} className="text-[#7aa2ff] underline underline-offset-4">{source.name}</a></li>)}</ul>
+          </section>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}

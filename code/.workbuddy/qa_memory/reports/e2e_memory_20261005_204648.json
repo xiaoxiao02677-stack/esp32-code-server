@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "case": "A1",
+      "verdict": "FAIL",
+      "checks": {
+        "引擎切换后服务重启存活": true,
+        "会话1 连接正常": true,
+        "会话2 连接正常": true,
+        "回答包含 张三": false,
+        "回答包含 粤语": false,
+        "T1(音乐问句)回答含 粤语": false,
+        "T2(名字问句)回答含 张三": false,
+        "holographic 库文件存在且有条目": false,
+        "条目含 张三（profile）": false,
+        "条目含 粤语（preference）": false,
+        "管理 API 能列出 张三 条目": false
+      },
+      "notes": [
+        "T1 回答: ",
+        "T2 回答: 当然记得啦",
+        "会话2 完整回答: 当然记得啦"
+      ],
+      "details": {
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [],
+              "stt": [
+                "我叫张三，我喜欢听粤语歌"
+              ],
+              "audio_frames": 0,
+              "emotion": "happy",
+              "tts_stop": false,
+              "total_s": 1.9
+            }
+          ]
+        },
+        "s2": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [],
+              "stt": [
+                "你还记得我吗？我喜欢听什么音乐？"
+              ],
+              "audio_frames": 0,
+              "emotion": "relaxed",
+              "tts_stop": false,
+              "total_s": 1.39
+            },
+            {
+              "sentences": [
+                "当然记得啦"
+              ],
+              "stt": [
+                "我叫什么名字？"
+              ],
+              "audio_frames": 0,
+              "emotion": "confident",
+              "tts_stop": false,
+              "total_s": 1.69
+            }
+          ]
+        },
+        "facts": []
+      }
+    }
+  ],
+  "started": "2026-10-05 20:44:26",
+  "ended": "2026-10-05 20:46:48"
+}

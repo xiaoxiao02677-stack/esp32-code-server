@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="模型与参数">
+  <!-- 模型与参数组：辅助紫小齿轮 + 笑脸（kawaii 粉彩） -->
+  <rect x="2" y="2" width="44" height="44" rx="14" fill="#FFF7FA" stroke="#FFE3EA" stroke-width="1.5"/>
+  <g fill="#A78BFA" opacity="0.9">
+    <rect x="22.4" y="8.5" width="3.2" height="6" rx="1.6"/>
+    <rect x="22.4" y="33.5" width="3.2" height="6" rx="1.6"/>
+    <rect x="8.5" y="22.4" width="6" height="3.2" rx="1.6"/>
+    <rect x="33.5" y="22.4" width="6" height="3.2" rx="1.6"/>
+    <rect x="12.6" y="12.6" width="3.2" height="6" rx="1.6" transform="rotate(45 14.2 15.6)"/>
+    <rect x="32.2" y="12.6" width="3.2" height="6" rx="1.6" transform="rotate(-45 33.8 15.6)"/>
+    <rect x="12.6" y="29.4" width="3.2" height="6" rx="1.6" transform="rotate(-45 14.2 32.4)"/>
+    <rect x="32.2" y="29.4" width="3.2" height="6" rx="1.6" transform="rotate(45 33.8 32.4)"/>
+  </g>
+  <circle cx="24" cy="24" r="10.5" fill="#EEE7FE" stroke="#A78BFA" stroke-width="2"/>
+  <circle cx="20.8" cy="21.8" r="1.7" fill="#5B3EC4" opacity="0.6"/>
+  <circle cx="27.2" cy="21.8" r="1.7" fill="#5B3EC4" opacity="0.6"/>
+  <path d="M21.5 26 q2.5 1.8 5 0" stroke="#5B3EC4" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+</svg>

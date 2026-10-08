@@ -1,0 +1,119 @@
+AOCI-CODE CLI Runtime Contract v1
+=================================
+
+Identity
+--------
+
+The installed binary is named `aoci`. The canonical Go module is
+`github.com/aoci-spec/aoci-code`. The command tree and the exact flags exposed
+by the current binary are discoverable through `aoci --help` and command-level
+`--help` output.
+
+Global behavior
+---------------
+
+`--repo` binds an invocation to a repository root. `--json` selects the
+machine-readable output for commands that support it. `--quiet` suppresses
+eligible human progress output; it does not change the result or authorization
+boundary.
+
+The stable process exit classes are:
+
+  0 success
+  1 drift or ordinary check failure
+  2 invalid input, index, or governance state
+  3 uninitialized repository, configuration, or parameter failure
+  10 internal failure
+
+One `--json` invocation emits at most one top-level business result or error
+envelope. Human-readable errors are written to stderr. The `aoci mcp` command
+uses a direct stdio protocol path described by the MCP runtime contract.
+
+`aoci ui` serves a local, read-only status page for one or more repositories:
+identity, index header, Code and Database Volumes, budget, the Overview chunk
+plan at the configured chunk_tokens, governance drift, host integrations, the
+running `aoci mcp` processes of the current user (Linux), and the next step the
+Guide recommends. It binds loopback addresses only and refuses any other bind
+address, answers GET and HEAD only, takes no lock, appends nothing to the
+Ledger, and is not an MCP transport: the `aoci mcp` process never opens a
+socket, and the nine-tool surface is unchanged. The page's JSON routes are an
+implementation detail of the same binary, not a public contract; Hosts keep
+reading `capabilities` and the Guide.
+`aoci ui --detach` starts the page as its own session, detached from the
+calling shell, prints its URL once the page is listening, and returns; a page
+already registered and answering for the repository is reused rather than
+duplicated. `aoci ui --stop` ends the registered page, proving liveness through
+the page itself before any signal is sent. Registrations live in the user's
+cache directory (or AOCI_UI_REGISTRY_DIR), never in the repository.
+
+State and writes
+----------------
+
+Command help and the live Guide identify whether an operation is observational,
+prepares a candidate, requires human interaction, or can update formal assets.
+An observational command does not modify the formal index or Baseline unless
+its contract explicitly says otherwise, but local audit evidence can still be
+written when enabled. Formal writes use the existing validation, lock, CAS,
+atomic-write, and recovery pipeline.
+
+Managed Scope activation
+------------------------
+
+`aoci scope activate` activates the current desired scope and budget policy by
+building an empty `managed-scope-candidate-set/v1` through the existing Scope
+Change preview and Apply pipeline. It accepts no positional arguments or
+command-specific flags, edits no rules, and authors no Entries. It preserves
+the existing authorization, validation, lock, CAS, and recovery decisions.
+In particular, Legacy stale sources still require explicit Entry candidates;
+Volumes source drift remains available to subsequent ordinary maintenance.
+
+When the preview does not require human interaction, activation attempts Apply.
+Success exits 0 and `--json` emits the existing `managed-scope-change-result/v2`
+object, with no additional envelope. Other failures retain the existing Scope
+Change error behavior, including refusal when automation is off.
+
+When the preview reports `interaction_required`, activation does not prompt or
+attempt Apply. It saves the existing versioned preview in a unique directory
+under `.aoci/scope-change/`, without replacing an earlier pending preview, and
+exits 2. Human output names the preview and the approve and apply commands in
+order. `--json` emits the ordinary version-1 error envelope with `ok=false`,
+`exit_code=2`, `error_code=managed_scope_human_approval_required`, and these
+required `details` fields:
+
+  interaction_required: true
+  formal_writes_started: false
+  preview_file: absolute path to the saved preview
+  approve_command: shell-quoted command bound to this executable and repository
+  apply_command: shell-quoted command using the same preview and approval file
+
+The commands use `scope approve --actor <id> --out-file` followed by
+`scope apply --approval-file`; the operator replaces the quoted <id> placeholder
+with their reviewer identity. Approve retains its real-TTY digest confirmation.
+Saving the preview is a runtime artifact write, not a formal cognition or
+Baseline write. Apply still refuses changed sources or other stale guards and
+never treats the saved preview alone as approval.
+
+Bounded standard input
+----------------------
+
+Every command that reads standard input reads it under an explicit byte bound
+and never buffers an unbounded stream. update-entry accepts at most the Entries
+request limit and refuses a larger payload as a configuration error before any
+formal write; supplying both --entry and --stdin is refused the same way, since
+silently preferring one would write content the operator did not intend. Hook
+runtime input carries a small private bound and fails open on a read error or an
+oversize payload, because hook infrastructure must never block a workflow.
+
+Layout-scoped read commands
+---------------------------
+
+Read-only commands this contract declares Legacy-only, including status --deep,
+diagnose a Volumes v1 layout instead of reporting a result their governance path
+owns.
+
+Compatibility
+-------------
+
+Automation must consume JSON fields, schema versions, exit classes, and live
+capability output instead of parsing human prose. A public contract change that
+alters these surfaces requires matching compatibility tests.

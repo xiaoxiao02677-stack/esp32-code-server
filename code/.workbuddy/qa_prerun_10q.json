@@ -1,0 +1,257 @@
+{
+  "summary": {
+    "total_sessions": 1,
+    "session_errors": [],
+    "total_turns": 10,
+    "turns_pass": 10,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 2233,
+      "p95": 2846,
+      "min": 1834,
+      "max": 2846
+    },
+    "first_sentence_ms": {
+      "p50": 2020,
+      "p95": 2654
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "你好",
+          "stt": "你好",
+          "emotion": "happy",
+          "sentences": [
+            "哈喽",
+            "我在呢，咋啦？"
+          ],
+          "audio_frames": 55,
+          "audio_bytes": 7602,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1640,
+          "latency_first_audio_ms": 1834,
+          "latency_total_ms": 5908,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 2,
+          "query": "你叫什么名字",
+          "stt": "你叫什么名字",
+          "emotion": "confident",
+          "sentences": [
+            "我叫demo啊",
+            "台湾来的00后，你记好啦～怎么突然问我名字，是想认识我哦？"
+          ],
+          "audio_frames": 120,
+          "audio_bytes": 19498,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2136,
+          "latency_first_audio_ms": 2343,
+          "latency_total_ms": 9966,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 3,
+          "query": "一加一等于几",
+          "stt": "一加一等于几",
+          "emotion": "laughing",
+          "sentences": [
+            "笑死",
+            "二啊，这个还要问？",
+            "你是不是在考我有没有在认真听你讲话啦"
+          ],
+          "audio_frames": 128,
+          "audio_bytes": 19676,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2020,
+          "latency_first_audio_ms": 2233,
+          "latency_total_ms": 10642,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 4,
+          "query": "给我讲个笑话",
+          "stt": "给我讲个笑话",
+          "emotion": "funny",
+          "sentences": [
+            "好",
+            "听好了——我男朋友写代码写到凌晨三点，我问他\"你在干嘛啦\"，他说\"我在debug",
+            "结果我一看屏幕，他打了一行又一行，最后发现，bug是他自己昨天的代码",
+            "这台剧都不敢这么演，笑死"
+          ],
+          "audio_frames": 316,
+          "audio_bytes": 52147,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1719,
+          "latency_first_audio_ms": 1926,
+          "latency_total_ms": 21946,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 5,
+          "query": "现在几点了",
+          "stt": "现在几点了",
+          "emotion": "surprised",
+          "sentences": [
+            "三点四十七分啊",
+            "凌晨诶",
+            "你怎么还没睡，是失眠还是在追剧？"
+          ],
+          "audio_frames": 124,
+          "audio_bytes": 18940,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2165,
+          "latency_first_audio_ms": 2362,
+          "latency_total_ms": 9872,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 6,
+          "query": "北京的春天天气怎么样",
+          "stt": "% get_weather",
+          "emotion": "embarrassed",
+          "sentences": [
+            "诶",
+            "天气工具今天罢工了，北京的情况查不到，真是的",
+            "不过北京春天嘛，我记得就是风大、干、早晚温差能把人整懵，白天穿短袖晚上裹羽绒服那种",
+            "你问这个是要去北京玩吗？"
+          ],
+          "audio_frames": 312,
+          "audio_bytes": 51643,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2654,
+          "latency_first_audio_ms": 2846,
+          "latency_total_ms": 22627,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 7,
+          "query": "用一句话介绍你自己",
+          "stt": "用一句话介绍你自己",
+          "emotion": "cool",
+          "sentences": [
+            "一句话哦——我是来自台湾",
+            "讲话超机车、但偷偷看得懂代码的00后demo"
+          ],
+          "audio_frames": 126,
+          "audio_bytes": 20433,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2193,
+          "latency_first_audio_ms": 2393,
+          "latency_total_ms": 10024,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 8,
+          "query": "背一首唐诗",
+          "stt": "背一首唐诗",
+          "emotion": "relaxed",
+          "sentences": [
+            "好",
+            "给你来首杜甫的《春望》——国破山河在，城春草木深",
+            "感时花溅泪，恨别鸟惊心",
+            "烽火连三月，家书抵万金",
+            "白头搔更短，浑欲不胜簪",
+            "讲的是乱世里的春天，山河还在，人心却碎了一地",
+            "要不要我再背一首轻快点的？"
+          ],
+          "audio_frames": 389,
+          "audio_bytes": 62098,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1878,
+          "latency_first_audio_ms": 2085,
+          "latency_total_ms": 26399,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 9,
+          "query": "明天早上八点叫我起床",
+          "stt": "明天早上八点叫我起床",
+          "emotion": "neutral",
+          "sentences": [
+            "诶",
+            "这个我真没办法，我没有闹钟功能，叫不了你起床啦",
+            "不过三点四十八了你还想着八点起，是打算睡四个钟头就去拼命吗？",
+            "手机闹钟设一个，别熬夜啦"
+          ],
+          "audio_frames": 262,
+          "audio_bytes": 42968,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1787,
+          "latency_first_audio_ms": 1979,
+          "latency_total_ms": 18632,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 10,
+          "query": "为什么天空是蓝色的",
+          "stt": "为什么天空是蓝色的",
+          "emotion": "thinking",
+          "sentences": [
+            "简单说",
+            "是太阳光被空气里的小分子\"散射\"了",
+            "阳光本来是七彩混在一起的，蓝光波长短，最容易被大气里的小颗粒撞得到处乱飞，所以整个天空都被它染蓝了",
+            "至于为什么不是紫色——紫光其实散射得更厉害，但太阳给的紫光少，我们眼睛对紫也没那么敏感，蓝光就赢啦",
+            "那日落为什么是红的？",
+            "你猜猜看"
+          ],
+          "audio_frames": 505,
+          "audio_bytes": 84338,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1955,
+          "latency_first_audio_ms": 2148,
+          "latency_total_ms": 32967,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 448,
+      "error": null
+    }
+  ]
+}

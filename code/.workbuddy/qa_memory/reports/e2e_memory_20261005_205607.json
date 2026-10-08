@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "case": "A1",
+      "verdict": "FAIL",
+      "checks": {
+        "引擎切换后服务重启存活": true,
+        "会话1 连接正常": true,
+        "会话2 连接正常": true,
+        "回答包含 张三": true,
+        "回答包含 粤语": true,
+        "T1(音乐问句)回答含 粤语": true,
+        "T2(名字问句)回答含 张三": true,
+        "holographic 库文件存在且有条目": true,
+        "条目含 张三（profile）": true,
+        "条目含 粤语（preference）": true,
+        "来源设备非空": true,
+        "来源会话非空": true,
+        "管理 API 能列出 张三 条目": false
+      },
+      "notes": [
+        "张三条目: cat=preference trust=0.5 dev=14:c1:9f:d1:33:48 sess=d73bf68a-d2fd-4bb6-bb7f-dab06e8236cc",
+        "粤语条目: cat=preference trust=0.5"
+      ],
+      "details": {
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "系呀",
+                "张三，我记得嘅——你最爱听粤语歌",
+                "想听边首？",
+                "随便点，我帮你放"
+              ],
+              "stt": [
+                "我叫张三，我喜欢听粤语歌"
+              ],
+              "audio_frames": 153,
+              "emotion": "winking",
+              "tts_stop": true,
+              "total_s": 15.05
+            }
+          ]
+        },
+        "s2": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "当然记得啦",
+                "你系张三呀",
+                "你钟意听粤语歌，之前仲特登同我讲过嘅",
+                "要唔要我而家帮你播返首？"
+              ],
+              "stt": [
+                "你还记得我吗？我喜欢听什么音乐？"
+              ],
+              "audio_frames": 180,
+              "emotion": "happy",
+              "tts_stop": true,
+              "total_s": 17.87
+            },
+            {
+              "sentences": [
+                "你叫张三呀",
+                "我点会唔记得你啫",
+                "仲记得你钟意听粤语歌添~"
+              ],
+              "stt": [
+                "我叫什么名字？"
+              ],
+              "audio_frames": 116,
+              "emotion": "happy",
+              "tts_stop": true,
+              "total_s": 13.46
+            }
+          ]
+        },
+        "facts": [
+          {
+            "fact_id": 1,
+            "category": "preference",
+            "trust_score": 0.5,
+            "status": "active",
+            "device_id": "14:c1:9f:d1:33:48",
+            "session_id": "d73bf68a-d2fd-4bb6-bb7f-dab06e8236cc",
+            "content": "我叫张三，我喜欢听粤语歌"
+          },
+          {
+            "fact_id": 2,
+            "category": "preference",
+            "trust_score": 0.5,
+            "status": "active",
+            "device_id": "14:c1:9f:d1:33:48",
+            "session_id": "b3b57628-da5c-40c3-96d2-999ee196218b",
+            "content": "你还记得我吗？我喜欢听什么音乐？"
+          },
+          {
+            "fact_id": 3,
+            "category": "profile",
+            "trust_score": 0.5,
+            "status": "active",
+            "device_id": "14:c1:9f:d1:33:48",
+            "session_id": "b3b57628-da5c-40c3-96d2-999ee196218b",
+            "content": "我叫什么名字？"
+          }
+        ]
+      }
+    }
+  ],
+  "started": "2026-10-05 20:53:25",
+  "ended": "2026-10-05 20:56:07"
+}

@@ -1,0 +1,115 @@
+{
+  "name": "stylekit-core",
+  "version": "1.0.0-beta.7",
+  "description": "StyleKit core library - design style tokens, recipes, and accessibility helpers for 148 UI styles",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles": {
+      "types": "./dist/styles/index.d.ts",
+      "import": "./dist/styles/index.js",
+      "require": "./dist/styles/index.cjs"
+    },
+    "./recipes": {
+      "types": "./dist/recipes/index.d.ts",
+      "import": "./dist/recipes/index.js",
+      "require": "./dist/recipes/index.cjs"
+    },
+    "./accessibility": {
+      "types": "./dist/accessibility/index.d.ts",
+      "import": "./dist/accessibility/index.js",
+      "require": "./dist/accessibility/index.cjs"
+    },
+    "./discovery": {
+      "types": "./dist/discovery/index.d.ts",
+      "import": "./dist/discovery/index.js",
+      "require": "./dist/discovery/index.cjs"
+    },
+    "./prompt": {
+      "types": "./dist/prompt/index.d.ts",
+      "import": "./dist/prompt/index.js",
+      "require": "./dist/prompt/index.cjs"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "import": "./dist/export/index.js",
+      "require": "./dist/export/index.cjs"
+    },
+    "./assets": {
+      "types": "./dist/assets/index.d.ts",
+      "import": "./dist/assets/index.js",
+      "require": "./dist/assets/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "style-tokens",
+    "css",
+    "tailwind",
+    "tailwindcss",
+    "react",
+    "nextjs",
+    "ui",
+    "ui-styles",
+    "ui-design",
+    "web-design",
+    "frontend",
+    "theme",
+    "theming",
+    "color-palette",
+    "typography",
+    "glassmorphism",
+    "neo-brutalism",
+    "accessibility",
+    "wcag",
+    "recipes",
+    "figma-tokens",
+    "ai",
+    "llm",
+    "ai-prompts",
+    "cursor",
+    "claude",
+    "chatgpt",
+    "copilot",
+    "developer-tools",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "AnxForever",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnxForever/stylekit.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/AnxForever/stylekit/issues"
+  },
+  "homepage": "https://github.com/AnxForever/stylekit/tree/main/packages/core#readme",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}

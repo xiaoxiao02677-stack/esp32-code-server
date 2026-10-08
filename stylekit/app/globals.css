@@ -1,0 +1,733 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+/* Background registry values are copyable Tailwind snippets, not runtime
+   classes. Keep their embedded SVG data URLs out of Tailwind's source scan so
+   webpack does not try to resolve them as local CSS modules. */
+@source not "../lib/backgrounds/index.ts";
+
+/* next-themes uses `attribute="class"` (toggles a `.dark` class on <html>).
+   Tailwind v4's default `dark:` variant follows `prefers-color-scheme`,
+   which decouples from the active theme class. Pin it to the `.dark`
+   class so `dark:` utilities track the site theme, not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fix: Chrome 120+ changed <details> to use ::details-content pseudo-element
+   with content-visibility:hidden. The old md:!block trick no longer works.
+   Force details content visible on desktop so CollapsibleSection works. */
+@media (min-width: 768px) {
+  details.group\/collapsible::details-content {
+    display: block;
+    content-visibility: visible;
+  }
+}
+
+:root {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #0a0a0a;
+  --accent: #e63946;
+  --accent-foreground: #ffffff;
+  --muted: #6b7280;
+  --border: #e5e5e5;
+
+  /* Neo-Brutalist Colors */
+  --brutal-pink: #ff006e;
+  --brutal-green: #ccff00;
+  --brutal-blue: #00d9ff;
+  --brutal-yellow: #ff9500;
+  --brutal-orange: #ff6b00;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --accent: #ff6b6b;
+  --accent-foreground: #0a0a0a;
+  --muted: #9ca3af;
+  --border: #374151;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --font-serif: var(--font-display-active);
+  --font-sans: var(--font-body-active);
+  --font-mono: var(--font-mono-active);
+
+  /* Neo-Brutalist Colors */
+  --color-brutal-pink: var(--brutal-pink);
+  --color-brutal-green: var(--brutal-green);
+  --color-brutal-blue: var(--brutal-blue);
+  --color-brutal-yellow: var(--brutal-yellow);
+  --color-brutal-orange: var(--brutal-orange);
+
+  /* Neo-Brutalist Offset Shadows — semantic class names so callers
+     can write `shadow-brutal-pink` instead of repeating
+     `shadow-[4px_4px_0px_0px_#ff006e]` literals everywhere. The
+     shadow colors are derived from the brutal color CSS variables
+     so dark mode + future palette changes flow through. */
+  --shadow-brutal-pink: 4px 4px 0px 0px var(--brutal-pink);
+  --shadow-brutal-green: 4px 4px 0px 0px var(--brutal-green);
+  --shadow-brutal-blue: 4px 4px 0px 0px var(--brutal-blue);
+  --shadow-brutal-yellow: 4px 4px 0px 0px var(--brutal-yellow);
+  --shadow-brutal-orange: 4px 4px 0px 0px var(--brutal-orange);
+  --shadow-brutal-black: 4px 4px 0px 0px #000;
+  --shadow-brutal-pink-lg: 8px 8px 0px 0px var(--brutal-pink);
+  --shadow-brutal-blue-lg: 8px 8px 0px 0px var(--brutal-blue);
+  --shadow-brutal-black-lg: 8px 8px 0px 0px #000;
+  --shadow-brutal-pink-card: 6px 6px 0px 0px var(--brutal-pink);
+  --shadow-brutal-green-card: 6px 6px 0px 0px var(--brutal-green);
+  --shadow-brutal-blue-card: 6px 6px 0px 0px var(--brutal-blue);
+  --shadow-brutal-yellow-card: 6px 6px 0px 0px var(--brutal-yellow);
+  --shadow-brutal-orange-card: 6px 6px 0px 0px var(--brutal-orange);
+  --shadow-brutal-pink-card-lg: 12px 12px 0px 0px var(--brutal-pink);
+  --shadow-brutal-green-card-lg: 12px 12px 0px 0px var(--brutal-green);
+  --shadow-brutal-blue-card-lg: 12px 12px 0px 0px var(--brutal-blue);
+  --shadow-brutal-yellow-card-lg: 12px 12px 0px 0px var(--brutal-yellow);
+  --shadow-brutal-orange-card-lg: 12px 12px 0px 0px var(--brutal-orange);
+}
+
+/* Editorial/Magazine Typography */
+body {
+  --font-display-active: var(--font-public-display), "Songti SC", "STSong", "SimSun", ui-serif, Georgia, serif;
+  --font-body-active: var(--font-public-sans), "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-active: var(--font-public-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
+  --font-serif: var(--font-display-active);
+  --font-sans: var(--font-body-active);
+  --font-mono: var(--font-mono-active);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body-active);
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1, "liga" 1;
+  overflow-x: hidden;
+}
+
+/* The head bootstrap sets this before first paint for a previously dismissed
+   announcement. The client then removes the hidden markup without shifting
+   the page. */
+html[data-site-announcement-dismissed="true"] [data-site-announcement] {
+  display: none;
+}
+
+html[data-friend-promo-dismissed="true"] [data-friend-promo] {
+  display: none;
+}
+
+/* Public headings use the display face. Showcase routes override the same
+   semantic variables with a style-specific pairing in app/layout.tsx. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display-active);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Style covers are miniature design specimens, not public-site headings.
+   Keep the global editorial heading treatment from flattening previews that
+   intentionally rely on their own font utilities (or on inherited weight). */
+.style-cover-preview :where(h1, h2, h3, h4, h5, h6) {
+  font-family: inherit;
+  font-optical-sizing: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-wrap: inherit;
+}
+
+.style-cover-preview :where(.font-serif) {
+  font-family: var(--font-display-active);
+}
+
+.style-cover-preview :where(.font-sans) {
+  font-family: var(--font-body-active);
+}
+
+.style-cover-preview :where(.font-mono) {
+  font-family: var(--font-mono-active);
+}
+
+/* English homepage: the same refined serif voice used by Editorial previews.
+   Functional copy remains on the body face to preserve scanning clarity. */
+.home-hero-title-en {
+  font-family: var(--font-public-display), "Playfair Display", Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1, "liga" 1, "dlig" 1;
+  letter-spacing: -0.012em;
+  line-height: 1;
+}
+
+.home-hero-editorial-line-en {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 0.96;
+}
+
+.home-hero-editorial-accent-en {
+  display: inline-block;
+  margin-top: 0.04em;
+  padding-right: 0.08em;
+  font-family: inherit;
+  font-size: 1.06em;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 0.96;
+  transform: none;
+}
+
+/* Preserve the Chinese homepage acronym exactly as it appeared before the
+   typography overhaul: the original system serif stack and heading metrics. */
+.home-hero-ai-zh {
+  display: inline-block;
+  margin-inline: 0;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  transform: none;
+}
+
+.home-hero-surface {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+}
+
+.home-hero-surface::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--background) 0%, transparent 30%, transparent 70%, var(--background) 100%);
+  content: "";
+  pointer-events: none;
+}
+
+.home-hero-surface > * {
+  z-index: 1;
+}
+
+@media (max-width: 639px) {
+  .home-hero-title-en {
+    letter-spacing: -0.008em;
+    line-height: 1.02;
+  }
+
+  .home-hero-editorial-line-en {
+    font-size: 0.96em;
+    line-height: 0.96;
+  }
+
+  .home-hero-editorial-accent-en {
+    font-size: 1.06em;
+  }
+
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+/* Selection style */
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
+/* Editorial horizontal rule */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* Magazine-style pull quote */
+.pull-quote {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: 1.5rem;
+  font-style: italic;
+  line-height: 1.4;
+  border-left: 3px solid var(--accent);
+  padding-left: 1.5rem;
+  margin: 2rem 0;
+}
+
+/* Code block styling */
+pre {
+  background: var(--background);
+  color: var(--foreground);
+  padding: 1.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+code {
+  font-family: var(--font-mono-active);
+  font-variant-ligatures: none;
+}
+
+.admin-shell {
+  --admin-canvas: #fafafa;
+  --admin-panel: #ffffff;
+  --admin-input: #f2f2f2;
+  --admin-rail: #fafafa;
+  --admin-text-primary: #171717;
+  --admin-text-secondary: #4d4d4d;
+  --admin-text-tertiary: #666666;
+  --admin-text-muted: #8f8f8f;
+  --admin-border-soft: rgba(0, 0, 0, 0.08);
+  --admin-border-emphasis: rgba(0, 0, 0, 0.14);
+  --admin-focus: #0072f5;
+  --admin-focus-input: #005fcc;
+  --admin-shadow-border: 0 0 0 1px var(--admin-border-soft);
+  --admin-shadow-small: var(--admin-shadow-border), 0 2px 2px rgba(0, 0, 0, 0.04);
+  --admin-shadow-medium: var(--admin-shadow-border), 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  --admin-shadow-menu: var(--admin-shadow-border), 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --admin-shadow: var(--admin-shadow-border);
+  --admin-focus-ring: 0 0 0 2px var(--admin-panel), 0 0 0 4px var(--admin-focus);
+  --admin-hover: #ebebeb;
+  --admin-primary-hover: #2b2b2b;
+  --admin-status-blue: #0062d1;
+  --admin-status-green: #45a557;
+  --admin-status-amber: #ff990a;
+  --admin-status-red: #e5484d;
+  --foreground: var(--admin-text-primary);
+  --muted: var(--admin-text-secondary);
+  --border: var(--admin-border-soft);
+  color: var(--admin-text-primary);
+  font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "liga" 1, "tnum" 1, "cv02" 1, "cv03" 1;
+}
+
+
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell h5,
+.admin-shell h6 {
+  font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  text-wrap: balance;
+}
+
+.admin-shell section,
+.admin-shell table,
+.admin-shell input,
+.admin-shell textarea,
+.admin-shell select,
+.admin-shell button {
+  font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+}
+
+.admin-shell input,
+.admin-shell textarea,
+.admin-shell select {
+  background-color: var(--admin-input);
+  outline: none;
+}
+
+.admin-shell input:focus-visible,
+.admin-shell textarea:focus-visible,
+.admin-shell select:focus-visible,
+.admin-shell button:focus-visible,
+.admin-shell a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--admin-panel), 0 0 0 4px var(--admin-focus);
+}
+
+.admin-shell input:focus-visible,
+.admin-shell textarea:focus-visible,
+.admin-shell select:focus-visible {
+  box-shadow: 0 0 0 1px var(--admin-focus-input);
+}
+
+.admin-shell table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--admin-panel);
+  box-shadow: inset 0 -1px 0 var(--admin-border-soft);
+}
+
+.admin-shell th {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-shell td {
+  vertical-align: middle;
+}
+
+.admin-shell tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: 48px;
+  box-shadow: inset 0 -1px 0 var(--admin-border-soft);
+}
+
+.admin-shell code {
+  border-radius: 0.375rem;
+  background-color: var(--admin-input);
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.dark .admin-shell {
+  --admin-canvas: #0a0a0a;
+  --admin-panel: #111111;
+  --admin-input: #1a1a1a;
+  --admin-rail: #0a0a0a;
+  --admin-text-primary: #ededed;
+  --admin-text-secondary: #a1a1a1;
+  --admin-text-tertiary: #888888;
+  --admin-text-muted: #666666;
+  --admin-border-soft: rgba(255, 255, 255, 0.1);
+  --admin-border-emphasis: rgba(255, 255, 255, 0.18);
+  --admin-hover: #1f1f1f;
+  --admin-primary-hover: #d6d6d6;
+  --admin-shadow-small: var(--admin-shadow-border);
+  --admin-shadow-medium: var(--admin-shadow-border);
+  --admin-shadow-menu: var(--admin-shadow-border);
+}
+
+
+
+/* View Transitions */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: fade-out 150ms ease-out;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 150ms ease-out;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Editorial grid background (subtle) */
+.editorial-grid {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+}
+
+/* Magazine masthead style */
+.masthead {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* Drop cap for articles */
+.drop-cap::first-letter {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  float: left;
+  font-size: 4rem;
+  line-height: 0.8;
+  padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  font-weight: 400;
+}
+
+/* Utility: No scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Radix Accordion animations (for Tree component) */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@theme inline {
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+/* Neo-Brutalist Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Neo-Brutalist Slide In Animation */
+@keyframes slideIn {
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Home page reveal animations */
+@keyframes home-reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-reveal-up-strong {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-reveal-up-subtle {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-reveal-soft {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes home-feature-swap {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-feature-swap-soft {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dropdown-enter {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes home-segment-pulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+
+@keyframes home-quick-jump-pop {
+  0% { transform: translateY(-4px) scale(0.995); opacity: 0.78; }
+  70% { transform: translateY(0) scale(1.002); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes home-support-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@theme inline {
+  --animate-home-reveal-up-strong: home-reveal-up-strong 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-reveal-up: home-reveal-up 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-reveal-up-subtle: home-reveal-up-subtle 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-reveal-soft: home-reveal-soft 360ms ease-out both;
+  --animate-home-feature-swap: home-feature-swap 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-feature-swap-soft: home-feature-swap-soft 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-dropdown-enter: dropdown-enter 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-segment-pulse: home-segment-pulse 1.8s ease-in-out infinite;
+  --animate-home-quick-jump-pop: home-quick-jump-pop 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-home-support-float: home-support-float 5.2s ease-in-out infinite;
+}
+
+@media (max-width: 767px) {
+  .home-reveal-mobile-no-delay {
+    animation-delay: 0ms !important;
+    animation-name: home-reveal-soft !important;
+    animation-duration: 260ms !important;
+    transform: none !important;
+  }
+}
+
+/* Neo-Brutalist Text Stroke */
+.text-stroke {
+  -webkit-text-stroke: 2px black;
+  color: transparent;
+}
+
+.text-stroke-white {
+  -webkit-text-stroke: 2px white;
+  color: transparent;
+}
+
+/* Interactive element touch optimization */
+a, button, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* range sliders need a directional cursor, not the text I-beam */
+input[type="range"] { cursor: pointer; }
+
+/* Surface-level shadow utilities — hairline + contact + ambient
+   Replace border+border with this stack for Card, Popover, Modal,
+   Dropdown and similar floating-surface components. The zero-blur
+   edge ring inherits foreground alpha so it adapts to both light
+   and dark themes without a hard-coded gray border. */
+@utility shadow-surface {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent),
+    0 4px 12px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+@utility shadow-surface-lg {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 2px 4px color-mix(in srgb, var(--foreground) 6%, transparent),
+    0 8px 24px color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.sk-spotlight-surface > .sk-spotlight-layer {
+  background:
+    radial-gradient(
+      var(--sk-spotlight-radius, 360px) circle at var(--sk-spotlight-x, 50%) var(--sk-spotlight-y, 50%),
+      rgba(var(--sk-spotlight-color, 255,255,255), var(--sk-spotlight-strength, 0.14)),
+      transparent 46%
+    );
+  opacity: var(--sk-spotlight-opacity, 0);
+}
+
+.sk-tilt-perspective {
+  perspective: 900px;
+}
+
+/* Tabular numbers utility */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font specimen sheets (Resources > Font Pairings)
+   Each pairing prints on its own paper-and-ink stock, carried in as custom
+   properties by the card so the dark theme can swap the pair here — an inline
+   style cannot hold a variant. Every derived tone mixes from `currentColor`,
+   so one pair of values drives the whole sheet.
+   `content-visibility` keeps the 40+ off-screen specimens out of layout and
+   paint, which is what makes the wall scroll smoothly. */
+.specimen-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 34rem;
+}
+
+/* Skipped subtrees do not print, and full-page captures render them blank.
+   Both want the whole wall. */
+@media print {
+  .specimen-card {
+    content-visibility: visible;
+  }
+}
+
+.specimen-sheet {
+  /* The sheet is the sizing context for the specimen type: the grid drops from
+     two columns to one at different widths, so a card can be 240px or 520px
+     wide at the same viewport. Sizing the headline off the viewport made the
+     narrow cards wrap a display word onto four lines. */
+  container-type: inline-size;
+  background: var(--specimen-paper);
+  color: var(--specimen-ink);
+}
+
+.dark .specimen-sheet {
+  background: var(--specimen-paper-dark);
+  color: var(--specimen-ink-dark);
+}
+
+.specimen-ink-soft {
+  color: color-mix(in srgb, currentColor 82%, transparent);
+}
+
+/* 72% is the floor that keeps secondary specimen copy at or above 4.5:1 on
+   every stock -- verified against the darkest paper (ochre). */
+.specimen-ink-muted {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.specimen-ink-rule {
+  border-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.specimen-ink-track {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.specimen-ink-fill {
+  background: currentColor;
+}
+
+/* Copy actions live on the coloured sheet, so they are drawn in the sheet's own
+   ink rather than the site's black-on-white — a hairline outline at rest that
+   fills in on hover. This keeps the resting wall calm and stops every card from
+   ending in a black button bar. */
+.specimen-action {
+  color: currentColor;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.specimen-action:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border-color: color-mix(in srgb, currentColor 55%, transparent);
+}
+.specimen-action:focus-visible {
+  outline: 2px solid color-mix(in srgb, currentColor 55%, transparent);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* View Transitions render on their own pseudo-element tree, which the
+     universal selector above cannot reach. Zero them out so navigations
+     (including the shared style-cover morph) swap instantly. */
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

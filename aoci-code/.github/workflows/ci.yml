@@ -1,0 +1,197 @@
+name: fast-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-unit:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: modules and formatting
+        run: |
+          go mod download
+          go mod verify
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+          make fmt-check
+      - name: compile and unit tests
+        run: |
+          packages=$(go list ./... | grep -Ev '/internal/(cli|mcptools|fs|baseline|bootstrapapply|cognitiontxn|migrationapply|scopechange|dbevidence|dbcognition|managedscope|managedstate|cognitionbudget|machinecontract|capability)$|/textassets$')
+          go test -short -count=1 $packages
+          CGO_ENABLED=0 go build ./cmd/aoci
+          go vet ./...
+      - name: timing
+        if: always()
+        run: echo "build-and-unit_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  contracts-and-safety:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: contracts and public safety
+        run: |
+          bash scripts/check-deps.sh
+          bash scripts/check-public-text.sh
+          go test -short -count=1 ./textassets ./internal/machinecontract ./internal/capability ./internal/cognitionbudget ./internal/managedscope
+          go test -short -count=1 ./internal/mcptools
+      - name: timing
+        if: always()
+        run: echo "contracts-and-safety_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  lifecycle-smoke:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: CAS, Recovery, Migration, Scope, and Database safety
+        run: |
+          go test -short -count=1 ./internal/fs ./internal/baseline ./internal/bootstrapapply ./internal/migrationapply ./internal/scopechange ./internal/dbevidence ./internal/dbcognition ./internal/onboarding
+          go test -short -count=1 -run '^(TestMCPInvocationUsesTopLevelCommandOnly|TestAlignedCleanGuideMatchesGoldenByteForByte|TestCheckCleanRepo|TestScopeStatusObservesTestsWithoutChangingWholeIndex|TestScopeAcknowledgePreservesIndexAuthoringDebt|TestScopeBudgetDirectEditRequiresRefreshWithoutFormalWrites|TestDatabaseEvidenceBundleContainsFactsButNoSemanticCandidate|TestEntriesAutoCleanupFailureRetryOnlyCompletesRecovery|TestHeaderApplyKeepsRecoveryWhenCASWritesThenReturnsError|TestFirstManagedScanPersistsRolesAndForceCannotWashReceipt|TestAgentPlanIDIgnoresOnlyVolatileExcludedRuntimeCounts)$' ./internal/cli
+      - name: timing
+        if: always()
+        run: echo "lifecycle-smoke_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  cli-and-static:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      # internal/cli 是仓库最大的包(约 400 个测试), 此前 PR 门只跑 11 个具名用例,
+      # 回归会绿着合入再炸夜间门。整包 -short 只要约 40 秒, 值得挡在 PR 前。
+      - name: internal/cli short tests
+        run: go test -short -count=1 ./internal/cli
+      # staticcheck 版本与 full confidence 门完全一致, 两处判定不会分叉。
+      - name: pinned staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          "$(go env GOPATH)/bin/staticcheck" ./...
+      - name: timing
+        if: always()
+        run: echo "cli-and-static_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  blackbox-protocol:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: build the binary under test
+        run: make build
+      # 这两套只走公开 stdio MCP 与 CLI 表面, 是外部承诺的可执行判定;
+      # 没有自动化跑它们就会静默腐烂。生命周期与规模套件在 full confidence。
+      - name: MCP protocol conformance
+        run: python3 scripts/blackbox/mcp_conformance.py
+      - name: MCP client deadline regressions
+        run: python3 -m unittest discover -s scripts/blackbox -p test_stdio_deadline.py -v
+      - name: MCP stderr regressions
+        run: python3 -m unittest discover -s scripts/blackbox -p test_stdio_capture.py -v
+      - name: Overview traversal regressions
+        run: python3 -m unittest discover -s scripts/blackbox -p test_overview_chunks.py -v
+      - name: fault-injection scenarios
+        run: python3 scripts/blackbox/mcp_scenarios.py
+      - name: prove the suites left the repository untouched
+        run: git diff --exit-code
+      - name: timing
+        if: always()
+        run: echo "blackbox-protocol_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  windows-compile:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: start timer
+        run: echo "AOCI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Windows amd64 CGO-free compile
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o "$RUNNER_TEMP/aoci.exe" ./cmd/aoci
+      - name: timing
+        if: always()
+        run: echo "windows-compile_seconds=$(($(date +%s)-AOCI_JOB_START))" >> "$GITHUB_STEP_SUMMARY"
+
+  # PR 阶段就验证 Darwin 平台文件能编译, 不必等夜间 macOS 真机测试才发现。
+  darwin-compile:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Darwin amd64 and arm64 CGO-free compile
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o "$RUNNER_TEMP/aoci-darwin-amd64" ./cmd/aoci
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o "$RUNNER_TEMP/aoci-darwin-arm64" ./cmd/aoci
+
+  # 真机 Windows 上跑协议一致性套件: 此前 Windows 只有交叉编译证明"能编译",
+  # 公开 MCP 表面从未在 Windows 实测过。conformance 是三套里唯一纯只读、
+  # 零 Docker、纯标准库的一套, 放到 windows-latest 成本最低、盲区收益最大。
+  windows-conformance:
+    timeout-minutes: 25
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: build the binary under test
+        shell: bash
+        run: CGO_ENABLED=0 go build -o build/aoci.exe ./cmd/aoci
+      - name: MCP protocol conformance on Windows
+        shell: bash
+        env:
+          AOCI_BIN: ${{ github.workspace }}\build\aoci.exe
+        run: python scripts/blackbox/mcp_conformance.py
+      - name: MCP client deadline regressions
+        run: python -m unittest discover -s scripts/blackbox -p test_stdio_deadline.py -v
+      - name: MCP stderr regressions
+        run: python -m unittest discover -s scripts/blackbox -p test_stdio_capture.py -v
+      - name: Overview traversal regressions
+        run: python -m unittest discover -s scripts/blackbox -p test_overview_chunks.py -v

@@ -1,0 +1,74 @@
+{
+  "summary": {
+    "total_sessions": 1,
+    "session_errors": [],
+    "total_turns": 2,
+    "turns_pass": 2,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 3302,
+      "p95": 3302,
+      "min": 1977,
+      "max": 3302
+    },
+    "first_sentence_ms": {
+      "p50": 1962,
+      "p95": 1962
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "你好！我是小明😊，测试特殊字符：@#\\$%^&*()_+{}|:\"<>?`~/*-+",
+          "stt": "你好！我是小明😊，测试特殊字符：@#\\$%^&*()_+{}|:\"<>?`~/*-+",
+          "emotion": "laughing",
+          "sentences": [
+            "哈喽小明",
+            "你这一串符号砸过来，我差点以为电脑蓝屏了啦",
+            "测试收到，一切正常，就是笑死"
+          ],
+          "audio_frames": 166,
+          "audio_bytes": 26570,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1793,
+          "latency_first_audio_ms": 1977,
+          "latency_total_ms": 12333,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 2,
+          "query": "请重复我刚才说的特殊字符有哪些？我名字叫什么？",
+          "stt": "请重复我刚才说的特殊字符有哪些？我名字叫什么？",
+          "emotion": "funny",
+          "sentences": [
+            "你名字叫小明啊",
+            "这个我记得牢牢的",
+            "至于那串符号嘛，是@、#、美元、百分号、^、&、星号、括号、下划线、加号、大括号、竖线、冒号、引号、尖括号、问号、波浪号、斜杠、星号、减号、加号……一串下来，我念得嘴都要打结了，你是想考我记忆力还是想让我当场断气啊"
+          ],
+          "audio_frames": 471,
+          "audio_bytes": 80068,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 1962,
+          "latency_first_audio_ms": 3302,
+          "latency_total_ms": 32493,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 419,
+      "error": null
+    }
+  ]
+}

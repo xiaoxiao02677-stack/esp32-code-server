@@ -1,0 +1,397 @@
+import type { DesignStyle } from "./types";
+
+export const surrealism: DesignStyle = {
+  slug: "surrealism",
+  name: "超现实主义风",
+  nameEn: "Surrealism",
+  description:
+    "灵感源自Dali等超现实主义大师，梦境般的场景构成、不合逻辑的空间关系、融化变形的形态和意想不到的色彩组合，营造神秘而引人入胜的视觉体验。",
+  descriptionEn:
+    "Inspired by surrealist masters like Dali -- dreamlike scene compositions, illogical spatial relationships, melting and morphing forms, and unexpected color combinations create a mysterious and captivating visual experience.",
+  cover: "/styles/surrealism.svg",
+  styleType: "visual",
+  tags: ["retro"],
+  category: "expressive",
+  colors: {
+    primary: "#1a1a3e",
+    secondary: "#f0ece4",
+    accent: ["#d4a574", "#c38d94", "#4a3f6b", "#90ba6d"],
+  },
+  keywords: ["超现实", "梦境", "Dali", "融化", "不合逻辑", "潜意识", "奇幻", "expressive", "bold", "vibrant"],
+  keywordsEn: ["surrealism", "surrealist design", "dreamlike ui", "Dali inspired", "melting shapes", "dream logic", "distorted forms", "abstract art website", "subconscious", "artistic portfolio"],
+
+  philosophy: `Surrealism（超现实主义）是20世纪初的艺术运动，致力于释放潜意识的创造力，打破理性与非理性的界限。
+
+核心理念：
+- 梦境逻辑：超越现实的视觉叙事
+- 意外并置：不相关元素的奇妙组合
+- 变形流动：融化、扭曲的形态
+- 潜意识探索：深层心理的视觉表达
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Surrealism is an early 20th-century art movement dedicated to unleashing the creative power of the subconscious, breaking the boundaries between the rational and irrational.
+
+Core principles:
+- Dream logic: Visual narratives that transcend reality
+- Unexpected juxtaposition: Wondrous combinations of unrelated elements
+- Morphing fluidity: Melting, distorted forms
+- Subconscious exploration: Visual expression of deep psychology`,
+
+  doList: [
+    "使用午夜蓝和沙漠金的配色",
+    "创造梦境般的柔和渐变",
+    "使用意想不到的元素组合",
+    "添加柔和的阴影营造深度",
+    "使用衬线字体和斜体",
+    "保持神秘而优雅的氛围",
+    "Dream-like Distortion: hover applies subtle geometric reality-bending `hover:skew-x-2 hover:-rotate-1` — as if the element is being pulled through a dream portal",
+    "Timeless Easing: all transitions use `duration-700 ease-in-out` or `duration-1000 ease-in-out` — surrealist time is elastic, never hurried",
+    "Abyssal Glow: hover shadow uses large diffuse rose/gold `hover:shadow-[0_0_50px_rgba(195,141,148,0.3)]` — light emerges from deep within, never black drop shadows",
+    "Color Melting: blurred orb decorations expand on hover `group-hover:scale-150 transition-transform duration-[2000ms]` — colors slowly bleed and melt across the canvas",
+  ],
+
+  doListEn: [
+    "Use midnight blue and desert gold palette",
+    "Create dreamlike soft gradients",
+    "Use unexpected element combinations",
+    "Add soft shadows for depth",
+    "Use serif fonts and italics",
+    "Maintain a mysterious yet elegant atmosphere",
+    "Dream-like Distortion: hover applies subtle geometric reality-bending `hover:skew-x-2 hover:-rotate-1` -- as if the element is being pulled through a dream portal",
+    "Timeless Easing: all transitions use `duration-700 ease-in-out` or `duration-1000 ease-in-out` -- surrealist time is elastic, never hurried",
+    "Abyssal Glow: hover shadow uses large diffuse rose/gold `hover:shadow-[0_0_50px_rgba(195,141,148,0.3)]` -- light emerges from deep within, never black drop shadows",
+    "Color Melting: blurred orb decorations expand on hover `group-hover:scale-150 transition-transform duration-[2000ms]` -- colors slowly bleed and melt across the canvas",
+  ],
+
+  dontList: [
+    "禁止使用过于明亮的纯色",
+    "禁止使用严格对称的网格布局",
+    "禁止使用现代简约的无装饰设计",
+    "禁止使用刺眼的霓虹色彩",
+    "禁止使用 `hover:scale-105`（超现实主义使用 `skew` 和 `rotate` 扭曲现实，不是放大）",
+    "禁止使用黑色投影（Abyssal Glow 使用玫瑰/金色漫射光晕，黑色阴影会破坏梦境感）",
+    "禁止使用 `duration-200` 或更短的过渡（Timeless Easing 要求 `duration-700` 以上——梦境时间是弹性的）",
+    "禁止在卡片装饰光球上使用 `transition-none`（Color Melting 需要缓慢的 `duration-[2000ms]` 扩散）",
+  ],
+
+  dontListEn: [
+    "Do not use overly bright pure colors",
+    "Do not use strictly symmetrical grid layouts",
+    "Do not use modern minimalist undecorated design",
+    "Do not use harsh neon colors",
+    "Do not use `hover:scale-105` (surrealism uses `skew` and `rotate` to distort reality, not scaling)",
+    "Do not use black drop shadows (Abyssal Glow uses rose/gold diffuse glow -- black shadows break the dream feel)",
+    "Do not use `duration-200` or shorter transitions (Timeless Easing requires `duration-700` or above -- dream time is elastic)",
+    "Do not use `transition-none` on card decorative orbs (Color Melting requires slow `duration-[2000ms]` expansion)",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "超现实主义风格按钮，Dream-like Distortion `skew+rotate` + Timeless Easing `duration-1000` + Abyssal Glow 漫射光晕 + 有机圆角",
+      code: `<button className="
+  px-10 py-4
+  bg-gradient-to-br from-[#1a1a3e] to-[#c38d94]
+  text-[#f0ece4] font-serif italic tracking-wide
+  border border-[#d4a574]/50
+  rounded-[40%_60%_70%_30%/30%_30%_70%_70%]
+  shadow-[0_4px_20px_rgba(195,141,148,0.2)]
+  hover:shadow-[0_0_50px_rgba(195,141,148,0.3)]
+  hover:-translate-y-1 hover:skew-x-2 hover:-rotate-1
+  active:translate-y-1 active:skew-x-0 active:rotate-0
+  transition-all duration-1000 ease-in-out
+">
+  Enter the Dream
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "超现实主义风格卡片，Color Melting 光球扩散 `group-hover:scale-150 duration-[2000ms]` + 标题字距扩展 + 下划线延伸 + Dream-like Distortion",
+      code: `<div className="group relative p-8 bg-gradient-to-br from-[#f0ece4] to-[#f0ece4]/80 border border-[#d4a574]/30 rounded-2xl overflow-hidden hover:shadow-[0_0_50px_rgba(195,141,148,0.3)] hover:-translate-y-1 hover:skew-x-1 transition-all duration-700 ease-in-out cursor-pointer">
+  {/* Melting orb — gold */}
+  <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#d4a574]/20 blur-2xl group-hover:scale-150 transition-transform duration-[2000ms] ease-in-out" />
+  {/* Melting orb — rose */}
+  <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-[#c38d94]/20 blur-2xl group-hover:scale-150 transition-transform duration-[2000ms] ease-in-out" />
+  <div className="relative z-10">
+    <h3 className="text-2xl font-serif italic text-[#1a1a3e] mb-1 group-hover:tracking-widest transition-all duration-1000 ease-in-out">
+      The Persistence of Memory
+    </h3>
+    <div className="h-px bg-[#d4a574] w-8 group-hover:w-full transition-all duration-1000 ease-in-out mb-4 mt-2" />
+    <p className="text-[#1a1a3e]/60 font-serif">
+      Time melts in the desert of consciousness
+    </p>
+  </div>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "超现实主义风格输入框",
+      code: `<input
+  type="text"
+  placeholder="Whisper your dreams..."
+  className="
+    w-full px-6 py-4
+    bg-[#f0ece4]
+    border border-[#d4a574]/40
+    rounded-lg
+    text-[#1a1a3e] placeholder-[#c38d94]/50
+    font-serif italic
+    focus:border-[#c38d94]
+    focus:shadow-[0_0_16px_rgba(195,141,148,0.3)]
+    focus:outline-none
+    transition-all duration-500
+  "
+/>`,
+    },
+    hero: {
+      name: "Hero 区块",
+      description: "超现实主义风格 Hero",
+      code: `<section className="
+  min-h-screen
+  flex items-center justify-center
+  bg-gradient-to-b from-[#1a1a3e] via-[#2a2a5e] to-[#d4a574]/30
+  relative overflow-hidden
+">
+  <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-[#d4a574]/20 blur-3xl" />
+  <div className="absolute bottom-20 left-20 w-48 h-48 rounded-full bg-[#c38d94]/20 blur-3xl" />
+
+  <div className="relative z-10 text-center px-6">
+    <h1 className="text-6xl md:text-8xl font-serif italic text-[#f0ece4] mb-6">
+      Surrealism
+    </h1>
+    <p className="text-xl text-[#d4a574] font-serif italic mb-8">
+      Beyond the threshold of consciousness
+    </p>
+    <button className="
+      px-10 py-4
+      bg-gradient-to-r from-[#c38d94] to-[#d4a574]
+      text-[#1a1a3e] font-serif italic tracking-wide
+      rounded-lg shadow-lg
+      hover:shadow-[0_8px_30px_rgba(212,165,116,0.5)]
+      transition-all duration-500
+    ">
+      Descend
+    </button>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Surrealism 全局样式 */
+
+:root {
+  --sr-midnight: #1a1a3e;
+  --sr-gold: #d4a574;
+  --sr-rose: #c38d94;
+  --sr-cream: #f0ece4;
+}
+
+/* 梦境模糊光晕 */
+.sr-dream-glow {
+  box-shadow:
+    0 0 40px rgba(212, 165, 116, 0.2),
+    0 0 80px rgba(195, 141, 148, 0.1);
+}
+
+/* 超现实渐变 */
+.sr-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--sr-midnight) 0%,
+    #2a2a5e 40%,
+    var(--sr-rose) 70%,
+    var(--sr-gold) 100%
+  );
+}
+
+/* 融化效果 */
+.sr-melt {
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+}
+
+/* 飘浮阴影 */
+.sr-float-shadow {
+  box-shadow:
+    0 20px 60px rgba(26, 26, 62, 0.3),
+    0 0 40px rgba(195, 141, 148, 0.15);
+}
+@keyframes surrealism-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes surrealism-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.surrealism-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.surrealism-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(26, 26, 62, 0.05), transparent);
+  pointer-events: none;
+}
+
+.surrealism-card:hover::before {
+  opacity: 1;
+}
+
+.surrealism-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(26, 26, 62, 0.08);
+}
+
+.surrealism-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.surrealism-animate-in {
+  animation: surrealism-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一个 Surrealism 设计风格的前端开发专家。生成的所有代码必须严格遵守以下约束：
+
+## 绝对禁止
+
+- 使用纯白色背景
+- 使用严格对称的网格布局
+- 使用明亮的霓虹色彩
+- 使用过于规整的几何形状
+
+## 必须遵守
+
+- 午夜蓝 #1a1a3e 为深色基调
+- 沙漠金 #d4a574 和玫瑰粉 #c38d94 为强调色
+- 奶油白 #f0ece4 为浅色背景
+- 使用 font-serif italic 营造梦幻感
+- 柔和的渐变和模糊光晕效果
+
+## 配色
+
+主色调：
+- 午夜蓝: #1a1a3e
+- 沙漠金: #d4a574
+- 玫瑰粉: #c38d94
+- 奶油白: #f0ece4
+
+## 特殊元素
+
+- 模糊光晕背景装饰
+- 非对称布局和有机形状
+- 柔和的过渡动画 (duration-500)
+- 意想不到的颜色渐变组合
+
+## Animation & Interaction Rules
+
+- Dream-like Distortion: Hover applies geometric reality-bending \`hover:skew-x-2 hover:-rotate-1\` — as if the element is being pulled through a dream portal. Never use \`hover:scale-105\` alone; distortion (skew/rotate) is how surrealism deforms reality.
+- Timeless Easing: All transitions use \`duration-700 ease-in-out\` minimum, preferring \`duration-1000 ease-in-out\` — surrealist time is elastic. Never use \`duration-200\` or faster; urgency is a rational concept.
+- Abyssal Glow: Hover shadow uses large diffuse rose/gold \`hover:shadow-[0_0_50px_rgba(195,141,148,0.3)]\` — light wells up from within the dream. Never use black drop shadows; they belong to the rational world.
+- Color Melting: Blurred orb decorations slowly expand \`group-hover:scale-150 transition-transform duration-[2000ms] ease-in-out\` — colors bleed across the canvas over 2 full seconds. The expanding underline \`group-hover:w-full transition-all duration-1000\` and heading \`group-hover:tracking-widest transition-all duration-1000\` melt together.`,
+
+  aiRulesEn: `You are a Surrealism design style frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolutely Forbidden
+
+- Pure white backgrounds
+- Strictly symmetrical grid layouts
+- Bright neon colors
+- Overly regular geometric shapes
+
+## Must Follow
+
+- Midnight blue #1a1a3e as dark base tone
+- Desert gold #d4a574 and rose pink #c38d94 as accent colors
+- Cream white #f0ece4 as light background
+- Use font-serif italic for a dreamy feel
+- Soft gradients and blurred glow effects
+
+## Color Palette
+
+Primary:
+- Midnight Blue: #1a1a3e
+- Desert Gold: #d4a574
+- Rose Pink: #c38d94
+- Cream White: #f0ece4
+
+## Special Elements
+
+- Blurred glow background decorations
+- Asymmetric layouts and organic shapes
+- Soft transition animations (duration-500)
+- Unexpected color gradient combinations
+
+## Animation & Interaction Rules
+
+- Dream-like Distortion: Hover applies geometric reality-bending \`hover:skew-x-2 hover:-rotate-1\` -- as if the element is being pulled through a dream portal. Never use \`hover:scale-105\` alone; distortion (skew/rotate) is how surrealism deforms reality.
+- Timeless Easing: All transitions use \`duration-700 ease-in-out\` minimum, preferring \`duration-1000 ease-in-out\` -- surrealist time is elastic. Never use \`duration-200\` or faster; urgency is a rational concept.
+- Abyssal Glow: Hover shadow uses large diffuse rose/gold \`hover:shadow-[0_0_50px_rgba(195,141,148,0.3)]\` -- light wells up from within the dream. Never use black drop shadows; they belong to the rational world.
+- Color Melting: Blurred orb decorations slowly expand \`group-hover:scale-150 transition-transform duration-[2000ms] ease-in-out\` -- colors bleed across the canvas over 2 full seconds. The expanding underline \`group-hover:w-full transition-all duration-1000\` and heading \`group-hover:tracking-widest transition-all duration-1000\` melt together.`,
+
+  examplePrompts: [
+    {
+      title: "梦境画廊",
+      titleEn: "Dreamscape Gallery",
+      description: "超现实主义风格的艺术画廊",
+      descriptionEn: "Surrealist art gallery",
+      prompt: `用 Surrealism 风格创建一个梦境画廊页面，要求：
+1. 背景：午夜蓝到沙漠金的渐变
+2. 标题：衬线斜体，奶油白色
+3. 卡片：圆角带光晕阴影
+4. 添加模糊光球装饰
+5. 整体梦境般的神秘氛围`,
+    },
+  {
+      title: "SaaS 着陆页",
+      titleEn: "SaaS Landing Page",
+      description: "生成 超现实主义风风格的 SaaS 产品着陆页",
+      descriptionEn: "Generate a SaaS product landing page in Surrealism style",
+      prompt: `Create a SaaS landing page using Surrealism style with hero section, feature grid, testimonials, pricing table, and footer.`,
+    },
+    {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 超现实主义风风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Surrealism style",
+      prompt: `Create a portfolio showcase page using Surrealism style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "surrealism-warm",
+      name: "超现实主义风暖色版",
+      nameEn: "Surrealism Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#2b153b",
+        secondary: "#f2eee7",
+        accent: ["#b3b067", "#bb9180", "#5d3a63"],
+      },
+    },
+    {
+      id: "surrealism-cool",
+      name: "超现实主义风冷色版",
+      nameEn: "Surrealism Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#0a1f38",
+        secondary: "#d8d4cd",
+        accent: ["#ea9c90", "#c08caa", "#364569"],
+      },
+    },
+  ],
+};

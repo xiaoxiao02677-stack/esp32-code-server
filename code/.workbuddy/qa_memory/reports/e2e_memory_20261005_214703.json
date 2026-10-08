@@ -1,0 +1,60 @@
+{
+  "cases": [
+    {
+      "case": "A2",
+      "verdict": "FAIL",
+      "checks": {
+        "列表命中 张三": true,
+        "编辑成功": true,
+        "对话连接正常": true,
+        "回答引用 张三丰": false,
+        "回答不再引用 张三": true,
+        "删除成功": true,
+        "删除后回答不引用 张三丰": true
+      },
+      "notes": [
+        "编辑后回答: "
+      ],
+      "details": {
+        "edited_content": "我叫张三丰，我喜欢听粤语歌",
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [],
+              "stt": [
+                "我叫什么名字？"
+              ],
+              "audio_frames": 0,
+              "emotion": "relaxed",
+              "tts_stop": false,
+              "total_s": 3.06
+            }
+          ]
+        },
+        "s2": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "你还没同我讲过你叫咩名呢",
+                "我一直都喺度等紧你话我知——你叫咩名呀？"
+              ],
+              "stt": [
+                "我叫什么名字？"
+              ],
+              "audio_frames": 115,
+              "emotion": "happy",
+              "tts_stop": true,
+              "total_s": 13.93
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "started": "2026-10-05 21:45:45",
+  "ended": "2026-10-05 21:47:03"
+}

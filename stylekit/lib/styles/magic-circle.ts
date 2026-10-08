@@ -1,0 +1,409 @@
+import type { DesignStyle } from "./types";
+
+export const magicCircle: DesignStyle = {
+  slug: "magic-circle",
+  name: "魔法阵风",
+  nameEn: "Magic Circle",
+  description:
+    "同心圆环嵌套体系、六芒星几何核心、符文铭文沿圆路径排列、生命之花神圣几何、金色辉光辐射与炼金术符号交织的奇幻视觉风格。",
+  descriptionEn:
+    "A fantasy visual style featuring concentric nested ring systems, hexagram geometric cores, runic inscriptions along circular paths, Flower of Life sacred geometry, golden radiant glow, and interwoven alchemical symbols.",
+  cover: "/styles/magic-circle.svg",
+  styleType: "visual",
+  tags: [],
+  category: "expressive",
+  colors: {
+    primary: "#1e1b4b",
+    secondary: "#0a0920",
+    accent: ["#fbbf24", "#e2e8f0", "#818cf8", "#56ed40"],
+  },
+  keywords: ["魔法阵", "符文", "神秘", "奇幻", "光效", "几何", "魔法", "同心圆", "六芒星"],
+  keywordsEn: ["magic circle", "summoning circle", "sacred geometry", "runes", "hexagram", "Flower of Life", "alchemy symbols", "fantasy ui", "arcane design", "glowing rings", "mystical", "occult aesthetic"],
+
+  philosophy: `Magic Circle draws from the arcane tradition of geometric summoning circles, weaving precision geometry with radiant light effects.
+
+Core principles:
+- Concentric ring system: multiple nested circles of varying thickness, dash patterns, and colors
+- Hexagram/pentagram central figures: overlapping triangles as primary structural motifs
+- Runic inscription borders: text-like marks arranged along circular paths
+- Sacred geometry patterns: Flower of Life, Metatron's Cube as background textures
+- Rotating ring animation: slow counter-rotating rings suggesting arcane machinery
+- Golden center radiation: warm glow emanating from the center of compositions
+- Alchemical symbols: fire, water, air, earth triangles at intersection points`,
+
+  philosophyEn: `Magic Circle draws from the arcane tradition of geometric summoning circles, weaving precision geometry with radiant light effects.
+
+Core principles:
+- Concentric ring system: Multiple nested circles of varying thickness, dash patterns, and colors
+- Hexagram/pentagram central figures: Overlapping triangles as primary structural motifs
+- Runic inscription borders: Text-like marks arranged along circular paths
+- Sacred geometry patterns: Flower of Life, Metatron's Cube as background textures
+- Rotating ring animation: Slow counter-rotating rings suggesting arcane machinery
+- Golden center radiation: Warm glow emanating from the center of compositions
+- Alchemical symbols: Fire, water, air, earth triangles at intersection points`,
+
+  doList: [
+    "Use deep dark navy backgrounds (bg-[#0a0920])",
+    "Add concentric ring decorations around focal elements",
+    "Use hexagonal or circular card layouts",
+    "Apply runic inscription marks along borders",
+    "Add golden glow radiation from center of elements",
+    "Use sacred geometry patterns as subtle backgrounds",
+    "Place alchemical symbols at geometric intersection points",
+    "卡片使用 group 类，hover 时内部虚线同心圆环触发旋转：group-hover:rotate-180 transition-all duration-[3000ms] ease-linear（Arcane Rotation，法阵启动）",
+    "按钮 active:scale-95 active:shadow-[inset_0_0_30px_rgba(251,191,36,0.6)]（Energy Convergence，能量聚焦内爆）",
+    "focus:ring-2 focus:ring-[#fbbf24]/50 focus:ring-offset-2 focus:ring-offset-[#0a0920]",
+  ],
+
+  doListEn: [
+    "Use deep dark navy backgrounds (bg-[#0a0920])",
+    "Add concentric ring decorations around focal elements",
+    "Use hexagonal or circular card layouts",
+    "Apply runic inscription marks along borders",
+    "Add golden glow radiation from center of elements",
+    "Use sacred geometry patterns as subtle backgrounds",
+    "Place alchemical symbols at geometric intersection points",
+    "Cards use group class, hover triggers dashed concentric ring rotation: group-hover:rotate-180 transition-all duration-[3000ms] ease-linear (Arcane Rotation, circle activation)",
+    "Button active:scale-95 active:shadow-[inset_0_0_30px_rgba(251,191,36,0.6)] (Energy Convergence, energy implosion focus)",
+    "focus:ring-2 focus:ring-[#fbbf24]/50 focus:ring-offset-2 focus:ring-offset-[#0a0920]",
+  ],
+
+  dontList: [
+    "No bright neon colors (use warm gold and cool indigo only)",
+    "No brutalist style elements",
+    "No pixel art aesthetics",
+    "No heavy/thick borders",
+    "No informal/handwritten fonts",
+    "禁止按钮缺少 active:scale-95（魔法施放必须有能量聚焦感）",
+    "禁止环形装饰在 group-hover 时静止不动（法阵启动的核心视觉语言）",
+    "禁止 focus:ring 缺少 focus:ring-offset-[#0a0920]（深色背景下焦点环必须有偏移分离）",
+  ],
+
+  dontListEn: [
+    "No bright neon colors (use warm gold and cool indigo only)",
+    "No brutalist style elements",
+    "No pixel art aesthetics",
+    "No heavy/thick borders",
+    "No informal/handwritten fonts",
+    "Buttons must not lack active:scale-95 (magic casting must have energy convergence feel)",
+    "Ring decorations must not remain static on group-hover (core visual language of circle activation)",
+    "focus:ring must not lack focus:ring-offset-[#0a0920] (focus ring needs offset separation on dark backgrounds)",
+  ],
+
+  components: {
+    button: {
+      name: "Button",
+      description:
+        "Hexagon-bordered button with pulsing rune glow and Energy Convergence active state",
+      code: `<button className="
+  group relative px-10 py-3
+  bg-[#0a0920] text-[#fbbf24]
+  font-serif font-bold tracking-widest uppercase
+  border border-[#fbbf24]/40
+  rounded-sm
+  shadow-[0_0_15px_rgba(251,191,36,0.15)]
+  hover:border-[#fbbf24]
+  hover:shadow-[0_0_30px_rgba(251,191,36,0.4),inset_0_0_15px_rgba(251,191,36,0.1)]
+  focus:outline-none focus:ring-2 focus:ring-[#fbbf24]/50 focus:ring-offset-2 focus:ring-offset-[#0a0920]
+  active:scale-95 active:shadow-[inset_0_0_30px_rgba(251,191,36,0.6)]
+  transition-all duration-500
+  overflow-hidden
+">
+  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-700 bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.1),transparent_70%)]" />
+  <span className="relative z-10 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">Invoke</span>
+</button>`,
+    },
+    card: {
+      name: "Card",
+      description:
+        "Card with rotating concentric rings, sacred seal geometry, and runic glow text",
+      code: `<div className="
+  group relative p-10
+  bg-[#0a0920]
+  border border-[#1e1b4b]
+  rounded-full aspect-square
+  flex flex-col items-center justify-center
+  shadow-[0_0_30px_rgba(30,27,75,0.8)]
+  hover:border-[#fbbf24]/50
+  hover:shadow-[0_0_50px_rgba(251,191,36,0.2)]
+  transition-all duration-1000 ease-in-out
+  cursor-crosshair overflow-hidden
+">
+  <div className="absolute inset-2 border border-dashed border-[#fbbf24]/20 rounded-full group-hover:rotate-180 group-hover:border-[#fbbf24]/60 transition-all duration-[3000ms] ease-linear" />
+  <div className="absolute inset-6 border border-[#e2e8f0]/10 rounded-full group-hover:-rotate-90 group-hover:border-[#e2e8f0]/30 transition-all duration-[2000ms] ease-linear" style={{ borderStyle: "dotted" }} />
+  <div className="relative z-10 text-center">
+    <h3 className="text-3xl font-serif font-bold text-[#fbbf24] mb-2 tracking-[0.2em] group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.8)] transition-all duration-500">
+      ARCANUM
+    </h3>
+    <p className="text-[#e2e8f0]/40 font-mono text-xs tracking-widest uppercase group-hover:text-[#e2e8f0]/80 transition-colors duration-500">
+      Seal of the Ancients
+    </p>
+  </div>
+</div>`,
+    },
+    input: {
+      name: "Input",
+      description: "Input with geometric frame and golden glow focus",
+      code: `<input
+  type="text"
+  placeholder="Enter rune..."
+  className="
+    w-full px-4 py-3
+    bg-[#0a0920]
+    border border-[#fbbf24]/15
+    rounded-sm
+    text-[#e2e8f0] placeholder-[#e2e8f0]/25
+    font-sans
+    focus:border-[#fbbf24]/50
+    focus:shadow-[0_0_20px_rgba(251,191,36,0.25)]
+    focus:outline-none
+    transition-all duration-500
+  "
+/>`,
+    },
+    hero: {
+      name: "Hero",
+      description: "Hero with concentric ring decorations and hexagram layout",
+      code: `<section className="
+  min-h-screen
+  flex items-center justify-center
+  bg-[#0a0920]
+  relative overflow-hidden
+">
+  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div className="w-[500px] h-[500px] border border-[#fbbf24]/8 rounded-full animate-spin" style={{ animationDuration: "40s" }} />
+    <div className="absolute w-[400px] h-[400px] border border-dashed border-[#818cf8]/6 rounded-full animate-spin" style={{ animationDuration: "60s", animationDirection: "reverse" }} />
+    <div className="absolute w-[300px] h-[300px] border border-[#fbbf24]/10 rounded-full" />
+  </div>
+  <div className="relative z-10 text-center px-6">
+    <h1 className="text-6xl md:text-8xl font-serif font-bold text-[#fbbf24] mb-2
+      [text-shadow:0_0_40px_rgba(251,191,36,0.4)]">
+      ARCANE CIRCLE
+    </h1>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Magic Circle Global Styles */
+
+:root {
+  --mc-navy: #1e1b4b;
+  --mc-dark: #0a0920;
+  --mc-gold: #fbbf24;
+  --mc-silver: #e2e8f0;
+  --mc-indigo: #818cf8;
+}
+
+/* Golden glow text */
+.mc-gold-glow {
+  text-shadow: 0 0 25px var(--mc-gold), 0 0 50px rgba(251, 191, 36, 0.2);
+}
+
+/* Concentric ring decoration */
+.mc-rings {
+  position: relative;
+}
+.mc-rings::before {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border: 1px solid rgba(251, 191, 36, 0.08);
+  border-radius: 50%;
+  animation: mc-rotate 30s linear infinite;
+}
+.mc-rings::after {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  border: 1px dashed rgba(129, 140, 248, 0.06);
+  border-radius: 50%;
+  animation: mc-rotate 45s linear infinite reverse;
+}
+
+@keyframes mc-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Runic inscription border */
+.mc-rune-border {
+  position: relative;
+}
+.mc-rune-border::after {
+  content: "--- ... --- . -- --- ...";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: rgba(251, 191, 36, 0.15);
+  pointer-events: none;
+}
+
+/* Sacred geometry shimmer */
+.mc-sacred-bg {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(251, 191, 36, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 25% 25%, rgba(129, 140, 248, 0.02) 0%, transparent 40%),
+    radial-gradient(circle at 75% 75%, rgba(129, 140, 248, 0.02) 0%, transparent 40%);
+}
+
+/* Center glow radiation */
+.mc-center-glow {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(251, 191, 36, 0.08) 0%,
+    rgba(251, 191, 36, 0.02) 40%,
+    transparent 70%
+  );
+}`,
+
+  aiRules: `You are a Magic Circle design style frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolutely Forbidden
+
+- Bright neon colors (use warm gold and cool indigo only)
+- Brutalist style elements
+- Pixel art aesthetics
+- Heavy/thick borders
+- Informal/handwritten fonts
+- Light backgrounds
+
+## Must Follow
+
+- Deep dark backgrounds: bg-[#0a0920] or bg-[#1e1b4b]
+- Concentric ring decorations (nested circles with varying styles)
+- Gold accent glow: #fbbf24 with radiant shadow effects
+- Hexagram/sacred geometry structural motifs
+- Runic inscription marks along borders
+- Elegant serif fonts for headings (font-serif)
+- Thin elegant borders with low opacity
+- Golden center radiation glow effects
+
+## Color Palette
+
+Primary:
+- Deep Navy: #1e1b4b
+- Dark Background: #0a0920
+- Gold Glow: #fbbf24
+- Silver White: #e2e8f0
+- Mystic Indigo: #818cf8
+
+## Unique Elements
+
+- Concentric circle/ring decorative system (multiple nested rings)
+- Runic inscription borders (dot-dash marks along edges)
+- Hexagram/sacred geometry card layout
+- Alchemical symbols at geometric intersection points
+- Rotating ring animation suggesting arcane machinery
+
+## Animation & Interaction Rules
+
+- Arcane Rotation: hover 时环形装饰使用 group-hover:rotate-90 / rotate-180 或线性长时旋转，营造法阵启动。
+- Rune Pulsing: 金色标题、符文描边在交互时可加入 animate-pulse 或发光强化，表现魔力流转。
+- Energy Focus: active 状态优先使用内发光或 active:scale-95，模拟能量向中心收束。
+- Ethereal Delay: 关键过渡使用 duration-700 到 1000，旋转层可使用 2000ms+ 线性节奏。`,
+
+  aiRulesEn: `You are a Magic Circle design style frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolutely Forbidden
+
+- Bright neon colors (use warm gold and cool indigo only)
+- Brutalist style elements
+- Pixel art aesthetics
+- Heavy/thick borders
+- Informal/handwritten fonts
+- Light backgrounds
+
+## Must Follow
+
+- Deep dark backgrounds: bg-[#0a0920] or bg-[#1e1b4b]
+- Concentric ring decorations (nested circles with varying styles)
+- Gold accent glow: #fbbf24 with radiant shadow effects
+- Hexagram/sacred geometry structural motifs
+- Runic inscription marks along borders
+- Elegant serif fonts for headings (font-serif)
+- Thin elegant borders with low opacity
+- Golden center radiation glow effects
+
+## Color Palette
+
+Primary:
+- Deep Navy: #1e1b4b
+- Dark Background: #0a0920
+- Gold Glow: #fbbf24
+- Silver White: #e2e8f0
+- Mystic Indigo: #818cf8
+
+## Unique Elements
+
+- Concentric circle/ring decorative system (multiple nested rings)
+- Runic inscription borders (dot-dash marks along edges)
+- Hexagram/sacred geometry card layout
+- Alchemical symbols at geometric intersection points
+- Rotating ring animation suggesting arcane machinery
+
+## Animation & Interaction Rules
+
+- Arcane Rotation: On hover, ring decorations use group-hover:rotate-90 / rotate-180 or long linear rotation, creating circle activation effect.
+- Rune Pulsing: Gold titles and rune strokes can add animate-pulse or glow enhancement on interaction, expressing magical energy flow.
+- Energy Focus: Active state prioritizes inner glow or active:scale-95, simulating energy converging toward center.
+- Ethereal Delay: Key transitions use duration-700 to 1000, rotation layers can use 2000ms+ linear rhythm.`,
+
+  examplePrompts: [
+    {
+      title: "魔法阵主题页面",
+      titleEn: "Magic Circle Theme Page",
+      description: "同心圆环、六芒星与金色辉光的神秘几何页面",
+      descriptionEn: "Concentric rings, hexagram and golden glow mystical page",
+      prompt: `Use Magic Circle style to create a mystical dark-themed page:
+1. Background: deep navy with sacred geometry shimmer pattern
+2. Hero: concentric rotating rings around golden-glow title
+3. Cards: arranged in hexagonal grid with runic inscription borders
+4. Buttons: hexagon-bordered with golden glow hover radiation
+5. Alchemical symbols at geometric intersection points
+6. Slow-rotating ring animation suggesting ancient mechanisms`,
+    },
+  {
+      title: "SaaS 着陆页",
+      titleEn: "SaaS Landing Page",
+      description: "生成 魔法阵风风格的 SaaS 产品着陆页",
+      descriptionEn: "Generate a SaaS product landing page in Magic Circle style",
+      prompt: `Create a SaaS landing page using Magic Circle style with hero section, feature grid, testimonials, pricing table, and footer.`,
+    },
+    {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 魔法阵风风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Magic Circle style",
+      prompt: `Create a portfolio showcase page using Magic Circle style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "magic-circle-warm",
+      name: "魔法阵风暖色版",
+      nameEn: "Magic Circle Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#341546",
+        secondary: "#232236",
+        accent: ["#a5d91c", "#e7e6f1", "#b67df2"],
+      },
+    },
+    {
+      id: "magic-circle-cool",
+      name: "魔法阵风冷色版",
+      nameEn: "Magic Circle Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#082245",
+        secondary: "#09081d",
+        accent: ["#ffa556", "#dee9ec", "#509de2"],
+      },
+    },
+  ],
+};

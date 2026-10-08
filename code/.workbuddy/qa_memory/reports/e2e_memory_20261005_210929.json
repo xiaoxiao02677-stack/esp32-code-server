@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "case": "A10",
+      "verdict": "PASS",
+      "checks": {
+        "前置：demo 当前引擎为 holographic": true,
+        "前置：holographic 库有条目": true,
+        "切换回退后服务存活": true,
+        "对话连接正常": true,
+        "对话有回复": true,
+        "holographic 数据保留不丢失": true
+      },
+      "notes": [
+        "条目数: 切回前 3 → 切回后 3"
+      ],
+      "details": {
+        "facts_before": 3,
+        "facts_after": 3,
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "我在呢",
+                "今日过得点样呀？"
+              ],
+              "stt": [
+                "你好呀"
+              ],
+              "audio_frames": 56,
+              "emotion": "happy",
+              "tts_stop": true,
+              "total_s": 9.28
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "started": "2026-10-05 21:08:00",
+  "ended": "2026-10-05 21:09:29"
+}

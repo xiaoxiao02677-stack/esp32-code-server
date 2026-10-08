@@ -1,0 +1,463 @@
+package mcptools
+
+import (
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"path"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/aoci-spec/aoci-code/internal/authoringcontract"
+	"github.com/aoci-spec/aoci-code/internal/baseline"
+	"github.com/aoci-spec/aoci-code/internal/codebatch"
+	"github.com/aoci-spec/aoci-code/internal/cognition"
+	"github.com/aoci-spec/aoci-code/internal/config"
+	"github.com/aoci-spec/aoci-code/internal/dbcognition"
+	"github.com/aoci-spec/aoci-code/internal/index"
+	"github.com/aoci-spec/aoci-code/internal/ledger"
+	"github.com/aoci-spec/aoci-code/internal/machinecontract"
+	"github.com/aoci-spec/aoci-code/internal/volumegovernance"
+	"github.com/aoci-spec/aoci-code/textassets"
+)
+
+type volumeMaintainCandidate struct {
+	Domain              string                     `json:"domain"`
+	Change              string                     `json:"change"`
+	ObjectRef           string                     `json:"object_ref"`
+	Path                string                     `json:"path,omitempty"`
+	ExistingEntry       string                     `json:"existing_entry,omitempty"`
+	ExistingEntrySHA256 string                     `json:"existing_entry_sha256,omitempty"`
+	SourceSHA256        string                     `json:"source_sha256,omitempty"`
+	EvidenceVersion     string                     `json:"evidence_version,omitempty"`
+	EvidenceSHA256      string                     `json:"evidence_sha256,omitempty"`
+	CandidateID         string                     `json:"candidate_id,omitempty"`
+	BatchID             string                     `json:"batch_id,omitempty"`
+	ModelAuthoringOnly  bool                       `json:"model_authoring_only"`
+	Importance          int                        `json:"importance,omitempty"`
+	Cost                *cognitionOptimizationCost `json:"cost,omitempty"`
+	SelectionReason     string                     `json:"selection_reason,omitempty"`
+}
+
+type volumeMaintainSets struct {
+	Review []string `json:"review"`
+	// ReviewTotal is the complete review-closure size when Review was cut to
+	// the transport sample; zero means Review is complete. On an update batch
+	// the relation closure routinely spans the Whole-Index, and that fact is
+	// a count, not a path list the model must scroll.
+	ReviewTotal int      `json:"review_total,omitempty"`
+	Write       []string `json:"write"`
+	// WriteTotal is the complete write-set size when Write was cut to the
+	// transport sample; zero means Write is complete. While the response
+	// carries candidates the write set is exactly their object references, so
+	// the sample repeats nothing the candidates do not already say.
+	WriteTotal int      `json:"write_total,omitempty"`
+	Guard      []string `json:"guard"`
+}
+
+type volumeAuthoringBatch struct {
+	LogicalPlan          string `json:"logical_plan"`
+	BatchIdentity        string `json:"batch_identity"`
+	TotalTargets         int    `json:"total_targets"`
+	MaxEntries           int    `json:"max_entries"`
+	TransportBudgetBytes int    `json:"transport_budget_bytes,omitempty"`
+	Included             int    `json:"included"`
+	Remaining            int    `json:"remaining"`
+	CompleteCandidateSet bool   `json:"complete_candidate_set_for_current_batch"`
+	ContinuationRequired bool   `json:"continuation_required"`
+	CompositeIdentity    string `json:"composite_identity"`
+	ScopePolicyIdentity  string `json:"scope_policy_identity"`
+	NextAction           string `json:"next_action"`
+}
+
+type volumeMaintainResult struct {
+	Version           int                          `json:"version"`
+	Status            string                       `json:"status"`
+	Result            string                       `json:"result"`
+	Aligned           bool                         `json:"aligned"`
+	RequestedScope    string                       `json:"requested_scope"`
+	AffectedDomains   []string                     `json:"affected_domains"`
+	Candidates        []volumeMaintainCandidate    `json:"candidates"`
+	OrphanRemovals    []string                     `json:"orphan_remove_candidates"`
+	Sets              volumeMaintainSets           `json:"sets"`
+	DatabasePlan      *dbcognition.Plan            `json:"database_plan,omitempty"`
+	CodePlan          *codebatch.Plan              `json:"code_plan,omitempty"`
+	Batch             volumeAuthoringBatch         `json:"authoring_batch"`
+	Governance        *volumegovernance.Facts      `json:"governance"`
+	Receipt           cognitionReceipt             `json:"cognition_receipt"`
+	Metrics           autoMetrics                  `json:"metrics"`
+	SemanticGenerated bool                         `json:"semantic_generated"`
+	NetworkAccessed   bool                         `json:"network_accessed"`
+	NextAction        string                       `json:"next_action"`
+	Instructions      []string                     `json:"instructions,omitempty"`
+	AuthoringMeta     string                       `json:"authoring_meta,omitempty"`
+	NextCommands      []string                     `json:"next_commands,omitempty"`
+	Optimization      *cognitionOptimizationStatus `json:"optimization,omitempty"`
+	// Stop carries an asset-level fact no candidate can repair, found before a batch
+	// is issued, so that the model is not asked to author Entries the update path
+	// would have to refuse. Absent otherwise.
+	Stop *GlobalStopFacts `json:"stop,omitempty"`
+	// ServiceBinaryReplacedOnDisk 是纯咨询事实: 磁盘上的服务二进制已不同于本进程
+	// 启动时的那份, 宿主应择机重启 MCP 集成。它不阻塞任何流程, 未漂移时不出现。
+	ServiceBinaryReplacedOnDisk bool `json:"service_binary_replaced_on_disk,omitempty"`
+}
+
+func handleVolumeMaintain(root, serviceVersion, requestedScope string, loaded *cognitionRepoCtx, refreshSession *cognitionRefreshSession) *mcp.CallToolResult {
+	start := time.Now()
+	if requestedScope != "" && requestedScope != cognition.ScopeCode && requestedScope != cognition.ScopeDatabase && requestedScope != cognition.ScopeAll {
+		return failResult(&Fail{Code: errBadArgs, Msg: "maintain_scope_invalid"})
+	}
+	facts, err := volumegovernance.Assess(root, loaded.cfg, loaded.set)
+	if err != nil {
+		return failResult(&Fail{Code: errInternal, Msg: "volumes_governance_facts_invalid"})
+	}
+	refreshSession.RecordAlignedIdentity(
+		newVolumeCognitionReceipt(root, serviceVersion, loaded.set, mustVolumeScope(loaded.set)).ScopeIdentity,
+		facts.GovernanceAligned)
+	result := volumeMaintainResult{
+		Version: 1, Status: autoStatusStopped, Result: facts.Result, Aligned: facts.GovernanceAligned,
+		RequestedScope: requestedScope, AffectedDomains: append([]string{}, facts.AffectedDomains...),
+		Candidates: []volumeMaintainCandidate{}, OrphanRemovals: []string{},
+		Sets:       volumeMaintainSets{Review: []string{}, Write: []string{}, Guard: []string{"root", "meta"}},
+		Governance: facts, Receipt: newVolumeCognitionReceipt(root, serviceVersion, loaded.set, mustVolumeScope(loaded.set)),
+		Metrics: autoMetrics{AOCIToolCalls: 1}, SemanticGenerated: false, NetworkAccessed: false,
+		ServiceBinaryReplacedOnDisk: serviceBinaryReplacedOnDisk(),
+		NextAction:                  facts.NextRequiredAction,
+		Batch: volumeAuthoringBatch{MaxEntries: codeBatchLimit(loaded.cfg),
+			CompositeIdentity: facts.CompositeIdentity, ScopePolicyIdentity: facts.ManagedScope.PolicyIdentity},
+	}
+	requested := map[string]bool{cognition.ScopeCode: requestedScope == "" || requestedScope == cognition.ScopeAll || requestedScope == cognition.ScopeCode,
+		cognition.ScopeDatabase: requestedScope == "" || requestedScope == cognition.ScopeAll || requestedScope == cognition.ScopeDatabase}
+	codeWork := volumegovernance.CodeAuthoringWork{}
+	if requested[cognition.ScopeCode] {
+		codeWork = volumegovernance.CodeAuthoringWorkFor(loaded.set, facts.CodeDrift)
+	}
+
+	if facts.Result != volumegovernance.ResultBlocked && facts.Result != volumegovernance.ResultEvidenceRequired {
+		if requested[cognition.ScopeCode] && facts.Code.Enabled {
+			buildVolumeCodeCandidates(root, loaded, &result, codeWork)
+		}
+		if result.Stop == nil && requested[cognition.ScopeDatabase] && facts.Database.Enabled {
+			buildVolumeDatabaseCandidates(root, loaded, &result, codeBatchLimit(loaded.cfg)-len(result.Candidates))
+		}
+	}
+	result.Batch.TotalTargets = volumeAuthoringTargetCount(facts, requested, codeWork)
+	result.Batch.Included = len(result.Candidates)
+	result.Batch.Remaining = result.Batch.TotalTargets - result.Batch.Included
+	if result.Batch.Remaining < 0 {
+		result.Batch.Remaining = 0
+	}
+	result.Batch.CompleteCandidateSet = len(result.Candidates) > 0
+	result.Batch.ContinuationRequired = result.Batch.Remaining > 0
+	result.Batch.LogicalPlan, result.Batch.BatchIdentity = volumeBatchIdentities(result)
+	result.Batch.NextAction = "author_complete_current_machine_batch"
+	for _, orphan := range facts.CodeDrift.Orphan {
+		if requested[cognition.ScopeCode] {
+			result.OrphanRemovals = append(result.OrphanRemovals, "code:"+orphan)
+		}
+	}
+	for _, item := range facts.DatabaseCognition.Items {
+		if requested[cognition.ScopeDatabase] && item.State == machinecontract.DatabaseCognitionOrphan {
+			result.OrphanRemovals = append(result.OrphanRemovals, item.ObjectRef)
+		}
+	}
+	sort.Strings(result.OrphanRemovals)
+	result.Sets.Write = candidateRefs(result.Candidates)
+	result.Sets.Review = reviewClosure(loaded.set, result.Candidates)
+	if facts.Code.Enabled {
+		result.Sets.Guard = append(result.Sets.Guard, cognition.ScopeCode)
+	}
+	if facts.Database.Enabled {
+		result.Sets.Guard = append(result.Sets.Guard, cognition.ScopeDatabase, "database_evidence", "database_binding")
+	}
+	result.Sets.Guard = sortedUniqueStrings(result.Sets.Guard)
+
+	switch {
+	case result.Stop != nil:
+		// A directory in the batch that would be issued has no section header that
+		// reads back to it. No Entry edit clears that, so the batch is withheld and
+		// the operator's way out is the answer; issuing it would have the model author
+		// every Entry only for the update to stop, and the same batch come back.
+		result.Status, result.Aligned, result.Result, result.NextAction = autoStatusStopped, false, volumegovernance.ResultBlocked, "resolve_unspellable_directory"
+		result.Batch.NextAction = result.NextAction
+	case facts.Result == volumegovernance.ResultEvidenceRequired:
+		result.Status, result.Aligned = autoStatusStopped, false
+		result.NextCommands = evidenceNextCommands()
+	case facts.Result == volumegovernance.ResultBlocked || len(result.OrphanRemovals) > 0:
+		result.Status, result.Aligned, result.Result, result.NextAction = autoStatusStopped, false, volumegovernance.ResultBlocked, "explicit_orphan_remove_or_resolve_blocker"
+		result.NextCommands = blockedNextCommands(facts)
+	case len(result.Candidates) > 0:
+		result.Status, result.Aligned, result.Result, result.NextAction = autoStatusRepairRequired, false, volumegovernance.ResultAuthoringRequired, result.Batch.NextAction
+	default:
+		result.Status, result.Aligned, result.Result, result.NextAction = autoStatusApplied, true, volumegovernance.ResultAligned, "none"
+	}
+	if len(result.Candidates) > 0 {
+		// Whichever arm was taken, a response that names candidates carries the
+		// contract to author them. Until v0.1.0-rc14 held sources were dressed as
+		// orphans, the blocked arm ran first, and the candidates it still listed
+		// came without authoring_meta or instructions, so a model told to author
+		// had nothing to author against. The invariant lives here rather than in
+		// one arm so no future arm can repeat that.
+		affected := candidateDomains(result.Candidates)
+		contract, contractErr := authoringcontract.Build(loaded.set.Meta.Raw, affected, textassets.ActiveLocale())
+		if contractErr != nil {
+			return failResult(&Fail{Code: errInternal, Msg: "volume_authoring_contract_invalid"})
+		}
+		result.AuthoringMeta = contract.AuthoringMeta
+		result.Instructions = contract.Instructions
+	}
+	result.Metrics.DeterministicMs = elapsedMilliseconds(start)
+	result.Metrics.SemanticFiles = len(result.Candidates)
+	if refreshSession != nil {
+		refreshSession.noteSemanticThreshold(len(result.Candidates), loaded.cfg.CognitionRefreshThreshold)
+	}
+	ledgerResult := ledger.ResultOK
+	if result.Status == autoStatusStopped {
+		ledgerResult = ledger.ResultError
+	} else if result.Status == autoStatusRepairRequired {
+		ledgerResult = ledger.ResultRepairRequired
+	}
+	ledger.Append(root, loaded.cfg.LedgerEnabled, ledger.Event{Op: "maintain", Source: ledger.SourceAgent,
+		Result: ledgerResult, PathsCount: len(result.Candidates), DurationMs: result.Metrics.DeterministicMs,
+		AOCIToolCalls: 1, SemanticFiles: len(result.Candidates)})
+	boundMaintainTransport(&result)
+	data, marshalErr := json.Marshal(result)
+	if marshalErr != nil {
+		return failResult(&Fail{Code: errInternal, Msg: "volumes_maintain_result_invalid"})
+	}
+	return textResult(string(data) + "\n")
+}
+
+// boundMaintainTransport keeps a Maintain response inside ordinary host
+// tool-result windows regardless of repository size: per-item governance
+// enumerations and the review closure keep a leading sample plus complete
+// counts. Candidates, plans, receipts, and every scalar fact are untouched,
+// so nothing the model must act on is ever cut. (A 453-file fresh repository
+// otherwise answered its first Maintain with 212 KB, three times a common host
+// window; the host spilled it to disk and the model fell back to scripting.)
+func boundMaintainTransport(result *volumeMaintainResult) {
+	limit := machinecontract.MaintainTransportListLimit
+	if len(result.Candidates) > 0 {
+		// While the response carries candidates they are the actionable set:
+		// the governance enumerations, the review closure, and the write set
+		// shrink to a small sample plus complete counts so the batch, not the
+		// situational awareness, spends the transport budget.
+		limit = maintainCandidateSampleLimit
+		if len(result.Sets.Write) > limit {
+			result.Sets.WriteTotal = len(result.Sets.Write)
+			result.Sets.Write = append([]string{}, result.Sets.Write[:limit]...)
+		}
+	}
+	if len(result.Sets.Review) > limit {
+		result.Sets.ReviewTotal = len(result.Sets.Review)
+		result.Sets.Review = append([]string{}, result.Sets.Review[:limit]...)
+	}
+	result.Governance = volumegovernance.BoundListsForTransport(result.Governance, limit)
+}
+
+func candidateDomains(candidates []volumeMaintainCandidate) []string {
+	values := make([]string, 0, 2)
+	for _, domain := range []string{cognition.ScopeCode, cognition.ScopeDatabase} {
+		for _, candidate := range candidates {
+			if candidate.Domain == domain {
+				values = append(values, domain)
+				break
+			}
+		}
+	}
+	return values
+}
+
+func mustVolumeScope(set *cognition.Set) cognition.ScopeView {
+	view, _ := set.Scope(cognition.ScopeAll)
+	return view
+}
+
+// buildVolumeCodeCandidates turns the shared authoring work into receipt-bound
+// candidates: a target the Code Volume already describes is an update, any
+// other is a create. The work set is the same value the batch total and Guide
+// report, so the plan can never promise more than it issues.
+func buildVolumeCodeCandidates(root string, loaded *cognitionRepoCtx, result *volumeMaintainResult, work volumegovernance.CodeAuthoringWork) {
+	all := codeCandidatesForWork(root, loaded.set, work)
+	if len(all) == 0 {
+		return
+	}
+	_, selected := codebatch.SelectWithBudget(all, codeBatchLimit(loaded.cfg), codeCandidateBudget(loaded.cfg, loaded.set, all))
+	if fail := firstUnspellableCandidate(root, loaded, selected); fail != nil {
+		result.Stop = fail.GlobalStop
+		return
+	}
+	plan, err := codebatch.BuildPlanWithBudget(root, result.Governance.CompositeIdentity,
+		result.Governance.ManagedScope.PolicyIdentity, result.Governance.Code.Path,
+		result.Governance.Code.SHA256, all, codeBatchLimit(loaded.cfg), codeCandidateBudget(loaded.cfg, loaded.set, all))
+	if err != nil {
+		return
+	}
+	result.CodePlan = transportCodePlan(plan)
+	result.Batch.TransportBudgetBytes = plan.TransportBudgetBytes
+	for _, candidate := range plan.Candidates {
+		result.Candidates = append(result.Candidates, volumeMaintainCandidate{Domain: cognition.ScopeCode,
+			Change: candidate.Change, ObjectRef: candidate.ObjectRef, Path: candidate.Path,
+			ExistingEntry: candidate.ExistingEntry, SourceSHA256: candidate.SourceSHA256,
+			CandidateID: candidate.CandidateID, BatchID: plan.BatchID, ModelAuthoringOnly: true})
+	}
+}
+
+// codeCandidatesForWork turns the shared authoring work into the candidate list
+// a batch is cut from: a target the Code Volume already describes is an update
+// carrying its existing Entry, any other is a create. Maintain plans from it and
+// the Guide projects the same batch from it (PlanCodeBatchIncluded).
+func codeCandidatesForWork(root string, set *cognition.Set, work volumegovernance.CodeAuthoringWork) []codebatch.Candidate {
+	all := []codebatch.Candidate{}
+	for _, path := range work.Targets {
+		fingerprint, hashErr := baseline.HashFile(filepath.Join(root, filepath.FromSlash(path)))
+		if hashErr != nil {
+			continue
+		}
+		if object := cognitionObjectByRef(set.Volumes[cognition.ScopeCode], "code:"+path); object != nil {
+			all = append(all, codebatch.Candidate{Target: codebatch.Target{Change: cognition.ImpactChangeUpdate,
+				ObjectRef: object.CanonicalRef, Path: path, ExistingEntry: object.CanonicalLine,
+				SourceSHA256: fingerprint.SHA256}})
+			continue
+		}
+		all = append(all, codebatch.Candidate{Target: codebatch.Target{Change: cognition.ImpactChangeCreate,
+			ObjectRef: "code:" + path, Path: path, SourceSHA256: fingerprint.SHA256}})
+	}
+	return all
+}
+
+// firstUnspellableCandidate asks, for every directory a create candidate of this
+// batch lives in, whether the writer could record it, and answers the refusal the
+// update path would give for the first one it could not. The Volume is parsed
+// once for the whole batch, a directory that already has a section costs a lookup,
+// and a new one is judged on the section list without re-parsing, so the check
+// stays a small fraction of Maintain on a large index.
+func firstUnspellableCandidate(root string, loaded *cognitionRepoCtx, selected []codebatch.Candidate) *Fail {
+	code := loaded.set.Volumes[cognition.ScopeCode]
+	if code == nil {
+		return nil
+	}
+	var probe *index.InsertProbe
+	probed := map[string]bool{}
+	for _, candidate := range selected {
+		directory := path.Dir(candidate.Path)
+		if candidate.Change != cognition.ImpactChangeCreate || probed[directory] {
+			continue
+		}
+		probed[directory] = true
+		if probe == nil {
+			probe = index.NewInsertProbe(string(code.Raw), root)
+		}
+		var unspellable *index.DirectoryUnspellableError
+		if err := probe.Check(candidate.Path); errors.As(err, &unspellable) {
+			return directoryUnspellableFail(root, candidate.Path, config.AOCIPaths(root, code.Descriptor.Path).IndexPath, unspellable)
+		}
+	}
+	return nil
+}
+
+func buildVolumeDatabaseCandidates(root string, loaded *cognitionRepoCtx, result *volumeMaintainResult, capacity int) {
+	if capacity <= 0 {
+		return
+	}
+	assessment := result.Governance.DatabaseCognition
+	objectLimit, evidenceLimit := loaded.cfg.DatabaseCognitionBatchLimits()
+	if objectLimit > capacity {
+		objectLimit = capacity
+	}
+	plan, err := dbcognition.BuildPlan(root, assessment, loaded.set, objectLimit, evidenceLimit)
+	if err != nil {
+		return
+	}
+	result.DatabasePlan = &plan
+	for _, candidate := range plan.Candidates {
+		change := cognition.ImpactChangeUpdate
+		if candidate.CognitionState == machinecontract.DatabaseCognitionMissing {
+			change = cognition.ImpactChangeCreate
+		}
+		result.Candidates = append(result.Candidates, volumeMaintainCandidate{Domain: cognition.ScopeDatabase,
+			Change: change, ObjectRef: candidate.ObjectRef, ExistingEntry: candidate.ExistingDatabaseEntry,
+			EvidenceVersion: candidate.EvidenceVersion, EvidenceSHA256: candidate.TableEvidenceSHA256,
+			CandidateID: candidate.CandidateID, BatchID: plan.BatchID, ModelAuthoringOnly: true})
+	}
+}
+
+func volumeAuthoringTargetCount(facts *volumegovernance.Facts, requested map[string]bool, work volumegovernance.CodeAuthoringWork) int {
+	total := 0
+	if requested[cognition.ScopeCode] {
+		total += len(work.Targets)
+	}
+	if requested[cognition.ScopeDatabase] {
+		total += facts.DatabaseCognition.Summary.Missing + facts.DatabaseCognition.Summary.Stale + facts.DatabaseCognition.Summary.Unbaselined
+	}
+	return total
+}
+
+func volumeBatchIdentities(result volumeMaintainResult) (string, string) {
+	codePlanID := "-"
+	if result.CodePlan != nil {
+		codePlanID = result.CodePlan.PlanID
+	}
+	databasePlanID := "-"
+	if result.DatabasePlan != nil {
+		databasePlanID = result.DatabasePlan.BatchID
+	}
+	logical := sha256.Sum256([]byte(fmt.Sprintf("volumes-authoring-plan/v1\x00%s\x00%s\x00%d\x00%s\x00%s",
+		result.Batch.CompositeIdentity, result.Batch.ScopePolicyIdentity, result.Batch.TotalTargets,
+		codePlanID, databasePlanID)))
+	parts := make([]string, 0, len(result.Candidates))
+	for _, candidate := range result.Candidates {
+		parts = append(parts, strings.Join([]string{candidate.Domain, candidate.ObjectRef, candidate.BatchID,
+			candidate.CandidateID, candidate.SourceSHA256, candidate.EvidenceSHA256}, "\x00"))
+	}
+	batch := sha256.Sum256([]byte(fmt.Sprintf("volumes-authoring-batch/v1\x00%x\x00%s\x00%d",
+		logical, strings.Join(parts, "\x1e"), result.Batch.Included)))
+	return fmt.Sprintf("%x", logical), fmt.Sprintf("%x", batch)
+}
+
+func candidateRefs(candidates []volumeMaintainCandidate) []string {
+	values := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		values = append(values, candidate.ObjectRef)
+	}
+	return sortedUniqueStrings(values)
+}
+
+func reviewClosure(set *cognition.Set, candidates []volumeMaintainCandidate) []string {
+	review := candidateRefs(candidates)
+	impactCandidates := []cognition.ImpactCandidate{}
+	for candidateIndex, candidate := range candidates {
+		if candidate.ExistingEntry == "" {
+			continue
+		}
+		impactCandidates = append(impactCandidates, cognition.ImpactCandidate{Change: cognition.ImpactChangeUpdate,
+			ObjectRef: candidate.ObjectRef, CanonicalLine: candidate.ExistingEntry, OriginalCandidateIndex: candidateIndex + 1})
+	}
+	if len(impactCandidates) == 0 {
+		return review
+	}
+	impact, err := cognition.ResolveImpact(set, impactCandidates)
+	if err != nil {
+		return review
+	}
+	for _, item := range impact.ReviewSet {
+		review = append(review, item.Object)
+	}
+	return sortedUniqueStrings(review)
+}
+
+func sortedUniqueStrings(values []string) []string {
+	sort.Strings(values)
+	result := values[:0]
+	for _, value := range values {
+		if len(result) == 0 || result[len(result)-1] != value {
+			result = append(result, value)
+		}
+	}
+	return result
+}

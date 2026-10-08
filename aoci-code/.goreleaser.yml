@@ -1,0 +1,61 @@
+# AOCI-CODE cross-platform package configuration.
+# 索引条目: .goreleaser.yml[Dist.Root.3.Xp.T]
+# GoReleaser's SCM publisher stays disabled. The pinned GitHub tag workflow
+# performs keyless signing, provenance attestation, exact-asset verification,
+# and the explicitly authorized draft-to-release transition.
+version: 2
+project_name: aoci
+
+builds:
+  - id: aoci
+    main: ./cmd/aoci
+    binary: aoci
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -buildid=
+      - -X github.com/aoci-spec/aoci-code/internal/cli.version={{.Version}}
+      - -X github.com/aoci-spec/aoci-code/internal/cli.commit={{.FullCommit}}
+      - -X github.com/aoci-spec/aoci-code/internal/cli.buildDate={{.CommitDate}}
+
+archives:
+  - id: default
+    name_template: "aoci_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE
+      - NOTICE
+      - PATENTS
+      - README.md
+      - README.zh-CN.md
+      - assets/aoci-logo-en.jpg
+      - assets/aoci-logo-zh-CN.jpg
+      - THIRD-PARTY-NOTICES
+      - TRADEMARKS
+      - CHANGELOG.md
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+
+# GoReleaser's checksum is retained for local release rehearsals. The signed
+# tag workflow rebuilds SHA256SUMS after copying the six archive SBOMs into the
+# isolated release-asset directory so the published checksum covers both sets.
+
+sboms:
+  - id: archives
+    artifacts: archive
+    disable: false
+
+report_sizes: true
+
+release:
+  disable: true

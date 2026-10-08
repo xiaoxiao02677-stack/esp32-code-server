@@ -1,0 +1,266 @@
+/* ============================================================
+   小智 API 控制台 · Kawaii Minimal 主题
+   独立项目，不依赖原 manager-web
+   ============================================================ */
+
+:root {
+  /* Kawaii 色板 */
+  --bg: #FFF7ED;
+  --surface: #ffffff;
+  --primary: #F9A8D4;
+  --primary-strong: #FF8FAB;
+  --primary-soft: #FFD6E0;
+  --primary-bg: #FFF0F4;
+  --secondary: #A78BFA;
+  --tertiary: #67E8F9;
+  --accent: #FDE68A;
+  --text: #4B3B44;
+  --text-soft: #A08E96;
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-full: 9999px;
+  --shadow-card: 0 4px 16px rgba(255, 143, 171, 0.14);
+  --shadow-hover: 0 8px 24px rgba(255, 143, 171, 0.22);
+  --ease-jelly: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { box-sizing: border-box; }
+
+/* ============================================================
+   主题系统：kawaii（默认） / blue / dark / purple / green / morandi
+   通过 <html data-theme="..."> 切换
+   ============================================================ */
+html[data-theme="blue"] {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --primary: #2563EB;
+  --primary-strong: #1D4ED8;
+  --primary-soft: #93C5FD;
+  --primary-bg: #EFF6FF;
+  --secondary: #0EA5E9;
+  --tertiary: #7DD3FC;
+  --accent: #F59E0B;
+  --text: #0F172A;
+  --text-soft: #64748B;
+  --shadow-card: 0 4px 16px rgba(37, 99, 235, 0.12);
+  --shadow-hover: 0 8px 24px rgba(37, 99, 235, 0.20);
+}
+
+html[data-theme="dark"] {
+  --bg: #0B1120;
+  --surface: #111827;
+  --primary: #3B82F6;
+  --primary-strong: #60A5FA;
+  --primary-soft: #1E3A8A;
+  --primary-bg: #1F2937;
+  --secondary: #06B6D4;
+  --tertiary: #164E63;
+  --accent: #A855F7;
+  --text: #F9FAFB;
+  --text-soft: #9CA3AF;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.60);
+}
+
+html[data-theme="purple"] {
+  --bg: #FAF5FF;
+  --surface: #FFFFFF;
+  --primary: #7C3AED;
+  --primary-strong: #6D28D9;
+  --primary-soft: #DDD6FE;
+  --primary-bg: #F5F3FF;
+  --secondary: #C026D3;
+  --tertiary: #F0ABFC;
+  --accent: #F472B6;
+  --text: #1E1B4B;
+  --text-soft: #6B7280;
+  --shadow-card: 0 4px 16px rgba(124, 58, 237, 0.13);
+  --shadow-hover: 0 8px 24px rgba(124, 58, 237, 0.22);
+}
+
+html[data-theme="green"] {
+  --bg: #F7FDF9;
+  --surface: #FFFFFF;
+  --primary: #16A34A;
+  --primary-strong: #15803D;
+  --primary-soft: #86EFAC;
+  --primary-bg: #F0FDF4;
+  --secondary: #84CC16;
+  --tertiary: #A7F3D0;
+  --accent: #0D9488;
+  --text: #14532D;
+  --text-soft: #4B5563;
+  --shadow-card: 0 4px 16px rgba(22, 163, 74, 0.12);
+  --shadow-hover: 0 8px 24px rgba(22, 163, 74, 0.20);
+}
+
+html[data-theme="morandi"] {
+  --bg: #F5F3F0;
+  --surface: #FFFFFF;
+  --primary: #8B9DAF;
+  --primary-strong: #708597;
+  --primary-soft: #CBD5DD;
+  --primary-bg: #EEF1F4;
+  --secondary: #B7C4CF;
+  --tertiary: #D8E0E6;
+  --accent: #D8A7A0;
+  --text: #3F3F46;
+  --text-soft: #7C7C83;
+  --shadow-card: 0 4px 16px rgba(139, 157, 175, 0.16);
+  --shadow-hover: 0 8px 24px rgba(139, 157, 175, 0.26);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-weight: 500;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   stylekit 动效（MIT，github.com/AnxForever/stylekit）
+   ============================================================ */
+
+/* ===== 淡入上滑 fade-in-up ===== */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  --sk-duration: 600ms;
+  --sk-delay: 0ms;
+  --sk-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  animation: fade-in-up var(--sk-duration) var(--sk-ease) var(--sk-delay) both;
+}
+
+/* ===== 左侧滑入 slide-in-left ===== */
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.slide-in-left {
+  --sk-duration: 500ms;
+  --sk-delay: 0ms;
+  --sk-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  animation: slide-in-left var(--sk-duration) var(--sk-ease) var(--sk-delay) both;
+}
+
+/* ===== 边框描边 border-trace ===== */
+.border-trace {
+  position: relative;
+  background:
+    linear-gradient(var(--primary), var(--primary)) top left / 0 2px no-repeat,
+    linear-gradient(var(--primary), var(--primary)) top right / 2px 0 no-repeat,
+    linear-gradient(var(--primary), var(--primary)) bottom right / 0 2px no-repeat,
+    linear-gradient(var(--primary), var(--primary)) bottom left / 2px 0 no-repeat;
+  transition: background-size 600ms ease-in-out;
+}
+.border-trace:hover {
+  background-size: 100% 2px, 2px 100%, 100% 2px, 2px 100%;
+}
+
+/* ===== 悬浮发光 hover-glow（粉彩适配） ===== */
+.hover-glow { position: relative; }
+.hover-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 15px rgba(249, 168, 212, 0.45), 0 0 30px rgba(249, 168, 212, 0.22);
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  pointer-events: none;
+  z-index: 0;
+}
+.hover-glow:hover::before { opacity: 1; }
+
+/* ===== 进度条 progress-bar（入口 0.3s 变体） ===== */
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@keyframes progress-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.progress-bar {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--primary-soft);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, #FF8FAB 0%, #F9A8D4 50%, #FF8FAB 100%);
+  background-size: 200% 100%;
+  animation:
+    progress-fill var(--sk-progress-duration, 300ms) ease-out both,
+    progress-shimmer 1.2s linear infinite;
+}
+
+/* ===== 光晕指针 cursor-aura（粉彩适配） ===== */
+.cursor-aura {
+  position: fixed;
+  left: 0; top: 0;
+  width: 34px; height: 34px;
+  border-radius: var(--radius-full);
+  translate: -50% -50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(249,168,212,0.22), transparent 62%);
+  will-change: transform;
+  z-index: 9999;
+}
+
+/* ===== 交错入场（fade-in-up 派生，列表用） ===== */
+.stagger-item {
+  animation: fade-in-up 500ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* ===== reduced-motion 全局降级 ===== */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up, .slide-in-left, .stagger-item, .progress-bar-fill {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .border-trace { transition: none; border: 2px solid var(--primary); background: none; }
+  .hover-glow::before { display: none; }
+  .cursor-aura { display: none; }
+}
+
+/* ============================================================
+   布局组件
+   ============================================================ */
+.kawaii-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+}
+.kawaii-pill {
+  border-radius: var(--radius-full);
+  padding: 10px 22px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  background: var(--primary-strong);
+  color: #fff;
+  transition: all 0.2s var(--ease-jelly);
+}
+.kawaii-pill:hover { transform: scale(1.05); }
+.kawaii-pill:active { transform: scale(0.95); }
+.kawaii-pill:disabled { opacity: 0.6; cursor: wait; }
+.kawaii-pill--ghost {
+  background: var(--surface);
+  color: var(--text-soft);
+  border: 2px solid var(--primary-soft);
+}

@@ -1,0 +1,576 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  clearRemoteCache,
+  getComponentRecipeLive,
+  getStyleDetailLive,
+  getImplementationBriefLive,
+  getTokensLive,
+  knownSlugLive,
+  searchStylesLive,
+} from "@/packages/core/src/discovery/remote";
+import { getImplementationBrief, type ImplementationBrief } from "@/lib/implementation-brief";
+import { getTokens } from "@/lib/discovery";
+
+const catalogue = (styles: unknown[]) =>
+  new Response(JSON.stringify({ total: styles.length, styles }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+
+const style = (slug: string, category = "modern") => ({
+  slug,
+  name: `${slug} 中文`,
+  nameEn: slug,
+  description: `${slug} description`,
+  descriptionEn: `${slug} description`,
+  category,
+  tags: ["live"],
+  keywords: [slug],
+  colors: {
+    primary: "#111111",
+    secondary: "#ffffff",
+    accent: ["#ff006e"],
+  },
+});
+
+function responseFor(url: string, body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function copyLocalBrief(slug = "neo-brutalist"): ImplementationBrief {
+  return JSON.parse(JSON.stringify(getImplementationBrief(slug))) as ImplementationBrief;
+}
+
+beforeEach(() => {
+  clearRemoteCache();
+  vi.useRealTimers();
+});
+
+afterEach(() => {
+  clearRemoteCache();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+describe("remote discovery", () => {
+  it("prefers updated live detail, tokens, briefs, and recipe definitions for bundled styles", async () => {
+    const brief = copyLocalBrief();
+    brief.name = "Live updated name";
+    brief.aiRules = `${brief.aiRules}\nLive-only guidance.`;
+    brief.recipes.button.skeleton.baseClasses[0] = "online-recipe-class";
+    const localTokens = getTokens("neo-brutalist")!;
+    const liveTokens = {
+      ...localTokens,
+      border: { ...localTokens.border, width: "border-8" },
+    };
+    const liveMetadata = {
+      ...style("neo-brutalist"),
+      name: "线上中文名称",
+      nameEn: "Online English Name",
+      description: "线上中文介绍",
+      descriptionEn: "Online English description",
+      tags: ["live-tag"],
+      keywords: ["catalogue-keyword"],
+    };
+    const liveDetail = {
+      slug: "neo-brutalist",
+      name: "接口返回的中文名",
+      nameEn: "API English Name",
+      description: "接口返回的中文介绍",
+      philosophy: "Live detail philosophy",
+      keywords: ["api-keyword"],
+      colors: style("neo-brutalist").colors,
+      doList: ["Use the live guidance"],
+      dontList: [],
+      tokens: liveTokens,
+      recipes: { styleSlug: "neo-brutalist", recipes: brief.recipes },
+      readiness: { source: "curated" },
+      components: {},
+    };
+    const fetchMock = vi.fn((url: string) => {
+      const pathname = new URL(url).pathname;
+      if (pathname.endsWith("/brief")) return Promise.resolve(responseFor(url, brief));
+      if (pathname.endsWith("/tokens")) return Promise.resolve(responseFor(url, { styleSlug: "neo-brutalist", tokens: liveTokens }));
+      if (pathname === "/api/styles/neo-brutalist") return Promise.resolve(responseFor(url, liveDetail));
+      if (pathname === "/api/styles") return Promise.resolve(catalogue([liveMetadata]));
+      throw new Error(`Unexpected request ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const liveBrief = await getImplementationBriefLive("neo-brutalist", { baseUrl: "https://style-update.test" });
+    const liveTokensResult = await getTokensLive("neo-brutalist", { baseUrl: "https://style-update.test" });
+    const liveDetailResult = await getStyleDetailLive("neo-brutalist", { baseUrl: "https://style-update.test" });
+    const liveRecipe = await getComponentRecipeLive("neo-brutalist", "button", { baseUrl: "https://style-update.test" });
+
+    expect(liveBrief).toMatchObject({ origin: "live", data: { name: "Live updated name" } });
+    expect(liveBrief.data?.aiRules).toContain("Live-only guidance.");
+    expect(liveTokensResult).toMatchObject({ origin: "live", data: { border: { width: "border-8" } } });
+    expect(liveDetailResult).toMatchObject({
+      origin: "live",
+      data: {
+        name: "线上中文名称",
+        nameEn: "Online English Name",
+        description: "Online English description",
+        tags: ["live-tag"],
+        keywords: ["api-keyword"],
+      },
+    });
+    expect(liveRecipe).toMatchObject({ origin: "live", data: { className: expect.stringContaining("online-recipe-class") } });
+  });
+
+  it("does not revive a bundled style after the online catalogue removes it", async () => {
+    const fetchMock = vi.fn((url: string) => new URL(url).pathname.endsWith("/brief")
+      ? Promise.resolve(responseFor(url, { error: "not found" }, 404))
+      : Promise.resolve(catalogue([])));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getImplementationBriefLive("neo-brutalist", { baseUrl: "https://removed-style.test" });
+
+    expect(result).toMatchObject({ data: null, origin: "live", failureKind: "not-found" });
+    expect(result.fallbackReason).toContain("not found in the live catalogue");
+  });
+
+  it("does not revive removed live recipes or tokens from the bundle", async () => {
+    const brief = copyLocalBrief();
+    brief.tokens = null;
+    brief.recipes = {};
+    const fetchMock = vi.fn((url: string) => {
+      const pathname = new URL(url).pathname;
+      if (pathname.endsWith("/tokens")) return Promise.resolve(responseFor(url, { error: "not found" }, 404));
+      if (pathname.endsWith("/brief")) return Promise.resolve(responseFor(url, brief));
+      if (pathname === "/api/styles/neo-brutalist") return Promise.resolve(responseFor(url, { slug: "neo-brutalist", tokens: null }));
+      return Promise.resolve(catalogue([style("neo-brutalist")]));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tokens = await getTokensLive("neo-brutalist", { baseUrl: "https://removed-capabilities.test" });
+    const recipe = await getComponentRecipeLive("neo-brutalist", "button", { baseUrl: "https://removed-capabilities.test" });
+
+    expect(tokens).toMatchObject({ data: null, origin: "live", failureKind: "not-found" });
+    expect(recipe).toMatchObject({ data: null, origin: "live", failureKind: "not-found" });
+  });
+
+  it("falls back to the matching bundled data with a reason when live requests fail or change schema", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseFor("", { error: "offline" }, 503)));
+
+    const failedBrief = await getImplementationBriefLive("neo-brutalist", { baseUrl: "https://brief-fallback.test" });
+    const failedDetail = await getStyleDetailLive("neo-brutalist", { baseUrl: "https://detail-fallback.test" });
+    const failedTokens = await getTokensLive("neo-brutalist", { baseUrl: "https://tokens-fallback.test" });
+    const failedRecipe = await getComponentRecipeLive("neo-brutalist", "button", { baseUrl: "https://recipe-fallback.test" });
+
+    expect(failedBrief).toMatchObject({ origin: "bundled", fallbackReason: "HTTP 503", data: { slug: "neo-brutalist" } });
+    expect(failedDetail).toMatchObject({ origin: "bundled", fallbackReason: "HTTP 503", data: { slug: "neo-brutalist" } });
+    expect(failedTokens).toMatchObject({ origin: "bundled", fallbackReason: "HTTP 503", data: { border: expect.any(Object) } });
+    expect(failedRecipe).toMatchObject({ origin: "bundled", fallbackReason: "HTTP 503", data: { slug: "neo-brutalist", component: "button" } });
+
+    clearRemoteCache();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseFor("", { schemaVersion: "old-brief", slug: "neo-brutalist" })));
+    const incompatible = await getImplementationBriefLive("neo-brutalist", { baseUrl: "https://schema-fallback.test" });
+    expect(incompatible).toMatchObject({ origin: "bundled", data: { slug: "neo-brutalist" } });
+    expect(incompatible.fallbackReason).toContain("stylekit-brief-v1 contract");
+  });
+
+  it("refreshes an online brief after its configured cache TTL expires", async () => {
+    vi.useFakeTimers();
+    const first = copyLocalBrief();
+    const second = copyLocalBrief();
+    first.name = "Live name one";
+    second.name = "Live name two";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responseFor("", first))
+      .mockResolvedValueOnce(responseFor("", second));
+    vi.stubGlobal("fetch", fetchMock);
+    const options = { baseUrl: "https://brief-ttl.test", cacheTtlMs: 100 };
+
+    const initial = await getImplementationBriefLive("neo-brutalist", options);
+    const cached = await getImplementationBriefLive("neo-brutalist", options);
+    await vi.advanceTimersByTimeAsync(101);
+    const refreshed = await getImplementationBriefLive("neo-brutalist", options);
+
+    expect(initial.data?.name).toBe("Live name one");
+    expect(cached.data?.name).toBe("Live name one");
+    expect(refreshed.data?.name).toBe("Live name two");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads a live brief for a new style and rejects incompatible contracts", async () => {
+    const brief = getImplementationBrief("neo-brutalist")!;
+    const valid = { ...brief, slug: "live-only" };
+    const fetchMock = vi.fn().mockResolvedValueOnce(responseFor("", valid))
+      .mockResolvedValueOnce(responseFor("", { schemaVersion: "wrong", slug: "invalid" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await getImplementationBriefLive("live-only", { baseUrl: "https://brief.test" });
+    expect(result.origin).toBe("live");
+    expect(result.data?.aiRules).toBe(brief.aiRules);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://brief.test/api/styles/live-only/brief");
+    const invalid = await getImplementationBriefLive("invalid", { baseUrl: "https://brief.test" });
+    expect(invalid.data).toBeNull();
+    expect(invalid.fallbackReason).toContain("contract");
+  });
+
+  it("unwraps actual recipe ids in a legacy live detail response", async () => {
+    const fetchMock = vi.fn((url: string) => Promise.resolve(url.endsWith("/api/styles/live-only")
+      ? responseFor(url, { ...style("live-only"), recipes: { styleSlug: "live-only", recipes: { button: {}, card: {} } } })
+      : catalogue([style("live-only")])));
+    vi.stubGlobal("fetch", fetchMock);
+    const detail = await getStyleDetailLive("live-only", { baseUrl: "https://detail.test" });
+    expect(detail.data?.recipeIds).toEqual(["button", "card"]);
+  });
+
+  it("falls back with a reason on HTTP and network failures", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(responseFor("", {}, 503));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const httpFailure = await searchStylesLive({}, { baseUrl: "https://http.test" });
+    expect(httpFailure.origin).toBe("bundled");
+    expect(httpFailure.fallbackReason).toBe("HTTP 503");
+    expect(httpFailure.failureKind).toBe("unavailable");
+
+    clearRemoteCache();
+    fetchMock.mockRejectedValueOnce(new Error("DNS unavailable"));
+    const networkFailure = await searchStylesLive({}, { baseUrl: "https://network.test" });
+    expect(networkFailure.origin).toBe("bundled");
+    expect(networkFailure.fallbackReason).toBe("DNS unavailable");
+    expect(networkFailure.failureKind).toBe("unavailable");
+  });
+
+  it("does not open the site-wide circuit when one live detail is missing", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/api/styles/missing-detail") {
+        return Promise.resolve(responseFor(url, { error: "not found" }, 404));
+      }
+      if (parsed.pathname === "/api/styles/available-detail") {
+        return Promise.resolve(responseFor(url, {
+          slug: "available-detail",
+          name: "Available detail",
+          nameEn: "Available detail",
+          description: "Still online",
+          philosophy: "Still online",
+          keywords: ["online"],
+          colors: style("available-detail").colors,
+          recipes: {},
+          tokens: null,
+        }));
+      }
+      if (parsed.pathname === "/api/styles") {
+        return Promise.resolve(catalogue([style("available-detail")]));
+      }
+      throw new Error(`Unexpected request ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const missing = await getStyleDetailLive("missing-detail", { baseUrl: "https://cross-404.test" });
+    const available = await getStyleDetailLive("available-detail", { baseUrl: "https://cross-404.test" });
+
+    expect(missing).toMatchObject({ data: null, origin: "live", failureKind: "not-found" });
+    expect(missing.fallbackReason).toContain("not found in the live catalogue");
+    expect(available).toMatchObject({ origin: "live", data: { slug: "available-detail" } });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/api/styles/available-detail"))).toBe(true);
+  });
+
+  it("classifies a missing brief separately from a missing style", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname.endsWith("/brief")) {
+        return Promise.resolve(responseFor(url, { error: "not found" }, 404));
+      }
+      if (parsed.pathname === "/api/styles") {
+        return Promise.resolve(catalogue([style("live-only")]));
+      }
+      throw new Error(`Unexpected request ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const existing = await getImplementationBriefLive("live-only", { baseUrl: "https://legacy-brief.test" });
+    const missing = await getImplementationBriefLive("not-in-catalogue", { baseUrl: "https://legacy-brief.test" });
+
+    expect(existing).toMatchObject({ data: null, failureKind: "unsupported" });
+    expect(existing.fallbackReason).toContain("existing style");
+    expect(missing).toMatchObject({ data: null, failureKind: "not-found" });
+  });
+
+  it("reports a missing brief as unavailable when style existence cannot be checked", async () => {
+    const fetchMock = vi.fn((url: string) => Promise.resolve(
+      new URL(url).pathname.endsWith("/brief")
+        ? responseFor(url, { error: "not found" }, 404)
+        : responseFor(url, { error: "offline" }, 503),
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getImplementationBriefLive("maybe-live", { baseUrl: "https://brief-offline.test" });
+
+    expect(result).toMatchObject({ data: null, failureKind: "unavailable" });
+    expect(result.fallbackReason).toContain("style existence could not be checked");
+  });
+
+  it("uses a NFKC exact bundled match even when the local scorer has no hit", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseFor("", { error: "unavailable" }, 503)));
+
+    const result = await searchStylesLive(
+      { query: "Ｇｌａｓｓｍｏｒｐｈｉｓｍ", limit: 1 },
+      { baseUrl: "https://exact-fallback.test" },
+    );
+
+    expect(result.origin).toBe("bundled");
+    expect(result.ranking).toBe("exact");
+    expect(result.data).toMatchObject({ total: 1, results: [{ slug: "glassmorphism" }] });
+  });
+
+  it("prioritizes live exact slug or name matches over hybrid results and keeps totals", async () => {
+    const exact = {
+      ...style("exact-live"),
+      name: "独特名称",
+      nameEn: "Exact Display Name",
+    };
+    const fetchMock = vi.fn((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/api/search") {
+        return Promise.resolve(responseFor(url, {
+          mode: "hybrid",
+          results: [{ slug: "semantic-first", score: 10 }],
+        }));
+      }
+      return Promise.resolve(catalogue([style("semantic-first"), exact]));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const slugMatch = await searchStylesLive(
+      { query: "exact-live", limit: 1 },
+      { baseUrl: "https://exact-live.test" },
+    );
+    const nameMatch = await searchStylesLive(
+      { query: "独特名称", limit: 1 },
+      { baseUrl: "https://exact-live.test" },
+    );
+
+    expect(slugMatch).toMatchObject({ ranking: "exact", data: { total: 2, results: [{ slug: "exact-live" }] } });
+    expect(nameMatch).toMatchObject({ ranking: "exact", data: { total: 2, results: [{ slug: "exact-live" }] } });
+  });
+
+  it("uses the timeout budget and reports a stable fallback reason", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = searchStylesLive(
+      {},
+      { baseUrl: "https://timeout.test", timeoutMs: 25 },
+    );
+    await vi.advanceTimersByTimeAsync(25);
+    const result = await pending;
+
+    expect(result.origin).toBe("bundled");
+    expect(result.fallbackReason).toBe("timed out after 25ms");
+  });
+
+  it("isolates caches and circuit breakers by normalized base URL", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("https://one.test")) {
+        return Promise.resolve(responseFor(url, { styles: [style("one-only")] }));
+      }
+      if (url.startsWith("https://failing.test")) {
+        return Promise.reject(new Error("offline"));
+      }
+      return Promise.resolve(responseFor(url, { styles: [style("two-only")] }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const one = await searchStylesLive({}, { baseUrl: "https://one.test/" });
+    const oneAgain = await searchStylesLive({}, { baseUrl: "https://one.test" });
+    const two = await searchStylesLive({}, { baseUrl: "https://two.test" });
+
+    expect(one.origin).toBe("live");
+    expect(oneAgain.origin).toBe("live");
+    expect(one.data.results[0]?.slug).toBe("one-only");
+    expect(two.origin).toBe("live");
+    expect(two.data.results[0]?.slug).toBe("two-only");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const failed = await searchStylesLive({}, { baseUrl: "https://failing.test" });
+    const backedOff = await searchStylesLive({}, { baseUrl: "https://failing.test" });
+    const recoveredOtherHost = await searchStylesLive({}, { baseUrl: "https://two.test" });
+
+    expect(failed.fallbackReason).toBe("offline");
+    expect(backedOff.fallbackReason).toBe("live source unreachable, backing off");
+    expect(recoveredOtherHost.origin).toBe("live");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("coalesces concurrent requests for the same endpoint", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = searchStylesLive({}, { baseUrl: "https://coalesce.test" });
+    const second = searchStylesLive({}, { baseUrl: "https://coalesce.test/" });
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    resolveResponse?.(catalogue([style("coalesced")]));
+    await expect(first).resolves.toMatchObject({ origin: "live" });
+    await expect(second).resolves.toMatchObject({ origin: "live" });
+  });
+
+  it("falls back when styles is not an array or contains no usable records", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(responseFor("", { styles: null }))
+      .mockResolvedValueOnce(responseFor("", { styles: [{ name: "missing slug" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const malformed = await searchStylesLive({}, { baseUrl: "https://malformed.test" });
+    expect(malformed.origin).toBe("bundled");
+    expect(malformed.fallbackReason).toContain("malformed styles payload");
+
+    clearRemoteCache();
+    const unusable = await searchStylesLive({}, { baseUrl: "https://unusable.test" });
+    expect(unusable.origin).toBe("bundled");
+    expect(unusable.fallbackReason).toContain("no usable styles");
+  });
+
+  it("keeps category, existence, and detail data aligned for live-only styles", async () => {
+    const liveStyle = style("live-only", "retro");
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/api/styles/live-only")) {
+        return Promise.resolve(
+          responseFor(url, {
+            slug: "live-only",
+            name: "仅在线",
+            nameEn: "Live Only",
+            description: "Remote detail",
+            philosophy: "Remote philosophy",
+            keywords: ["retro", "live"],
+            colors: liveStyle.colors,
+            tokens: null,
+            recipes: null,
+            readiness: { source: "fallback" },
+          }),
+        );
+      }
+      if (url.endsWith("/api/styles/live-only/tokens")) {
+        return Promise.resolve(responseFor(url, null));
+      }
+      return Promise.resolve(catalogue([liveStyle]));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const search = await searchStylesLive(
+      { category: "retro" },
+      { baseUrl: "https://self-hosted.test/" },
+    );
+    const known = await knownSlugLive("live-only", {
+      baseUrl: "https://self-hosted.test",
+    });
+    const detail = await getStyleDetailLive("live-only", {
+      baseUrl: "https://self-hosted.test",
+    });
+    const tokens = await getTokensLive("live-only", {
+      baseUrl: "https://self-hosted.test",
+    });
+
+    expect(search.origin).toBe("live");
+    expect(search.data.total).toBe(1);
+    expect(known).toMatchObject({ data: true, origin: "live" });
+    expect(detail).toMatchObject({ origin: "live", data: { category: "retro" } });
+    expect(detail.data?.url).toBe("https://self-hosted.test/styles/live-only");
+    expect(tokens.origin).toBe("bundled");
+    expect(tokens.fallbackReason).toContain("malformed payload");
+  });
+
+  it("does not throw for primitive detail payloads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(responseFor("", "not an object")),
+    );
+
+    const result = await getStyleDetailLive("remote-primitive", {
+      baseUrl: "https://primitive.test",
+    });
+    expect(result.data).toBeNull();
+    expect(result.origin).toBe("bundled");
+    expect(result.fallbackReason).toContain("malformed payload");
+  });
+
+  it("expires cached responses and clearRemoteCache resets state", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(catalogue([style("cached")]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await searchStylesLive({}, { baseUrl: "https://ttl.test", cacheTtlMs: 100 });
+    await searchStylesLive({}, { baseUrl: "https://ttl.test", cacheTtlMs: 100 });
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(101);
+    await searchStylesLive({}, { baseUrl: "https://ttl.test", cacheTtlMs: 100 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    clearRemoteCache();
+    await searchStylesLive({}, { baseUrl: "https://ttl.test", cacheTtlMs: 100 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("orders query results by the site's hybrid search and keeps the category filter", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes("/api/search")) {
+        return Promise.resolve(
+          responseFor(url, {
+            mode: "hybrid",
+            results: [
+              { slug: "gamma", score: 3 },
+              { slug: "retro-one", score: 2 },
+              { slug: "alpha", score: 1 },
+              { slug: "unknown-slug", score: 0.5 },
+            ],
+          }),
+        );
+      }
+      return Promise.resolve(
+        catalogue([style("alpha"), style("gamma"), style("retro-one", "retro")]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await searchStylesLive(
+      { query: "玻璃质感", category: "modern" },
+      { baseUrl: "https://hybrid.test" },
+    );
+    expect(result.origin).toBe("live");
+    expect(result.ranking).toBe("hybrid");
+    expect(result.data.results.map((r) => r.slug)).toEqual(["gamma", "alpha"]);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("q=%E7%8E%BB%E7%92%83"))).toBe(true);
+  });
+
+  it("falls back to the bundled scorer when search is missing, without backing off the catalogue", async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes("/api/search")
+          ? responseFor(url, { error: "not found" }, 404)
+          : catalogue([style("alpha"), style("gamma")]),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await searchStylesLive({ query: "gamma" }, { baseUrl: "https://old-site.test" });
+    expect(first.origin).toBe("live");
+    expect(first.ranking).toBe("exact");
+    expect(first.data.results.map((r) => r.slug)).toEqual(["gamma"]);
+
+    const detail = await getStyleDetailLive("not-bundled-slug", { baseUrl: "https://old-site.test" });
+    expect(detail.fallbackReason).not.toBe("live source unreachable, backing off");
+  });
+});

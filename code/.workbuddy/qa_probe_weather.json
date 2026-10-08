@@ -1,0 +1,82 @@
+{
+  "summary": {
+    "total_sessions": 1,
+    "session_errors": [],
+    "total_turns": 2,
+    "turns_pass": 2,
+    "turns_fail": 0,
+    "fail_turns": [],
+    "first_audio_ms": {
+      "p50": 3436,
+      "p95": 3436,
+      "min": 2898,
+      "max": 3436
+    },
+    "first_sentence_ms": {
+      "p50": 3236,
+      "p95": 3236
+    },
+    "fail_phrase_total": 0
+  },
+  "sessions": [
+    {
+      "session": 1,
+      "turns": [
+        {
+          "session": 1,
+          "turn": 1,
+          "query": "北京今天天气怎么样",
+          "stt": "% get_weather",
+          "stt_all": [
+            "北京今天天气怎么样",
+            "% get_weather"
+          ],
+          "emotion": "happy",
+          "sentences": [
+            "哎呀",
+            "天气数据那边抽风了，北京暂时查不到啦，晚点再帮你看看行不行"
+          ],
+          "audio_frames": 128,
+          "audio_bytes": 20882,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 2696,
+          "latency_first_audio_ms": 2898,
+          "latency_total_ms": 11502,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        },
+        {
+          "session": 1,
+          "turn": 2,
+          "query": "上海天气如何",
+          "stt": "% get_weather",
+          "stt_all": [
+            "上海天气如何",
+            "% get_weather"
+          ],
+          "emotion": "neutral",
+          "sentences": [
+            "上海也查不到诶",
+            "天气系统今天是真的在罢工，笑死",
+            "要不你直接去窗外看一眼？",
+            "反正天空不会骗人嘛"
+          ],
+          "audio_frames": 184,
+          "audio_bytes": 28900,
+          "tts_stop": true,
+          "error": null,
+          "other_types": [],
+          "latency_first_sentence_ms": 3236,
+          "latency_first_audio_ms": 3436,
+          "latency_total_ms": 14551,
+          "fail_phrase_hits": [],
+          "verdict": "PASS"
+        }
+      ],
+      "connect_ms": 431,
+      "error": null
+    }
+  ]
+}

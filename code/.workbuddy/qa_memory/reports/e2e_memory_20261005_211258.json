@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "case": "A6",
+      "verdict": "FAIL",
+      "checks": {
+        "对话连接正常": false,
+        "两轮均有回复": false,
+        "无失败话术": true,
+        "/memory/agents 调用成功": true,
+        "QA Agent 出现在列表": false
+      },
+      "notes": [
+        "会话错误: RuntimeError: 首消息非 hello: {\"type\": \"stt\", \"text\": \"\\u6ca1\\u6709\\u627e\\u5230\\u8be5\\u8bbe\\u5907\\u7684\\u7248\\",
+        "mem0 日志尾部: iders.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key\n261005 05:13:47[0.9.7-00000000000000][core.providers.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key",
+        "未在 /memory/agents 找到 QA Agent；返回: [{'agent_id': '03532a34fcea46639099adb38474a2d9', 'name': '汪汪队长', 'engine': 'mem_holographic', 'available': True, 'fact_count': 3, 'pending_count': 0}]"
+      ],
+      "details": {
+        "s1": {
+          "ok": false,
+          "error": "RuntimeError: 首消息非 hello: {\"type\": \"stt\", \"text\": \"\\u6ca1\\u6709\\u627e\\u5230\\u8be5\\u8bbe\\u5907\\u7684\\u7248\\",
+          "turns": []
+        },
+        "agents_vo": [
+          {
+            "agent_id": "03532a34fcea46639099adb38474a2d9",
+            "name": "汪汪队长",
+            "engine": "mem_holographic",
+            "available": true,
+            "fact_count": 3,
+            "pending_count": 0
+          }
+        ]
+      }
+    }
+  ],
+  "started": "2026-10-05 21:11:52",
+  "ended": "2026-10-05 21:12:58"
+}

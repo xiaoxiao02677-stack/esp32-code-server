@@ -1,0 +1,38 @@
+{
+  "mode": "dom-check",
+  "baseUrl": "http://localhost:8001",
+  "generatedAt": "2026-10-05T22:46:51.150Z",
+  "checks": [
+    {
+      "name": "landing HTML 可获取",
+      "ok": true,
+      "detail": "dist/index.html",
+      "level": "required"
+    },
+    {
+      "name": "service worker 产物存在",
+      "ok": true,
+      "detail": "workbox InjectManifest（swSrc=src/service-worker.js, swDest=service-worker.js）",
+      "level": "required"
+    },
+    {
+      "name": "offline.html 存在",
+      "ok": true,
+      "detail": "离线降级页",
+      "level": "required"
+    },
+    {
+      "name": "PWA manifest 链接 <link rel=\"manifest\">",
+      "ok": false,
+      "detail": "信息项：本项目为 PWA-lite（无 manifest），未注入属设计现状",
+      "level": "info"
+    },
+    {
+      "name": "theme-color meta",
+      "ok": false,
+      "detail": "信息项：同上，无 theme-color 属设计现状",
+      "level": "info"
+    }
+  ],
+  "result": "PASS"
+}

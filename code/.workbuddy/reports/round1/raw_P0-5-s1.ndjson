@@ -1,0 +1,113 @@
+{"case": "P0-5-s1", "phase": "connect", "dir": "out", "t": 4984.968, "wall": "261005 04:14:01.533", "kind": "text", "text": "{\"type\": \"hello\", \"version\": 1, \"transport\": \"websocket\", \"audio_params\": {\"format\": \"opus\", \"sample_rate\": 16000, \"channels\": 1, \"frame_duration\": 60}}"}
+{"case": "P0-5-s1", "phase": "connect", "dir": "in", "t": 4985.001, "wall": "261005 04:14:01.566", "kind": "text", "text": "{\"type\": \"hello\", \"version\": 1, \"transport\": \"websocket\", \"audio_params\": {\"format\": \"opus\", \"sample_rate\": 16000, \"channels\": 1, \"frame_duration\": 60}, \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "out", "t": 4987.013, "wall": "261005 04:14:03.579", "kind": "text", "text": "{\"session_id\": \"verify-s1\", \"type\": \"listen\", \"state\": \"start\", \"mode\": \"manual\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "out", "t": 4987.015, "wall": "261005 04:14:03.580", "kind": "text", "text": "{\"session_id\": \"verify-s1\", \"type\": \"listen\", \"state\": \"detect\", \"text\": \"\\u4f60\\u597d\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "out", "t": 4987.015, "wall": "261005 04:14:03.580", "kind": "text", "text": "{\"session_id\": \"verify-s1\", \"type\": \"listen\", \"state\": \"stop\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4987.067, "wall": "261005 04:14:03.633", "kind": "text", "text": "{\"type\": \"stt\", \"text\": \"\\u4f60\\u597d\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4987.067, "wall": "261005 04:14:03.633", "kind": "text", "text": "{\"type\": \"tts\", \"state\": \"start\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4987.473, "wall": "261005 04:14:04.038", "kind": "text", "text": "{\"type\": \"llm\", \"text\": \"\\ud83d\\ude42\", \"emotion\": \"happy\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.602, "wall": "261005 04:14:05.167", "kind": "text", "text": "{\"type\": \"tts\", \"state\": \"sentence_start\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\", \"text\": \"\\u54c8\\u55bd\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.8, "wall": "261005 04:14:05.365", "kind": "binary", "len": 66}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.801, "wall": "261005 04:14:05.366", "kind": "binary", "len": 76}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.803, "wall": "261005 04:14:05.368", "kind": "binary", "len": 147}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.805, "wall": "261005 04:14:05.370", "kind": "binary", "len": 197}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.806, "wall": "261005 04:14:05.371", "kind": "binary", "len": 195}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.808, "wall": "261005 04:14:05.373", "kind": "binary", "len": 185}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.868, "wall": "261005 04:14:05.434", "kind": "binary", "len": 182}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.929, "wall": "261005 04:14:05.495", "kind": "binary", "len": 197}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4988.989, "wall": "261005 04:14:05.554", "kind": "binary", "len": 177}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.048, "wall": "261005 04:14:05.613", "kind": "binary", "len": 180}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.108, "wall": "261005 04:14:05.673", "kind": "binary", "len": 208}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.168, "wall": "261005 04:14:05.733", "kind": "binary", "len": 164}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.23, "wall": "261005 04:14:05.796", "kind": "binary", "len": 106}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.289, "wall": "261005 04:14:05.855", "kind": "binary", "len": 97}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.347, "wall": "261005 04:14:05.913", "kind": "binary", "len": 80}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.408, "wall": "261005 04:14:05.973", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.468, "wall": "261005 04:14:06.033", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.528, "wall": "261005 04:14:06.094", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.589, "wall": "261005 04:14:06.154", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.649, "wall": "261005 04:14:06.214", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4989.707, "wall": "261005 04:14:06.273", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.3, "wall": "261005 04:14:06.865", "kind": "text", "text": "{\"type\": \"tts\", \"state\": \"sentence_start\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\", \"text\": \"\\u6211\\u5728\\u5462~ \\u548b\\u5566\\uff0c\\u662f\\u60f3\\u804a\\u5929\\u8fd8\\u662f\\u8981\\u70b9\\u97f3\\u4e50\\u3001\\u542c\\u65b0\\u95fb\\uff1f\"}"}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.491, "wall": "261005 04:14:07.056", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.551, "wall": "261005 04:14:07.116", "kind": "binary", "len": 83}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.612, "wall": "261005 04:14:07.177", "kind": "binary", "len": 154}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.672, "wall": "261005 04:14:07.237", "kind": "binary", "len": 224}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.733, "wall": "261005 04:14:07.298", "kind": "binary", "len": 211}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.791, "wall": "261005 04:14:07.356", "kind": "binary", "len": 188}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.852, "wall": "261005 04:14:07.417", "kind": "binary", "len": 191}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.912, "wall": "261005 04:14:07.477", "kind": "binary", "len": 193}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4990.973, "wall": "261005 04:14:07.538", "kind": "binary", "len": 195}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.033, "wall": "261005 04:14:07.598", "kind": "binary", "len": 185}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.092, "wall": "261005 04:14:07.657", "kind": "binary", "len": 195}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.151, "wall": "261005 04:14:07.717", "kind": "binary", "len": 171}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.212, "wall": "261005 04:14:07.777", "kind": "binary", "len": 161}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.272, "wall": "261005 04:14:07.838", "kind": "binary", "len": 192}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.332, "wall": "261005 04:14:07.898", "kind": "binary", "len": 200}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.391, "wall": "261005 04:14:07.956", "kind": "binary", "len": 179}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.451, "wall": "261005 04:14:08.016", "kind": "binary", "len": 186}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.511, "wall": "261005 04:14:08.077", "kind": "binary", "len": 158}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.571, "wall": "261005 04:14:08.136", "kind": "binary", "len": 171}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.632, "wall": "261005 04:14:08.197", "kind": "binary", "len": 187}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.692, "wall": "261005 04:14:08.257", "kind": "binary", "len": 175}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.753, "wall": "261005 04:14:08.318", "kind": "binary", "len": 160}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.812, "wall": "261005 04:14:08.377", "kind": "binary", "len": 168}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.871, "wall": "261005 04:14:08.436", "kind": "binary", "len": 196}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.931, "wall": "261005 04:14:08.496", "kind": "binary", "len": 192}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4991.991, "wall": "261005 04:14:08.557", "kind": "binary", "len": 184}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.052, "wall": "261005 04:14:08.617", "kind": "binary", "len": 212}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.112, "wall": "261005 04:14:08.677", "kind": "binary", "len": 170}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.171, "wall": "261005 04:14:08.736", "kind": "binary", "len": 186}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.231, "wall": "261005 04:14:08.796", "kind": "binary", "len": 192}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.292, "wall": "261005 04:14:08.857", "kind": "binary", "len": 175}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.352, "wall": "261005 04:14:08.917", "kind": "binary", "len": 183}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.412, "wall": "261005 04:14:08.977", "kind": "binary", "len": 169}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.471, "wall": "261005 04:14:09.036", "kind": "binary", "len": 169}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.531, "wall": "261005 04:14:09.096", "kind": "binary", "len": 150}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.593, "wall": "261005 04:14:09.158", "kind": "binary", "len": 147}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.652, "wall": "261005 04:14:09.218", "kind": "binary", "len": 186}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.715, "wall": "261005 04:14:09.281", "kind": "binary", "len": 153}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.771, "wall": "261005 04:14:09.336", "kind": "binary", "len": 200}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.831, "wall": "261005 04:14:09.396", "kind": "binary", "len": 197}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.892, "wall": "261005 04:14:09.457", "kind": "binary", "len": 196}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4992.952, "wall": "261005 04:14:09.518", "kind": "binary", "len": 189}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.012, "wall": "261005 04:14:09.577", "kind": "binary", "len": 171}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.071, "wall": "261005 04:14:09.636", "kind": "binary", "len": 191}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.132, "wall": "261005 04:14:09.697", "kind": "binary", "len": 174}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.192, "wall": "261005 04:14:09.757", "kind": "binary", "len": 175}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.252, "wall": "261005 04:14:09.817", "kind": "binary", "len": 208}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.312, "wall": "261005 04:14:09.878", "kind": "binary", "len": 180}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.371, "wall": "261005 04:14:09.936", "kind": "binary", "len": 191}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.431, "wall": "261005 04:14:09.996", "kind": "binary", "len": 199}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.492, "wall": "261005 04:14:10.057", "kind": "binary", "len": 161}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.552, "wall": "261005 04:14:10.118", "kind": "binary", "len": 153}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.613, "wall": "261005 04:14:10.178", "kind": "binary", "len": 181}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.671, "wall": "261005 04:14:10.236", "kind": "binary", "len": 199}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.731, "wall": "261005 04:14:10.296", "kind": "binary", "len": 170}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.792, "wall": "261005 04:14:10.357", "kind": "binary", "len": 191}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.853, "wall": "261005 04:14:10.418", "kind": "binary", "len": 181}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.912, "wall": "261005 04:14:10.477", "kind": "binary", "len": 130}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4993.972, "wall": "261005 04:14:10.537", "kind": "binary", "len": 129}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.033, "wall": "261005 04:14:10.598", "kind": "binary", "len": 138}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.093, "wall": "261005 04:14:10.658", "kind": "binary", "len": 172}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.154, "wall": "261005 04:14:10.720", "kind": "binary", "len": 200}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.212, "wall": "261005 04:14:10.777", "kind": "binary", "len": 187}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.272, "wall": "261005 04:14:10.837", "kind": "binary", "len": 194}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.333, "wall": "261005 04:14:10.898", "kind": "binary", "len": 189}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.393, "wall": "261005 04:14:10.958", "kind": "binary", "len": 165}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.453, "wall": "261005 04:14:11.019", "kind": "binary", "len": 167}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.512, "wall": "261005 04:14:11.077", "kind": "binary", "len": 202}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.572, "wall": "261005 04:14:11.137", "kind": "binary", "len": 195}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.632, "wall": "261005 04:14:11.197", "kind": "binary", "len": 180}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.693, "wall": "261005 04:14:11.259", "kind": "binary", "len": 192}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.752, "wall": "261005 04:14:11.318", "kind": "binary", "len": 163}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.814, "wall": "261005 04:14:11.379", "kind": "binary", "len": 109}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.871, "wall": "261005 04:14:11.437", "kind": "binary", "len": 91}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.932, "wall": "261005 04:14:11.497", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4994.991, "wall": "261005 04:14:11.556", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.055, "wall": "261005 04:14:11.620", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.112, "wall": "261005 04:14:11.677", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.173, "wall": "261005 04:14:11.739", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.232, "wall": "261005 04:14:11.798", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.291, "wall": "261005 04:14:11.856", "kind": "binary", "len": 65}
+{"case": "P0-5-s1", "phase": "turn", "dir": "in", "t": 4995.712, "wall": "261005 04:14:12.277", "kind": "text", "text": "{\"type\": \"tts\", \"state\": \"stop\", \"session_id\": \"7787e423-3d27-4fb4-b299-76bc57fb7ee6\"}"}

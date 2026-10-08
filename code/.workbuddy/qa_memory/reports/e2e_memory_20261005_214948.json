@@ -1,0 +1,15 @@
+{
+  "cases": [
+    {
+      "case": "A1",
+      "verdict": "FAIL",
+      "checks": {},
+      "notes": [
+        "EXCEPTION: IndexError: list index out of range"
+      ],
+      "details": {}
+    }
+  ],
+  "started": "2026-10-05 21:49:25",
+  "ended": "2026-10-05 21:49:48"
+}

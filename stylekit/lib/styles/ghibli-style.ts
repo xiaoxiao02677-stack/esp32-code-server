@@ -1,0 +1,409 @@
+import type { DesignStyle } from "./types";
+
+export const ghibliStyle: DesignStyle = {
+  slug: "ghibli-style",
+  name: "吉卜力风格",
+  nameEn: "Ghibli Style",
+  description:
+    "灵感源自吉卜力工作室动画的设计风格，温暖柔和的色调、手绘质感、自然元素和梦幻氛围，传递治愈与诗意。",
+  descriptionEn:
+    "A design style inspired by Studio Ghibli animations, featuring warm soft tones, hand-drawn textures, natural elements, and a dreamy atmosphere that conveys healing and poetry.",
+  cover: "/styles/ghibli-style.svg",
+  styleType: "visual",
+  tags: ["retro"],
+  category: "expressive",
+  colors: {
+    primary: "#7cb9a8",
+    secondary: "#f4e4bc",
+    accent: ["#e8a87c", "#85cdca", "#c38d94", "#9ec069"],
+  },
+  keywords: ["吉卜力", "宫崎骏", "手绘", "治愈", "自然", "梦幻", "动画", "expressive", "bold", "vibrant"],
+  keywordsEn: ["Ghibli style", "Studio Ghibli aesthetic", "Miyazaki", "anime illustration", "hand-drawn texture", "watercolor illustration", "whimsical design", "storybook illustration", "nature-inspired palette", "cozy aesthetic", "dreamy landing page"],
+
+  philosophy: `Ghibli Style（吉卜力风格）受日本吉卜力工作室动画影响，以温暖、治愈、富有诗意的视觉语言著称。
+
+核心理念：
+- 手绘质感：保留手工绘制的温度和不完美
+- 自然主题：云朵、森林、天空等自然元素
+- 柔和色调：温暖的大地色系和天空色
+- 梦幻氛围：创造宁静治愈的视觉体验
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Ghibli Style is influenced by Japan's Studio Ghibli animations, known for its warm, healing, and poetic visual language.
+
+Core principles:
+- Hand-drawn texture: Preserving the warmth and imperfection of hand-crafted work
+- Natural themes: Clouds, forests, skies, and other natural elements
+- Soft tones: Warm earth tones and sky colors
+- Dreamy atmosphere: Creating serene and healing visual experiences`,
+
+  doList: [
+    "使用柔和温暖的色调",
+    "添加手绘风格的插图或边框",
+    "融入自然元素（云、树、花）",
+    "使用圆润柔和的形状",
+    "添加微妙的纹理效果",
+    "创造梦幻般的渐变背景",
+    "交互动效保持微风感（duration-500 到 700，轻微浮动和小角度旋转）",
+  ],
+
+  doListEn: [
+    "Use warm soft tones",
+    "Add hand-drawn style illustrations or borders",
+    "Incorporate natural elements (clouds, trees, flowers)",
+    "Use rounded soft shapes",
+    "Add subtle texture effects",
+    "Create dreamy gradient backgrounds",
+    "Keep interaction animations breezy (duration-500 to 700, slight floating and small-angle rotation)",
+  ],
+
+  dontList: [
+    "禁止使用过于锐利的边缘",
+    "禁止使用高对比的刺眼配色",
+    "禁止使用冰冷的科技感元素",
+    "禁止过于复杂的动效",
+    "禁止快速硬切与突兀的高频动效",
+  ],
+
+  dontListEn: [
+    "Do NOT use sharp hard edges",
+    "Do NOT use high-contrast glaring color schemes",
+    "Do NOT use cold tech-feel elements",
+    "Do NOT use overly complex animations",
+    "Do NOT use fast hard cuts and abrupt high-frequency animations",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "吉卜力风格按钮",
+      code: `<button className="
+  px-8 py-4
+  bg-gradient-to-b from-[#85cdca] to-[#7cb9a8]
+  text-white font-medium
+  rounded-full
+  border-2 border-[#5a9a8a]/25
+  shadow-[0_8px_20px_rgba(124,185,168,0.3)]
+  hover:shadow-[0_12px_30px_rgba(124,185,168,0.45)]
+  hover:-translate-y-1 hover:scale-[1.01] hover:rotate-[0.8deg]
+  active:scale-[0.98] active:rotate-0 active:translate-y-0
+  transition-all duration-500 ease-in-out
+">
+  Begin Journey
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "吉卜力风格卡片",
+      code: `<div className="group p-8
+  bg-gradient-to-br from-[#f4e4bc]/90 to-[#e8d5a3]/90
+  rounded-3xl
+  border border-[#d4c49a]/45
+  shadow-[0_8px_30px_rgba(90,74,58,0.06)]
+  hover:shadow-[0_16px_40px_rgba(124,185,168,0.18)]
+  hover:-translate-y-1.5 hover:-rotate-[0.8deg] hover:scale-[1.01]
+  transition-all duration-700 ease-in-out
+  backdrop-blur-sm
+">
+  <div className="w-16 h-16 bg-gradient-to-br from-[#85cdca] to-[#7cb9a8] rounded-full flex items-center justify-center mb-6 shadow-inner group-hover:scale-105 group-hover:rotate-6 transition-all duration-500 ease-in-out">
+    {/* Cloud icon */}
+    <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+    </svg>
+  </div>
+  <h3 className="text-2xl font-semibold text-[#5a4a3a] mb-2 group-hover:text-[#7cb9a8] transition-colors duration-500">
+    Sky Garden
+  </h3>
+  <p className="text-[#7a6a5a] leading-relaxed group-hover:text-[#5a4a3a] transition-colors duration-500">
+    Where dreams float among the clouds, carried by the gentle wind of summer.
+  </p>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "吉卜力风格输入框",
+      code: `<input
+  type="text"
+  placeholder="Write your story..."
+  className="
+    w-full px-5 py-4
+    bg-[#f4e4bc]/60
+    border-2 border-[#d4c49a]/40
+    rounded-2xl
+    text-[#5a4a3a] placeholder-[#a89a7a]
+    focus:outline-none focus:border-[#7cb9a8]
+    focus:bg-[#f4e4bc]/80
+    transition-all duration-300
+  "
+/>`,
+    },
+    hero: {
+      name: "Hero 区块",
+      description: "吉卜力风格 Hero",
+      code: `<section className="
+  min-h-screen
+  bg-gradient-to-b from-[#87ceeb] via-[#b4e4f5] to-[#f4e4bc]
+  relative overflow-hidden
+  flex items-center justify-center
+  px-6
+">
+  {/* Clouds */}
+  <div className="absolute top-20 left-10 w-32 h-16 bg-white/60 rounded-full blur-sm" />
+  <div className="absolute top-32 right-20 w-40 h-20 bg-white/50 rounded-full blur-sm" />
+  <div className="absolute top-16 right-40 w-24 h-12 bg-white/40 rounded-full blur-sm" />
+
+  <div className="relative z-10 text-center max-w-2xl">
+    <h1 className="text-5xl md:text-7xl font-semibold text-[#5a4a3a] mb-6 leading-tight">
+      A World of
+      <br />
+      <span className="text-[#7cb9a8]">Wonder</span>
+    </h1>
+    <p className="text-xl text-[#7a6a5a] mb-8 leading-relaxed">
+      Where every journey begins with a single step into the magical unknown.
+    </p>
+    <button className="px-10 py-4 bg-gradient-to-b from-[#7cb9a8] to-[#5a9a8a] text-white font-medium rounded-full shadow-[0_4px_20px_rgba(124,185,168,0.4)] hover:-translate-y-1 transition-all duration-300">
+      Start Adventure
+    </button>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Ghibli Style 全局样式 */
+
+:root {
+  --ghibli-sage: #7cb9a8;
+  --ghibli-cream: #f4e4bc;
+  --ghibli-coral: #e8a87c;
+  --ghibli-sky: #85cdca;
+  --ghibli-rose: #c38d94;
+  --ghibli-brown: #5a4a3a;
+}
+
+/* 柔和渐变背景 */
+.ghibli-sky-gradient {
+  background: linear-gradient(180deg, #87ceeb 0%, #b4e4f5 50%, #f4e4bc 100%);
+}
+
+/* 手绘风格边框 */
+.ghibli-border {
+  border: 2px solid rgba(212, 196, 154, 0.5);
+  border-radius: 1.5rem;
+}
+
+/* 云朵样式 */
+.ghibli-cloud {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 9999px;
+  filter: blur(4px);
+}
+
+/* 柔和阴影 */
+.ghibli-shadow {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+@keyframes ghibli-style-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ghibli-style-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.ghibli-style-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.ghibli-style-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(124, 185, 168, 0.05), transparent);
+  pointer-events: none;
+}
+
+.ghibli-style-card:hover::before {
+  opacity: 1;
+}
+
+.ghibli-style-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(124, 185, 168, 0.08);
+}
+
+.ghibli-style-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.ghibli-style-animate-in {
+  animation: ghibli-style-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一个 Ghibli Style 设计风格的前端开发专家。生成的所有代码必须严格遵守以下约束：
+
+## 绝对禁止
+
+- 使用锐利的直角边缘
+- 使用高对比刺眼的配色
+- 使用冰冷的科技感元素
+- 过于复杂的动效
+
+## 必须遵守
+
+- 柔和色调 from-[#7cb9a8], bg-[#f4e4bc]
+- 圆润形状 rounded-full, rounded-3xl, rounded-2xl
+- 温和渐变 bg-gradient-to-b, bg-gradient-to-br
+- 柔和阴影 shadow-[0_8px_30px_rgba(0,0,0,0.08)]
+- 自然元素装饰
+
+## 配色
+
+主色调：
+- 鼠尾草绿: #7cb9a8
+- 奶油色: #f4e4bc
+- 珊瑚橙: #e8a87c
+- 天空蓝: #85cdca
+- 玫瑰粉: #c38d94
+- 深棕色: #5a4a3a (文字)
+
+## 装饰元素
+
+- 云朵形状
+- 柔和的圆形
+- 自然图案
+- 渐变背景
+
+## Animation & Interaction Rules
+
+- Gentle Breeze: 悬停动画需轻柔克制，可使用微小浮动与低角度旋转（约 1deg 内）模拟自然风感。
+- Watercolor Glow: 阴影应使用本体色的柔和扩散（如鼠尾草绿系），避免厚重黑影破坏水彩质地。
+- Soft Cushion: 点击反馈使用温和按压（如 \`active:scale-[0.98]\`），避免机械式快速收缩。
+- Magic Longing: 交互节奏建议 \`duration-500\` 到 \`duration-700\`，搭配 \`ease-in-out\` 保持童话般从容。
+
+## Layout & Spacing
+- Section padding: py-16 md:py-24
+- Card padding: p-6 md:p-8
+- Gap between cards: gap-6 md:gap-8
+- Max content width: max-w-6xl mx-auto
+
+## Responsive Design
+- Mobile-first approach with Tailwind breakpoints
+- Stack elements vertically on mobile (flex-col), row on desktop (md:flex-row)
+- Reduce font sizes on mobile: text-3xl md:text-5xl for headings
+- Touch-friendly targets: min 44px for interactive elements
+
+## Self-Check Verification
+After generating code, verify:
+1. All interactive elements have hover/focus/active states
+2. Color contrast meets WCAG 2.1 AA (4.5:1 for text)
+3. Layout is responsive across breakpoints
+4. Typography hierarchy is clear (h1 > h2 > h3 > body)
+5. Spacing is consistent using the defined scale
+6. All animations respect prefers-reduced-motion`,
+
+  aiRulesEn: `You are a Ghibli Style design frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolute Prohibitions
+
+- Using sharp straight edges
+- Using high-contrast glaring color schemes
+- Using cold tech-feel elements
+- Overly complex animations
+
+## Must Follow
+
+- Soft tones from-[#7cb9a8], bg-[#f4e4bc]
+- Rounded shapes rounded-full, rounded-3xl, rounded-2xl
+- Gentle gradients bg-gradient-to-b, bg-gradient-to-br
+- Soft shadows shadow-[0_8px_30px_rgba(0,0,0,0.08)]
+- Natural element decorations
+
+## Color Palette
+
+Primary:
+- Sage green: #7cb9a8
+- Cream: #f4e4bc
+- Coral orange: #e8a87c
+- Sky blue: #85cdca
+- Rose pink: #c38d94
+- Dark brown: #5a4a3a (text)
+
+## Decorative Elements
+
+- Cloud shapes
+- Soft circles
+- Natural patterns
+- Gradient backgrounds
+
+## Animation & Interaction Rules
+
+- Gentle Breeze: Hover animations should be gentle and restrained, using tiny floating and low-angle rotation (within about 1deg) to simulate natural wind.
+- Watercolor Glow: Shadows should use soft diffusion of the element's own color (e.g., sage green series), avoiding heavy black shadows that break the watercolor texture.
+- Soft Cushion: Click feedback uses gentle press (e.g., \`active:scale-[0.98]\`), avoiding mechanical rapid contraction.
+- Magic Longing: Interaction rhythm recommends \`duration-500\` to \`duration-700\`, paired with \`ease-in-out\` to maintain fairy-tale composure.`,
+
+  examplePrompts: [
+    {
+      title: "治愈系个人博客",
+      titleEn: "Healing Personal Blog",
+      description: "温暖治愈的个人博客",
+      descriptionEn: "Warm and healing personal blog",
+      prompt: `用 Ghibli Style 创建一个治愈系个人博客，要求：
+1. 背景：天空到大地的柔和渐变
+2. 装饰：云朵、自然元素
+3. 配色：鼠尾草绿、奶油色、天空蓝
+4. 圆润的卡片和按钮
+5. 整体传递温暖治愈的感觉`,
+    },
+  {
+      title: "SaaS 着陆页",
+      titleEn: "SaaS Landing Page",
+      description: "生成 吉卜力风格风格的 SaaS 产品着陆页",
+      descriptionEn: "Generate a SaaS product landing page in Ghibli Style style",
+      prompt: `Create a SaaS landing page using Ghibli Style style with hero section, feature grid, testimonials, pricing table, and footer.`,
+    },
+    {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 吉卜力风格风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Ghibli Style style",
+      prompt: `Create a portfolio showcase page using Ghibli Style style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "ghibli-style-warm",
+      name: "吉卜力风格暖色版",
+      nameEn: "Ghibli Style Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#81b5c0",
+        secondary: "#f5e7c3",
+        accent: ["#c6b469", "#93c6e5", "#bb9180"],
+      },
+    },
+    {
+      id: "ghibli-style-cool",
+      name: "吉卜力风格冷色版",
+      nameEn: "Ghibli Style Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#84b991",
+        secondary: "#dccda9",
+        accent: ["#fc9f9e", "#86d0ac", "#c08caa"],
+      },
+    },
+  ],
+};

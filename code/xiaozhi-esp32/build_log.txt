@@ -1,0 +1,292 @@
+Activating ESP-IDF 6.1
+Setting IDF_PATH to 'D:\INSTALL\esp\v6.1\esp-idf'.
+* Checking python version ... 3.13.15
+* Checking python dependencies ... OK
+* Deactivating the current ESP-IDF environment (if any) ... OK
+* Establishing a new ESP-IDF environment ... OK
+* Identifying shell ... cmd.exe
+* Detecting outdated tools in system ... Found tools that are not used by active ESP-IDF version.
+For removing old versions of components, python, python_env use command 'python.exe D:\INSTALL\esp\v6.1\esp-idf\tools\idf_tools.py uninstall'
+To free up even more space, remove installation packages of those tools.
+Use option python.exe D:\INSTALL\esp\v6.1\esp-idf\tools\idf_tools.py uninstall --remove-archives.
+
+Done! You can now compile ESP-IDF projects.
+Go to the project directory and run:
+
+  idf.py build
+
+[WARN] Ambiguous board config for lilygo/t-cameraplus-s3 (target=esp32s3), target-matched candidates=['CONFIG_BOARD_TYPE_LILYGO_T_CAMERAPLUS_S3_V1_0_V1_1', 'CONFIG_BOARD_TYPE_LILYGO_T_CAMERAPLUS_S3_V1_2'], selecting first: CONFIG_BOARD_TYPE_LILYGO_T_CAMERAPLUS_S3_V1_0_V1_1
+-- Found Git: D:/INSTALL/Git/cmd/git.exe (found version "2.50.1.windows.1")
+-- Minimal build - ON
+-- ccache will be used for faster recompilation
+-- The C compiler identification is GNU 15.2.0
+-- The CXX compiler identification is GNU 15.2.0
+-- The ASM compiler identification is GNU
+-- Found assembler: D:/INSTALL/esp/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc.exe
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: D:/INSTALL/esp/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: D:/INSTALL/esp/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Building ESP-IDF components for target esp32s3
+NOTE: Skipping optional dependency: espressif/esp_h264
+NOTE: Skipping optional dependency: espressif/esp_ipa
+NOTE: Skipping optional dependency: espressif/esp_lcd_touch_cst9220
+NOTE: Skipping optional dependency: espressif/esp_lcd_jd9365
+NOTE: Skipping optional dependency: waveshare/esp_lcd_hx8394
+NOTE: Skipping optional dependency: waveshare/esp_lcd_st7703
+NOTE: Skipping optional dependency: espressif/esp_lcd_ili9881c
+NOTE: Skipping optional dependency: espressif/esp_lcd_ek79007
+NOTE: Skipping optional dependency: espressif/esp_hosted
+NOTE: Skipping optional dependency: espressif/esp_wifi_remote
+NOTE: Skipping optional dependency: espfriends/servo_dog_ctrl
+NOTE: Skipping optional dependency: espressif/touch_slider_sensor
+NOTE: Skipping optional dependency: espressif/touch_button_sensor
+NOTE: Skipping optional dependency: kevincoooool/esp_lcd_st7102
+NOTE: Processing 74 dependencies:
+NOTE: [1/74] 78/esp-ml307 (3.7.3)
+NOTE: [2/74] 78/esp-wifi-connect (3.3.1)
+NOTE: [3/74] 78/esp_lcd_nv3023 (1.0.1)
+NOTE: [4/74] 78/uart-eth-modem (0.6.5)
+NOTE: [5/74] 78/uart-uhci (0.3.3)
+NOTE: [6/74] 78/xiaozhi-fonts (2.0.0)
+NOTE: [7/74] cube32esp/xpowerslib (0.3.3)
+NOTE: [8/74] esphome/esp-hub75 (0.3.6)
+NOTE: [9/74] espressif/adc_battery_estimation (0.2.2)
+NOTE: [10/74] espressif/bmi270_sensor (0.1.2)
+NOTE: [11/74] espressif/bq27220 (0.1.2)
+NOTE: [12/74] espressif/button (4.2.1)
+NOTE: [13/74] espressif/cjson (1.7.19~2)
+NOTE: [14/74] espressif/cmake_utilities (0.5.0)
+NOTE: [15/74] espressif/dl_fft (0.7.0)
+NOTE: [16/74] espressif/esp-dsp (1.8.0)
+NOTE: [17/74] espressif/esp-sr (2.4.7)
+NOTE: [18/74] espressif/esp32-camera (2.1.7)
+NOTE: [19/74] espressif/esp_audio_codec (2.5.0)
+NOTE: [20/74] espressif/esp_audio_effects (1.3.0~1)
+NOTE: [21/74] espressif/esp_cam_sensor (2.4.0)
+NOTE: [22/74] espressif/esp_codec_dev (1.6.2)
+NOTE: [23/74] espressif/esp_image_effects (1.2.0)
+NOTE: [24/74] espressif/esp_io_expander (1.2.1)
+NOTE: [25/74] espressif/esp_io_expander_tca9554 (2.0.3)
+NOTE: [26/74] espressif/esp_io_expander_tca95xx_16bit (2.0.2)
+NOTE: [27/74] espressif/esp_jpeg (1.3.1)
+NOTE: [28/74] espressif/esp_lcd_axs15231b (2.1.1)
+NOTE: [29/74] espressif/esp_lcd_co5300 (2.2.0)
+NOTE: [30/74] espressif/esp_lcd_gc9a01 (2.0.4)
+NOTE: [31/74] espressif/esp_lcd_ili9341 (2.1.0)
+NOTE: [32/74] espressif/esp_lcd_panel_io_additions (1.0.1~1)
+NOTE: [33/74] espressif/esp_lcd_spd2010 (2.0.0~1)
+NOTE: [34/74] espressif/esp_lcd_st7701 (2.0.2~2)
+NOTE: [35/74] espressif/esp_lcd_st77916 (2.0.2)
+NOTE: [36/74] espressif/esp_lcd_st77922 (2.0.2)
+NOTE: [37/74] espressif/esp_lcd_st7796 (1.4.0)
+NOTE: [38/74] espressif/esp_lcd_touch (1.2.1)
+NOTE: [39/74] espressif/esp_lcd_touch_cst816s (1.1.2)
+NOTE: [40/74] espressif/esp_lcd_touch_ft5x06 (1.1.1)
+NOTE: [41/74] espressif/esp_lcd_touch_gt1151 (1.1.1)
+NOTE: [42/74] espressif/esp_lcd_touch_gt911 (1.2.1)
+NOTE: [43/74] espressif/esp_lcd_touch_st7123 (1.0.2)
+NOTE: [44/74] espressif/esp_lvgl_port (2.9.0)
+NOTE: [45/74] espressif/esp_mmap_assets (1.4.0)
+NOTE: [46/74] espressif/esp_new_jpeg (1.0.2)
+NOTE: [47/74] espressif/esp_sccb_intf (0.0.9)
+NOTE: [48/74] espressif/esp_video (2.4.1)
+NOTE: [49/74] espressif/freetype (2.14.3~1)
+NOTE: [50/74] espressif/gmf_fft (1.0.0)
+NOTE: [51/74] espressif/i2c_bus (1.5.2)
+NOTE: [52/74] espressif/iot_eth (1.1.0)
+NOTE: [53/74] espressif/iot_usbh_cdc (3.1.0)
+NOTE: [54/74] espressif/iot_usbh_rndis (0.3.1)
+NOTE: [55/74] espressif/knob (1.1.0)
+NOTE: [56/74] espressif/led_strip (3.0.3)
+NOTE: [57/74] espressif/mqtt (1.1.0)
+NOTE: [58/74] espressif/usb (1.5.0)
+NOTE: [59/74] espressif/usb_host_uvc (2.5.2)
+NOTE: [60/74] espressif2022/esp_emote_assets (0.1.2)
+NOTE: [61/74] espressif2022/esp_emote_expression (1.0.2)
+NOTE: [62/74] espressif2022/esp_emote_gfx (3.0.5)
+NOTE: [63/74] espressif2022/image_player (1.1.1)
+NOTE: [64/74] laride/heatshrink (0.4.1)
+NOTE: [65/74] lvgl/lvgl (9.5.0)
+NOTE: [66/74] m5stack/m5ioe1 (1.0.9)
+NOTE: [67/74] m5stack/m5pm1 (1.0.7)
+NOTE: [68/74] tny-robotics/sh1106-esp-idf (1.0.1)
+NOTE: [69/74] txp666/otto-emoji-gif-component (1.3.0)
+NOTE: [70/74] waveshare/custom_io_expander_ch32v003 (2.0.0)
+NOTE: [71/74] waveshare/esp_lcd_sh8601 (1.0.2)
+NOTE: [72/74] waveshare/esp_lcd_touch_cst9217 (1.0.4)
+NOTE: [73/74] wvirgil123/sscma_client (1.0.4)
+NOTE: [74/74] idf (6.1.0)
+-- CONFIG_ESP32P4_SELECTS_REV_LESS_V3 is 
+-- IDF_VERSION_MAJOR is 6
+-- IDF_VERSION_MINOR is 1
+-- IDF_VERSION_PATCH is 0
+-- TARGET_LIB_PATH is set to: esp32s3
+NOTE: Skipping optional dependency: espressif/esp_lcd_touch_cst9220
+NOTE: Skipping optional dependency: espressif/esp_lcd_jd9365
+NOTE: Skipping optional dependency: waveshare/esp_lcd_hx8394
+NOTE: Skipping optional dependency: waveshare/esp_lcd_st7703
+NOTE: Skipping optional dependency: espressif/esp_lcd_ili9881c
+NOTE: Skipping optional dependency: espressif/esp_lcd_ek79007
+NOTE: Skipping optional dependency: espressif/esp_hosted
+NOTE: Skipping optional dependency: espressif/esp_wifi_remote
+NOTE: Skipping optional dependency: espfriends/servo_dog_ctrl
+NOTE: Skipping optional dependency: espressif/touch_slider_sensor
+NOTE: Skipping optional dependency: espressif/touch_button_sensor
+NOTE: Skipping optional dependency: kevincoooool/esp_lcd_st7102
+NOTE: Skipping optional dependency: espressif/esp_h264
+NOTE: Skipping optional dependency: espressif/esp_ipa
+-- KCONFIG_REPORT_VERBOSITY not set, using default
+-- Project sdkconfig file G:/demo/21 小智魔改/固件源码/xiaozhi-esp32/sdkconfig
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:58: SR_WN_WN9S_HILEXIN: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:62: SR_WN_WN9S_HIESP: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:66: SR_WN_WN9S_NIHAOXIAOZHI: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:70: SR_WN_WN9S_HIJASON: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:79: SR_WN_WN9_HILEXIN: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:83: SR_WN_WN9_HIESP: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:87: SR_WN_WN9L_JA_KONNICHIHAESP_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:91: SR_WN_WN9L_FR_BONJOURESP_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:95: SR_WN_WN9_NIHAOMIAOBAN_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:99: SR_WN_WN9_XIAOAITONGXUE: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:103: SR_WN_WN9L_XIAOAITONGXUE: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:107: SR_WN_WN9_NIHAOXIAOZHI_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:111: SR_WN_WN9L_NIHAOXIAOZHI_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:115: SR_WN_WN9_ALEXA: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:119: SR_WN_WN9_JARVIS_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:123: SR_WN_WN9_COMPUTER_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:127: SR_WN_WN9_HEYWILLOW_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:131: SR_WN_WN9_HIMFIVE: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:135: SR_WN_WN9_SOPHIA_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:139: SR_WN_WN9_HEYWANDA_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:143: SR_WN_WN9_HIJOLLY_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:147: SR_WN_WN9_HIFAIRY_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:151: SR_WN_WN9_HEYPRINTER_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:155: SR_WN_WN9_MYCROFT_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:159: SR_WN_WN9_HIJOY_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:163: SR_WN_WN9_HIJASON_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:167: SR_WN_WN9_ASTROLABE_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:171: SR_WN_WN9_HEYILY_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:175: SR_WN_WN9_BLUECHIP_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:179: SR_WN_WN9_HIANDY_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:183: SR_WN_WN9_HEYIVY_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:187: SR_WN_WN9L_HISTACKCHAN_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:191: SR_WN_WN9_HEYKIRA_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:195: SR_WN_WN9L_HEYGIGI_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:199: SR_WN_WN9_XIAOLONGXIAOLONG_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:203: SR_WN_WN9_HIMIAOMIAO_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:207: SR_WN_WN9_MIAOMIAOTONGXUE_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:211: SR_WN_WN9_NIHAOXIAOXIN_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:215: SR_WN_WN9_XIAOMEITONGXUE_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:219: SR_WN_WN9_HILILI_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:223: SR_WN_WN9_HITELLY_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:227: SR_WN_WN9_XIAOBINXIAOBIN_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:231: SR_WN_WN9_HAIXIAOWU_TTS: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:235: SR_WN_WN9_XIAOYAXIAOYA_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:239: SR_WN_WN9_LINAIBAN_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:243: SR_WN_WN9_XIAOSUROU_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:247: SR_WN_WN9_XIAOYUTONGXUE_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:251: SR_WN_WN9_XIAOMINGTONGXUE_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:255: SR_WN_WN9_XIAOKANGTONGXUE_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:259: SR_WN_WN9_XIAOJIANXIAOJIAN_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:263: SR_WN_WN9_XIAOTEXIAOTE_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:267: SR_WN_WN9_NIHAOXIAOYI_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:271: SR_WN_WN9_NIHAOBAIYING_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:275: SR_WN_WN9_NIHAODONGDONG_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:279: SR_WN_WN9_HIWALLE_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:283: SR_WN_WN9_XIAOLUXIAOLU_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:287: SR_WN_WN9_NIHAOXIAOAN_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:291: SR_WN_WN9_NI3HAO3XIAO3MAI4_TTS2: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:295: SR_WN_WN9_NI3HAO3XIAO3RUI4_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:299: SR_WN_WN9_HAI1XIAO3OU1_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:303: SR_WN_WN9_XIAO3JIA1XIAO3JIA1_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:307: SR_WN_WN9_XIAO3FENG1XIAO3FENG1_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:311: SR_WN_WN9_HAI1XIAO3XIANG4_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp-sr/Kconfig.projbuild:315: SR_WN_WN9L_NI3HAO3XING1BAO3_TTS3: 'default False' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: D:/INSTALL/esp/v6.1/esp-idf/components/bt/host/nimble/Kconfig.in:1428: BT_NIMBLE_MESH_PROVISIONER: 'default 0' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: D:/INSTALL/esp/v6.1/esp-idf/components/fatfs/Kconfig:240: FATFS_PRINT_LLI: 'default 0' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+NOTE: D:/INSTALL/esp/v6.1/esp-idf/components/fatfs/Kconfig:245: FATFS_PRINT_FLOAT: 'default 0' is not a valid bool value (only 'y' and 'n' are allowed). Value is treated as 'n'.
+ERROR: G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp_cam_sensor/Kconfig:4: 'G:/demo/21 灏忔櫤榄旀敼/鍥轰欢婧愮爜/xiaozhi-esp32/managed_components/espressif__esp_cam_sensor\sensors/bf3901/Kconfig.bf3901' not found (in 'rsource "sensors/bf3901/Kconfig.bf3901"'). Check that environment variables are set correctly (e.g. $srctree, which is unset or blank). Also note that unset environment variables expand to the empty string.
+CMake Error at D:/INSTALL/esp/v6.1/esp-idf/tools/cmake/kconfig.cmake:251 (message):
+  Failed to run kconfgen
+  (D:/INSTALL/esp/tools/python/v6.1/venv/Scripts/python.exe;-m;kconfgen;--list-separator=semicolon;--kconfig;D:/INSTALL/esp/v6.1/esp-idf/Kconfig;--sdkconfig-rename;D:/INSTALL/esp/v6.1/esp-idf/sdkconfig.rename;--config;G:/demo/21
+  小智魔改/固件源码/xiaozhi-esp32/sdkconfig;--defaults;G:/demo/21
+  小智魔改/固件源码/xiaozhi-esp32/sdkconfig.defaults;--defaults;G:/demo/21
+  小智魔改/固件源码/xiaozhi-esp32/sdkconfig.defaults.esp32s3;--defaults;G:/demo/21
+  小智魔改/固件源码/xiaozhi-esp32/build/xiaozhi-build.sdkconfig.defaults;--env;IDF_MINIMAL_BUILD=y;--env-file;G:/demo/21
+  小智魔改/固件源码/xiaozhi-esp32/build/config.env).  Error 1
+Call Stack (most recent call first):
+  D:/INSTALL/esp/v6.1/esp-idf/tools/cmake/build.cmake:804 (__kconfig_generate_config)
+  D:/INSTALL/esp/v6.1/esp-idf/tools/cmake/project.cmake:868 (idf_build_process)
+  CMakeLists.txt:13 (project)
+
+
+-- Configuring incomplete, errors occurred!
+Executing action: reconfigure
+Running cmake in directory 'G:\demo\21 小智魔改\固件源码\xiaozhi-esp32\build'
+Executing "cmake -G Ninja -B 'G:\demo\21 小智魔改\固件源码\xiaozhi-esp32\build' -DPYTHON_DEPS_CHECKED=1 -DPYTHON=D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe -DESP_PLATFORM=1 -DIDF_TARGET=esp32s3 -DSDKCONFIG_DEFAULTS=sdkconfig.defaults;build/xiaozhi-build.sdkconfig.defaults -DBOARD_NAME=my-s3-tft -DCCACHE_ENABLE=True 'G:\demo\21 小智魔改\固件源码\xiaozhi-esp32'"...
+Traceback (most recent call last):
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf_py_actions\tools.py", line 829, in ensure_build_directory
+    RunTool('cmake', cmake_args, cwd=args.build_dir, env=env, hints=hints)()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf_py_actions\tools.py", line 444, in __call__
+    raise FatalError(
+    ...<2 lines>...
+    )
+idf_py_actions.errors.FatalError: cmake failed with exit code 1, output of the command is in the G:\demo\21 小智魔改\固件源码\xiaozhi-esp32\build\log\idf_py_stderr_output_22928 and G:\demo\21 小智魔改\固件源码\xiaozhi-esp32\build\log\idf_py_stdout_output_22928
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py", line 1525, in <module>
+    main()
+    ~~~~^^
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py", line 1317, in main
+    cli(argv, prog_name=PROG, complete_var=SHELL_COMPLETE_VAR)
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\rich_click\rich_command.py", line 402, in __call__
+    return super().__call__(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\click\core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\rich_click\rich_command.py", line 216, in main
+    rv = self.invoke(ctx)
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\click\core.py", line 2002, in invoke
+    return _process_result(rv)
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\click\core.py", line 1939, in _process_result
+    value = ctx.invoke(self._result_callback, value, **ctx.params)
+  File "D:\INSTALL\esp\tools\python\v6.1\venv\Lib\site-packages\click\core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py", line 865, in execute_tasks
+    task(ctx, global_args, task.action_args)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py", line 277, in __call__
+    self.callback(self.name, context, global_args, **action_args)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf_py_actions\core_ext.py", line 264, in reconfigure
+    ensure_build_directory(args, ctx.info_name, True)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\INSTALL\esp\v6.1\esp-idf\tools\idf_py_actions\tools.py", line 834, in ensure_build_directory
+    os.remove(cache_path)
+    ~~~~~~~~~^^^^^^^^^^^^
+PermissionError: [WinError 5] 拒绝访问。: 'G:\\demo\\21 小智魔改\\固件源码\\xiaozhi-esp32\\build\\CMakeCache.txt'
+D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py -DIDF_TARGET=esp32s3 -DSDKCONFIG_DEFAULTS=sdkconfig.defaults;build/xiaozhi-build.sdkconfig.defaults -DBOARD_NAME=my-s3-tft reconfigure failed
+Project Version: 2.5.1 (main\boards\my-s3-tft\config.json)
+--------------------------------------------------------------------------------
+name: my-s3-tft
+reported_type: my-s3-tft
+target: esp32s3
+sdkconfig_append: CONFIG_BOARD_TYPE_MY_S3_TFT=y
+sdkconfig_append: CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+sdkconfig_append: CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/16m.csv"
+sdkconfig_append: CONFIG_YH_PROTOCOL_ENABLED=y
+sdkconfig_append: CONFIG_YH_SERVER_HOST="sandyun.top"
+sdkconfig_append: CONFIG_YH_SERVER_PORT=12399
+sdkconfig_append: CONFIG_OTA_URL="http://sandyun.top:8002/xiaozhi/ota/"
+[INFO] Reusing target esp32s3.

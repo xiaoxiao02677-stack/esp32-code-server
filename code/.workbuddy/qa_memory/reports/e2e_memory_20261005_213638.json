@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "case": "A6",
+      "verdict": "PASS",
+      "checks": {
+        "对话连接正常": true,
+        "两轮均有回复": true,
+        "无失败话术": true,
+        "/memory/agents 调用成功": true,
+        "QA Agent 引擎为 mem0ai": true,
+        "available=false 徽标": true
+      },
+      "notes": [
+        "mem0 日志尾部: iders.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key\n261005 05:13:47[0.9.7-00000000000000][core.providers.memory.mem0ai.mem0ai]-ERROR-配置错误: Mem0ai 的 API key 未设置,当前值为: 你的api_key",
+        "QA Agent VO: {'agent_id': '21e2e000000000000000000000000001', 'name': 'QA-mem0-测试', 'engine': 'mem0ai', 'available': False, 'fact_count': 0, 'pending_count': 0}"
+      ],
+      "details": {
+        "s1": {
+          "ok": true,
+          "error": null,
+          "turns": [
+            {
+              "sentences": [
+                "你好呀",
+                "夜晚咁静，得闲同你倾两句，几好",
+                "今日过得点呀？"
+              ],
+              "stt": [
+                "你好呀，跟我打个招呼吧"
+              ],
+              "audio_frames": 114,
+              "emotion": "happy",
+              "tts_stop": true,
+              "total_s": 12.45
+            },
+            {
+              "sentences": [
+                "实不相瞒",
+                "我这边一时查唔到你合肥嘅天气资料，预报都冇攞到",
+                "不过依家夜晚九点半，十月嘅合肥，风应该开始带啲凉意啦，出门记得添返件薄外套呀"
+              ],
+              "stt": [
+                "今天天气怎么样？"
+              ],
+              "audio_frames": 259,
+              "emotion": "neutral",
+              "tts_stop": true,
+              "total_s": 22.83
+            }
+          ]
+        },
+        "agents_vo": [
+          {
+            "agent_id": "21e2e000000000000000000000000001",
+            "name": "QA-mem0-测试",
+            "engine": "mem0ai",
+            "available": false,
+            "fact_count": 0,
+            "pending_count": 0
+          }
+        ]
+      }
+    }
+  ],
+  "started": "2026-10-05 21:34:13",
+  "ended": "2026-10-05 21:36:38"
+}

@@ -1,0 +1,8 @@
+
+$ awk -v s="261005 04:27:00" -v e="261005 04:33:13" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -cE 'ERROR|Traceback|Exception'
+1
+[rc=0]
+
+$ awk -v s="261005 04:27:00" -v e="261005 04:33:13" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -E 'ERROR|Traceback|Exception' | head -10
+261005 04:31:14[0.9.7-00000000000000][core.providers.tts.base]-ERROR-audio_play_priority_thread: None received 1000 (OK); then sent 1000 (OK)
+[rc=0]

@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "case": "A1",
+      "verdict": "SKIP",
+      "checks": {
+        "远程含 mem_holographic 代码": false,
+        "/api/memory 路由已挂载": false,
+        "ai_model_config 含 Memory_mem_holographic": false
+      },
+      "notes": [
+        "线上未部署（{'providers': 'base.py\\nmem0ai\\nmem_local_short\\nmem_report_only\\nnomem\\npowermem\\n__pycache__', 'route': '404'}）"
+      ],
+      "details": {}
+    }
+  ],
+  "started": "2026-10-05 19:34:15",
+  "ended": "2026-10-05 19:34:33"
+}

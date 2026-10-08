@@ -1,0 +1,215 @@
+const API_CATALOG = {
+    "agent": {zh:"智能体",icon:"agent",apis:[
+      {m:"getAgentList",h:"GET",p:"/agent/list",s:"获取智能体列表",pa:"无"},
+      {m:"addAgent",h:"POST",p:"/agent",s:"添加智能体",pa:"agentName(body)"},
+      {m:"deleteAgent",h:"DELETE",p:"/agent/${agentId}",s:"删除智能体",pa:"agentId(路径)"},
+      {m:"getDeviceConfig",h:"GET",p:"/agent/${agentId}",s:"获取智能体配置",pa:"agentId(路径)"},
+      {m:"updateAgentConfig",h:"PUT",p:"/agent/${agentId}",s:"保存智能体配置",pa:"agentId(路径),configData(body)"},
+      {m:"getAgentSnapshots",h:"GET",p:"/agent/${agentId}/snapshots",s:"获取配置快照列表",pa:"agentId(路径),分页(query)"},
+      {m:"getAgentSnapshot",h:"GET",p:"/agent/${agentId}/snapshots/${snapshotId}",s:"获取快照详情",pa:"agentId,snapshotId(路径)"},
+      {m:"restoreAgentSnapshot",h:"POST",p:"/agent/${agentId}/snapshots/${snapshotId}/restore",s:"恢复配置快照",pa:"agentId,snapshotId(路径),token(body)"},
+      {m:"deleteAgentSnapshot",h:"DELETE",p:"/agent/${agentId}/snapshots/${snapshotId}",s:"删除配置快照",pa:"agentId,snapshotId(路径)"},
+      {m:"getAgentTemplate",h:"GET",p:"/agent/template",s:"获取智能体模板列表",pa:"无"},
+      {m:"getAgentTemplatesPage",h:"GET",p:"/agent/template/page",s:"模板分页列表",pa:"分页(query)"},
+      {m:"getAgentSessions",h:"GET",p:"/agent/${agentId}/sessions",s:"获取智能体会话列表",pa:"agentId(路径),分页(query)"},
+      {m:"getAgentChatHistory",h:"GET",p:"/agent/${agentId}/chat-history/${sessionId}",s:"获取聊天记录",pa:"agentId,sessionId(路径)"},
+      {m:"getAudioId",h:"POST",p:"/agent/audio/${audioId}",s:"获取音频下载ID",pa:"audioId(路径)"},
+      {m:"getAgentMcpAccessAddress",h:"GET",p:"/agent/mcp/address/${agentId}",s:"获取MCP接入点地址",pa:"agentId(路径)"},
+      {m:"getAgentMcpToolsList",h:"GET",p:"/agent/mcp/tools/${agentId}",s:"获取MCP工具列表",pa:"agentId(路径)"},
+      {m:"addAgentVoicePrint",h:"POST",p:"/agent/voice-print",s:"添加声纹",pa:"voicePrintData(body)"},
+      {m:"getAgentVoicePrintList",h:"GET",p:"/agent/voice-print/list/${id}",s:"获取声纹列表",pa:"id(路径)"},
+      {m:"deleteAgentVoicePrint",h:"DELETE",p:"/agent/voice-print/${id}",s:"删除声纹",pa:"id(路径)"},
+      {m:"updateAgentVoicePrint",h:"PUT",p:"/agent/voice-print",s:"更新声纹",pa:"voicePrintData(body)"},
+      {m:"getRecentlyFiftyByAgentId",h:"GET",p:"/agent/${id}/chat-history/user",s:"最近用户聊天记录",pa:"id(路径)"},
+      {m:"getContentByAudioId",h:"GET",p:"/agent/${id}/chat-history/audio",s:"音频聊天记录",pa:"id(路径)"},
+      {m:"addAgentTemplate",h:"POST",p:"/agent/template",s:"新增智能体模板",pa:"templateData(body)"},
+      {m:"updateAgentTemplate",h:"PUT",p:"/agent/template",s:"更新智能体模板",pa:"templateData(body)"},
+      {m:"deleteAgentTemplate",h:"DELETE",p:"/agent/template/${id}",s:"删除智能体模板",pa:"id(路径)"},
+      {m:"batchDeleteAgentTemplate",h:"POST",p:"/agent/template/batch-remove",s:"批量删除模板",pa:"ids(body)"},
+      {m:"getAgentTemplateById",h:"GET",p:"/agent/template/${templateId}",s:"获取模板详情",pa:"templateId(路径)"},
+      {m:"getDownloadUrl",h:"POST",p:"/agent/chat-history/getDownloadUrl/${agentId}/${sessionId}",s:"获取聊天记录下载链接",pa:"agentId,sessionId(路径)"},
+      {m:"searchAgent",h:"GET",p:"/agent/list",s:"按关键词搜索智能体",pa:"keyword,searchType(query)"},
+      {m:"getAgentTags",h:"GET",p:"/agent/${agentId}/tags",s:"获取智能体标签",pa:"agentId(路径)"},
+      {m:"saveAgentTags",h:"PUT",p:"/agent/${agentId}/tags",s:"保存智能体标签",pa:"agentId(路径),tags(body)"}
+    ]},
+    "user": {zh:"用户",icon:"system",apis:[
+      {m:"login",h:"POST",p:"/user/login",s:"用户登录",pa:"loginForm(body)"},
+      {m:"getCaptcha",h:"GET",p:"/user/captcha",s:"获取图形验证码",pa:"uuid(query)"},
+      {m:"sendSmsVerification",h:"POST",p:"/user/smsVerification",s:"发送短信验证码",pa:"data(body)"},
+      {m:"register",h:"POST",p:"/user/register",s:"注册账号",pa:"registerForm(body)"},
+      {m:"saveDeviceConfig",h:"PUT",p:"/user/configDevice/${device_id}",s:"保存设备配置",pa:"device_id(路径),configData(body)"},
+      {m:"getUserInfo",h:"GET",p:"/user/info",s:"获取当前用户信息",pa:"无"},
+      {m:"changePassword",h:"PUT",p:"/user/change-password",s:"修改密码",pa:"old/newPassword(body)"},
+      {m:"changeUserStatus",h:"PUT",p:"/admin/users/changeStatus/${status}",s:"批量修改用户状态",pa:"status(路径),userIds(body)"},
+      {m:"getPubConfig",h:"GET",p:"/user/pub-config",s:"获取公共配置",pa:"无"},
+      {m:"retrievePassword",h:"PUT",p:"/user/retrieve-password",s:"找回密码",pa:"phone,code,password(body)"}
+    ]},
+    "device": {zh:"设备",icon:"agent",apis:[
+      {m:"getAgentBindDevices",h:"GET",p:"/device/bind/${agentId}",s:"查询智能体绑定设备",pa:"agentId(路径)"},
+      {m:"unbindDevice",h:"POST",p:"/device/unbind",s:"解绑设备",pa:"deviceId(body)"},
+      {m:"bindDevice",h:"POST",p:"/device/bind/${agentId}/${deviceCode}",s:"绑定设备",pa:"agentId,deviceCode(路径)"},
+      {m:"updateDeviceInfo",h:"PUT",p:"/device/update/${id}",s:"更新设备信息",pa:"id(路径),payload(body)"},
+      {m:"manualAddDevice",h:"POST",p:"/device/manual-add",s:"手动添加设备",pa:"params(body)"},
+      {m:"getDeviceStatus",h:"POST",p:"/device/bind/${agentId}",s:"获取设备在线状态",pa:"agentId(路径),空body"}
+    ]},
+    "deviceConfig": {zh:"设备云端配置",icon:"agent",apis:[
+      {m:"getDeviceConfigList",h:"GET",p:"/deviceConfigMag",s:"设备云端配置分页",pa:"分页(query)"},
+      {m:"getDeviceConfig",h:"GET",p:"/deviceConfigMag/${id}",s:"单台设备云端配置",pa:"id(路径)"},
+      {m:"deleteDeviceConfig",h:"DELETE",p:"/deviceConfigMag/${id}",s:"删除设备云端配置",pa:"id(路径)"},
+      {m:"clearAllDeviceConfigs",h:"DELETE",p:"/deviceConfigMag",s:"清空全部设备云端配置",pa:"无"}
+    ]},
+    "modelVad": {zh:"模型·语言活动检测",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"VAD 模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"VAD 供应器列表",pa:"modelType(路径)"}
+    ]},
+    "modelAsr": {zh:"模型·语音识别",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"ASR 模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"ASR 供应器列表",pa:"modelType(路径)"},
+      {m:"getQwenAsrModels",h:"GET",p:"/models/qwenTtsModels",s:"千问平台模型列表（含ASR）",pa:"apiKey(query)"}
+    ]},
+    "modelLlm": {zh:"模型·大语言模型",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"LLM 模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getLlmModelCodeList",h:"GET",p:"/models/llm/names",s:"LLM 模型列表",pa:"modelName(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"LLM 供应器列表",pa:"modelType(路径)"},
+      {m:"getModelNames",h:"GET",p:"/models/names",s:"模型名称列表",pa:"modelType,modelName(query)"}
+    ]},
+    "modelVllm": {zh:"模型·视觉大语言模型",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"视觉(VLLM)模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"视觉(VLLM)供应器列表",pa:"modelType(路径)"}
+    ]},
+    "modelIntent": {zh:"模型·意图识别",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"意图识别模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"意图识别供应器列表",pa:"modelType(路径)"}
+    ]},
+    "modelTts": {zh:"模型·语音合成",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"TTS 模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"TTS 供应器列表",pa:"modelType(路径)"},
+      {m:"getModelVoices",h:"GET",p:"/models/${modelId}/voices",s:"获取模型音色列表",pa:"modelId(路径),voiceName(query)"},
+      {m:"ttsVoicePreview",h:"GET",p:"/models/ttsPreview",s:"TTS 音色试听（音频播放）",pa:"modelId,voice,text(query)"},
+      {m:"getQwenTtsModels",h:"GET",p:"/models/qwenTtsModels",s:"千问 TTS 平台模型列表",pa:"apiKey(query)"}
+    ]},
+    "modelMemory": {zh:"模型·记忆",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"记忆模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getModelProviders",h:"GET",p:"/models/${modelType}/provideTypes",s:"记忆供应器列表",pa:"modelType(路径)"}
+    ]},
+    "modelRag": {zh:"模型·知识库",icon:"model",apis:[
+      {m:"getModelList",h:"GET",p:"/models/list",s:"RAG 模型配置分页",pa:"modelType,modelName,page,limit(query)"},
+      {m:"getRAGModels",h:"GET",p:"/datasets/rag-models",s:"RAG 模型列表",pa:"无"}
+    ]},
+    "modelCommon": {zh:"模型·通用管理",icon:"model",apis:[
+      {m:"getModelConfig",h:"GET",p:"/models/${id}",s:"获取模型配置详情",pa:"id(路径)"},
+      {m:"updateModelStatus",h:"PUT",p:"/models/enable/${id}/${status}",s:"启用/禁用模型",pa:"id,status(路径)"},
+      {m:"setDefaultModel",h:"PUT",p:"/models/default/${id}",s:"设置默认模型",pa:"id(路径)"},
+      {m:"updateModel",h:"PUT",p:"/models/${modelType}/${provideCode}/${id}",s:"更新模型配置",pa:"三参数(路径),表单(body)"},
+      {m:"addModel",h:"POST",p:"/models/${modelType}/${provideCode}",s:"新增模型配置",pa:"modelType,provideCode(路径),配置字段(body)"},
+      {m:"deleteModel",h:"DELETE",p:"/models/${id}",s:"删除模型配置",pa:"id(路径)"},
+      {m:"getModelProvidersPage",h:"GET",p:"/models/provider",s:"供应器配置分页",pa:"name,modelType,page,limit(query)"},
+      {m:"addModelProvider",h:"POST",p:"/models/provider",s:"新增供应器",pa:"modelType,providerCode,name,fields(body)"},
+      {m:"updateModelProvider",h:"PUT",p:"/models/provider",s:"更新供应器",pa:"id,modelType,providerCode,name,fields(body)"},
+      {m:"deleteModelProviderByIds",h:"POST",p:"/models/provider/delete",s:"批量删除供应器",pa:"ids(body)"},
+      {m:"getPluginFunctionList",h:"GET",p:"/models/provider/plugin/names",s:"插件功能名称列表",pa:"无"}
+    ]},
+    "timbre": {zh:"音色",icon:"voice",apis:[
+      {m:"getVoiceList",h:"GET",p:"/ttsVoice",s:"音色分页列表",pa:"ttsModelId,page,limit,name(query)"},
+      {m:"saveVoice",h:"POST",p:"/ttsVoice",s:"新增音色",pa:"音色字段(body)"},
+      {m:"deleteVoice",h:"POST",p:"/ttsVoice/delete",s:"批量删除音色",pa:"ids(body)"},
+      {m:"updateVoice",h:"PUT",p:"/ttsVoice/${id}",s:"修改音色",pa:"id(路径),音色字段(body)"}
+    ]},
+    "memory": {zh:"记忆",icon:"knowledge",apis:[
+      {m:"getMemoryAgents",h:"GET",p:"/memory/agents",s:"获取有记忆数据的Agent",pa:"无"},
+      {m:"getFactList",h:"GET",p:"/memory/facts",s:"记忆条目分页查询",pa:"agent_id,keyword,category,status,trust,page等(query)"},
+      {m:"getFactDetail",h:"GET",p:"/memory/facts/${factId}",s:"记忆条目详情",pa:"factId(路径),agent_id(query)"},
+      {m:"createFact",h:"POST",p:"/memory/facts",s:"新增记忆条目",pa:"agent_id,content,trust(body)"},
+      {m:"updateFact",h:"PUT",p:"/memory/facts/${factId}",s:"编辑记忆条目",pa:"factId(路径),agent_id(body)"},
+      {m:"deleteFact",h:"DELETE",p:"/memory/facts/${factId}",s:"删除记忆条目",pa:"factId(路径),agent_id(query)"},
+      {m:"sendFeedback",h:"POST",p:"/memory/facts/${factId}/feedback",s:"记忆条目信任反馈",pa:"factId(路径),agent_id,helpful(body)"},
+      {m:"reviewFact",h:"POST",p:"/memory/facts/${factId}/review",s:"审核记忆条目",pa:"factId(路径),agent_id,action(body)"}
+    ]},
+    "voiceClone": {zh:"音色复刻",icon:"voice",apis:[
+      {m:"getVoiceCloneList",h:"GET",p:"/voiceClone",s:"音色复刻列表",pa:"分页(query)"},
+      {m:"uploadVoice",h:"POST",p:"/voiceClone/upload",s:"上传复刻音频",pa:"formData(body)"},
+      {m:"updateName",h:"POST",p:"/voiceClone/updateName",s:"更新音色名称",pa:"params(body)"},
+      {m:"getAudioId",h:"POST",p:"/voiceClone/audio/${id}",s:"获取音频下载ID",pa:"id(路径)"},
+      {m:"getPlayVoiceUrl",h:"GET",p:"/voiceClone/play/${uuid}",s:"音频播放URL",pa:"uuid(路径)"},
+      {m:"cloneAudio",h:"POST",p:"/voiceClone/cloneAudio",s:"发起音色克隆训练",pa:"params(body)"}
+    ]},
+    "voiceResource": {zh:"音色资源",icon:"voice",apis:[
+      {m:"getVoiceResourceList",h:"GET",p:"/voiceResource",s:"音色资源分页",pa:"分页(query)"},
+      {m:"getVoiceResourceInfo",h:"GET",p:"/voiceResource/${id}",s:"音色资源详情",pa:"id(路径)"},
+      {m:"saveVoiceResource",h:"POST",p:"/voiceResource",s:"保存音色资源",pa:"entity(body)"},
+      {m:"deleteVoiceResource",h:"DELETE",p:"/voiceResource/${ids}",s:"删除音色资源(批量)",pa:"ids(路径)"},
+      {m:"getVoiceResourceByUserId",h:"GET",p:"/voiceResource/user/${userId}",s:"用户音色资源列表",pa:"userId(路径)"},
+      {m:"getTtsPlatformList",h:"GET",p:"/voiceResource/ttsPlatforms",s:"TTS平台列表",pa:"无"}
+    ]},
+    "knowledgeBase": {zh:"知识库",icon:"knowledge",apis:[
+      {m:"getKnowledgeBaseList",h:"GET",p:"/datasets",s:"知识库分页列表",pa:"page,page_size,name(query)"},
+      {m:"createKnowledgeBase",h:"POST",p:"/datasets",s:"创建知识库",pa:"data(body)"},
+      {m:"updateKnowledgeBase",h:"PUT",p:"/datasets/${datasetId}",s:"更新知识库",pa:"datasetId(路径),data(body)"},
+      {m:"deleteKnowledgeBase",h:"DELETE",p:"/datasets/${datasetId}",s:"删除知识库",pa:"datasetId(路径)"},
+      {m:"deleteKnowledgeBases",h:"DELETE",p:"/datasets/batch",s:"批量删除知识库",pa:"ids(query)"},
+      {m:"getDocumentList",h:"GET",p:"/datasets/${datasetId}/documents",s:"文档分页列表",pa:"datasetId(路径),page等(query)"},
+      {m:"uploadDocument",h:"POST",p:"/datasets/${datasetId}/documents",s:"上传文档",pa:"datasetId(路径),formData(body)"},
+      {m:"parseDocument",h:"POST",p:"/datasets/${datasetId}/chunks",s:"解析文档切片",pa:"datasetId(路径),document_ids(body)"},
+      {m:"deleteDocument",h:"DELETE",p:"/datasets/${datasetId}/documents/${documentId}",s:"删除文档",pa:"datasetId,documentId(路径)"},
+      {m:"listChunks",h:"GET",p:"/datasets/${datasetId}/documents/${documentId}/chunks",s:"切片分页列表",pa:"datasetId,documentId(路径),page,keywords(query)"},
+      {m:"retrievalTest",h:"POST",p:"/datasets/${datasetId}/retrieval-test",s:"知识库召回测试",pa:"datasetId(路径),查询文本(body)"}
+    ]},
+    "admin": {zh:"系统管理",icon:"system",apis:[
+      {m:"getUserList",h:"GET",p:"/admin/users",s:"用户分页列表",pa:"page,limit,mobile(query)"},
+      {m:"deleteUser",h:"DELETE",p:"/admin/users/${id}",s:"删除用户",pa:"id(路径)"},
+      {m:"resetUserPassword",h:"PUT",p:"/admin/users/${id}",s:"重置用户密码",pa:"id(路径)"},
+      {m:"getParamsList",h:"GET",p:"/admin/params/page",s:"系统参数分页",pa:"page,limit,paramCode(query)"},
+      {m:"addParam",h:"POST",p:"/admin/params",s:"新增系统参数",pa:"data(body)"},
+      {m:"updateParam",h:"PUT",p:"/admin/params",s:"修改系统参数",pa:"data(body)"},
+      {m:"deleteParam",h:"POST",p:"/admin/params/delete",s:"批量删除参数",pa:"ids(body)"},
+      {m:"getWsServerList",h:"GET",p:"/admin/server/server-list",s:"WS服务端节点列表",pa:"无"},
+      {m:"sendWsServerAction",h:"POST",p:"/admin/server/emit-action",s:"下发WS服务管理指令",pa:"data(body)"},
+      {m:"getConfig",h:"POST",p:"/config/server-base",s:"获取服务端运行配置",pa:"无"},
+      {m:"getAgentModels",h:"POST",p:"/config/agent-models",s:"按MAC获取智能体模型配置",pa:"macAddress,selectedModule(body)"},
+      {m:"getCorrectWords",h:"POST",p:"/config/correct-words",s:"按MAC获取替换词",pa:"macAddress(body)"},
+      {m:"reportDeviceConfig",h:"POST",p:"/config/device-config",s:"上报设备云端配置",pa:"macAddress,config(body)"}
+    ]},
+    "ota": {zh:"OTA固件",icon:"system",apis:[
+      {m:"getOtaList",h:"GET",p:"/otaMag",s:"OTA固件分页",pa:"分页(query)"},
+      {m:"getOtaInfo",h:"GET",p:"/otaMag/${id}",s:"OTA固件详情",pa:"id(路径)"},
+      {m:"saveOta",h:"POST",p:"/otaMag",s:"保存OTA固件",pa:"entity(body)"},
+      {m:"updateOta",h:"PUT",p:"/otaMag/${id}",s:"更新OTA固件",pa:"id(路径),entity(body)"},
+      {m:"deleteOta",h:"DELETE",p:"/otaMag/${id}",s:"删除OTA固件",pa:"id(路径)"},
+      {m:"uploadFirmware",h:"POST",p:"/otaMag/upload",s:"上传固件",pa:"file(body)"},
+      {m:"getDownloadUrl",h:"GET",p:"/otaMag/getDownloadUrl/${id}",s:"固件下载链接",pa:"id(路径)"},
+      {m:"downloadByUuid",h:"GET",p:"/otaMag/download/${uuid}",s:"按UUID下载固件文件",pa:"uuid(路径)"},
+      {m:"uploadAssetsBin",h:"POST",p:"/otaMag/uploadAssetsBin",s:"上传资源分区固件",pa:"file(body)"},
+      {m:"otaCheckUpdate",h:"POST",p:"/ota",s:"设备侧检查固件更新",pa:"deviceInfo(body)"},
+      {m:"otaActivate",h:"POST",p:"/ota/activate",s:"确认固件激活",pa:"activateInfo(body)"},
+      {m:"otaGetLatest",h:"GET",p:"/ota",s:"获取最新固件信息",pa:"无"}
+    ]},
+    "addressBook": {zh:"通讯录",icon:"contact",apis:[
+      {m:"getAddressBookList",h:"GET",p:"/device/address-book/${macAddress}",s:"设备通讯录列表",pa:"macAddress(路径)"},
+      {m:"updateAlias",h:"PUT",p:"/device/address-book/alias",s:"更新联系人别名",pa:"data(body)"},
+      {m:"updatePermission",h:"PUT",p:"/device/address-book/permission",s:"更新联系人权限",pa:"data(body)"}
+    ]},
+    "dict": {zh:"字典",icon:"system",apis:[
+      {m:"getDictTypeList",h:"GET",p:"/admin/dict/type/page",s:"字典类型分页",pa:"dictType,dictName,page,limit(query)"},
+      {m:"getDictTypeDetail",h:"GET",p:"/admin/dict/type/${id}",s:"字典类型详情",pa:"id(路径)"},
+      {m:"addDictType",h:"POST",p:"/admin/dict/type/save",s:"新增字典类型",pa:"data(body)"},
+      {m:"updateDictType",h:"PUT",p:"/admin/dict/type/update",s:"更新字典类型",pa:"data(body)"},
+      {m:"deleteDictType",h:"POST",p:"/admin/dict/type/delete",s:"批量删除字典类型",pa:"ids(body)"},
+      {m:"getDictDataList",h:"GET",p:"/admin/dict/data/page",s:"字典数据分页",pa:"dictTypeId,dictLabel,page等(query)"},
+      {m:"getDictDataDetail",h:"GET",p:"/admin/dict/data/${id}",s:"字典数据详情",pa:"id(路径)"},
+      {m:"addDictData",h:"POST",p:"/admin/dict/data/save",s:"新增字典数据",pa:"data(body)"},
+      {m:"updateDictData",h:"PUT",p:"/admin/dict/data/update",s:"更新字典数据",pa:"data(body)"},
+      {m:"deleteDictData",h:"POST",p:"/admin/dict/data/delete",s:"批量删除字典数据",pa:"ids(body)"},
+      {m:"getDictDataByType",h:"GET",p:"/admin/dict/data/type/${dictType}",s:"按类型取全部字典数据",pa:"dictType(路径)"}
+    ]},
+    "correctWord": {zh:"替换词",icon:"system",apis:[
+      {m:"getFileList",h:"GET",p:"/correct-word/file/list",s:"替换词文件分页",pa:"page,limit(query)"},
+      {m:"selectAll",h:"GET",p:"/correct-word/file/select",s:"全部替换词文件",pa:"无"},
+      {m:"downloadFile",h:"GET",p:"/correct-word/file/download/${id}",s:"下载替换词文件",pa:"id(路径)"},
+      {m:"addFile",h:"POST",p:"/correct-word/file",s:"新增替换词文件",pa:"data(body)"},
+      {m:"updateFile",h:"PUT",p:"/correct-word/file/${id}",s:"更新替换词文件",pa:"id(路径),fileName,content(body)"},
+      {m:"deleteFile",h:"DELETE",p:"/correct-word/file/${id}",s:"删除替换词文件",pa:"id(路径)"},
+      {m:"batchDeleteFile",h:"POST",p:"/correct-word/file/batch-delete",s:"批量删除替换词文件",pa:"ids(body)"}
+    ]}
+};
+
+export default API_CATALOG;

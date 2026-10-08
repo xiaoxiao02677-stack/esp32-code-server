@@ -1,0 +1,524 @@
+import type { DesignStyle } from "./types";
+
+export const sketchStyle: DesignStyle = {
+  slug: "sketch-style",
+  name: "铅笔手绘风",
+  nameEn: "Sketch Style",
+  description:
+    "模拟铅笔手绘的设计风格，不规则线条边框、纸张纹理背景、手写字体感、素描阴影和涂鸦装饰，传达亲切温暖的手工质感。",
+  descriptionEn:
+    "A design style simulating pencil hand-drawing, with irregular line borders, paper texture backgrounds, handwritten font feel, sketch shadows, and doodle decorations, conveying a warm and approachable handcrafted texture.",
+  cover: "/styles/sketch-style.svg",
+  styleType: "visual",
+  tags: ["retro"],
+  category: "expressive",
+  colors: {
+    primary: "#2c2c2c",
+    secondary: "#f5f0e8",
+    accent: ["#e74c3c", "#3498db", "#27ae60", "#f39c12"],
+  },
+  keywords: ["手绘", "铅笔", "素描", "纸张", "手写", "涂鸦", "不规则", "expressive", "bold", "vibrant"],
+  keywordsEn: ["hand-drawn ui", "sketch style", "pencil sketch", "doodle design", "sketchy borders", "handwritten font", "paper texture", "sketchbook aesthetic", "notebook style", "wireframe sketch", "hand-drawn portfolio"],
+
+  philosophy: `Sketch Style 是一种模拟手绘铅笔素描的设计风格，通过不规则的线条、纸张纹理和手写感元素，为数字界面注入温暖的手工质感。
+
+核心理念：
+- 手工感：线条和形状不追求完美对齐，保留手绘的不规则感
+- 纸张质感：使用暖色调米色背景模拟素描本纸张
+- 铅笔线条：边框使用不均匀的手绘风格线条
+- 素描阴影：使用交叉线条（cross-hatching）模拟阴影效果
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Sketch Style is a design style simulating hand-drawn pencil sketches, injecting warm handcrafted texture into digital interfaces through irregular lines, paper textures, and handwritten-feel elements.
+
+Core principles:
+- Handcrafted feel: Lines and shapes don't pursue perfect alignment, preserving the irregularity of hand-drawing
+- Paper texture: Warm beige backgrounds simulating sketchbook paper
+- Pencil lines: Borders use uneven hand-drawn style lines
+- Sketch shadows: Using cross-hatching to simulate shadow effects`,
+
+  doList: [
+    "使用纸张色背景 bg-[#f5f0e8]",
+    "边框使用不规则风格 border-2 border-dashed 或 wavy",
+    "使用手写风格字体或 serif 字体",
+    "阴影使用交叉线条效果而非纯色",
+    "元素保留轻微倾斜 rotate-[-1deg] 增加手绘感",
+    "使用铅笔灰色 #2c2c2c 作为主色调",
+    "hover 时可模拟铅笔涂黑：从透明底迅速过渡到铅笔灰背景并反白文字",
+    "标题和链接的强调线使用虚线/波浪式手绘下划线而非完美直线",
+    "active 状态强化按压感：减少阴影并增加轻微倾斜抖动",
+  ],
+
+  doListEn: [
+    "Use paper-colored background bg-[#f5f0e8]",
+    "Use irregular style borders border-2 border-dashed or wavy",
+    "Use handwritten-style or serif fonts",
+    "Use cross-hatching effects for shadows instead of solid colors",
+    "Keep elements slightly tilted rotate-[-1deg] for hand-drawn feel",
+    "Use pencil gray #2c2c2c as primary color",
+    "Hover can simulate pencil shading: quickly transition from transparent to pencil gray background with inverted white text",
+    "Title and link emphasis lines use dashed/wavy hand-drawn underlines instead of perfect straight lines",
+    "Active state enhances press feel: reduce shadow and add slight tilt jitter",
+  ],
+
+  dontList: [
+    "禁止使用完美的直线和圆角",
+    "禁止使用纯白背景（应使用纸张色）",
+    "禁止使用渐变效果",
+    "禁止使用玻璃模糊效果",
+    "禁止使用过于饱和的颜色",
+    "禁止长时间平滑动画（手绘反馈应短促直接）",
+    "禁止过度规则的 hover 变化（需保留笔触粗糙感）",
+  ],
+
+  dontListEn: [
+    "Do NOT use perfect straight lines and rounded corners",
+    "Do NOT use pure white backgrounds (should use paper color)",
+    "Do NOT use gradient effects",
+    "Do NOT use glass blur effects",
+    "Do NOT use overly saturated colors",
+    "Do NOT use long smooth animations (hand-drawn feedback should be short and direct)",
+    "Do NOT use overly regular hover changes (need to preserve rough brush stroke feel)",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "手绘风格按钮，不规则边框",
+      code: `<button className="
+  px-8 py-3
+  bg-transparent
+  text-[#2c2c2c] font-serif italic font-bold tracking-widest
+  border-2 border-dashed border-[#2c2c2c]
+  rounded-sm
+  shadow-[4px_4px_0_rgba(44,44,44,0.15)]
+  hover:bg-[#2c2c2c] hover:text-[#f5f0e8]
+  hover:shadow-[6px_6px_0_rgba(44,44,44,0.25)]
+  hover:-translate-y-1 hover:rotate-1
+  active:translate-y-[4px] active:translate-x-[4px]
+  active:rotate-[-2deg] active:shadow-none
+  transition-all duration-150
+">
+  Sketch It
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "素描本风格卡片",
+      code: `<div className="
+  group p-8
+  bg-[#f5f0e8]
+  border-2 border-[#2c2c2c]
+  rounded-sm
+  -rotate-1
+  relative
+  shadow-[5px_5px_0_rgba(44,44,44,0.15)]
+  hover:rotate-0
+  hover:shadow-[8px_8px_0_rgba(44,44,44,0.2)]
+  hover:-translate-y-1
+  transition-all duration-200
+  overflow-hidden
+">
+  <div className="absolute top-4 right-4 w-8 h-8 rounded-[40%_60%_70%_30%] border border-[#2c2c2c] opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300" />
+  <div className="absolute top-4 right-4 w-8 h-8 rounded-[60%_40%_30%_70%] border border-[#2c2c2c] opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 delay-75" />
+
+  <h3 className="text-2xl font-serif italic font-bold text-[#2c2c2c] mb-4">
+    Rough Draft
+  </h3>
+  <p className="text-[#555] font-serif leading-relaxed">
+    Drawn with pencil, eraser, and intention. Imperfect lines still tell a clear story.
+  </p>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "手绘风格输入框",
+      code: `<input
+  type="text"
+  placeholder="Write something..."
+  className="
+    w-full px-4 py-3
+    bg-transparent
+    border-0 border-b-2 border-dashed border-[#2c2c2c]
+    text-[#2c2c2c] placeholder-[#999]
+    font-serif italic
+    focus:outline-none focus:border-solid focus:border-[#e74c3c]
+    transition-all
+  "
+/>`,
+    },
+    nav: {
+      name: "导航栏",
+      description: "手绘风格导航栏",
+      code: `<nav className="
+  px-6 py-4
+  bg-[#f5f0e8]
+  border-b-2 border-dashed border-[#2c2c2c]
+">
+  <div className="max-w-4xl mx-auto flex items-center justify-between">
+    <a href="/" className="text-[#2c2c2c] font-serif italic text-xl">
+      Sketchbook
+    </a>
+    <div className="flex gap-6">
+      <a href="#" className="text-[#2c2c2c] hover:text-[#e74c3c] font-serif italic text-sm transition-colors underline decoration-dashed">
+        Drawings
+      </a>
+      <a href="#" className="text-[#2c2c2c] hover:text-[#e74c3c] font-serif italic text-sm transition-colors underline decoration-dashed">
+        Gallery
+      </a>
+    </div>
+  </div>
+</nav>`,
+    },
+    hero: {
+      name: "Hero 区块",
+      description: "手绘风格 Hero 展示区域",
+      code: `<section className="
+  min-h-screen
+  flex flex-col items-center justify-center
+  bg-[#f5f0e8]
+  px-6 py-20
+  relative
+">
+  <div className="absolute inset-0 opacity-5"
+    style={{
+      backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\'6\\' height=\\'6\\' viewBox=\\'0 0 6 6\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cg fill=\\'%232c2c2c\\' fill-rule=\\'evenodd\\'%3E%3Cpath d=\\'M5 0h1L0 6V5zM6 5v1H5z\\'/%3E%3C/g%3E%3C/svg%3E")'
+    }}
+  />
+  <h1 className="
+    text-4xl md:text-6xl
+    font-serif italic
+    text-[#2c2c2c]
+    mb-4
+    rotate-[-1deg]
+  ">
+    Sketch Style
+  </h1>
+  <p className="text-xl font-serif text-[#666] mb-8 rotate-[0.5deg]">
+    Every line tells a story
+  </p>
+  <button className="
+    px-8 py-4
+    bg-[#2c2c2c]
+    text-[#f5f0e8]
+    border-2 border-[#2c2c2c]
+    rounded-sm
+    font-serif italic text-lg
+    hover:bg-transparent hover:text-[#2c2c2c]
+    transition-all duration-300
+    rotate-[-0.5deg]
+  ">
+    Open Sketchbook
+  </button>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Sketch Style 全局样式 */
+
+:root {
+  --sketch-dark: #2c2c2c;
+  --sketch-paper: #f5f0e8;
+  --sketch-red: #e74c3c;
+  --sketch-blue: #3498db;
+  --sketch-green: #27ae60;
+  --sketch-yellow: #f39c12;
+}
+
+/* 纸张纹理背景 */
+.sketch-paper {
+  background-color: var(--sketch-paper);
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%232c2c2c' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* 手绘边框效果 */
+.sketch-border {
+  border: 2px dashed var(--sketch-dark);
+  border-radius: 2px;
+}
+
+/* 交叉阴影效果 */
+.sketch-shadow {
+  box-shadow: 3px 3px 0 rgba(44, 44, 44, 0.15);
+}
+
+/* 手绘不规则效果 */
+.sketch-wobbly {
+  transform: rotate(-0.5deg);
+}
+
+.sketch-wobbly:nth-child(even) {
+  transform: rotate(0.5deg);
+}
+
+/* 手写字体 */
+.sketch-text {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-style: italic;
+}
+
+/* 铅笔下划线 */
+.sketch-underline {
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--sketch-dark);
+  text-underline-offset: 4px;
+}
+
+/* 涂鸦圆圈标记 */
+.sketch-circle {
+  border: 2px solid var(--sketch-dark);
+  border-radius: 50%;
+  transform: rotate(-2deg);
+}
+@keyframes sketch-style-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sketch-style-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.sketch-style-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.sketch-style-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(135deg, rgba(44, 44, 44, 0.05), transparent);
+  pointer-events: none;
+}
+
+.sketch-style-card:hover::before {
+  opacity: 1;
+}
+
+.sketch-style-gradient {
+  background: linear-gradient(135deg, #2c2c2c, #e74c3c);
+}
+
+.sketch-style-gradient-text {
+  background: linear-gradient(135deg, #2c2c2c, #e74c3c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sketch-style-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(44, 44, 44, 0.08);
+}
+
+.sketch-style-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.sketch-style-animate-in {
+  animation: sketch-style-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一个 Sketch Style 设计风格的前端开发专家。生成的所有代码必须严格遵守以下约束：
+
+## 绝对禁止
+
+- 使用完美的直线边框 border-solid（优先使用 border-dashed）
+- 使用纯白背景 bg-white
+- 使用渐变 bg-gradient-*
+- 使用玻璃模糊 backdrop-blur
+- 使用完美圆角 rounded-xl, rounded-2xl
+- 使用过于饱和的颜色
+
+## 必须遵守
+
+- 纸张色背景 bg-[#f5f0e8]
+- 虚线或不规则边框 border-2 border-dashed border-[#2c2c2c]
+- 衬线斜体字体 font-serif italic
+- 轻微倾斜 rotate-[-0.5deg] 或 rotate-[0.5deg]
+- 铅笔灰色主色调 #2c2c2c
+- 手绘感阴影 shadow-[3px_3px_0_rgba(44,44,44,0.15)]
+
+## 配色
+
+主色调：
+- 铅笔灰: #2c2c2c
+- 纸张米色: #f5f0e8
+
+强调色（低饱和度）：
+- 红色: #e74c3c
+- 蓝色: #3498db
+- 绿色: #27ae60
+- 黄色: #f39c12
+
+## 特殊效果
+
+纸张纹理：使用 SVG 纹理背景
+交叉阴影：线条状半透明阴影
+手绘标注：虚线圆圈、波浪下划线
+不规则排列：元素微微倾斜
+
+## 自检
+
+每次生成代码后检查：
+1. 使用纸张色背景而非纯白
+2. 边框为虚线或不规则风格
+3. 文字使用衬线斜体
+4. 元素有轻微倾斜
+5. 整体感觉像手绘素描本
+
+## Animation & Interaction Rules
+
+- Pencil Shading: hover 时可将线框元素快速涂黑并反白文字，模拟铅笔涂抹。
+- Stroke Jitter: 交互允许轻微旋转和位移抖动，保留手绘笔触不稳定感。
+- Scribble Reveal: 文本强调优先使用虚线/波浪下划线或手绘轨迹样式。
+- Paper Press: active 状态应减少阴影并增强倾斜，表现笔尖压纸阻尼感。
+
+## Layout & Spacing
+- Section padding: py-16 md:py-24
+- Card padding: p-6 md:p-8
+- Gap between cards: gap-6 md:gap-8
+- Max content width: max-w-6xl mx-auto
+
+## Responsive Design
+- Mobile-first approach with Tailwind breakpoints
+- Stack elements vertically on mobile (flex-col), row on desktop (md:flex-row)
+- Reduce font sizes on mobile: text-3xl md:text-5xl for headings
+- Touch-friendly targets: min 44px for interactive elements
+
+## Self-Check Verification
+After generating code, verify:
+1. All interactive elements have hover/focus/active states
+2. Color contrast meets WCAG 2.1 AA (4.5:1 for text)
+3. Layout is responsive across breakpoints
+4. Typography hierarchy is clear (h1 > h2 > h3 > body)
+5. Spacing is consistent using the defined scale
+6. All animations respect prefers-reduced-motion`,
+
+  aiRulesEn: `You are a Sketch Style design frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolute Prohibitions
+
+- Using perfect straight-line borders border-solid (prefer border-dashed)
+- Using pure white backgrounds bg-white
+- Using gradients bg-gradient-*
+- Using glass blur backdrop-blur
+- Using perfect rounded corners rounded-xl, rounded-2xl
+- Using overly saturated colors
+
+## Must Follow
+
+- Paper-colored background bg-[#f5f0e8]
+- Dashed or irregular borders border-2 border-dashed border-[#2c2c2c]
+- Serif italic fonts font-serif italic
+- Slight tilt rotate-[-0.5deg] or rotate-[0.5deg]
+- Pencil gray primary color #2c2c2c
+- Hand-drawn feel shadows shadow-[3px_3px_0_rgba(44,44,44,0.15)]
+
+## Color Palette
+
+Primary:
+- Pencil gray: #2c2c2c
+- Paper beige: #f5f0e8
+
+Accent colors (low saturation):
+- Red: #e74c3c
+- Blue: #3498db
+- Green: #27ae60
+- Yellow: #f39c12
+
+## Special Effects
+
+Paper texture: Using SVG texture backgrounds
+Cross-hatching shadows: Line-style semi-transparent shadows
+Hand-drawn annotations: Dashed circles, wavy underlines
+Irregular arrangement: Elements slightly tilted
+
+## Self-Check
+
+After generating code, verify:
+1. Using paper-colored background not pure white
+2. Borders are dashed or irregular style
+3. Text uses serif italic
+4. Elements have slight tilt
+5. Overall feel is like a hand-drawn sketchbook
+
+## Animation & Interaction Rules
+
+- Pencil Shading: Hover can quickly shade line elements to pencil gray with inverted white text, simulating pencil smudging.
+- Stroke Jitter: Interactions allow slight rotation and displacement jitter, preserving hand-drawn brush stroke instability.
+- Scribble Reveal: Text emphasis prioritizes dashed/wavy underlines or hand-drawn trajectory styles.
+- Paper Press: Active state should reduce shadow and enhance tilt, expressing pen-tip paper-pressing damping feel.`,
+
+  examplePrompts: [
+    {
+      title: "手绘作品集",
+      titleEn: "Sketch Portfolio",
+      description: "铅笔手绘风格的个人作品集",
+      descriptionEn: "Hand-drawn sketch portfolio",
+      prompt: `用 Sketch Style 风格创建一个个人作品集页面，要求：
+1. 纸张纹理背景 #f5f0e8
+2. 虚线边框卡片展示作品
+3. 衬线斜体字体标题
+4. 元素微微倾斜增加手绘感
+5. 铅笔灰色主色调
+6. 涂鸦装饰元素`,
+    },
+    {
+      title: "手绘笔记页面",
+      titleEn: "Sketch Notes",
+      description: "仿手写笔记的博客页面",
+      descriptionEn: "Hand-written notes blog page",
+      prompt: `用 Sketch Style 风格设计一个笔记/博客页面，要求：
+1. 模仿素描本的纸张质感
+2. 手写风格的标题和正文
+3. 波浪下划线标记重点
+4. 涂鸦圆圈标注关键点
+5. 虚线分割线分隔内容
+6. 铅笔素描风格的图标`,
+    },
+  {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 铅笔手绘风风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Sketch Style style",
+      prompt: `Create a portfolio showcase page using Sketch Style style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "sketch-style-warm",
+      name: "铅笔手绘风暖色版",
+      nameEn: "Sketch Style Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#2c2c2c",
+        secondary: "#f6f2ea",
+        accent: ["#bf5e05", "#6985fa", "#1fab98", "#9fb700"],
+      },
+    },
+    {
+      id: "sketch-style-cool",
+      name: "铅笔手绘风冷色版",
+      nameEn: "Sketch Style Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#2c2c2c",
+        secondary: "#ddd8d1",
+        accent: ["#ee4380", "#15a6a6", "#4aa834", "#ff834d"],
+      },
+    },
+  ],
+};

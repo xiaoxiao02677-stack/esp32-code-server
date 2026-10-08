@@ -1,0 +1,70 @@
+warning: in the working copy of 'cc-console/src/App.vue', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cc-console/src/styles/kawaii.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'code-server-mirror/manager-api/src/main/java/xiaozhi/modules/config/service/impl/ConfigServiceImpl.java', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'code-server-mirror/xiaozhi-server/core/http_server.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'code/.workbuddy/release-cc-five-issues_runlog.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/asr_onserver.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/check_agent_detail.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/check_agent_models.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/del_nul.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/e2e_asr_real.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/e2e_simulator.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/e2e_voice_crud.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/e2e_voice_crud2.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/final_tts_verify.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/fix_stream_conf.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/insert_hybrid.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/matrix_test.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/matrix_test2.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/megatts_test.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/push_result.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/qa_full.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/self_test_volume.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/show_friendly_err.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/test_hybrid_mem.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/verify_icl2.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/verify_nointent_tools.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.workbuddy/verify_template_create.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cc-console/contract/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cc-console/contract/exceptions.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cc-console/scripts/check_contract.py', LF will be replaced by CRLF the next time Git touches it
+[master d5fd0822] feat: 第3-17轮 cc-console 修复与功能集（链路模拟器真实ASR/模型CRUD/声音复刻/混合记忆引擎/契约工程/双协议HTTPS）
+ 47 files changed, 3076 insertions(+), 132 deletions(-)
+ create mode 100644 .workbuddy/asr_onserver.py
+ delete mode 100644 .workbuddy/cc_dist_v2.tar.gz
+ create mode 100644 .workbuddy/check_agent_detail.py
+ create mode 100644 .workbuddy/check_agent_models.py
+ create mode 100644 .workbuddy/del_nul.py
+ create mode 100644 .workbuddy/e2e_asr_real.py
+ create mode 100644 .workbuddy/e2e_simulator.py
+ create mode 100644 .workbuddy/e2e_voice_crud.py
+ create mode 100644 .workbuddy/e2e_voice_crud2.py
+ create mode 100644 .workbuddy/empty_init.py
+ create mode 100644 .workbuddy/final_tts_verify.py
+ create mode 100644 .workbuddy/fix_stream_conf.py
+ create mode 100644 .workbuddy/insert_hybrid.py
+ create mode 100644 .workbuddy/matrix_test.py
+ create mode 100644 .workbuddy/matrix_test2.py
+ create mode 100644 .workbuddy/megatts_test.py
+ create mode 100644 .workbuddy/push_result.txt
+ create mode 100644 .workbuddy/qa_full.py
+ create mode 100644 .workbuddy/self_test_volume.py
+ create mode 100644 .workbuddy/show_friendly_err.py
+ create mode 100644 .workbuddy/test_hybrid_mem.py
+ create mode 100644 .workbuddy/verify_icl2.py
+ create mode 100644 .workbuddy/verify_nointent_tools.py
+ create mode 100644 .workbuddy/verify_template_create.py
+ create mode 100644 cc-console/contract/README.md
+ create mode 100644 cc-console/contract/check-report.json
+ create mode 100644 cc-console/contract/exceptions.json
+ create mode 100644 cc-console/contract/openapi.json
+ create mode 100644 cc-console/scripts/check_contract.py
+ create mode 100644 code-server-mirror/manager-api/src/main/java/xiaozhi/modules/model/controller/AsrRecognizeController.java
+ create mode 100644 code-server-mirror/xiaozhi-server/core/api/asr_recognize_handler.py
+ create mode 100644 code-server-mirror/xiaozhi-server/core/providers/memory/mem_hybrid/__init__.py
+ create mode 100644 code-server-mirror/xiaozhi-server/core/providers/memory/mem_hybrid/mem_hybrid.py
+remote: Powered by [01;33mGITEE.COM [0m[1.1.23]        
+remote: Set trace flag 8642cd8f        
+To gitee.com:mm-Super-Nices/esp32-code-server.git
+   e5701d6c..d5fd0822  master -> master
+FINAL_EXIT=0

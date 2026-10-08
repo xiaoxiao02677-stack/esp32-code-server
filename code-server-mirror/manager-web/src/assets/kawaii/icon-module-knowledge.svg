@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="知识与记忆">
+  <!-- 知识与记忆组：薄荷绿小书本 + 星光（kawaii 粉彩） -->
+  <rect x="2" y="2" width="44" height="44" rx="14" fill="#FFF7FA" stroke="#FFE3EA" stroke-width="1.5"/>
+  <path d="M24 15 C21 12.8 16.5 12.3 12.5 13.3 V31 C16.5 30 21 30.5 24 32.5 C27 30.5 31.5 30 35.5 31 V13.3 C31.5 12.3 27 12.8 24 15 Z" fill="#E8F4EB" stroke="#9BC9A8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M24 15 V32.5" stroke="#9BC9A8" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="18.5" cy="22.5" r="1.5" fill="#2F7D4E" opacity="0.5"/>
+  <circle cx="29.5" cy="22.5" r="1.5" fill="#2F7D4E" opacity="0.5"/>
+  <path d="M21 26 q3 1.8 6 0" stroke="#2F7D4E" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M35.5 7.5 l1.1 2.6 2.6 1.1 -2.6 1.1 -1.1 2.6 -1.1 -2.6 -2.6 -1.1 2.6 -1.1 Z" fill="#F6C87A"/>
+</svg>

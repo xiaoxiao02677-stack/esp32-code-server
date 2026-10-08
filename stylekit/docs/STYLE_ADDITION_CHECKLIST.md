@@ -1,0 +1,304 @@
+# StyleKit - New Style Addition Checklist
+
+## Overview
+
+Complete checklist for adding a new design style to StyleKit.
+**All items are REQUIRED** - do not skip any step.
+
+## Pre-Flight
+
+- [ ] Define style slug (kebab-case, e.g., `warm-dashboard`)
+- [ ] Prepare 3-5 primary colors with hex codes
+- [ ] Identify 5-10 characteristic visual traits
+- [ ] Determine styleType: `visual` | `layout` | `both`
+- [ ] Choose category: `modern` | `classic` | `expressive` | `cultural` | `functional`
+
+## Phase 1: Core Definition Files (CREATE)
+
+### 1.1 Style Definition
+
+- [ ] `lib/styles/{slug}.ts` - Main DesignStyle object
+  - `slug`, `name`, `nameEn`, `description`
+  - `cover`: `/styles/{slug}.svg`
+  - `styleType`, `tags`, `category`
+  - `colors`: primary, secondary, accent[]
+  - `keywords`: Chinese search terms
+  - `philosophy`: Design principles (multi-line string)
+  - `doList`: 6-8 required patterns
+  - `dontList`: 4-6 forbidden patterns
+  - `components`: button, card, input, nav, hero, footer (with code snippets)
+  - `globalCss`: CSS custom properties
+  - `aiRules`: Comprehensive AI generation guidelines
+  - `examplePrompts`: 2-3 example use cases
+
+### 1.2 Style Tokens
+
+- [ ] `lib/styles/{slug}-tokens.ts` - AI-consumable Tailwind mappings
+  - Use `createStyleTokens()` from `./token-defaults` (provides sensible defaults via deep-merge)
+  - Only override fields that differ from defaults
+  - Required override sections:
+    - `colors`: background, text, button (style-specific)
+    - `forbidden`: classes to never use
+    - `required`: classes that must be used
+  - Optional overrides (inherit defaults if omitted):
+    - `border`: radius, width, style
+    - `shadow`: default, hover variants
+    - `interaction`: hover, active, focus states
+    - `typography`: fonts, sizes, weights
+    - `spacing`: padding, margin, gap
+  - Example:
+    ```ts
+    import { createStyleTokens } from "./token-defaults";
+
+    export const myStyleTokens = createStyleTokens({
+      colors: { background: { primary: "bg-black" } },
+      border: { radius: "rounded-none" },
+      forbidden: { classes: ["rounded-lg"], patterns: [], reasons: {} },
+      required: { button: ["font-mono"], card: ["border-2"], input: ["bg-transparent"] },
+    });
+    ```
+
+### 1.3 Recipe Definition
+
+- [ ] `lib/recipes/{slug}.ts` - Component recipes
+  - Use `createStyleRecipes()` and helpers from `./factory`
+  - **MUST include**: button, card, input (minimum)
+  - **Optional**: nav, badge, table, alert, hero, footer, etc.
+  - Available helpers:
+    - `sizeParam({ sm, md, lg })` - Size select parameter
+    - `paddingParam({ sm, md, lg })` - Padding select parameter
+    - `fullWidthParam` - Full width boolean toggle
+    - `interactiveParam(classes, default?)` - Interactive boolean
+    - `visibleParam` - Visibility toggle
+    - `buttonSlots(label?)`, `cardSlots(title?, content?)`, `inputSlots(placeholder?)` - Common slot presets
+    - `childrenSlot()`, `labelSlot(default)`, `iconSlot()` - Single-slot presets
+    - `defaultVariant`, `variant(id, label, labelZh, classes)` - Variant builders
+  - Example:
+    ```ts
+    import { sizeParam, fullWidthParam, buttonSlots, variant, createStyleRecipes } from "./factory";
+
+    export const myStyleRecipes = createStyleRecipes("my-style", "My Style", {
+      button: {
+        id: "button", name: "Button", nameZh: "按钮",
+        description: "My style button",
+        skeleton: { element: "button", baseClasses: ["font-bold", "border-2"] },
+        parameters: [sizeParam({ sm: "px-3 py-1", md: "px-5 py-2", lg: "px-7 py-3" }), fullWidthParam],
+        variants: {
+          primary: variant("primary", "Primary", "主要", ["bg-black text-white"]),
+        },
+        slots: buttonSlots("Click"),
+        states: { hover: ["hover:opacity-80"] },
+      },
+      // ... card, input, etc.
+    });
+    ```
+
+## Phase 2: Registration Files (MODIFY)
+
+Preferred workflow: submit one `StyleScaffoldInput` through `publishStyle` from
+`@/lib/style-publication`. It plans and validates every projection before commit and rolls back a
+partial commit. Treat the registry items below as review assertions or manual recovery steps, not
+independent publication operations. The input must contain an explicitly approved `previewModule`;
+publication never invents a generic preview.
+
+### 2.1 Full Style Registry
+
+- [ ] `lib/styles/registry.ts`
+  - Add import statement: `import { styleName } from "./{slug}";`
+  - Add to `styles` array: `styleName,`
+
+### 2.2 Style Metadata Registry
+
+- [ ] `lib/styles/meta-registry.ts`
+  - Add entry to `stylesMeta` array with:
+    - `slug`, `name`, `nameEn`, `description`
+    - `cover`: `/styles/{slug}.svg`
+    - `styleType`, `tags`, `category`
+    - `colors`: primary, secondary, accent[]
+    - `keywords`: Chinese search terms
+
+### 2.3 Token Registry
+
+- [ ] `lib/styles/tokens-registry-data.ts`
+  - Add import statement: `import { styleNameTokens } from "./{slug}-tokens";`
+  - Add to `styleTokensRegistry`: `"{slug}": styleNameTokens,`
+
+### 2.4 Recipe Registry
+
+- [ ] `lib/recipes/registry.ts`
+  - Add import statement: `import { styleNameRecipes } from "./{slug}";`
+  - Add to `recipeRegistry` object: `"{slug}": styleNameRecipes,`
+
+### 2.5 Preview Module
+
+- [ ] `lib/style-preview/styles/{slug}.tsx`
+  - Export preview renderers explicitly authored and approved for this style
+  - Keep the existing visual contract unchanged when editing an approved style
+  - Include `coverPreview`; add `button`, `card`, and `input` when the style supports them
+  - Pick a cover composition from [`STYLE_COVER_ARCHETYPES.md`](STYLE_COVER_ARCHETYPES.md); the cover must not print the style's own name
+  - Do not leave the generated TODO placeholder in a publication request
+
+### 2.6 Preview Delivery Registries
+
+- [ ] `lib/style-preview/registry.ts`
+  - Add the preview module import and `{slug}` entry
+- [ ] `lib/style-preview/delivery.ts`
+  - Add the lazy loader and `{slug}` to `stylePreviewSlugs`
+
+## Phase 3: Showcase Pages (CREATE)
+
+### 3.1 Showcase Directory
+
+- [ ] Create `app/styles/{slug}/showcase/` directory
+
+### 3.2 Page Wrapper
+
+- [ ] `app/styles/{slug}/showcase/page.tsx`
+  - Dynamic import with loading skeleton
+  - Loading skeleton styled to match theme colors
+  - Example:
+    ```tsx
+    import dynamic from "next/dynamic";
+
+    const ShowcaseContent = dynamic(() => import("./_content"), {
+      loading: () => (
+        <div className="min-h-screen bg-[#BACKGROUND] flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block w-8 h-8 border-2 border-[#PRIMARY] border-t-transparent animate-spin rounded-full mb-4" />
+            <p className="text-[#MUTED]">Loading...</p>
+          </div>
+        </div>
+      ),
+    });
+
+    export default function StyleShowcase() {
+      return <ShowcaseContent />;
+    }
+    ```
+
+### 3.3 Showcase Content
+
+- [ ] `app/styles/{slug}/showcase/_content.tsx`
+  - `"use client"` directive at top
+  - **400-600 lines minimum**
+  - **12+ distinct sections**
+  - **2+ useState hooks** for interactivity (tabs, dropdowns, pagination, etc.)
+  - Required sections:
+    1. Navigation header
+    2. Hero section with title
+    3. Color palette display
+    4. Typography showcase
+    5. Buttons (4+ variants)
+    6. Cards (3+ variations)
+    7. Form elements (input, textarea, select)
+    8. Tabs or navigation component
+    9. Badges/tags
+    10. Progress bars or indicators
+    11. Alerts (info, success, warning, error)
+    12. Table with data
+    13. Blockquote/testimonial
+    14. Dividers/decorators
+    15. Rules summary (do/don't)
+    16. Footer
+
+## Phase 4: Visual Assets (CREATE)
+
+### 4.1 Cover SVG (CRITICAL)
+
+- [ ] `public/styles/{slug}.svg`
+  - Dimensions: `1200x630` viewBox
+  - **MUST show miniaturized UI components** (NOT just style name)
+  - Four-corner layout with variety of components:
+    - Top-left: Card with heading + text
+    - Top-right: Another card or component
+    - Bottom-left: Buttons or badges
+    - Bottom-right: Form element or card
+  - Central title area with style name
+  - Style-specific effects:
+    - Shadows (drop-shadow, soft, hard)
+    - Gradients
+    - Patterns (grids, dots, textures)
+    - Borders (thick, thin, dashed)
+    - Decorative elements
+
+**Reference examples:**
+
+| Style | Approach |
+|-------|----------|
+| `neo-brutalist.svg` | Hard shadows, grid background, bold colors |
+| `neumorphism.svg` | Soft embossed shadows, rounded shapes |
+| `dark-academia.svg` | Leather texture, gold accents, serif headings |
+
+## Phase 5: Verification
+
+### 5.1 TypeScript Check
+
+- [ ] Run `npx tsc --noEmit` - no errors
+
+### 5.2 Test Suite
+
+- [ ] Run `npm test` - all tests pass
+  - `styles-consistency.test.ts` validates index + meta alignment
+  - `style-assets.test.ts` validates SVG + coverPreview existence
+  - `recipes-integrity.test.ts` validates recipe structure
+
+### 5.3 Visual Check
+
+- [ ] Run `pnpm run dev`
+- [ ] Visit `/styles` - verify style appears in gallery with correct cover
+- [ ] Visit `/styles/{slug}` - verify docs page loads
+- [ ] Visit `/styles/{slug}/showcase` - verify showcase renders with all sections
+- [ ] Test responsive behavior (mobile/tablet/desktop)
+
+## File Summary
+
+| Phase | Action | File |
+|-------|--------|------|
+| 1.1 | CREATE | `lib/styles/{slug}.ts` |
+| 1.2 | CREATE | `lib/styles/{slug}-tokens.ts` |
+| 1.3 | CREATE | `lib/recipes/{slug}.ts` |
+| 2.1 | MODIFY | `lib/styles/registry.ts` |
+| 2.2 | MODIFY | `lib/styles/meta-registry.ts` |
+| 2.3 | MODIFY | `lib/styles/tokens-registry-data.ts` |
+| 2.4 | MODIFY | `lib/recipes/registry.ts` |
+| 2.5 | CREATE | `lib/style-preview/styles/{slug}.tsx` |
+| 2.6 | MODIFY | `lib/style-preview/registry.ts` |
+| 2.7 | MODIFY | `lib/style-preview/delivery.ts` |
+| 3.1 | CREATE | `app/styles/{slug}/showcase/` (directory) |
+| 3.2 | CREATE | `app/styles/{slug}/showcase/page.tsx` |
+| 3.3 | CREATE | `app/styles/{slug}/showcase/_content.tsx` |
+| 4.1 | CREATE | `public/styles/{slug}.svg` |
+
+**Total: 7 new files + 6 modified files per style**
+
+## Common Mistakes to Avoid
+
+1. **Forgetting showcase pages** - Always create both `page.tsx` and `_content.tsx`
+2. **Cover SVG shows only text** - MUST show UI components
+3. **Missing coverPreview in the preview module** - Required for gallery preview
+4. **Mismatched slugs** - Use exact same slug everywhere
+5. **Missing imports** - Remember to add to index.ts files
+6. **Non-interactive showcase** - Add useState hooks for tabs, dropdowns, etc.
+
+## Quick Copy Template
+
+```bash
+# Create directories
+mkdir -p app/styles/{slug}/showcase
+
+# Files to create
+touch lib/styles/{slug}.ts
+touch lib/styles/{slug}-tokens.ts
+touch lib/recipes/{slug}.ts
+touch app/styles/{slug}/showcase/page.tsx
+touch app/styles/{slug}/showcase/_content.tsx
+touch public/styles/{slug}.svg
+
+# Files to modify
+# - lib/styles/registry.ts
+# - lib/styles/meta-registry.ts
+# - lib/styles/tokens-registry-data.ts
+# - lib/recipes/registry.ts
+# - lib/style-preview/registry.ts
+# - lib/style-preview/delivery.ts
+```

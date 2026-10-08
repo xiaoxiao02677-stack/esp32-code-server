@@ -1,0 +1,1026 @@
+{
+"agent": [
+{
+"method": "getAgentList",
+"http": "GET",
+"path": "/agent/list",
+"summary": "获取智能体列表",
+"params": "无"
+},
+{
+"method": "addAgent",
+"http": "POST",
+"path": "/agent",
+"summary": "添加智能体",
+"params": "agentName(body)"
+},
+{
+"method": "deleteAgent",
+"http": "DELETE",
+"path": "/agent/${agentId}",
+"summary": "删除智能体",
+"params": "agentId(路径)"
+},
+{
+"method": "getDeviceConfig",
+"http": "GET",
+"path": "/agent/${agentId}",
+"summary": "获取智能体配置",
+"params": "agentId(路径)"
+},
+{
+"method": "updateAgentConfig",
+"http": "PUT",
+"path": "/agent/${agentId}",
+"summary": "保存智能体配置",
+"params": "agentId(路径),configData(body)"
+},
+{
+"method": "getAgentSnapshots",
+"http": "GET",
+"path": "/agent/${agentId}/snapshots",
+"summary": "获取配置快照列表",
+"params": "agentId(路径),分页(query)"
+},
+{
+"method": "getAgentSnapshot",
+"http": "GET",
+"path": "/agent/${agentId}/snapshots/${snapshotId}",
+"summary": "获取快照详情",
+"params": "agentId,snapshotId(路径)"
+},
+{
+"method": "restoreAgentSnapshot",
+"http": "POST",
+"path": "/agent/${agentId}/snapshots/${snapshotId}/restore",
+"summary": "恢复配置快照",
+"params": "agentId,snapshotId(路径),token(body)"
+},
+{
+"method": "deleteAgentSnapshot",
+"http": "DELETE",
+"path": "/agent/${agentId}/snapshots/${snapshotId}",
+"summary": "删除配置快照",
+"params": "agentId,snapshotId(路径)"
+},
+{
+"method": "getAgentTemplate",
+"http": "GET",
+"path": "/agent/template",
+"summary": "获取智能体模板列表",
+"params": "无"
+},
+{
+"method": "getAgentTemplatesPage",
+"http": "GET",
+"path": "/agent/template/page",
+"summary": "模板分页列表",
+"params": "分页(query)"
+},
+{
+"method": "getAgentSessions",
+"http": "GET",
+"path": "/agent/${agentId}/sessions",
+"summary": "获取智能体会话列表",
+"params": "agentId(路径),分页(query)"
+},
+{
+"method": "getAgentChatHistory",
+"http": "GET",
+"path": "/agent/${agentId}/chat-history/${sessionId}",
+"summary": "获取聊天记录",
+"params": "agentId,sessionId(路径)"
+},
+{
+"method": "getAudioId",
+"http": "POST",
+"path": "/agent/audio/${audioId}",
+"summary": "获取音频下载ID",
+"params": "audioId(路径)"
+},
+{
+"method": "getAgentMcpAccessAddress",
+"http": "GET",
+"path": "/agent/mcp/address/${agentId}",
+"summary": "获取MCP接入点地址",
+"params": "agentId(路径)"
+},
+{
+"method": "getAgentMcpToolsList",
+"http": "GET",
+"path": "/agent/mcp/tools/${agentId}",
+"summary": "获取MCP工具列表",
+"params": "agentId(路径)"
+},
+{
+"method": "addAgentVoicePrint",
+"http": "POST",
+"path": "/agent/voice-print",
+"summary": "添加声纹",
+"params": "voicePrintData(body)"
+},
+{
+"method": "getAgentVoicePrintList",
+"http": "GET",
+"path": "/agent/voice-print/list/${id}",
+"summary": "获取声纹列表",
+"params": "id(路径)"
+},
+{
+"method": "deleteAgentVoicePrint",
+"http": "DELETE",
+"path": "/agent/voice-print/${id}",
+"summary": "删除声纹",
+"params": "id(路径)"
+},
+{
+"method": "updateAgentVoicePrint",
+"http": "PUT",
+"path": "/agent/voice-print",
+"summary": "更新声纹",
+"params": "voicePrintData(body)"
+},
+{
+"method": "getRecentlyFiftyByAgentId",
+"http": "GET",
+"path": "/agent/${id}/chat-history/user",
+"summary": "最近用户聊天记录",
+"params": "id(路径)"
+},
+{
+"method": "getContentByAudioId",
+"http": "GET",
+"path": "/agent/${id}/chat-history/audio",
+"summary": "音频聊天记录",
+"params": "id(路径)"
+},
+{
+"method": "addAgentTemplate",
+"http": "POST",
+"path": "/agent/template",
+"summary": "新增智能体模板",
+"params": "templateData(body)"
+},
+{
+"method": "updateAgentTemplate",
+"http": "PUT",
+"path": "/agent/template",
+"summary": "更新智能体模板",
+"params": "templateData(body)"
+},
+{
+"method": "deleteAgentTemplate",
+"http": "DELETE",
+"path": "/agent/template/${id}",
+"summary": "删除智能体模板",
+"params": "id(路径)"
+},
+{
+"method": "batchDeleteAgentTemplate",
+"http": "POST",
+"path": "/agent/template/batch-remove",
+"summary": "批量删除模板",
+"params": "ids(body)"
+},
+{
+"method": "getAgentTemplateById",
+"http": "GET",
+"path": "/agent/template/${templateId}",
+"summary": "获取模板详情",
+"params": "templateId(路径)"
+},
+{
+"method": "getDownloadUrl",
+"http": "POST",
+"path": "/agent/chat-history/getDownloadUrl/${agentId}/${sessionId}",
+"summary": "获取聊天记录下载链接",
+"params": "agentId,sessionId(路径)"
+},
+{
+"method": "searchAgent",
+"http": "GET",
+"path": "/agent/list",
+"summary": "按关键词搜索智能体",
+"params": "keyword,searchType(query)"
+},
+{
+"method": "getAgentTags",
+"http": "GET",
+"path": "/agent/${agentId}/tags",
+"summary": "获取智能体标签",
+"params": "agentId(路径)"
+},
+{
+"method": "saveAgentTags",
+"http": "PUT",
+"path": "/agent/${agentId}/tags",
+"summary": "保存智能体标签",
+"params": "agentId(路径),tags(body)"
+}
+],
+"user": [
+{
+"method": "login",
+"http": "POST",
+"path": "/user/login",
+"summary": "用户登录",
+"params": "loginForm(body)"
+},
+{
+"method": "getCaptcha",
+"http": "GET",
+"path": "/user/captcha",
+"summary": "获取图形验证码",
+"params": "uuid(query)"
+},
+{
+"method": "sendSmsVerification",
+"http": "POST",
+"path": "/user/smsVerification",
+"summary": "发送短信验证码",
+"params": "data(body)"
+},
+{
+"method": "register",
+"http": "POST",
+"path": "/user/register",
+"summary": "注册账号",
+"params": "registerForm(body)"
+},
+{
+"method": "saveDeviceConfig",
+"http": "PUT",
+"path": "/user/configDevice/${device_id}",
+"summary": "保存设备配置",
+"params": "device_id(路径),configData(body)"
+},
+{
+"method": "getUserInfo",
+"http": "GET",
+"path": "/user/info",
+"summary": "获取当前用户信息",
+"params": "无"
+},
+{
+"method": "changePassword",
+"http": "PUT",
+"path": "/user/change-password",
+"summary": "修改密码",
+"params": "old/newPassword(body)"
+},
+{
+"method": "changeUserStatus",
+"http": "PUT",
+"path": "/admin/users/changeStatus/${status}",
+"summary": "批量修改用户状态",
+"params": "status(路径),userIds(body)"
+},
+{
+"method": "getPubConfig",
+"http": "GET",
+"path": "/user/pub-config",
+"summary": "获取公共配置",
+"params": "无"
+},
+{
+"method": "retrievePassword",
+"http": "PUT",
+"path": "/user/retrieve-password",
+"summary": "找回密码",
+"params": "phone,code,password(body)"
+}
+],
+"device": [
+{
+"method": "getAgentBindDevices",
+"http": "GET",
+"path": "/device/bind/${agentId}",
+"summary": "查询智能体绑定设备",
+"params": "agentId(路径)"
+},
+{
+"method": "unbindDevice",
+"http": "POST",
+"path": "/device/unbind",
+"summary": "解绑设备",
+"params": "deviceId(body)"
+},
+{
+"method": "bindDevice",
+"http": "POST",
+"path": "/device/bind/${agentId}/${deviceCode}",
+"summary": "绑定设备",
+"params": "agentId,deviceCode(路径)"
+},
+{
+"method": "updateDeviceInfo",
+"http": "PUT",
+"path": "/device/update/${id}",
+"summary": "更新设备信息",
+"params": "id(路径),payload(body)"
+},
+{
+"method": "manualAddDevice",
+"http": "POST",
+"path": "/device/manual-add",
+"summary": "手动添加设备",
+"params": "params(body)"
+},
+{
+"method": "getDeviceStatus",
+"http": "POST",
+"path": "/device/bind/${agentId}",
+"summary": "获取设备在线状态",
+"params": "agentId(路径),空body"
+}
+],
+"deviceConfig": [
+{
+"method": "getDeviceConfigList",
+"http": "GET",
+"path": "/deviceConfigMag",
+"summary": "设备云端配置分页",
+"params": "分页(query)"
+},
+{
+"method": "getDeviceConfig",
+"http": "GET",
+"path": "/deviceConfigMag/${id}",
+"summary": "单台设备云端配置",
+"params": "id(路径)"
+},
+{
+"method": "deleteDeviceConfig",
+"http": "DELETE",
+"path": "/deviceConfigMag/${id}",
+"summary": "删除设备云端配置",
+"params": "id(路径)"
+},
+{
+"method": "clearAllDeviceConfigs",
+"http": "DELETE",
+"path": "/deviceConfigMag",
+"summary": "清空全部设备云端配置",
+"params": "无"
+}
+],
+"model": [
+{
+"method": "getModelList",
+"http": "GET",
+"path": "/models/list",
+"summary": "模型配置分页",
+"params": "modelType,modelName,page,limit(query)"
+},
+{
+"method": "getModelProviders",
+"http": "GET",
+"path": "/models/${modelType}/provideTypes",
+"summary": "获取供应器列表",
+"params": "modelType(路径)"
+},
+{
+"method": "addModel",
+"http": "POST",
+"path": "/models/${modelType}/${provideCode}",
+"summary": "新增模型配置",
+"params": "modelType,provideCode(路径),配置字段(body)"
+},
+{
+"method": "deleteModel",
+"http": "DELETE",
+"path": "/models/${id}",
+"summary": "删除模型配置",
+"params": "id(路径)"
+},
+{
+"method": "getModelNames",
+"http": "GET",
+"path": "/models/names",
+"summary": "获取模型名称列表",
+"params": "modelType,modelName(query)"
+},
+{
+"method": "getLlmModelCodeList",
+"http": "GET",
+"path": "/models/llm/names",
+"summary": "获取LLM模型列表",
+"params": "modelName(query)"
+},
+{
+"method": "getModelVoices",
+"http": "GET",
+"path": "/models/${modelId}/voices",
+"summary": "获取模型音色列表",
+"params": "modelId(路径),voiceName(query)"
+},
+{
+"method": "ttsVoicePreview",
+"http": "GET",
+"path": "/models/ttsPreview",
+"summary": "TTS音色试听(音频流)",
+"params": "modelId,voice,text(query)"
+},
+{
+"method": "getModelConfig",
+"http": "GET",
+"path": "/models/${id}",
+"summary": "获取模型配置详情",
+"params": "id(路径)"
+},
+{
+"method": "updateModelStatus",
+"http": "PUT",
+"path": "/models/enable/${id}/${status}",
+"summary": "启用/禁用模型",
+"params": "id,status(路径)"
+},
+{
+"method": "updateModel",
+"http": "PUT",
+"path": "/models/${modelType}/${provideCode}/${id}",
+"summary": "更新模型配置",
+"params": "三参数(路径),表单(body)"
+},
+{
+"method": "setDefaultModel",
+"http": "PUT",
+"path": "/models/default/${id}",
+"summary": "设置默认模型",
+"params": "id(路径)"
+},
+{
+"method": "getModelProvidersPage",
+"http": "GET",
+"path": "/models/provider",
+"summary": "供应器配置分页",
+"params": "name,modelType,page,limit(query)"
+},
+{
+"method": "addModelProvider",
+"http": "POST",
+"path": "/models/provider",
+"summary": "新增供应器",
+"params": "modelType,providerCode,name,fields(body)"
+},
+{
+"method": "updateModelProvider",
+"http": "PUT",
+"path": "/models/provider",
+"summary": "更新供应器",
+"params": "id,modelType,providerCode,name,fields(body)"
+},
+{
+"method": "deleteModelProviderByIds",
+"http": "POST",
+"path": "/models/provider/delete",
+"summary": "批量删除供应器",
+"params": "ids(body)"
+},
+{
+"method": "getPluginFunctionList",
+"http": "GET",
+"path": "/models/provider/plugin/names",
+"summary": "插件功能名称列表",
+"params": "无"
+},
+{
+"method": "getRAGModels",
+"http": "GET",
+"path": "/datasets/rag-models",
+"summary": "RAG模型列表",
+"params": "无"
+},
+{
+"method": "getQwenTtsModels",
+"http": "GET",
+"path": "/models/qwenTtsModels",
+"summary": "千问TTS平台模型列表",
+"params": "apiKey(query)"
+}
+],
+"timbre": [
+{
+"method": "getVoiceList",
+"http": "GET",
+"path": "/ttsVoice",
+"summary": "音色分页列表",
+"params": "ttsModelId,page,limit,name(query)"
+},
+{
+"method": "saveVoice",
+"http": "POST",
+"path": "/ttsVoice",
+"summary": "新增音色",
+"params": "音色字段(body)"
+},
+{
+"method": "deleteVoice",
+"http": "POST",
+"path": "/ttsVoice/delete",
+"summary": "批量删除音色",
+"params": "ids(body)"
+},
+{
+"method": "updateVoice",
+"http": "PUT",
+"path": "/ttsVoice/${id}",
+"summary": "修改音色",
+"params": "id(路径),音色字段(body)"
+}
+],
+"memory": [
+{
+"method": "getMemoryAgents",
+"http": "GET",
+"path": "/memory/agents",
+"summary": "获取有记忆数据的Agent",
+"params": "无"
+},
+{
+"method": "getFactList",
+"http": "GET",
+"path": "/memory/facts",
+"summary": "记忆条目分页查询",
+"params": "agent_id,keyword,category,status,trust,page等(query)"
+},
+{
+"method": "getFactDetail",
+"http": "GET",
+"path": "/memory/facts/${factId}",
+"summary": "记忆条目详情",
+"params": "factId(路径),agent_id(query)"
+},
+{
+"method": "createFact",
+"http": "POST",
+"path": "/memory/facts",
+"summary": "新增记忆条目",
+"params": "agent_id,content,trust(body)"
+},
+{
+"method": "updateFact",
+"http": "PUT",
+"path": "/memory/facts/${factId}",
+"summary": "编辑记忆条目",
+"params": "factId(路径),agent_id(body)"
+},
+{
+"method": "deleteFact",
+"http": "DELETE",
+"path": "/memory/facts/${factId}",
+"summary": "删除记忆条目",
+"params": "factId(路径),agent_id(query)"
+},
+{
+"method": "sendFeedback",
+"http": "POST",
+"path": "/memory/facts/${factId}/feedback",
+"summary": "记忆条目信任反馈",
+"params": "factId(路径),agent_id,helpful(body)"
+},
+{
+"method": "reviewFact",
+"http": "POST",
+"path": "/memory/facts/${factId}/review",
+"summary": "审核记忆条目",
+"params": "factId(路径),agent_id,action(body)"
+}
+],
+"voiceClone": [
+{
+"method": "getVoiceCloneList",
+"http": "GET",
+"path": "/voiceClone",
+"summary": "音色复刻列表",
+"params": "分页(query)"
+},
+{
+"method": "uploadVoice",
+"http": "POST",
+"path": "/voiceClone/upload",
+"summary": "上传复刻音频",
+"params": "formData(body)"
+},
+{
+"method": "updateName",
+"http": "POST",
+"path": "/voiceClone/updateName",
+"summary": "更新音色名称",
+"params": "params(body)"
+},
+{
+"method": "getAudioId",
+"http": "POST",
+"path": "/voiceClone/audio/${id}",
+"summary": "获取音频下载ID",
+"params": "id(路径)"
+},
+{
+"method": "getPlayVoiceUrl",
+"http": "GET",
+"path": "/voiceClone/play/${uuid}",
+"summary": "音频播放URL",
+"params": "uuid(路径)"
+},
+{
+"method": "cloneAudio",
+"http": "POST",
+"path": "/voiceClone/cloneAudio",
+"summary": "发起音色克隆训练",
+"params": "params(body)"
+}
+],
+"voiceResource": [
+{
+"method": "getVoiceResourceList",
+"http": "GET",
+"path": "/voiceResource",
+"summary": "音色资源分页",
+"params": "分页(query)"
+},
+{
+"method": "getVoiceResourceInfo",
+"http": "GET",
+"path": "/voiceResource/${id}",
+"summary": "音色资源详情",
+"params": "id(路径)"
+},
+{
+"method": "saveVoiceResource",
+"http": "POST",
+"path": "/voiceResource",
+"summary": "保存音色资源",
+"params": "entity(body)"
+},
+{
+"method": "deleteVoiceResource",
+"http": "DELETE",
+"path": "/voiceResource/${ids}",
+"summary": "删除音色资源(批量)",
+"params": "ids(路径)"
+},
+{
+"method": "getVoiceResourceByUserId",
+"http": "GET",
+"path": "/voiceResource/user/${userId}",
+"summary": "用户音色资源列表",
+"params": "userId(路径)"
+},
+{
+"method": "getTtsPlatformList",
+"http": "GET",
+"path": "/voiceResource/ttsPlatforms",
+"summary": "TTS平台列表",
+"params": "无"
+}
+],
+"knowledgeBase": [
+{
+"method": "getKnowledgeBaseList",
+"http": "GET",
+"path": "/datasets",
+"summary": "知识库分页列表",
+"params": "page,page_size,name(query)"
+},
+{
+"method": "createKnowledgeBase",
+"http": "POST",
+"path": "/datasets",
+"summary": "创建知识库",
+"params": "data(body)"
+},
+{
+"method": "updateKnowledgeBase",
+"http": "PUT",
+"path": "/datasets/${datasetId}",
+"summary": "更新知识库",
+"params": "datasetId(路径),data(body)"
+},
+{
+"method": "deleteKnowledgeBase",
+"http": "DELETE",
+"path": "/datasets/${datasetId}",
+"summary": "删除知识库",
+"params": "datasetId(路径)"
+},
+{
+"method": "deleteKnowledgeBases",
+"http": "DELETE",
+"path": "/datasets/batch",
+"summary": "批量删除知识库",
+"params": "ids(query)"
+},
+{
+"method": "getDocumentList",
+"http": "GET",
+"path": "/datasets/${datasetId}/documents",
+"summary": "文档分页列表",
+"params": "datasetId(路径),page等(query)"
+},
+{
+"method": "uploadDocument",
+"http": "POST",
+"path": "/datasets/${datasetId}/documents",
+"summary": "上传文档",
+"params": "datasetId(路径),formData(body)"
+},
+{
+"method": "parseDocument",
+"http": "POST",
+"path": "/datasets/${datasetId}/chunks",
+"summary": "解析文档切片",
+"params": "datasetId(路径),document_ids(body)"
+},
+{
+"method": "deleteDocument",
+"http": "DELETE",
+"path": "/datasets/${datasetId}/documents/${documentId}",
+"summary": "删除文档",
+"params": "datasetId,documentId(路径)"
+},
+{
+"method": "listChunks",
+"http": "GET",
+"path": "/datasets/${datasetId}/documents/${documentId}/chunks",
+"summary": "切片分页列表",
+"params": "datasetId,documentId(路径),page,keywords(query)"
+},
+{
+"method": "retrievalTest",
+"http": "POST",
+"path": "/datasets/${datasetId}/retrieval-test",
+"summary": "知识库召回测试",
+"params": "datasetId(路径),查询文本(body)"
+}
+],
+"admin": [
+{
+"method": "getUserList",
+"http": "GET",
+"path": "/admin/users",
+"summary": "用户分页列表",
+"params": "page,limit,mobile(query)"
+},
+{
+"method": "deleteUser",
+"http": "DELETE",
+"path": "/admin/users/${id}",
+"summary": "删除用户",
+"params": "id(路径)"
+},
+{
+"method": "resetUserPassword",
+"http": "PUT",
+"path": "/admin/users/${id}",
+"summary": "重置用户密码",
+"params": "id(路径)"
+},
+{
+"method": "getParamsList",
+"http": "GET",
+"path": "/admin/params/page",
+"summary": "系统参数分页",
+"params": "page,limit,paramCode(query)"
+},
+{
+"method": "addParam",
+"http": "POST",
+"path": "/admin/params",
+"summary": "新增系统参数",
+"params": "data(body)"
+},
+{
+"method": "updateParam",
+"http": "PUT",
+"path": "/admin/params",
+"summary": "修改系统参数",
+"params": "data(body)"
+},
+{
+"method": "deleteParam",
+"http": "POST",
+"path": "/admin/params/delete",
+"summary": "批量删除参数",
+"params": "ids(body)"
+},
+{
+"method": "getWsServerList",
+"http": "GET",
+"path": "/admin/server/server-list",
+"summary": "WS服务端节点列表",
+"params": "无"
+},
+{
+"method": "sendWsServerAction",
+"http": "POST",
+"path": "/admin/server/emit-action",
+"summary": "下发WS服务管理指令",
+"params": "data(body)"
+}
+],
+"ota": [
+{
+"method": "getOtaList",
+"http": "GET",
+"path": "/otaMag",
+"summary": "OTA固件分页",
+"params": "分页(query)"
+},
+{
+"method": "getOtaInfo",
+"http": "GET",
+"path": "/otaMag/${id}",
+"summary": "OTA固件详情",
+"params": "id(路径)"
+},
+{
+"method": "saveOta",
+"http": "POST",
+"path": "/otaMag",
+"summary": "保存OTA固件",
+"params": "entity(body)"
+},
+{
+"method": "updateOta",
+"http": "PUT",
+"path": "/otaMag/${id}",
+"summary": "更新OTA固件",
+"params": "id(路径),entity(body)"
+},
+{
+"method": "deleteOta",
+"http": "DELETE",
+"path": "/otaMag/${id}",
+"summary": "删除OTA固件",
+"params": "id(路径)"
+},
+{
+"method": "uploadFirmware",
+"http": "POST",
+"path": "/otaMag/upload",
+"summary": "上传固件",
+"params": "file(body)"
+},
+{
+"method": "getDownloadUrl",
+"http": "GET",
+"path": "/otaMag/getDownloadUrl/${id}",
+"summary": "固件下载链接",
+"params": "id(路径)"
+}
+],
+"addressBook": [
+{
+"method": "getAddressBookList",
+"http": "GET",
+"path": "/device/address-book/${macAddress}",
+"summary": "设备通讯录列表",
+"params": "macAddress(路径)"
+},
+{
+"method": "updateAlias",
+"http": "PUT",
+"path": "/device/address-book/alias",
+"summary": "更新联系人别名",
+"params": "data(body)"
+},
+{
+"method": "updatePermission",
+"http": "PUT",
+"path": "/device/address-book/permission",
+"summary": "更新联系人权限",
+"params": "data(body)"
+}
+],
+"dict": [
+{
+"method": "getDictTypeList",
+"http": "GET",
+"path": "/admin/dict/type/page",
+"summary": "字典类型分页",
+"params": "dictType,dictName,page,limit(query)"
+},
+{
+"method": "getDictTypeDetail",
+"http": "GET",
+"path": "/admin/dict/type/${id}",
+"summary": "字典类型详情",
+"params": "id(路径)"
+},
+{
+"method": "addDictType",
+"http": "POST",
+"path": "/admin/dict/type/save",
+"summary": "新增字典类型",
+"params": "data(body)"
+},
+{
+"method": "updateDictType",
+"http": "PUT",
+"path": "/admin/dict/type/update",
+"summary": "更新字典类型",
+"params": "data(body)"
+},
+{
+"method": "deleteDictType",
+"http": "POST",
+"path": "/admin/dict/type/delete",
+"summary": "批量删除字典类型",
+"params": "ids(body)"
+},
+{
+"method": "getDictDataList",
+"http": "GET",
+"path": "/admin/dict/data/page",
+"summary": "字典数据分页",
+"params": "dictTypeId,dictLabel,page等(query)"
+},
+{
+"method": "getDictDataDetail",
+"http": "GET",
+"path": "/admin/dict/data/${id}",
+"summary": "字典数据详情",
+"params": "id(路径)"
+},
+{
+"method": "addDictData",
+"http": "POST",
+"path": "/admin/dict/data/save",
+"summary": "新增字典数据",
+"params": "data(body)"
+},
+{
+"method": "updateDictData",
+"http": "PUT",
+"path": "/admin/dict/data/update",
+"summary": "更新字典数据",
+"params": "data(body)"
+},
+{
+"method": "deleteDictData",
+"http": "POST",
+"path": "/admin/dict/data/delete",
+"summary": "批量删除字典数据",
+"params": "ids(body)"
+},
+{
+"method": "getDictDataByType",
+"http": "GET",
+"path": "/admin/dict/data/type/${dictType}",
+"summary": "按类型取全部字典数据",
+"params": "dictType(路径)"
+}
+],
+"correctWord": [
+{
+"method": "getFileList",
+"http": "GET",
+"path": "/correct-word/file/list",
+"summary": "替换词文件分页",
+"params": "page,limit(query)"
+},
+{
+"method": "selectAll",
+"http": "GET",
+"path": "/correct-word/file/select",
+"summary": "全部替换词文件",
+"params": "无"
+},
+{
+"method": "downloadFile",
+"http": "GET",
+"path": "/correct-word/file/download/${id}",
+"summary": "下载替换词文件",
+"params": "id(路径)"
+},
+{
+"method": "addFile",
+"http": "POST",
+"path": "/correct-word/file",
+"summary": "新增替换词文件",
+"params": "data(body)"
+},
+{
+"method": "updateFile",
+"http": "PUT",
+"path": "/correct-word/file/${id}",
+"summary": "更新替换词文件",
+"params": "id(路径),fileName,content(body)"
+},
+{
+"method": "deleteFile",
+"http": "DELETE",
+"path": "/correct-word/file/${id}",
+"summary": "删除替换词文件",
+"params": "id(路径)"
+},
+{
+"method": "batchDeleteFile",
+"http": "POST",
+"path": "/correct-word/file/batch-delete",
+"summary": "批量删除替换词文件",
+"params": "ids(body)"
+}
+]
+}

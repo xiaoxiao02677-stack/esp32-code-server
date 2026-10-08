@@ -1,0 +1,146 @@
+/* ============================================================
+ * Kawaii Minimal — Element UI overrides (唯一 .el-* 全局覆盖文件)
+ * 策略：CSS 变量 + 后置覆盖层（design §1.1.1 拍板）
+ * specificity ≥ 原版；CDN 模式下不依赖加载顺序
+ * ============================================================ */
+
+/* ---------- Button ---------- */
+.el-button {
+    border-radius: var(--kawaii-radius-full, 9999px);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-weight: 500;
+}
+.el-button--primary {
+    background: var(--kawaii-primary, #FF8FAB);
+    border-color: var(--kawaii-primary, #FF8FAB);
+}
+.el-button--primary:hover, .el-button--primary:focus {
+    background: var(--kawaii-primary-hover, #FF7A97);
+    border-color: var(--kawaii-primary-hover, #FF7A97);
+    transform: scale(1.05);
+}
+.el-button--default {
+    background: #fff;
+    border: 2px solid var(--kawaii-border, #F5D8E0);
+    color: var(--kawaii-primary, #FF8FAB);
+    border-radius: var(--kawaii-radius-full, 9999px);
+}
+.el-button--default:hover, .el-button--default:focus {
+    border-color: var(--kawaii-primary, #FF8FAB);
+    transform: scale(1.05);
+}
+.el-button:active {
+    /* squash-and-stretch：横向膨胀 ×纵向压扁，释放回弹（系数来自 tokens） */
+    transform: scale(var(--kawaii-squash-x, 1.09), var(--kawaii-squash-y, 0.91));
+}
+@media (prefers-reduced-motion: reduce) {
+    .el-button, .el-button:hover, .el-button:active { transform: none; transition: none; }
+    .el-dialog, .el-message-box, .el-message { animation: none; }
+}
+
+/* ---------- Input / Select ---------- */
+.el-input__inner, .el-textarea__inner {
+    border-radius: var(--kawaii-radius, 14px);
+    border: 2px solid var(--kawaii-border, #F5D8E0);
+    transition: border-color 0.2s;
+}
+.el-input__inner:focus, .el-textarea__inner:focus {
+    border-color: var(--kawaii-primary, #FF8FAB);
+    outline: none;
+}
+.el-select .el-input__inner { border-radius: var(--kawaii-radius, 14px); }
+
+/* ---------- Table ---------- */
+.el-table {
+    border-radius: var(--kawaii-radius, 14px);
+    overflow: hidden;
+    background: var(--kawaii-surface, #fff);
+}
+.el-table th, .el-table th.is-leaf {
+    background: var(--kawaii-surface-2, #FFF0F4);
+    color: var(--kawaii-text, #4A3B40);
+    border-bottom: 1px solid var(--kawaii-border, #F5D8E0);
+}
+.el-table tr { background: var(--kawaii-surface, #fff); }
+.el-table--enable-row-hover .el-table__body tr:hover > td {
+    background: var(--kawaii-primary-light, #FFE3EA);
+}
+.el-table td, .el-table th.is-leaf { border-bottom: 1px solid var(--kawaii-border, #F5D8E0); }
+
+/* ---------- Dialog / MessageBox ---------- */
+.el-dialog, .el-message-box {
+    border-radius: var(--kawaii-radius-lg, 20px);
+    box-shadow: 0 8px 24px rgba(255, 143, 171, 0.18);
+}
+/* 弹层入场：squash 感弹性放大（keyframes 见 jelly-motion.scss） */
+.el-dialog, .el-message-box {
+    animation: kawaii-jelly-entrance var(--kawaii-motion-enter, 280ms)
+        var(--kawaii-spring-soft, cubic-bezier(0.34, 1.2, 0.64, 1)) both;
+}
+.el-dialog__title, .el-message-box__title { color: var(--kawaii-text, #4A3B40); font-weight: 600; }
+
+/* ---------- Tag / Switch / Badge ---------- */
+.el-tag { border-radius: var(--kawaii-radius-full, 9999px); border: none; }
+.el-switch.is-checked .el-switch__core {
+    background-color: var(--kawaii-primary, #FF8FAB);
+    border-color: var(--kawaii-primary, #FF8FAB);
+}
+.el-badge__content { border-radius: var(--kawaii-radius-full, 9999px); }
+
+/* ---------- Pagination ---------- */
+.el-pagination .el-pager li, .el-pagination button {
+    border-radius: var(--kawaii-radius-sm, 8px);
+}
+.el-pagination .el-pager li.active {
+    color: var(--kawaii-primary, #FF8FAB);
+}
+
+/* ---------- Tabs / Dropdown / Message / Loading ---------- */
+.el-tabs__item.is-active { color: var(--kawaii-primary, #FF8FAB); }
+.el-tabs__active-bar { background-color: var(--kawaii-primary, #FF8FAB); }
+.el-dropdown-menu {
+    border-radius: var(--kawaii-radius, 14px);
+    border: 1px solid var(--kawaii-border, #F5D8E0);
+    box-shadow: 0 4px 16px rgba(255, 143, 171, 0.14);
+}
+.el-dropdown-menu__item:not(.is-disabled):hover {
+    background-color: var(--kawaii-primary-light, #FFE3EA);
+    color: var(--kawaii-primary, #FF8FAB);
+}
+.el-message { border-radius: var(--kawaii-radius, 14px); border: 1px solid var(--kawaii-border, #F5D8E0);
+    /* toast 入场：同族 squash 弹性放大，与弹层一致（Element 自带 top 位移由其 transition 承载，不冲突） */
+    animation: kawaii-jelly-entrance var(--kawaii-motion-enter, 280ms)
+        var(--kawaii-spring-soft, cubic-bezier(0.34, 1.2, 0.64, 1)) both;
+}
+.el-loading-mask { border-radius: inherit; }
+
+/* ---------- Form ---------- */
+.el-form-item__label { color: var(--kawaii-text-secondary, #9C8A90); }
+.el-radio__input.is-checked .el-radio__inner,
+.el-checkbox__input.is-checked .el-checkbox__inner {
+    border-color: var(--kawaii-primary, #FF8FAB);
+    background: var(--kawaii-primary, #FF8FAB);
+}
+.el-radio__input.is-checked + .el-radio__label,
+.el-checkbox__input.is-checked + .el-checkbox__label {
+    color: var(--kawaii-primary, #FF8FAB);
+}
+
+/* ---------- 公共皮肤类 ---------- */
+.kawaii-card {
+    background: var(--kawaii-surface, #fff);
+    border-radius: var(--kawaii-radius-lg, 20px);
+    box-shadow: 0 4px 16px rgba(255, 143, 171, 0.14);
+    padding: 24px;
+}
+.kawaii-pill {
+    border-radius: var(--kawaii-radius-full, 9999px);
+    padding: 8px 18px;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kawaii-pill:hover { transform: scale(1.05); }
+.kawaii-pill:active { transform: scale(var(--kawaii-squash-x, 1.09), var(--kawaii-squash-y, 0.91)); }
+@media (prefers-reduced-motion: reduce) {
+    .kawaii-pill:hover, .kawaii-pill:active { transform: none; }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="智能体">
+  <!-- 智能体组：果冻小机器人（kawaii 粉彩） -->
+  <rect x="2" y="2" width="44" height="44" rx="14" fill="#FFF7FA" stroke="#FFE3EA" stroke-width="1.5"/>
+  <line x1="24" y1="9" x2="24" y2="13.5" stroke="#F6A9BC" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="24" cy="7.8" r="1.9" fill="#FF8FAB"/>
+  <rect x="8" y="21" width="3.5" height="7" rx="1.75" fill="#FFB6C9"/>
+  <rect x="36.5" y="21" width="3.5" height="7" rx="1.75" fill="#FFB6C9"/>
+  <rect x="13" y="13" width="22" height="20" rx="9" fill="#FFE3EA"/>
+  <circle cx="19.5" cy="21.5" r="1.9" fill="#5A4550"/>
+  <circle cx="28.5" cy="21.5" r="1.9" fill="#5A4550"/>
+  <path d="M21.5 26 q2.5 2 5 0" stroke="#5A4550" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+  <circle cx="15.8" cy="24.5" r="1.6" fill="#FF8FAB" opacity="0.55"/>
+  <circle cx="32.2" cy="24.5" r="1.6" fill="#FF8FAB" opacity="0.55"/>
+</svg>

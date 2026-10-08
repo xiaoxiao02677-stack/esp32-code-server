@@ -1,0 +1,161 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { getStyleFeedbackLoginHref } from "@/lib/community/comments";
+import { Star } from "lucide-react";
+import { useStyleRating } from "@/lib/swr";
+import { useUser } from "@/lib/auth/use-user";
+import { useI18n } from "@/lib/i18n/context";
+
+interface StyleRatingProps {
+  slug: string;
+}
+
+export function StyleRating({ slug }: StyleRatingProps) {
+  const { data, mutate } = useStyleRating(slug);
+  const { user } = useUser();
+  const { t, locale } = useI18n();
+  const pathname = usePathname();
+  const [userRating, setUserRating] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const average = data?.averageRating ?? 0;
+  const total = data?.totalRatings ?? 0;
+  const resolvedUserRating = data?.userRating ?? null;
+
+  useEffect(() => {
+    if (resolvedUserRating == null) {
+      setUserRating(0);
+      return;
+    }
+
+    if (
+      typeof resolvedUserRating === "number" &&
+      resolvedUserRating >= 1 &&
+      resolvedUserRating <= 5
+    ) {
+      setUserRating(resolvedUserRating);
+      return;
+    }
+
+    setUserRating(0);
+  }, [resolvedUserRating, slug]);
+
+  async function handleRate(rating: number) {
+    if (submitting || !user) return;
+    setSubmitting(true);
+    setUserRating(rating);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/styles/${slug}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        // The route already answers with a user-safe message. Surfacing it
+        // keeps a rejected write diagnosable instead of looking identical to
+        // every other failure, which is how a schema mismatch stayed hidden.
+        setUserRating(0);
+        setError(body?.error ?? "Failed to submit rating. Please try again.");
+        await mutate();
+        return;
+      }
+      await mutate();
+    } catch {
+      setUserRating(0);
+      setError("Failed to submit rating. Please try again.");
+      await mutate();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const displayRating = hoveredStar || userRating;
+  const loginHref = getStyleFeedbackLoginHref(pathname, slug, locale);
+
+  // Anonymous users: show read-only stars + sign-in link
+  if (!user) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span key={star} className="p-0.5">
+              <Star
+                className={`w-5 h-5 ${
+                  star <= average
+                    ? "text-yellow-500/40 fill-yellow-500/40"
+                    : "text-muted"
+                }`}
+              />
+            </span>
+          ))}
+        </div>
+        {total > 0 ? (
+          <span className="text-sm text-muted">
+            {average.toFixed(1)} ({total})
+          </span>
+        ) : (
+          <span className="text-sm text-muted">{t("rating.beFirst")}</span>
+        )}
+        <Link
+          href={loginHref}
+          className="text-xs text-muted hover:text-foreground transition-colors underline"
+        >
+          {t("rating.signInToRate")}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-muted">{t("rating.rateThisStyle")}</span>
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              onClick={() => handleRate(star)}
+              onMouseEnter={() => setHoveredStar(star)}
+              onMouseLeave={() => setHoveredStar(0)}
+              disabled={submitting}
+              className="p-0.5 transition-transform hover:scale-110 disabled:opacity-50"
+              aria-label={`Rate ${star} stars`}
+            >
+              <Star
+                className={`w-5 h-5 transition-colors ${
+                  star <= displayRating
+                    ? "text-yellow-500 fill-yellow-500"
+                    : star <= average
+                      ? "text-yellow-500/40 fill-yellow-500/40"
+                      : "text-muted"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+        {total > 0 ? (
+          <span className="text-sm text-muted">
+            {average.toFixed(1)} ({total})
+          </span>
+        ) : (
+          <span className="text-sm text-muted">{t("rating.beFirst")}</span>
+        )}
+      </div>
+      {error ? (
+        <p className="text-xs text-red-500">{error}</p>
+      ) : (
+        resolvedUserRating != null && (
+          <p className="text-xs text-muted">{t("rating.saved")}</p>
+        )
+      )}
+    </div>
+  );
+}

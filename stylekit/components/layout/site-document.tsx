@@ -1,0 +1,348 @@
+/* eslint-disable @next/next/no-head-element -- Shared App Router document, rendered by root layouts; next/head is for the Pages Router. */
+import type { CSSProperties } from "react";
+import type { Metadata, Viewport } from "next";
+import Script from "next/script";
+import {
+  Albert_Sans,
+  Playfair_Display,
+  Fragment_Mono,
+} from "next/font/google";
+import { ClientProviders } from "@/components/providers/client-providers";
+import { LazyCommandPalette } from "@/components/ui/lazy-command-palette";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { ClientScripts } from "@/components/layout/client-scripts";
+import { AnnouncementBanner } from "@/components/layout/announcement-banner";
+import { serializeJsonLd } from "@/lib/security/json-ld";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import { getLocaleDocumentContext, getRequestLocaleContext } from "@/lib/i18n/request";
+import { buildSiteMetadata } from "@/lib/seo/site-metadata";
+import { CURATED_STYLE_COUNT } from "@/lib/product/catalog-facts";
+import { getShowcaseTypographyProfile } from "@/lib/typography/showcase-profiles";
+import { LazyShowcaseTypographyRuntime } from "@/components/typography/lazy-showcase-typography-runtime";
+import { ShowcaseBackBar } from "@/components/showcase/showcase-back-bar";
+import { getSiteAnnouncement } from "@/lib/site-announcements";
+import "@/app/globals.css";
+import type { Locale } from "@/lib/i18n/translations";
+import {
+  FRIEND_PROMO_ID,
+  FRIEND_PROMO_STORAGE_KEY,
+} from "@/lib/home/friend-promo";
+
+const publicSans = Albert_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: "variable",
+  display: "swap",
+  variable: "--font-public-sans",
+});
+
+const publicDisplay = Playfair_Display({
+  subsets: ["latin", "latin-ext"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+  // Preloading a family with three weights and two styles pushes every Latin
+  // font slice into the critical request queue. The CSS still loads the exact
+  // face used by the page, while the body font remains the only global preload.
+  preload: false,
+  variable: "--font-public-display",
+});
+
+const publicMono = Fragment_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: "400",
+  display: "swap",
+  // Mono is used for labels and code, not the primary above-the-fold copy.
+  preload: false,
+  variable: "--font-public-mono",
+});
+
+const productFontVariables = {
+  "--font-body-active":
+    '"PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  "--font-display-active":
+    '"PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  "--font-mono-active":
+    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+} as CSSProperties;
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+};
+
+const BASE_URL = getSiteBaseUrl();
+const SITE_ORIGIN = new URL(BASE_URL).origin;
+
+function getExternalAssetOrigin(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  if (!normalized || normalized.startsWith("/")) return null;
+
+  try {
+    const origin = new URL(normalized).origin;
+    return origin === SITE_ORIGIN ? null : origin;
+  } catch {
+    // next.config.ts owns strict validation and fails the build for an invalid
+    // prefix. Keeping layout rendering defensive makes this helper harmless in
+    // isolated tests that do not execute the Next config first.
+    return null;
+  }
+}
+
+const EXTERNAL_ASSET_ORIGIN = getExternalAssetOrigin(
+  process.env.NEXT_PUBLIC_ASSET_PREFIX,
+);
+const LOCALE_BOOTSTRAP_SCRIPT = `
+(() => {
+  try {
+    const pathname = window.location.pathname || "/";
+    const firstSegment = pathname.split("/")[1];
+    const lang = firstSegment === "zh" ? "zh-CN" : "en";
+    document.documentElement.lang = lang;
+    document.documentElement.dataset.locale = firstSegment === "zh" ? "zh" : "en";
+  } catch {}
+})();
+`;
+
+const DEV_SW_CLEANUP_SCRIPT = `
+(() => {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        void registration.unregister();
+      });
+    }).catch(() => {});
+
+    if ("caches" in window) {
+      caches.keys().then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith("stylekit-"))
+          .map((key) => caches.delete(key))
+      )).catch(() => {});
+    }
+  } catch {}
+})();
+`;
+
+function buildAnnouncementBootstrapScript(id: string): string {
+  const dismissalKey = serializeJsonLd(`sk-site-announcement-dismissed:${id}`);
+  return `
+(() => {
+  try {
+    if (localStorage.getItem(${dismissalKey}) === "1") {
+      document.documentElement.dataset.siteAnnouncementDismissed = "true";
+    }
+  } catch {}
+})();
+`;
+}
+
+const FRIEND_PROMO_BOOTSTRAP_SCRIPT = `
+(() => {
+  try {
+    if (localStorage.getItem(${serializeJsonLd(FRIEND_PROMO_STORAGE_KEY)}) === ${serializeJsonLd(FRIEND_PROMO_ID)}) {
+      document.documentElement.dataset.friendPromoDismissed = "true";
+    }
+  } catch {}
+})();
+`;
+
+export async function generateSiteMetadata(): Promise<Metadata> {
+  return buildSiteMetadata(await getRequestLocaleContext());
+}
+
+export default async function SiteDocument({
+  children,
+  locale: routeLocale,
+}: Readonly<{
+  children: React.ReactNode;
+  locale?: Locale;
+}>) {
+  const { locale, htmlLang, contentPath } = routeLocale
+    ? getLocaleDocumentContext(routeLocale)
+    : await getRequestLocaleContext();
+  // Announcements are shared, while the locale root supplies the document
+  // language before hydration or any request-header lookup.
+  const [announcementEn, announcementZh] = await Promise.all([
+    getSiteAnnouncement("en"),
+    getSiteAnnouncement("zh-CN"),
+  ]);
+  const activeAnnouncement = locale === "zh" ? announcementZh : announcementEn;
+  const showcaseTypography = getShowcaseTypographyProfile(contentPath);
+  const isProductSurface = /^\/(?:admin|admin-login|login|profile|validation|workspace)(?:\/|$)/.test(
+    contentPath
+  );
+  const showcaseFontVariables = showcaseTypography
+    ? ({
+        "--font-body-active": showcaseTypography.bodyStack,
+        "--font-display-active": showcaseTypography.displayStack,
+        "--font-mono-active": showcaseTypography.monoStack,
+      } as CSSProperties)
+    : undefined;
+  const routeFontVariables = showcaseFontVariables ??
+    (isProductSurface ? productFontVariables : undefined);
+
+  return (
+    <html lang={htmlLang} suppressHydrationWarning>
+      <head>
+        {EXTERNAL_ASSET_ORIGIN ? (
+          <>
+            {/* Start the CDN DNS/TLS handshake before the browser reaches the
+                stylesheet and module references emitted later in the head. */}
+            <link rel="dns-prefetch" href={EXTERNAL_ASSET_ORIGIN} />
+            <link
+              rel="preconnect"
+              href={EXTERNAL_ASSET_ORIGIN}
+              crossOrigin="anonymous"
+            />
+          </>
+        ) : null}
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
+        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <Script
+          id="vibeloft-telemetry"
+          strategy="lazyOnload"
+          src="https://vibeloft.ai/telemetry/v1.js"
+          data-vl-product-id="89414aab-7920-4854-8720-5ef041561792"
+          data-vl-auth-key="vl_web.grGnbaTxVblO8tSKoOK8zC-726z3_2htURIvubBSPXM"
+        />
+        {process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL &&
+        process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID ? (
+          <Script
+            id="umami-analytics"
+            strategy="afterInteractive"
+            src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          />
+        ) : null}
+        {showcaseTypography ? (
+          <link
+            rel="stylesheet"
+            href={showcaseTypography.stylesheetUrl}
+            data-showcase-font-profile={showcaseTypography.id}
+          />
+        ) : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: LOCALE_BOOTSTRAP_SCRIPT,
+          }}
+        />
+        {activeAnnouncement ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: buildAnnouncementBootstrapScript(activeAnnouncement.id),
+            }}
+          />
+        ) : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: FRIEND_PROMO_BOOTSTRAP_SCRIPT,
+          }}
+        />
+        {process.env.NODE_ENV !== "production" ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: DEV_SW_CLEANUP_SCRIPT,
+            }}
+          />
+        ) : null}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "@id": `${BASE_URL}/#webapplication`,
+              name: "StyleKit",
+              description: `Open-source visual style library for AI-generated web interfaces with ${CURATED_STYLE_COUNT} curated styles, design tokens, component recipes, and AI prompts.`,
+              url: BASE_URL,
+              applicationCategory: "DesignApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+              },
+              author: {
+                "@type": "Organization",
+                "@id": `${BASE_URL}/#organization`,
+                name: "StyleKit",
+              },
+              isPartOf: {
+                "@id": `${BASE_URL}/#website`,
+              },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "@id": `${BASE_URL}/#organization`,
+              "name": "StyleKit",
+              "url": BASE_URL,
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${BASE_URL}/icon-512x512.png`,
+              },
+              "description": `Open-source visual style library for AI-generated web interfaces with ${CURATED_STYLE_COUNT} curated styles, design tokens, and AI prompts.`,
+              "sameAs": [
+                "https://github.com/AnxForever/stylekit",
+                "https://x.com/Justice66890051",
+                "https://www.npmjs.com/package/stylekit-core",
+                "https://www.npmjs.com/package/stylekit-mcp",
+                "https://www.npmjs.com/package/stylekit-cli",
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "@id": `${BASE_URL}/#website`,
+              name: "StyleKit",
+              url: BASE_URL,
+              inLanguage: ["en", "zh-CN"],
+              publisher: {
+                "@id": `${BASE_URL}/#organization`,
+              },
+            }),
+          }}
+        />
+      </head>
+      <body
+        className={`${publicSans.variable} ${publicDisplay.variable} ${publicMono.variable} antialiased pb-16 md:pb-0`}
+        data-showcase-font={showcaseTypography?.id}
+        data-product-font={isProductSurface ? "true" : undefined}
+        style={routeFontVariables}
+      >
+        <ClientProviders initialLocale={locale}>
+          <LazyShowcaseTypographyRuntime />
+          <AnnouncementBanner
+            key={activeAnnouncement?.id ?? `no-announcement-${locale}`}
+            announcements={{ en: announcementEn, zh: announcementZh }}
+          />
+          <LazyCommandPalette />
+          {children}
+          <ShowcaseBackBar />
+          <MobileBottomNav />
+          <ScrollToTop />
+        </ClientProviders>
+        <ClientScripts />
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,21 @@
+# 生产配置（含 server.secret，严禁入库）
+data/.config.yaml
+data/config_from_api.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行时数据与模型（服务器本地资产）
+models/
+music/
+tmp/
+*.log
+tts_notify.mp3
+
+# 测试与工具残留
+.pytest_cache/
+.workbuddy/

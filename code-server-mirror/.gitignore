@@ -1,0 +1,13 @@
+.venv/
+node_modules/
+__pycache__/
+dist/
+target/
+*.log
+logs/
+tmp/
+.webpack_cache/
+
+# AOCI agent host integration (machine-bound; do not commit)
+.codex/config.toml
+.codex/config.toml.backup.*

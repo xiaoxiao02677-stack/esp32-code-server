@@ -1,0 +1,382 @@
+import type { DesignStyle } from "./types";
+
+export const risograph: DesignStyle = {
+  slug: "risograph",
+  name: "Risograph 印刷风",
+  nameEn: "Risograph",
+  description:
+    "Risograph 印刷机的独特美学，2-3色套印效果、半调网点、套印错位和有限色彩，呈现独特的印刷质感和手工批量感。",
+  descriptionEn:
+    "The distinctive aesthetics of Risograph printing -- 2-3 color overprint effects, halftone dots, registration misalignment, and limited palette, presenting a unique print texture and handmade batch feel.",
+  cover: "/styles/risograph.svg",
+  styleType: "visual",
+  tags: ["high-contrast"],
+  category: "expressive",
+  colors: {
+    primary: "#ff6b9d",
+    secondary: "#2563eb",
+    accent: ["#ff8a00", "#22c55e", "#48c200", "#a38bff"],
+  },
+  keywords: ["Risograph", "印刷", "套印", "半调", "网点", "错位", "手工", "expressive", "bold", "vibrant"],
+  keywordsEn: ["risograph", "riso print", "riso aesthetic", "overprint effect", "halftone texture", "misregistration", "limited color palette", "zine design", "fluorescent ink", "grainy texture", "screen print style"],
+
+  philosophy: `Risograph 是一种源于日本的快速印刷技术，因其独特的视觉效果而被艺术家和设计师广泛采用。
+
+核心理念：
+- 有限色彩：通常只使用2-3种墨色叠加
+- 套印错位：颜色层之间故意的微妙偏移
+- 半调网点：可见的网点纹理和颗粒感
+- 印刷美学：拥抱印刷的不完美和独特性
+
+设计原则：
+- 视觉一致性：所有组件必须遵循统一的视觉语言，从色彩到字体到间距保持谐调
+- 层次分明：通过颜色深浅、字号大小、留白空间建立清晰的信息层级
+- 交互反馈：每个可交互元素都必须有明确的 hover、active、focus 状态反馈
+- 响应式适配：设计必须在移动端、平板、桌面端上保持一致的体验
+- 无障碍性：确保色彩对比度符合 WCAG 2.1 AA 标准，所有交互元素可键盘访问`,
+
+  philosophyEn: `Risograph is a rapid printing technology originating from Japan, widely adopted by artists and designers for its distinctive visual effects.
+
+Core principles:
+- Limited colors: Typically using only 2-3 ink colors layered together
+- Registration misalignment: Intentional subtle offset between color layers
+- Halftone dots: Visible dot textures and grain
+- Print aesthetics: Embracing the imperfections and uniqueness of printing`,
+
+  doList: [
+    "限制使用2-3种主色调",
+    "添加套印错位效果（offset shadow）",
+    "使用粗体等宽或无衬线字体",
+    "保持扁平色块无渐变",
+    "添加颗粒/网点纹理感",
+    "使用米白/奶白色纸张背景",
+    "Misregistration Offset: hover must use dual-direction shadows simulating two Riso ink plates out of register: `hover:shadow-[6px_6px_0_#2563eb,-4px_-4px_0_#ff8a00]` — one shadow goes bottom-right (blue plate), the other top-left (orange plate)",
+    "Instant Print: all transitions use `duration-100 ease-linear` — mechanical printing press speed, not organic motion",
+    "Overprint Illusion: active state switches background to the secondary ink color `active:bg-[#2563eb]`, simulating two Riso ink layers fully overlapping at the press point",
+    "Registration Shift: green corner element uses `translate-x-2 -translate-y-2` at rest and `group-hover:translate-x-0 group-hover:translate-y-0` on hover — the registration mark locks into place as the press completes its cycle",
+  ],
+
+  doListEn: [
+    "Limit to 2-3 primary colors",
+    "Add overprint misregistration effects (offset shadow)",
+    "Use bold monospace or sans-serif fonts",
+    "Keep flat color blocks without gradients",
+    "Add grain/dot texture feel",
+    "Use off-white/cream paper background",
+    "Misregistration Offset: hover must use dual-direction shadows simulating two Riso ink plates out of register: `hover:shadow-[6px_6px_0_#2563eb,-4px_-4px_0_#ff8a00]` -- one shadow goes bottom-right (blue plate), the other top-left (orange plate)",
+    "Instant Print: all transitions use `duration-100 ease-linear` -- mechanical printing press speed, not organic motion",
+    "Overprint Illusion: active state switches background to the secondary ink color `active:bg-[#2563eb]`, simulating two Riso ink layers fully overlapping at the press point",
+    "Registration Shift: green corner element uses `translate-x-2 -translate-y-2` at rest and `group-hover:translate-x-0 group-hover:translate-y-0` on hover -- the registration mark locks into place as the press completes its cycle",
+  ],
+
+  dontList: [
+    "禁止使用复杂的渐变效果",
+    "禁止使用太多颜色（最多3-4种）",
+    "禁止使用写实阴影或光照效果",
+    "禁止使用圆滑的圆角设计",
+    "禁止使用单方向阴影（Riso 总是两个墨版，阴影必须双向）",
+    "禁止使用 `ease-in-out` 或 `ease`（印刷机是机械的，必须 `ease-linear`）",
+    "禁止在阴影中使用 blur（所有偏移必须是零模糊的硬边）",
+    "禁止用 opacity 过渡实现 hover 颜色变化（必须是印刷机瞬间切换）",
+  ],
+
+  dontListEn: [
+    "Do not use complex gradient effects",
+    "Do not use too many colors (maximum 3-4)",
+    "Do not use realistic shadows or lighting effects",
+    "Do not use smooth rounded corner design",
+    "Do not use single-direction shadows (Riso always has two ink plates, shadows must be bidirectional)",
+    "Do not use `ease-in-out` or `ease` (printing press is mechanical, must use `ease-linear`)",
+    "Do not use blur in shadows (all offsets must be zero-blur hard edges)",
+    "Do not use opacity transitions for hover color changes (must be instant printing press switching)",
+  ],
+
+  components: {
+    button: {
+      name: "按钮",
+      description: "Risograph 风格按钮，Misregistration Offset 双向错位阴影 + Instant Print 机械速度 + Overprint Illusion active 颜色",
+      code: `<button className="
+  px-8 py-3
+  bg-[#ff6b9d] text-white
+  font-mono font-bold uppercase tracking-widest
+  rounded-sm
+  border-2 border-[#1a1a1a]
+  shadow-[4px_4px_0_#2563eb]
+  hover:shadow-[6px_6px_0_#2563eb,-4px_-4px_0_#ff8a00]
+  hover:-translate-x-[2px] hover:translate-y-[2px]
+  active:translate-x-[4px] active:translate-y-[4px]
+  active:shadow-none
+  active:bg-[#2563eb]
+  transition-all duration-100 ease-linear
+">
+  Overprint
+</button>`,
+    },
+    card: {
+      name: "卡片",
+      description: "Risograph 风格卡片，Registration Shift 绿色角落定位 + Misregistration 双向阴影 + 标题 Overprint 色变",
+      code: `<div className="group p-8 bg-[#fffbf0] border-[3px] border-[#1a1a1a] rounded-sm shadow-[6px_6px_0_#ff6b9d] hover:shadow-[8px_8px_0_#2563eb,-6px_-6px_0_#ff6b9d] transition-all duration-100 ease-linear cursor-pointer relative overflow-hidden">
+  {/* Registration mark — shifts into position on hover (Registration Shift) */}
+  <div className="absolute top-0 right-0 w-16 h-16 bg-[#22c55e] border-b-[3px] border-l-[3px] border-[#1a1a1a] transform translate-x-2 -translate-y-2 group-hover:translate-x-0 group-hover:translate-y-0 transition-transform duration-100 ease-linear" />
+  <h3 className="text-3xl font-mono font-black text-[#2563eb] uppercase mb-4 tracking-tighter group-hover:text-[#ff8a00] transition-colors duration-100 ease-linear" style={{ textShadow: '2px 2px 0 #1a1a1a' }}>
+    RISO_PRINT
+  </h3>
+  <p className="text-[#1a1a1a] font-mono font-bold leading-relaxed border-t-[3px] border-[#1a1a1a] pt-4">
+    Embrace the beauty of mechanical imperfection and limited palette expression.
+  </p>
+</div>`,
+    },
+    input: {
+      name: "输入框",
+      description: "Risograph 风格输入框",
+      code: `<input
+  type="text"
+  placeholder="Type here..."
+  className="
+    w-full px-4 py-3
+    bg-[#fffbf0]
+    border-2 border-[#1a1a1a]
+    rounded-sm
+    text-[#1a1a1a] placeholder-[#1a1a1a]/40
+    font-mono
+    focus:border-[#2563eb]
+    focus:shadow-[2px_2px_0px_#ff6b9d]
+    focus:outline-none
+    transition-all
+  "
+/>`,
+    },
+    hero: {
+      name: "Hero 区块",
+      description: "Risograph 风格 Hero",
+      code: `<section className="
+  min-h-screen
+  flex items-center justify-center
+  bg-[#fffbf0]
+  relative overflow-hidden
+">
+  <div className="relative z-10 text-center px-6">
+    <h1 className="text-6xl md:text-8xl font-mono font-bold text-[#ff6b9d] uppercase mb-2">
+      RISO
+    </h1>
+    <h2 className="text-4xl md:text-6xl font-mono font-bold text-[#2563eb] uppercase -mt-4 ml-4 mb-6">
+      GRAPH
+    </h2>
+    <p className="text-xl text-[#1a1a1a]/70 font-mono mb-8">
+      Print aesthetics for the digital age
+    </p>
+    <button className="
+      px-10 py-4
+      bg-[#2563eb] text-white
+      font-mono font-bold uppercase tracking-wider
+      rounded-sm
+      shadow-[4px_4px_0px_#ff6b9d]
+      hover:translate-x-[2px] hover:translate-y-[2px]
+      hover:shadow-[2px_2px_0px_#ff6b9d]
+      transition-all
+    ">
+      Explore
+    </button>
+  </div>
+</section>`,
+    },
+  },
+
+  globalCss: `/* Risograph Global Styles */
+
+:root {
+  --riso-pink: #ff6b9d;
+  --riso-blue: #2563eb;
+  --riso-orange: #ff8a00;
+  --riso-green: #22c55e;
+  --riso-paper: #fffbf0;
+}
+
+/* Grain texture overlay */
+.riso-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+/* Overprint offset */
+.riso-offset {
+  position: relative;
+}
+.riso-offset::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  color: var(--riso-blue);
+  opacity: 0.6;
+  mix-blend-mode: multiply;
+}
+
+/* Halftone pattern */
+.riso-halftone {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+@keyframes risograph-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes risograph-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.risograph-frosted {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(255, 107, 157, 0.08);
+}
+
+.risograph-accent-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), calc(100% - 2rem) 100%, 0 100%);
+}
+
+.risograph-animate-in {
+  animation: risograph-fade-in 0.5s ease-out both;
+}`,
+
+  aiRules: `你是一位专精于 Risograph 印刷风格的前端开发专家。生成的所有代码都必须严格遵守以下约束。
+
+## 绝对禁止
+
+- 复杂渐变或写实阴影
+- 总色数超过 3-4 种
+- 圆角（只能使用 rounded-sm）
+- 写实光照或 3D 效果
+
+## 必须遵守
+
+- 有限色板：粉色 #ff6b9d、蓝色 #2563eb、橙色 #ff8a00、绿色 #22c55e
+- 纸白色背景 bg-[#fffbf0]
+- 等宽字体 font-mono
+- 偏移阴影 shadow-[3px_3px_0px_color]
+- 粗边框 border-2 border-[#1a1a1a]
+- 只使用纯色，禁止渐变
+
+## 配色方案
+
+主色：
+- 荧光粉：#ff6b9d
+- 蓝色：#2563eb
+- 荧光橙：#ff8a00
+- 绿色：#22c55e
+- 纸白：#fffbf0
+
+## 特殊元素
+
+- 套印错位效果
+- 颗粒/噪点纹理叠加
+- 半调网点图案
+- 用套印规线作为装饰
+
+## 动效与交互规则
+
+- 套印错位：hover 时必须使用双向阴影，模拟两块油墨版套印错位：\`hover:shadow-[6px_6px_0_#2563eb,-4px_-4px_0_#ff8a00]\`。一个阴影偏向右下（蓝色版），另一个偏向左上（橙色版）。单方向阴影会破坏印刷错觉。
+- 瞬时印刷：所有过渡都使用 \`duration-100 ease-linear\`——机械印刷机的速度感。禁止使用 \`ease-in-out\` 等有机曲线缓动。
+- 套印错觉：active 状态下背景切换为第二种油墨色 \`active:bg-[#2563eb]\`，模拟两层 Riso 油墨在接触点完全重叠的瞬间。
+- 定位归位：绿色角标静止时使用 \`translate-x-2 -translate-y-2\`，hover 时使用 \`group-hover:translate-x-0 group-hover:translate-y-0 transition-transform duration-100 ease-linear\`——仿佛印刷机完成一次循环后，套印规线归位对齐。`,
+
+  aiRulesEn: `You are a Risograph design style frontend development expert. All generated code must strictly follow these constraints:
+
+## Absolutely Forbidden
+
+- Complex gradients or realistic shadows
+- More than 3-4 colors in total
+- Rounded corners (use rounded-sm only)
+- Realistic lighting or 3D effects
+
+## Must Follow
+
+- Limited palette: pink #ff6b9d, blue #2563eb, orange #ff8a00, green #22c55e
+- Paper-white background bg-[#fffbf0]
+- Monospace fonts font-mono
+- Offset shadows shadow-[3px_3px_0px_color]
+- Bold borders border-2 border-[#1a1a1a]
+- Flat colors only, no gradients
+
+## Color Palette
+
+Primary:
+- Fluorescent Pink: #ff6b9d
+- Blue: #2563eb
+- Fluorescent Orange: #ff8a00
+- Green: #22c55e
+- Paper: #fffbf0
+
+## Special Elements
+
+- Overprint offset effects
+- Grain/noise texture overlays
+- Halftone dot patterns
+- Registration marks as decoration
+
+## Animation & Interaction Rules
+
+- Misregistration Offset: Hover must use dual-direction shadows simulating two ink plates out of register: \`hover:shadow-[6px_6px_0_#2563eb,-4px_-4px_0_#ff8a00]\`. One shadow goes bottom-right (blue plate), the other goes top-left (orange plate). Single-direction shadows break the print illusion.
+- Instant Print: All transitions \`duration-100 ease-linear\` -- mechanical printing press speed. Never use \`ease-in-out\` or organic curves.
+- Overprint Illusion: Active state switches background to the secondary ink color \`active:bg-[#2563eb]\`, simulating the moment two Riso ink layers fully overlap at the point of contact.
+- Registration Shift: Green corner element uses \`translate-x-2 -translate-y-2\` at rest and \`group-hover:translate-x-0 group-hover:translate-y-0 transition-transform duration-100 ease-linear\` on hover -- the registration mark locks into place as the press completes its cycle.`,
+
+  examplePrompts: [
+    {
+      title: "Risograph 海报页面",
+      titleEn: "Risograph Poster Page",
+      description: "印刷风格的宣传页面",
+      descriptionEn: "Print-aesthetic promotional page",
+      prompt: `Use Risograph style to create a poster-like landing page:
+1. Background: paper-white with grain texture
+2. Title: bold mono font with overprint offset
+3. Cards: bold borders with color offset shadows
+4. Only use 2-3 colors maximum
+5. Overall hand-printed, limited palette aesthetic`,
+    },
+  {
+      title: "SaaS 着陆页",
+      titleEn: "SaaS Landing Page",
+      description: "生成 Risograph 印刷风风格的 SaaS 产品着陆页",
+      descriptionEn: "Generate a SaaS product landing page in Risograph style",
+      prompt: `Create a SaaS landing page using Risograph style with hero section, feature grid, testimonials, pricing table, and footer.`,
+    },
+    {
+      title: "作品集展示",
+      titleEn: "Portfolio Showcase",
+      description: "生成 Risograph 印刷风风格的作品集页面",
+      descriptionEn: "Generate a portfolio showcase in Risograph style",
+      prompt: `Create a portfolio showcase page using Risograph style with project grid, about section, contact form, and consistent visual language.`,
+    }],
+
+  variants: [
+    {
+      id: "risograph-warm",
+      name: "Risograph 印刷风暖色版",
+      nameEn: "Risograph Warm",
+      description: "Warm-toned variant with shifted hues toward amber/orange",
+      colors: {
+        primary: "#f77363",
+        secondary: "#3b73ed",
+        accent: ["#a5a800", "#14c2a3"],
+      },
+    },
+    {
+      id: "risograph-cool",
+      name: "Risograph 印刷风冷色版",
+      nameEn: "Risograph Cool",
+      description: "Cool-toned variant with shifted hues toward blue/teal",
+      colors: {
+        primary: "#e86cd3",
+        secondary: "#2159d4",
+        accent: ["#ff7048", "#51bc2a"],
+      },
+    },
+  ],
+};
