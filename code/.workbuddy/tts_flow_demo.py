@@ -33,7 +33,7 @@ import wave
 import websockets  # pip install websockets
 
 # ================= 配置 =================
-WS_URL = "ws://sandyun.top:9001/xiaozhi/v1/"  # nginx WS 入口（8000 内网未映射，经 9001 转发）
+WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"  # 8001 双协议分流：明文 ws → nginx 9001 → Python 8000
 DEVICE_TOKEN = ""  # 设备激活 token；服务器配置 server.auth.enabled=false 时可留空
 TEXT = sys.argv[1] if len(sys.argv) > 1 else "你好，我是屿禾工坊的语音助手，很高兴见到你！"
 OUT_WAV = "tts_output.wav"
@@ -41,7 +41,11 @@ AUDIO_TIMEOUT = 20  # 秒，TTS 音频流静默超时
 
 
 async def main():
-    headers = {}
+    headers = {
+        "Protocol-Version": "1",
+        "Device-Id": "14:c1:9f:d1:33:48",   # 模拟设备 MAC（与真实 ESP32 一致）
+        "Client-Id": "tts-flow-demo-client",  # 模拟客户端标识
+    }
     if DEVICE_TOKEN:
         headers["Authorization"] = "Bearer " + DEVICE_TOKEN
     print(f"[1] 连接 {WS_URL}")
