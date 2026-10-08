@@ -178,10 +178,36 @@ PYTHONPATH=<stubs> PYTEST_CONFIG_FILE=<tmp.yaml> PYTEST_DISABLE_PLUGIN_AUTOLOAD=
 
 ---
 
-## 八、部署与验收步骤
+## 八、部署实况（2026-10-09 02:40 已上线）
 
-1. **数据库**：`manager-api` 启动时 Liquibase 会自动执行 `202610090130.sql`。若目标库已手工建过 `dynamic_instruction` / `instruction_llm_id`，先删掉这两行再启动（MySQL 无 `ADD COLUMN IF NOT EXISTS`，重复会报 Duplicate column）。
-2. **重启** `manager-api`（8002）与 `xiaozhi-server`（8000 / 8003）。Python 侧 TTS provider 是**每连接一个实例**，不重启进程不会加载新代码。
-3. **验收 A（固定指令）**：音色管理 → 选一个豆包 2.0 音色 → 填「语气指令」如 `用哭腔说话，声音哽咽，带着抽泣`，**不勾**动态更新 → 保存并绑定智能体 → 设备对话。抓 Python 侧日志确认请求体含 `additions: {"context_texts":[...]}`，且**不再出现** `voice_instruction` 顶层字段。
+部署前的线上侦察推翻了两条原结论，记录如下以免后人踩坑：
+
+| 原判断                                          | 线上实际                                                                                       | 处置                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| 「`ai_tts_voice` 从未建 `dynamic_instruction` / `instruction_llm_id`」 | **两列早就在**（`dynamic_instruction tinyint(1)`、`instruction_llm_id varchar(64)`），是此前手工 ALTER 加的，Liquibase 里**没有**对应记录（最后一条是 `202610071800`） | 迁移 SQL 若原样上线必报 Duplicate column 并让 Spring Boot 起不来 → 已改为 `preConditions onFail=MARK_RAN` 幂等版本，列存在则跳过 |
+| 「需要重新构建 Java」                                  | 现网 jar 的 `ConfigServiceImpl.class` 里**已含** `dynamic_instruction` / `instruction_llm_id` / `voice_instruction` 三个字符串常量，下发逻辑本就在                  | **未重新构建**，只重启                                                  |
+
+### 执行记录
+
+- Python（`/root/xiaozhi-server/main/xiaozhi-server`，`.venv/bin/python app.py`，setsid 后台，非 systemd）：
+  备份 4 个文件为 `.bak-20261008T183831Z` → SFTP 上传 → md5 双端一致 → 服务器 `.venv/bin/python -m py_compile` 通过 → `kill -9` 旧进程后重新拉起。
+  ⚠️ 坑：`pkill -f` 没能杀掉 setsid 脱离会话的旧进程，导致新进程抢不到 8000/8003；必须按 PID `kill -9`。
+- Java：`systemctl restart xiaozhi-manager-api` → 30s 后 active，8002 → 200，日志有真实设备请求。
+- 线上复验（服务器 `.venv`，Python 3.12.3，mock `requests.post`）：
+  ```
+  A 固定指令 additions: {"context_texts": ["用温柔安慰的语气说"]}   无非法 voice_instruction 字段
+  B 动态覆盖: ['用轻快俏皮的语气说']
+  C 复刻音色 model: seed-tts-2.0-expressive
+  D 无指令时 additions: None
+  E connection 新方法: True
+  SERVER VERIFY ALL PASS
+  ```
+
+---
+
+## 九、验收步骤（现在可以做）
+
+1. **数据库 / Java**：**均已就绪，无需操作**（两列已存在，jar 已含下发逻辑，两个服务都已重启）。
+2. **验收 A（固定指令）**：音色管理 → 选一个豆包 2.0 音色 → 填「语气指令」如 `用哭腔说话，声音哽咽，带着抽泣`，**不勾**动态更新 → 保存并绑定智能体 → 设备对话。抓 Python 侧日志确认请求体含 `additions: {"context_texts":[...]}`，且**不再出现** `voice_instruction` 顶层字段。
 4. **验收 B（动态指令）**：勾选「动态更新」并选一个生成 LLM → 对话。日志应出现 `动态语气指令已更新: <指令>`；把开关关掉后下一轮应回落固定指令（日志不再出现该行）。
 5. **验收 C（降级）**：故意把生成 LLM 的 key 填错 → 指令生成会失败，日志出现 `动态语气指令生成失败，回落固定指令`，但**对话本身不受影响**。
