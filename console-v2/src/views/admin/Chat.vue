@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>聊天 <span style="color:var(--primary)">记录</span></h1>
-        <p class="sub">迁移自 /cc/ 聊天页：会话列表 / 消息流 / 删除会话</p>
+        <p class="sub">契约对齐 /cc/：chatType 消息流 / JSON 内容解析 / 语音两段式播放 / 删会话</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
@@ -11,7 +11,7 @@
     </div>
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
-      <!-- 左：智能体 + 会话 -->
+      <!-- 左：智能体 + 会话（契约：sessionId/title/createdAt/chatCount） -->
       <div style="flex:0 0 260px">
         <DataTable title="智能体">
           <div v-for="a in agents" :key="a.id" class="chat-agent" :class="{ active: agentId === a.id }" @click="pickAgent(a)">
@@ -21,19 +21,24 @@
         </DataTable>
         <DataTable title="会话" style="margin-top:16px">
           <div v-for="s in sessions" :key="s.sessionId" class="chat-agent" :class="{ active: sessionId === s.sessionId }" @click="pickSession(s)">
-            <span style="font-size:12px">{{ s.sessionId.slice(0, 14) }}…</span>
+            <span style="font-size:12px">{{ s.title || s.sessionId.slice(0, 14) }}</span>
+            <small v-if="s.createdAt">{{ s.createdAt }} · {{ s.chatCount }} 条</small>
           </div>
-          <div v-if="agentId && !sessions.length" class="empty-state"><strong>暂无会话</strong></div>
+          <div v-if="agentId && !sessions.length" class="empty-state"><strong>暂无会话，去跟设备说句话吧～</strong></div>
         </DataTable>
       </div>
 
-      <!-- 右：消息流 -->
+      <!-- 右：消息流（契约：m.chatType===1 用户侧，content JSON 需 parseChatText） -->
       <div style="flex:1;min-width:300px">
-        <DataTable title="消息流" style="flex:1">
+        <DataTable title="消息流">
           <div style="max-height:480px;overflow:auto">
-            <div v-for="(m, i) in messages" :key="i" class="chat-msg" :class="m.role">
+            <div v-for="(m, i) in messages" :key="i" class="chat-msg" :class="m.chatType === 1 ? 'user' : 'assistant'">
               <div class="msg-bubble">{{ m.content }}</div>
-              <div class="msg-meta">{{ m.role }} · {{ m.time || '' }}</div>
+              <div v-if="m.audioId" class="msg-actions">
+                <button class="link-btn" :disabled="playingAudio === m.audioId" @click="playAudio(m.audioId)">
+                  {{ playingAudio === m.audioId ? '▶ 播放中…' : '▶ 播放语音' }}
+                </button>
+              </div>
             </div>
             <div v-if="sessionId && !messages.length" class="empty-state"><strong>选择会话查看消息</strong></div>
           </div>
@@ -43,6 +48,7 @@
         </DataTable>
       </div>
     </div>
+    <audio ref="audioRef" hidden></audio>
   </div>
 </template>
 
@@ -61,15 +67,22 @@ const messages = ref([])
 const agentId = ref(route.query.agentId || '')
 const sessionId = ref(route.query.sessionId || '')
 const loading = ref(false)
+const playingAudio = ref('')
+const audioRef = ref(null)
+
+// 契约对齐 cc-console parseChatText：content 是 JSON 时取 obj.content/obj.text
+function parseChatText(content) {
+  try {
+    const obj = JSON.parse(content)
+    return (obj.content || obj.text || content).toString()
+  } catch (e) { return content }
+}
 
 async function load() {
   loading.value = true
   try {
     const res = await adminApi.agentList()
-    agents.value = (res.data || []).map(a => ({
-      id: a.agentId || a.id,
-      name: a.agentName || a.name || '未命名'
-    }))
+    agents.value = (res.data || []).map(a => ({ id: a.id, name: a.agentName || a.name || '未命名' }))
     if (agentId.value) await loadSessions()
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
@@ -85,8 +98,7 @@ async function pickAgent(a) {
 async function loadSessions() {
   try {
     const res = await adminApi.agentSessions(agentId.value, { page: 1, limit: 10 })
-    const data = res.data || {}
-    sessions.value = data.list || []
+    sessions.value = res.data?.list || []
     if (sessionId.value) await loadMessages()
   } catch (e) { toast(e.msg || '会话加载失败', 'error') }
 }
@@ -99,23 +111,41 @@ async function pickSession(s) {
 async function loadMessages() {
   try {
     const res = await adminApi.chatHistory(agentId.value, sessionId.value)
-    const data = res.data || {}
-    const list = data.messages || data.chatList || data.list || []
+    // 契约：data 为消息数组 [{chatType, content, audioId}]
+    const list = res.data || []
     messages.value = list.map(m => ({
-      role: m.role || (m.type === 'user' ? 'user' : 'assistant'),
-      content: m.content || m.text || '(空消息)',
-      time: m.createTime || m.time || ''
+      chatType: m.chatType,
+      content: parseChatText(m.content),
+      audioId: m.audioId
     }))
   } catch (e) { toast(e.msg || '消息加载失败', 'error'); messages.value = [] }
 }
 
+// 契约对齐 cc-console playChatAudio：POST /agent/audio/{id} → realId → blob 播放
+async function playAudio(audioId) {
+  playingAudio.value = audioId
+  try {
+    const res = await adminApi.chatHistoryAudio(audioId)
+    const realId = res.data?.data ? res.data.data : res.data
+    const blob = await adminApi.playAudioBlob(realId)
+    if (!audioRef.value) return
+    audioRef.value.src = URL.createObjectURL(blob)
+    await audioRef.value.play().catch(() => toast('播放失败', 'error'))
+  } catch (e) { toast('音频加载失败', 'error') }
+  finally { playingAudio.value = '' }
+}
+
 function removeSession() {
+  const s = sessions.value.find(x => x.sessionId === sessionId.value)
   askConfirm({
-    title: '删除会话', message: '确定删除此聊天会话吗？', danger: true,
+    title: '删除会话', message: `确定删除会话「${s?.title || sessionId.value}」吗？`, danger: true,
     onOk: async () => {
       try {
         await adminApi.deleteChatSession(agentId.value, sessionId.value)
-        toast('会话已删除'); sessionId.value = ''; messages.value = []; loadSessions()
+        toast('已删除')
+        sessionId.value = ''
+        messages.value = []
+        loadSessions()
       } catch (e) { toast(e.msg || '删除失败', 'error') }
     }
   })
@@ -134,5 +164,5 @@ onMounted(load)
 .chat-msg.user .msg-bubble { background: var(--primary); color: #fff; border-radius: 14px 14px 4px 14px; }
 .chat-msg.assistant .msg-bubble { background: var(--bg-soft); color: var(--text); border-radius: 14px 14px 14px 4px; }
 .msg-bubble { max-width: 70%; padding: 10px 14px; font-size: 13px; word-break: break-word; }
-.msg-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+.msg-actions { margin-top: 3px; }
 </style>

@@ -116,9 +116,8 @@ export const adminApi = {
   createAgent: (body) => api.post('/agent', body),
   updateAgent: (id, body) => api.put(`/agent/${id}`, body),
   deleteAgent: (id) => api.del(`/agent/${id}`),
-  boundDevices: (agentId) => api.get(`/device/bind/${agentId}`),
+  boundDevices: (agentId) => api.post(`/device/bind/${agentId}`, {}),
   bindDeviceByCode: (agentId, code) => api.post(`/device/bind/${agentId}/${encodeURIComponent(code)}`),
-  bindDeviceByMac: (agentId, mac) => api.post(`/device/bind/${agentId}/${encodeURIComponent(mac)}`),
   agentSessions: (agentId, params) => api.get(`/agent/${agentId}/sessions`, params || { page: 1, limit: 10 }),
   // MCP 接入点
   mcpAddress: (agentId) => api.get(`/agent/mcp/address/${agentId}`),
@@ -129,6 +128,10 @@ export const adminApi = {
   chatHistory: (agentId, sessionId) => api.get(`/agent/${agentId}/chat-history/${sessionId}`),
   chatHistoryAudio: (audioId) => api.post(`/agent/audio/${audioId}`),
   deleteChatSession: (agentId, sessionId) => api.del(`/agent/${agentId}/chat-history/${sessionId}`),
+  // 音频两段式播放：POST /agent/audio/{id} → realId → GET /voiceClone/play/{realId}（blob）
+  playAudioBlob: (realId) => fetch(API_BASE + '/voiceClone/play/' + realId, {
+    headers: { Authorization: 'Bearer ' + getToken() }
+  }).then(r => { if (!r.ok) throw { code: r.status, msg: '音频加载失败' }; return r.blob() }),
 
   // ===== 音色 / TTS =====
   ttsModels: () => api.get('/models/list', { modelType: 'TTS', page: 1, limit: 50 }),
@@ -149,7 +152,8 @@ export const adminApi = {
   // ===== 记忆 =====
   memoryAgents: () => api.get('/memory/agents'),
   memoryFacts: (params) => api.get('/memory/facts', params),
-  createFact: (body) => api.post('/memory/facts', body),
+  createFact: (agentId, content) => api.post('/memory/facts', { agent_id: agentId, content }),
+  updateFact: (factId, agentId, content, category) => api.put(`/memory/facts/${factId}`, { agent_id: agentId, content, category }),
   deleteFact: (factId, agentId) => api.del(`/memory/facts/${factId}?agent_id=${agentId}`),
   factFeedback: (factId, agentId, helpful) => api.post(`/memory/facts/${factId}/feedback`, { agent_id: agentId, helpful }),
   factReview: (factId, agentId, action) => api.post(`/memory/facts/${factId}/review`, { agent_id: agentId, action }),
@@ -165,7 +169,6 @@ export const adminApi = {
   deleteModel: (id) => api.del(`/models/${id}`),
   modelTest: (id, type) => api.get('/models/modelTest', { modelId: id, modelType: type }),
   enableModel: (id, status) => api.put(`/models/enable/${id}/${status}`),
-
   // ===== 设备 =====
   devicePage: (params) => api.get('/admin/device/all', params),
   deviceUpdate: (id, body) => api.put(`/device/update/${id}`, body),
@@ -203,17 +206,26 @@ export const adminApi = {
 
   // ===== OTA =====
   otaPage: (params) => api.get('/otaMag', params || { page: 1, limit: 100 }),
+  uploadOta: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return fetch(API_BASE + '/otaMag/upload', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: form
+    }).then(r => r.json())
+  },
   deleteOta: (id) => api.del(`/otaMag/${id}`),
+  otaDownloadUrl: (id) => API_BASE + '/otaMag/download/' + id,
 
   // ===== 数据字典 =====
   dictTypePage: (params) => api.get('/admin/dict/type/page', params || { page: 1, limit: 100 }),
   dictData: (dictType) => api.get(`/admin/dict/data/type/${dictType}`),
+  saveDictData: (body) => api.post(body.id ? '/admin/dict/data/update' : '/admin/dict/data/save', body),
   deleteDictData: (ids) => api.post('/admin/dict/data/delete', ids),
 
   // ===== 替换词 =====
   correctWordList: (params) => api.get('/correct-word/file/list', params || { page: 1, limit: 100 }),
-  createCorrectWord: (body) => api.post('/correct-word/file', body),
-  updateCorrectWord: (id, body) => api.put(`/correct-word/file/${id}`, body),
+  createCorrectWord: (fileName, content) => api.post('/correct-word/file', { fileName, content }),
+  updateCorrectWord: (id, fileName, content) => api.put(`/correct-word/file/${id}`, { fileName, content }),
   deleteCorrectWord: (id) => api.del(`/correct-word/file/${id}`),
 
   // ===== 服务器节点 =====
