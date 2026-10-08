@@ -229,24 +229,28 @@ class TTSProvider(TTSProviderBase):
         return headers
 
     def _build_payload(self, text):
+        # 官方 seed-tts-2.0 指令遵循格式（用户基准脚本验证）：additions.context_texts
+        instruction = self._dynamic_instruction_for()
+        audio_params = {
+            "format": self.audio_file_type,
+            "sample_rate": self.sample_rate,
+        }
         req_params = {
             "text": text,
             "speaker": self.voice,
-            "audio_params": {
-                "format": self.audio_file_type,
-                "sample_rate": self.sample_rate,
-                "speech_rate": self.speech_rate,
-                "loudness_rate": self.loudness_rate,
-            },
+            "audio_params": audio_params,
         }
-        # 动态指令优先；无动态时用固定指令（仅 2.0 系音色生效，服务端忽略不支持的音色）
-        instruction = self._dynamic_instruction_for()
         if instruction:
-            req_params["voice_instruction"] = instruction
-        return {
-            "user": {"uid": "xiaozhi-esp32-server"},
-            "req_params": req_params,
-        }
+            # 与基准脚本完全一致：additions 为 json 字符串，context_texts 为数组
+            req_params["additions"] = json.dumps(
+                {"context_texts": [instruction]}, ensure_ascii=False
+            )
+            # 指令请求保持与基准脚本逐字段一致（不带 user.uid / speech_rate / loudness_rate）
+            return {"req_params": req_params}
+        # 无指令请求保留原全量参数（语速/音量控制照常生效）
+        audio_params["speech_rate"] = self.speech_rate
+        audio_params["loudness_rate"] = self.loudness_rate
+        return {"req_params": req_params}
 
     @staticmethod
     def _decode_base64_chunk(data):
@@ -260,10 +264,9 @@ class TTSProvider(TTSProviderBase):
             return base64.b64decode(data + "==")
 
     def _parse_chunked_response(self, response):
-        """解析 chunked JSON 流，拼接 base64 音频分片。"""
+        """解析 chunked JSON 流，拼接 base64 音频分片（对齐基准脚本：code 0/20000000 均成功）。"""
         audio_parts = []
-        final_code = None
-        for line in response.iter_lines():
+        for line in response.iter_lines(decode_unicode=True):
             if not line:
                 continue
             try:
@@ -274,10 +277,8 @@ class TTSProvider(TTSProviderBase):
             data = chunk.get("data")
             if data:
                 audio_parts.append(self._decode_base64_chunk(data))
-            elif code is not None:
-                final_code = code
-        if final_code is not None and final_code != 20000000:
-            logger.bind(tag=TAG).warning(f"豆包 v3 流结束码: {final_code}")
+            elif code is not None and code not in (0, 20000000):
+                raise Exception(f"业务错误 {code}: {chunk.get('message', '')[:200]}")
         return b"".join(audio_parts)
 
     async def text_to_speak(self, text, output_file):
