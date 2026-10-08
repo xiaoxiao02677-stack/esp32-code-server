@@ -24,8 +24,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import xiaozhi.common.constant.Constant;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
+import xiaozhi.modules.model.dto.VoiceDTO;
 import xiaozhi.modules.model.service.ModelConfigService;
 import xiaozhi.modules.sys.service.SysParamsService;
+import xiaozhi.modules.timbre.service.TimbreService;
 
 /**
  * TTS 音色试听代理
@@ -48,11 +50,14 @@ public class TtsPreviewController {
 
     private final SysParamsService sysParamsService;
     private final ModelConfigService modelConfigService;
+    private final TimbreService timbreService;
 
     public TtsPreviewController(SysParamsService sysParamsService,
-            ModelConfigService modelConfigService) {
+            ModelConfigService modelConfigService,
+            TimbreService timbreService) {
         this.sysParamsService = sysParamsService;
         this.modelConfigService = modelConfigService;
+        this.timbreService = timbreService;
     }
 
     @GetMapping("/ttsPreview")
@@ -77,6 +82,26 @@ public class TtsPreviewController {
             RenException exception = new RenException(ErrorCode.RESOURCE_NOT_FOUND);
             exception.setMsg("模型不存在或未配置");
             throw exception;
+        }
+
+        // 音色级语气指令注入（与 ConfigServiceImpl 下发逻辑对齐）：按 ttsModelId+voice 查 timbre
+        try {
+            VoiceDTO timbre = timbreService.getByVoiceCode(modelId, voice);
+            if (timbre != null) {
+                JSONObject cfg = JSONUtil.parseObj(rawConfig);
+                if (timbre.getVoiceInstruction() != null && !timbre.getVoiceInstruction().isBlank()) {
+                    cfg.set("voice_instruction", timbre.getVoiceInstruction());
+                }
+                if (Boolean.TRUE.equals(timbre.getDynamicInstruction())) {
+                    cfg.set("dynamic_instruction", true);
+                    if (timbre.getInstructionLlmId() != null && !timbre.getInstructionLlmId().isBlank()) {
+                        cfg.set("instruction_llm_id", timbre.getInstructionLlmId());
+                    }
+                }
+                rawConfig = cfg.toString();
+            }
+        } catch (Exception e) {
+            // 音色指令查询失败不阻断试听（降级为模型级配置）
         }
 
         String secret = sysParamsService.getValue(Constant.SERVER_SECRET, false);

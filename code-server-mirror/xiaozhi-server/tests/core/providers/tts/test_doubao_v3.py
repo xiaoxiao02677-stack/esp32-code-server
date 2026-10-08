@@ -116,6 +116,11 @@ def test_private_voice_overrides_speaker():
 
 
 def test_voice_instruction_passed_through():
+    """语气指令必须走官方通道：req_params.additions（JSON 字符串）.context_texts[0]。
+
+    注意：火山 API 不存在 req_params.voice_instruction 字段，早期实现写该字段
+    会被服务端静默忽略（请求照常 200），表现为「指令不起作用」。
+    """
     provider = _make_provider(
         voice_instruction="用标准大陆普通话说话，不要台湾腔",
     )
@@ -124,16 +129,23 @@ def test_voice_instruction_passed_through():
     with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
         _run(provider.text_to_speak("你好", None))
     req = p.call_args.kwargs["json"]["req_params"]
-    assert req["voice_instruction"] == "用标准大陆普通话说话，不要台湾腔"
+    # 官方：additions 是 JSON 序列化后的字符串，不是对象
+    assert isinstance(req["additions"], str)
+    additions = json.loads(req["additions"])
+    # 官方：context_texts 是数组，且只有第一个值生效
+    assert additions["context_texts"] == ["用标准大陆普通话说话，不要台湾腔"]
+    # 非官方字段，绝不能再出现
+    assert "voice_instruction" not in req
 
 
-def test_no_voice_instruction_field_when_unset():
+def test_no_additions_field_when_unset():
     provider = _make_provider()
     post = _chunked_response([(0, "", base64.b64encode(b"AB").decode()),
                               (20000000, "OK", None)])
     with patch("core.providers.tts.doubao_v3.requests.post", return_value=post) as p:
         _run(provider.text_to_speak("你好", None))
     req = p.call_args.kwargs["json"]["req_params"]
+    assert "additions" not in req
     assert "voice_instruction" not in req
 
 

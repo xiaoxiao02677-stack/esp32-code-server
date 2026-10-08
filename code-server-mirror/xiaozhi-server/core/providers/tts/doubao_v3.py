@@ -97,9 +97,19 @@ class TTSProvider(TTSProviderBase):
                 "loudness_rate": self.loudness_rate,
             },
         }
-        # 指令遵循：仅 2.0（uranus/saturn）系音色生效，服务端对不支持的音色会忽略
+        # 指令遵循（火山官方唯一通道，见 docs/6561/1329505、docs/6561/2528925）：
+        #   req_params.additions = JSON 序列化后的字符串，内含 context_texts 数组
+        #   - 仅「豆包语音合成模型 2.0」官方音色生效（uranus/saturn 系）
+        #   - 官方明确「当前字符串列表只第一个值有效」→ 只放 1 条指令
+        #   - 复刻/克隆音色需同时传 req_params.model="seed-tts-2.0-expressive" 才生效
+        #   - seed-tts-2.0-standard 明确不支持 context_texts
+        # 重要：voice_instruction 只是本项目的配置项名，并非火山 API 字段。
+        #       早期实现直接写 req_params["voice_instruction"]，服务端对未知字段
+        #       静默忽略（请求照常 200、音频照常返回），表现为「指令不起作用」。
         if self.voice_instruction:
-            req_params["voice_instruction"] = self.voice_instruction
+            req_params["additions"] = json.dumps(
+                {"context_texts": [self.voice_instruction]}, ensure_ascii=False
+            )
         return {
             "user": {"uid": "xiaozhi-esp32-server"},
             "req_params": req_params,

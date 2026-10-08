@@ -248,6 +248,10 @@ public class TimbreServiceImpl extends BaseServiceImpl<TimbreDao, TimbreEntity> 
         VoiceDTO dto = new VoiceDTO(entity.getId(), entity.getName());
         dto.setVoiceDemo(entity.getVoiceDemo());
         dto.setIsClone(false); // 设置为普通音色
+        dto.setTtsVoice(entity.getTtsVoice());
+        dto.setVoiceInstruction(entity.getVoiceInstruction());
+        dto.setDynamicInstruction(entity.getDynamicInstruction());
+        dto.setInstructionLlmId(entity.getInstructionLlmId());
         return dto;
     }
 }

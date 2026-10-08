@@ -179,6 +179,13 @@ class TTSProvider(TTSProviderBase):
         self.additions = {**default_additions, **config.get("additions", {})}
         self.mix_speaker = {**default_mix_speaker, **config.get("mix_speaker", {})}
 
+        # 音色语气指令：火山官方唯一通道是 additions.context_texts（JSON 字符串内的数组，
+        # 且只有第一个元素生效）。仅 2.0 资源（seed-tts-2.0）支持，1.0 资源（volc.service_type.10029）
+        # 传未知字段会被服务端拒绝或忽略，故用 resource_type 门控。
+        self.voice_instruction = config.get("voice_instruction")
+        if self.voice_instruction and self.resource_type:
+            self.additions["context_texts"] = [self.voice_instruction]
+
         # 应用百分比调整（如果存在），否则使用公有化配置
         if "ttsVolume" in config:
             self.audio_params["loudness_rate"] = int(convert_percentage_to_range(
