@@ -831,8 +831,19 @@ class ConnectionHandler:
             self.bind_code = e.bind_code
             private_config = {}
         except Exception as e:
-            self.need_bind = True
-            self.logger.bind(tag=TAG).error(f"异步获取差异化配置失败: {e}")
+            # 「取配置失败」不等于「设备未绑定」。
+            # 旧实现把网络抖动 / 接口超时也置 need_bind=True，而 _check_timeout()
+            # 对 need_bind 的连接会改用 first_activity_time（连接建立时刻）做
+            # **不可续期**的倒计时 —— 正在正常对话的设备到点必被踢，之后立刻重连，
+            # 这正是「WebSocket 频繁断开」的主因之一（manager-api 抖动一次，
+            # 该时间窗内建立的所有连接都被判死刑）。
+            # 取配置失败时改用全局默认配置继续服务，把计时交回可续期的
+            # last_activity_time，避免因后端抖动误杀在线设备。
+            self.need_bind = False
+            self.bind_completed_event.set()
+            self.logger.bind(tag=TAG).error(
+                f"异步获取差异化配置失败（按已绑定处理，避免误踢在线设备）: {e}"
+            )
             private_config = {}
 
         init_llm, init_tts, init_memory, init_intent = (

@@ -73,12 +73,23 @@ class WebSocketServer:
         host = server_config.get("ip", "0.0.0.0")
         port = int(server_config.get("port", 8000))
 
+        # 协议层保活参数。原先是 ping_interval=None（完全关闭保活），导致：
+        #   1) 空闲连接没有任何双向流量，NAT/防火墙会悄悄回收，两端都发现不了；
+        #   2) 半开连接（对端掉电/断网）只能等 3600s 的兜底超时才被清理。
+        # 开启是安全的：固件侧 78__esp-ml307 web_socket.cc:392 收到 Ping(0x9)
+        # 会自动回 Pong(0xA)，无需固件改动。
+        # ping_timeout 放宽到 60s：弱网下偶发丢包不会误杀正常连接，
+        # 真正死掉的连接最多 90s 内被回收。
+        ws_ping_interval = int(server_config.get("ws_ping_interval", 30))
+        ws_ping_timeout = int(server_config.get("ws_ping_timeout", 60))
+
         async with websockets.serve(
             self._handle_connection,
             host,
             port,
             process_request=self._http_response,
-            ping_interval=None,
+            ping_interval=ws_ping_interval,
+            ping_timeout=ws_ping_timeout,
         ):
             await asyncio.Future()
 
