@@ -51,6 +51,7 @@
             <td>{{ i + 1 }}</td>
             <td>
               <div class="row-actions">
+                <button class="link-btn" @click="createFromTemplate(t)">⚡ 用模板创建</button>
                 <button class="link-btn" @click="openEdit(t)">编辑</button>
                 <button class="link-btn" @click="preview(t)">预览</button>
                 <button class="link-btn danger" @click="remove(t)">删除</button>
