@@ -139,6 +139,8 @@ public class TimbreServiceImpl extends BaseServiceImpl<TimbreDao, TimbreEntity> 
                     dto.setIsClone(false); // 设置为普通音色
                     dto.setTtsVoice(entity.getTtsVoice()); // 平台音色ID（试听合成用）
                     dto.setVoiceInstruction(entity.getVoiceInstruction()); // 音色级语气指令（编辑回显）
+                    dto.setDynamicInstruction(entity.getDynamicInstruction()); // 动态指令开关
+                    dto.setInstructionLlmId(entity.getInstructionLlmId()); // 动态指令生成 LLM
                     return dto;
                 })
                 .collect(Collectors.toList());
