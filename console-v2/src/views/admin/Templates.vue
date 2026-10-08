@@ -164,6 +164,19 @@ async function save() {
   }
 }
 function preview(t) { previewing.value = t }
+
+// 契约对齐 cc-console createAgentFromTemplate：POST /agent {agentName, templateId}
+function createFromTemplate(t) {
+  askConfirm({
+    title: '用模板创建智能体', message: `用模板「${t.agentName || t.name}」创建新智能体？`,
+    onOk: async () => {
+      try {
+        await adminApi.createAgent({ agentName: (t.agentName || t.name || '模板智能体') + '-副本', templateId: t.id })
+        toast('已创建，可在「智能体」页编辑')
+      } catch (e) { toast(e.msg || '创建失败', 'error') }
+    }
+  })
+}
 function remove(t) {
   askConfirm({
     title: '删除模板', message: `确定删除模板「${t.name}」吗？此操作不可恢复。`, danger: true,

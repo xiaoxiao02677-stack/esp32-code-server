@@ -92,7 +92,8 @@ async function load() {
     const res = await adminApi.userPage({ page: page.value, limit: 4, mobile: mobile.value || undefined })
     const data = res.data || {}
     users.value = (data.list || []).map(u => ({
-      id: u.id, username: u.username || u.mobile || '未命名',
+      // 契约对齐 cc-console：changeStatus body 用 [u.userid]
+      id: u.userid ?? u.id, username: u.username || u.mobile || '未命名',
       mobile: u.mobile, status: u.status ?? 1, deviceCount: u.deviceCount,
       createDate: u.createDate ? String(u.createDate).slice(0, 10) : '—'
     }))
