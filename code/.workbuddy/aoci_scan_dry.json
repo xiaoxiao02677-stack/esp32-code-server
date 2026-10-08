@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "ok": false,
+  "exit_code": 3,
+  "error_code": "config",
+  "message": "\u5df2\u6709Managed Scope Baseline\u4e0d\u80fd\u901a\u8fc7scan --force\u91cd\u5efa\uff1b\u8bf7\u4f7f\u7528scope preview/apply\uff0c\u786e\u4fddEntry\u3001\u89d2\u8272\u4e0eobserve\u53d8\u5316\u5904\u4e8e\u4e00\u4e2a\u53ef\u6062\u590d\u4e8b\u52a1\u4e2d"
+}

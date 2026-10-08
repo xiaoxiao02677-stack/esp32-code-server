@@ -29,8 +29,9 @@
         <tbody>
           <tr v-for="v in voices" :key="v.id">
             <td>
-              <div class="cell-main">{{ v.name }}</div>
+              <div class="cell-main">{{ v.name }}{{ v.dynamicInstruction ? ' 🔄动态' : '' }}</div>
               <div v-if="v.isClone" class="cell-sub">🔊 克隆音色</div>
+              <div v-if="v.voiceInstruction" class="cell-sub" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">💬 {{ v.voiceInstruction }}</div>
             </td>
             <td style="font-size:12px">{{ v.ttsVoice || v.id }}</td>
             <td>{{ v.languages || '—' }}</td>
@@ -56,7 +57,22 @@
         <div class="form-row"><label>音色代码</label><input v-model="editor.ttsVoice" placeholder="如 Cherry" /></div>
         <div class="form-row"><label>语言</label><input v-model="editor.languages" placeholder="普通话" /></div>
         <div class="form-row"><label>排序</label><input v-model.number="editor.sort" type="number" /></div>
-        <div class="form-row"><label>音色指令（可选）</label><input v-model="editor.voiceInstruction" placeholder="声音风格描述" /></div>
+        <div class="form-row"><label>音色指令（doubao 2.0 音色生效，如「用标准大陆普通话说话」）</label>
+          <input v-model="editor.voiceInstruction" placeholder="可选" /></div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" v-model="editor.dynamicInstruction" style="width:auto" /> ✔ 动态更新
+          </label>
+          <p class="field-hint">勾选后由 LLM 读取短期+长期聊天记录，自动定制口语化语气指令（覆盖固定指令）</p>
+        </div>
+        <div class="form-row" v-if="editor.dynamicInstruction"><label>指令生成 LLM</label>
+          <select v-model="editor.instructionLlmId">
+            <option value="">跟随智能体主 LLM</option>
+            <option v-for="m in llmOpts" :key="m.id" :value="m.id">{{ m.modelName }}</option>
+          </select>
+        </div>
+        <div class="form-row"><label>试听链接 voice_demo（可直接粘贴一个音频 URL）</label>
+          <input v-model="editor.voiceDemo" placeholder="https://... 可选" /></div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="editor.show = false">取消</button>
           <button class="btn btn-primary" :disabled="saving || !editor.name || !editor.ttsVoice" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
@@ -82,7 +98,8 @@ const defaultTtsName = ref('未设置')
 const loading = ref(false)
 const saving = ref(false)
 const audioRef = ref(null)
-const editor = reactive({ show: false, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '' })
+const llmOpts = ref([])
+const editor = reactive({ show: false, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '', dynamicInstruction: false, instructionLlmId: '' })
 
 async function load() {
   loading.value = true
@@ -96,6 +113,9 @@ async function load() {
     if (!activeModelId.value && list.length) {
       await pickModel(def || list[0], true)
     }
+    // LLM 下拉（动态指令生成用）
+    const lres = await adminApi.modelNames('LLM')
+    llmOpts.value = lres.data || []
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
 }
@@ -107,7 +127,14 @@ async function pickModel(m, silent) {
   try {
     // 契约：/models/{modelId}/voices → data 数组 [{id,name,ttsVoice,languages,isClone}]
     const res = await adminApi.modelVoices(m.id)
-    voices.value = res.data || []
+    voices.value = (res.data || []).map(v => ({
+      id: v.id, ttsVoice: v.ttsVoice, name: v.name || v.voiceName || v.ttsVoice,
+      desc: v.description || '', languages: v.languages,
+      isClone: v.isClone,
+      voiceInstruction: v.voiceInstruction || '',
+      dynamicInstruction: !!v.dynamicInstruction,
+      instructionLlmId: v.instructionLlmId || ''
+    }))
   } catch (e) { toast(e.msg || '音色加载失败', 'error'); voices.value = [] }
 }
 
@@ -123,24 +150,30 @@ async function preview(v) {
 }
 
 function openCreate() {
-  Object.assign(editor, { show: true, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '' })
+  Object.assign(editor, { show: true, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '', dynamicInstruction: false, instructionLlmId: '' })
 }
 function openEdit(v) {
   Object.assign(editor, {
     show: true, id: v.id, name: v.name || '',
     ttsVoice: v.ttsVoice || '', languages: v.languages || '普通话',
-    sort: v.sort != null ? v.sort : 0, voiceInstruction: v.voiceInstruction || ''
+    sort: v.sort != null ? v.sort : 0,
+    voiceInstruction: v.voiceInstruction || '',
+    voiceDemo: v.voiceDemo || '',
+    dynamicInstruction: !!v.dynamicInstruction,
+    instructionLlmId: v.instructionLlmId || ''
   })
 }
 
 async function save() {
   saving.value = true
   try {
-    // 契约对齐 cc-console saveVoice：payload 带 ttsModelId + 全字段
+    // 契约对齐 cc-console saveVoice：payload 带 ttsModelId + 全字段 + 动态指令
     const payload = {
       name: editor.name, ttsVoice: editor.ttsVoice, ttsModelId: activeModelId.value,
       languages: editor.languages || '普通话', sort: editor.sort || 0,
-      voiceInstruction: editor.voiceInstruction || '', voiceDemo: ''
+      voiceInstruction: editor.voiceInstruction || '', voiceDemo: editor.voiceDemo || '',
+      dynamicInstruction: editor.dynamicInstruction,
+      instructionLlmId: editor.dynamicInstruction ? (editor.instructionLlmId || null) : null
     }
     if (editor.id) await adminApi.ttsVoiceUpdate(editor.id, payload)
     else await adminApi.ttsVoiceCreate(payload)

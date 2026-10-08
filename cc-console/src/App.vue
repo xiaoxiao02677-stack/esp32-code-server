@@ -201,8 +201,9 @@
           </div>
           <div v-if="voices.length" class="voice-list">
             <div v-for="(v, i) in voices" :key="v.id" class="voice-item border-trace stagger-item" :style="{ '--i': Math.min(i, 12) }">
-              <div class="voice-name">{{ v.name }}</div>
+              <div class="voice-name">{{ v.name }}{{ v.dynamicInstruction ? ' 🔄动态' : '' }}</div>
               <div class="voice-lang">{{ v.languages || '—' }}</div>
+              <div v-if="v.voiceInstruction" class="voice-lang" style="font-size:11px;color:#888;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">💬 {{ v.voiceInstruction }}</div>
               <div class="voice-actions">
                 <button class="kawaii-pill kawaii-pill--ghost play-btn" :disabled="playingVoice === v.id" @click="playVoice(v)">
                   {{ playingVoice === v.id ? '试听中…' : '▶ 试听' }}
@@ -913,6 +914,17 @@
             </div>
             <div class="field" style="margin-top:8px;"><label>语气指令（doubao 2.0 音色生效，如「用标准大陆普通话说话」）</label>
               <input v-model.trim="editVoice.voiceInstruction" class="cc-input" placeholder="可选" /></div>
+            <div class="field" style="margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" v-model="editVoice.dynamicInstruction" /> ✔ 动态更新
+              </label>
+              <p class="field-hint">勾选后由 LLM 读取短期+长期聊天记录，自动定制口语化语气指令（覆盖固定指令）</p>
+            </div>
+            <div class="field" v-if="editVoice.dynamicInstruction" style="margin-top:8px;"><label>指令生成 LLM</label>
+              <select v-model="editVoice.instructionLlmId" class="cc-input">
+                <option value="">跟随智能体主 LLM</option>
+                <option v-for="m in modelOptions.LLM" :key="m.id" :value="m.id">{{ m.modelName }}</option>
+              </select></div>
             <div class="field" style="margin-top:8px;"><label>试听链接 voice_demo（可直接粘贴一个音频 URL）</label>
               <input v-model.trim="editVoice.voiceDemo" class="cc-input" placeholder="https://... 可选" /></div>
             <div class="fact-actions" style="margin-top:14px;">
@@ -1318,9 +1330,10 @@ export default {
     // ===== 音色 CRUD（后端 POST/PUT /ttsVoice） =====
     openVoiceEdit(v) {
       if (!this.voiceTtsModel) { alert('请先选择 TTS 引擎'); return; }
+      this.loadModelOptions(); // 确保 LLM 下拉可用（动态指令生成用）
       this.editVoice = v
-        ? { id: v.id, name: v.name || '', ttsVoice: v.ttsVoice || '', languages: v.languages || '', sort: v.sort != null ? v.sort : 0, voiceInstruction: v.voiceInstruction || '', voiceDemo: v.voiceDemo || '' }
-        : { id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '' };
+        ? { id: v.id, name: v.name || '', ttsVoice: v.ttsVoice || '', languages: v.languages || '', sort: v.sort != null ? v.sort : 0, voiceInstruction: v.voiceInstruction || '', voiceDemo: v.voiceDemo || '', dynamicInstruction: !!v.dynamicInstruction, instructionLlmId: v.instructionLlmId || '' }
+        : { id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '', dynamicInstruction: false, instructionLlmId: '' };
     },
     async saveVoice() {
       const ev = this.editVoice;
@@ -1331,6 +1344,8 @@ export default {
           name: ev.name, ttsVoice: ev.ttsVoice, ttsModelId: this.voiceTtsModel,
           languages: ev.languages || '普通话', sort: ev.sort || 0,
           voiceInstruction: ev.voiceInstruction || '', voiceDemo: ev.voiceDemo || '',
+          dynamicInstruction: !!ev.dynamicInstruction,
+          instructionLlmId: ev.dynamicInstruction ? (ev.instructionLlmId || null) : null,
         };
         const res = ev.id
           ? await this.api(`/ttsVoice/${ev.id}`, { method: 'PUT', json: payload })
