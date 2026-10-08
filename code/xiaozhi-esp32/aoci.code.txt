@@ -878,6 +878,8 @@ README.md[CS3T]: F:my-s3-tft板卡说明文档 | R:- | A:- | S:-
 config.h[CH4S]: F:my-s3-tft板引脚与外设宏定义 | R:code:main/boards/common/board.h | A:- | S:禁止为适配不同硬件改既有板引脚，新增板另建目录
 config.json[CH3S]: F:my-s3-tft板构建配置(目标芯片/变体) | R:code:scripts/build.py | A:- | S:板型选择链首环
 my_s3_tft_board.cc[CH4S]: F:my-s3-tft板卡初始化(引脚/显示/音频/网络) | R:code:main/boards/common/board.h | A:- | S:LCD复位/初始化加ESP_ERROR_CHECK防御；开机音量改由NVS/云端恢复不再硬编码50
+round_screen_display.cc[CH7L]: F:my-s3-tft圆屏(240x240)显示皮肤——接管布局/表情/气泡/状态栏渲染 | R:code:main/boards/my-s3-tft/round_screen_display.h,code:main/display/display.h,code:main/boards/common/board.h,code:main/application.h,code:main/assets/lang_config.h | A:SetupUI/BuildMainScreen/SetEmotion/SetChatMessage/SetStatus/UpdateStatusBar/ShowNotification/SetTheme/HandleKeyEvent/NextEasterEgg/Tick1s | S:接管圆屏布局/表情/气泡渲染；复用基类emoji管线；全量表情走noto_emoji_get_utf8未映射回退；须建隐藏network/mute/battery标签防SetTheme空指针崩溃(2026-10-08事故)；背景good.jpg全屏
+round_screen_display.h[CH4S]: F:my-s3-tft圆屏显示皮肤头文件——RoundScreenDisplay类声明(继承SpiLcdDisplay) | R:code:main/display/lcd_display.h | A:- | S:圆屏皮肤组件声明；覆写SetupUI等7接口；单BOOT键三事件与皮肤配色常量
 
 ===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/nologo/xingzhi-abs-2.0/===
 README.md[CS3T]: F:xingzhi-abs-2.0板卡说明文档 | R:- | A:- | S:-
@@ -1523,3 +1525,6 @@ build.py[XV7M]: F:权威构建入口——板型/变体选择与构建编排 | R
 build_all.py[XO4S]: F:开发辅助脚本(build_all.py) | R:- | A:- | S:-
 pack_model.py[XO4S]: F:开发辅助脚本(pack_model.py) | R:- | A:- | S:-
 spiffs_assets_gen.py[XO4S]: F:开发辅助脚本(spiffs_assets_gen.py) | R:- | A:- | S:-
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/===
+lang_config.h[CA5M]: F:自动生成的多语言/音效配置表(zh-CN，en-US回退)——字符串资源与OGG音效资产映射 | R:code:main/application.cc | A:- | S:namespace Lang::Strings 字符串表 + Lang::Sounds 经asm("_binary_N_ogg_start/end")绑定OGG资产；被Application/Alert播放提示音引用；新增音效须同步此表与assets

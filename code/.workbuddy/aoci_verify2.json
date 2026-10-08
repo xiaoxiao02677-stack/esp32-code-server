@@ -1,0 +1,242 @@
+{
+  "root": "G:\\demo\\21_xiaozhi\\code\\xiaozhi-esp32",
+  "layout_mode": "volumes-v1",
+  "layout_version": "1",
+  "structure_valid": true,
+  "governance_aligned": false,
+  "read_only_candidate": true,
+  "root_sha256": "1b0a80a38398eda43c4a295a43234016785902212087d31a7b9537143fc9a8d3",
+  "meta_sha256": "fbc304fa05182547e96f1f8404c7c30ad6c366bba9589523f1019c2c1da0427c",
+  "composite_identity": "4a3cf373bcab40ed5fd87477add6099b2c1d3cf1c7a18f2e1a930331cd28406f",
+  "volumes": [
+    {
+      "id": "meta",
+      "kind": "meta",
+      "path": "aoci.meta.txt",
+      "asset_state": "present",
+      "sha256": "fbc304fa05182547e96f1f8404c7c30ad6c366bba9589523f1019c2c1da0427c",
+      "object_count": 0
+    },
+    {
+      "id": "code",
+      "kind": "code",
+      "path": "aoci.code.txt",
+      "asset_state": "present",
+      "sha256": "f27430e3141f2490fe38b8aa12c539b1e4985d04fc023db3db7ac930391ab42d",
+      "object_count": 1071
+    },
+    {
+      "id": "database",
+      "kind": "database",
+      "path": "aoci.database.txt",
+      "asset_state": "absent",
+      "object_count": 0
+    }
+  ],
+  "governance": {
+    "version": "volumes-governance-facts/v1",
+    "layout": "volumes-v1",
+    "enabled_domains": [
+      "code"
+    ],
+    "structure_valid": true,
+    "governance_aligned": false,
+    "composite_identity": "4a3cf373bcab40ed5fd87477add6099b2c1d3cf1c7a18f2e1a930331cd28406f",
+    "root": {
+      "enabled": true,
+      "applicable": true,
+      "domain_state": "enabled",
+      "asset_state": "present",
+      "path": "aoci.txt",
+      "sha256": "1b0a80a38398eda43c4a295a43234016785902212087d31a7b9537143fc9a8d3",
+      "object_count": 0
+    },
+    "meta": {
+      "enabled": true,
+      "applicable": true,
+      "domain_state": "enabled",
+      "asset_state": "present",
+      "path": "aoci.meta.txt",
+      "sha256": "fbc304fa05182547e96f1f8404c7c30ad6c366bba9589523f1019c2c1da0427c",
+      "object_count": 0
+    },
+    "code": {
+      "enabled": true,
+      "applicable": true,
+      "domain_state": "enabled",
+      "asset_state": "present",
+      "path": "aoci.code.txt",
+      "sha256": "f27430e3141f2490fe38b8aa12c539b1e4985d04fc023db3db7ac930391ab42d",
+      "object_count": 1071
+    },
+    "database": {
+      "enabled": false,
+      "applicable": false,
+      "domain_state": "not_applicable",
+      "asset_state": "absent",
+      "path": "aoci.database.txt",
+      "object_count": 0
+    },
+    "code_source_count": 9013,
+    "code_entry_count": 1071,
+    "database_entry_count": 0,
+    "database_binding_count": 0,
+    "code_drift": {
+      "missing": [],
+      "orphan": [],
+      "stale": [],
+      "unbaselined": [],
+      "line_ending_only": [],
+      "observed_new": [],
+      "observed_changed": [],
+      "observed_removed": [],
+      "skipped": [],
+      "curation_excluded": []
+    },
+    "managed_scope": {
+      "aligned": false,
+      "scope_change_required": true,
+      "policy_identity": "ee066bdea2650afa1420f5494e8641349c4f822375b8428572d991969a8f4ef9",
+      "active_policy_identity": "c81414aa1ad20edc6cdd8c9d904678ca476240ca1a991b5d31759dcae114efd1",
+      "index_count": 9016,
+      "observe_count": 3526,
+      "exclude_count": 43,
+      "observed_pending_review": 0
+    },
+    "budget": {
+      "mode": "enforce",
+      "status": "healthy",
+      "whole_index_tokens": 59352,
+      "target_tokens": 200000,
+      "warning_tokens": 300000,
+      "max_tokens": 400000,
+      "r": [
+        {
+          "min_c": 1,
+          "max_c": 4,
+          "target_tokens": 25,
+          "max_tokens": 50
+        },
+        {
+          "min_c": 5,
+          "max_c": 7,
+          "target_tokens": 45,
+          "max_tokens": 90
+        },
+        {
+          "min_c": 8,
+          "max_c": 8,
+          "target_tokens": 70,
+          "max_tokens": 140
+        },
+        {
+          "min_c": 9,
+          "max_c": 9,
+          "target_tokens": 90,
+          "max_tokens": 180
+        }
+      ],
+      "s": [
+        {
+          "min_c": 1,
+          "max_c": 4,
+          "target_tokens": 20,
+          "max_tokens": 40
+        },
+        {
+          "min_c": 5,
+          "max_c": 7,
+          "target_tokens": 40,
+          "max_tokens": 80
+        },
+        {
+          "min_c": 8,
+          "max_c": 8,
+          "target_tokens": 70,
+          "max_tokens": 140
+        },
+        {
+          "min_c": 9,
+          "max_c": 9,
+          "target_tokens": 100,
+          "max_tokens": 200
+        }
+      ],
+      "violations": [],
+      "s_coverage": [
+        {
+          "min_c": 1,
+          "max_c": 4,
+          "entries": 951,
+          "s_present": 610
+        },
+        {
+          "min_c": 5,
+          "max_c": 7,
+          "entries": 106,
+          "s_present": 70
+        },
+        {
+          "min_c": 8,
+          "max_c": 8,
+          "entries": 9,
+          "s_present": 9
+        },
+        {
+          "min_c": 9,
+          "max_c": 9,
+          "entries": 5,
+          "s_present": 5
+        }
+      ],
+      "high_importance_entries": 39,
+      "high_importance_s_absent": 7,
+      "high_importance_s_absent_percent": 17
+    },
+    "database_cognition": {
+      "version": 1,
+      "configured_sources": 0,
+      "blocking_source_count": 0,
+      "database_volume_state": "absent",
+      "evidence_table_count": 0,
+      "cognition_entry_count": 0,
+      "cognition_current": true,
+      "network_accessed": false,
+      "summary": {
+        "current": 0,
+        "missing": 0,
+        "stale": 0,
+        "unbaselined": 0,
+        "orphan": 0,
+        "evidence_unavailable": 0,
+        "evidence_invalid": 0,
+        "source_disabled": 0
+      },
+      "sources": [],
+      "items": [],
+      "next_action": "no_database_configuration"
+    },
+    "database_evidence": {
+      "state": "not_applicable",
+      "configured_sources": 0,
+      "accepted_sources": 0,
+      "baseline_current": false
+    },
+    "relation_findings": [],
+    "pending_transactions": 0,
+    "recovery_pending": false,
+    "third_party_conflict": false,
+    "network_accessed": false,
+    "result": "blocked",
+    "affected_domains": [
+      "code"
+    ],
+    "next_required_action": "blocked",
+    "findings": [
+      {
+        "code": "scope_change_required",
+        "domain": "code"
+      }
+    ]
+  }
+}
