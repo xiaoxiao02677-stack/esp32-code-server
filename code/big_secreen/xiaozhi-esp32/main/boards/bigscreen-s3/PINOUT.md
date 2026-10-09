@@ -1,68 +1,48 @@
-# bigscreen-s3 引脚分配表
+# bigscreen-s3 引脚分配表（v2，已修正）
 
-> 依据《99 大屏幕固件信息.md》+ `freenove-esp32s3-display-2.8-lcd` 参考板交叉校准。
-> 99 文档自述「精确 GPIO 引脚可信度较低」，以下消解了原文档的引脚冲突。
+> **板卡鉴定**：Freenove ESP32-S3 Display 2.8"（或同布线套板）。
+> v1 依据《99 大屏幕固件信息.md》的字符串推断分配引脚，实测 ES8311 I2C 无 ACK 导致启动 abort。
+> 修正依据：该板官方原理图（仓库 `main/boards/freenove-esp32s3-display-2.8-lcd/` 板级配置完全一致：
+> ES8311 + ILI9341 2.8" + I2C 触摸 + SD + N16R8）。
+> 99 文档的引脚实为 Freenove 引脚但**功能标签张冠李戴**（46=LCD DC、45=背光、4=MCLK、5=BCLK…）。
 
-## 冲突消解说明
-
-99 文档原文存在三处引脚冲突（一个 GPIO 无法同时做两件事）：
-
-| 冲突 GPIO | 99 原文用法 A | 99 原文用法 B | 消解结果 |
-|---|---|---|---|
-| GPIO6 | LCD DC | LCD SCK / SD SCK | **保留 DC=6**；SCK 移到 GPIO12 |
-| GPIO7 | I2S DIN（麦克风） | LCD MOSI / SD MOSI | **保留 I2S DIN=7**；LCD MOSI 移到 GPIO13 |
-| GPIO1 | 触摸 SDA / SD MISO | LCD MISO | 触摸/SD 本阶段不启用，GPIO1 保留给 PA |
-
-消解原则：**音频 I2S 引脚来自固件 I2S 外设探测（es8311 字符串旁），可信度最高，全部保留**；显示控制脚（CS/DC/RST）与音频无冲突，保留；显示 SPI 数据脚（SCK/MOSI）与音频冲突，重新分配到干净 GPIO 区（12/13）。
-
-## 最终引脚分配（config.h）
+## 当前引脚（config.h）
 
 ### ES8311 音频（I2S + I2C）
 
 | 功能 | GPIO | 来源 |
 |---|---|---|
-| I2S MCLK | 2 | 99 文档 |
-| I2S BCLK (SCK) | 46 | 99 文档 |
-| I2S WS (LRC) | 45 | 99 文档 |
-| I2S DIN（麦克风） | 7 | 99 文档 |
-| I2S DOUT（扬声器） | 8 | 推测（99 未给，DIN 相邻） |
-| PA 使能 | 1 | 推测（99 未给） |
-| I2C SDA（ES8311 控制） | 11 | 推测（99 未给） |
-| I2C SCL（ES8311 控制） | 10 | 推测（99 未给） |
+| I2S MCLK | 4 | Freenove 官方（99 文档误标为 LCD RST） |
+| I2S BCLK | 5 | Freenove 官方（99 文档误标为 LCD CS） |
+| I2S WS (LRC) | 7 | Freenove 官方（99 文档误标为 I2S DIN） |
+| I2S DIN（麦克风） | 6 | Freenove 官方（99 文档误标为 SD SCK） |
+| I2S DOUT（扬声器） | 8 | Freenove 官方（99 文档误标为触摸 SDA） |
+| PA 使能（低有效） | 1 | Freenove 官方 |
+| I2C SDA（ES8311 控制） | 16 | Freenove 官方（v1 猜 11 → I2C 无 ACK 崩溃） |
+| I2C SCL（ES8311 控制） | 15 | Freenove 官方（v1 猜 10 → I2C 无 ACK 崩溃） |
 
 ### ILI9341 显示（SPI，320x240 横屏）
 
 | 功能 | GPIO | 来源 |
 |---|---|---|
-| CS 片选 | 5 | 99 文档 |
-| DC 数据/命令 | 6 | 99 文档 |
-| RST 复位 | 4 | 99 文档 |
-| SCK 时钟 | 12 | **消解值**（原 SCK=6 与 DC 冲突） |
-| MOSI 主出 | 13 | **消解值**（原 MOSI=7 与 I2S DIN 冲突） |
-| MISO 主入 | 悬空 | 屏只写不读 |
-| 背光 | 47 | 推测（99 未给） |
-| SPI 时钟 | 40 MHz | ILI9341 安全值 |
+| CS 片选 | 10 | Freenove 官方 |
+| DC 数据/命令 | 46 | Freenove 官方（99 文档误标为 I2S BCLK） |
+| RST 复位 | NC | Freenove 板无独立复位脚 |
+| SCK 时钟 | 12 | Freenove 官方 |
+| MOSI 主出 | 11 | Freenove 官方 |
+| MISO | 13 | Freenove 官方 |
+| 背光 | 45 | Freenove 官方（99 文档误标为 I2S WS） |
 
-### 其他
+## 防崩溃机制
 
-| 功能 | GPIO |
-|---|---|
-| BOOT 按键 | 0 |
-| 板载 LED | 无（未探测到） |
+`bigscreen-s3.cc` 启动时先探测 ES8311（I2C 地址 0x30）：
 
-### 本阶段不启用
+- **探测成功** → 正常走 `Es8311AudioCodec`（硬件 codec，硬件音量）。
+- **探测失败** → 打印 `[WARN] ES8311 not detected ...`，降级为
+  `NoAudioCodecDuplex`（纯 I2S 数字音频），设备照常运行、可配网联网，
+  不再像 v1 那样 `ESP_ERROR_CHECK` abort 重启循环。
 
-- **I2C 触摸屏**：型号未定且 `touch ic error` 初始化失败——跳过（如后续确认型号为 FT6336/GT911 等，可参照 freenove 板的 TouchDriver 移植）
-- **SD 卡**：与显示/音频引脚冲突，未分配
+## 验证记录
 
-## 实测修改指引
-
-烧录后若异常，改 `main/boards/bigscreen-s3/config.h` 对应宏即可（无需动 .cc）：
-
-| 症状 | 优先检查 |
-|---|---|
-| 白屏/花屏 | `DISPLAY_SCK_PIN`(12) / `DISPLAY_MOSI_PIN`(13) 是否与实际接线一致；颜色反了改 `DISPLAY_INVERT_COLOR`；方向不对改 `DISPLAY_SWAP_XY` / `MIRROR_X/Y` |
-| 完全黑屏 | `DISPLAY_BACKLIGHT_PIN`(47) 与 `DISPLAY_BACKLIGHT_OUTPUT_INVERT` |
-| 无声 | `AUDIO_I2S_GPIO_DOUT`(8) / `AUDIO_CODEC_PA_PIN`(1)；ES8311 初始化失败查 I2C 脚 10/11 |
-| 麦克风无输入 | `AUDIO_I2S_GPIO_DIN`(7) |
-| 屏幕镜像/颠倒 | 调 `DISPLAY_MIRROR_X/Y` 与 `DISPLAY_SWAP_XY` 四个组合 |
+- 2026-10-10：v1 引脚（I2C=10/11）烧录后启动即崩（本文档开头的 backtrace）。
+- 2026-10-10：v2 引脚（Freenove 官方）编译通过（BUILD OK），待烧录实测。

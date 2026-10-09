@@ -28,10 +28,8 @@
 #define AUDIO_CODEC_I2C_SDA_PIN  GPIO_NUM_16
 #define AUDIO_CODEC_ES8311_ADDR  ES8311_CODEC_DEFAULT_ADDR
 
-// ---------- 功放使能（Freenove 官方布线）----------
+// ---------- 功放使能（Freenove 官方布线，低电平使能）----------
 #define AUDIO_CODEC_PA_PIN       GPIO_NUM_1
-// Freenove 板 PA 使能为高电平（es8311_cfg.pa_reverted = false）
-#define AUDIO_CODEC_PA_ACTIVE_HIGH 1
 
 // ---------- BOOT 按键 ----------
 #define BOOT_BUTTON_GPIO GPIO_NUM_0

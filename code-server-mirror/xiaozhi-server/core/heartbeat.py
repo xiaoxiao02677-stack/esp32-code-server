@@ -155,7 +155,7 @@ class HeartbeatServer:
             self.logger.bind(tag=TAG).warning(f"心跳连接异常 {peer_str}: {e}")
         finally:
             if device_id:
-                self._mark_offline(device_id, "连接断开")
+                self._mark_offline(device_id, "连接断开", peer_str)
             try:
                 writer.close()
                 await writer.wait_closed()
@@ -233,9 +233,17 @@ class HeartbeatServer:
         elif msg.get("type") == "HEARTBEAT":
             self.logger.bind(tag=TAG).info(f"心跳 [{device_id}] {peer_str}")
 
-    def _mark_offline(self, device_id: str, reason: str):
+    def _mark_offline(self, device_id: str, reason: str, peer_str: str = None):
         device = self.devices.get(device_id)
         if device and device.get("online"):
+            # 半开连接治理的配套：同一设备可能换源端口建立了新连接（NAT 刷新），
+            # 旧连接超时关闭属正常替换。仅当离线判定来源仍是设备当前活跃连接
+            # （device["ip"] 与断开连接 peer 一致）时才判离线，避免误杀。
+            if peer_str is not None and device.get("ip") != peer_str:
+                self.logger.bind(tag=TAG).info(
+                    f"旧连接关闭 [{device_id}] {peer_str}（设备已切换到 {device.get('ip', '')}，不判离线）"
+                )
+                return
             device["online"] = False
             self.logger.bind(tag=TAG).warning(
                 f"设备离线 [{device_id}] {device.get('ip', '')} ({reason})"

@@ -5,6 +5,7 @@
 #include <wifi_station.h>
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
+#include "codecs/no_audio_codec.h"
 #include "display/lcd_display.h"
 #include "application.h"
 #include "button.h"
@@ -21,13 +22,19 @@
 #define TAG "BigscreenS3"
 
 // 大屏幕板：ESP32-S3 + ES8311 音频 + ILI9341 2.8" SPI 屏（320x240 横屏）。
-// 依据《99 大屏幕固件信息.md》适配；无电池、无可用触摸（I2C 触摸 init 失败，暂不启用）。
+// 板卡鉴定为 Freenove ESP32-S3 Display 2.8"（或同布线套板），引脚按该板官方
+// 原理图修正，见 config.h 顶部说明。无电池、无可用触摸（I2C 触摸 init 失败，暂不启用）。
 // YH 心跳协议（sandyun.top:12399）与 OTA 经 config.json 的 sdkconfig_append 启用。
+//
+// 防重启循环：ES8311 的 I2C 探测失败（无 ACK）时不再走 ESP_ERROR_CHECK abort，
+// 而是降级为 NoAudioCodecDuplex（纯 I2S 数字音频，无硬件 codec 控制），
+// 设备仍能进配网/联网，串口会打印 "[WARN] ES8311 not detected" 便于排查。
 class BigscreenS3Board : public WifiBoard {
 private:
     Button boot_button_;
     LcdDisplay *display_;
-    i2c_master_bus_handle_t codec_i2c_bus_;
+    i2c_master_bus_handle_t codec_i2c_bus_ = nullptr;
+    bool es8311_present_ = false;
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -43,6 +50,24 @@ private:
             },
         };
         ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &codec_i2c_bus_));
+    }
+
+    // 探测 ES8311 是否在总线上（地址 0x30/0x18 视 ADDR 引脚，默认 0x30）。
+    bool ProbeEs8311() {
+        i2c_master_dev_handle_t dev = nullptr;
+        i2c_device_config_t cfg = {
+            .device_address = AUDIO_CODEC_ES8311_ADDR >> 1,
+            .scl_speed_hz = 100000,
+            .scl_wait_us = 0,
+        };
+        if (i2c_master_bus_add_device(codec_i2c_bus_, &cfg, &dev) != ESP_OK) {
+            return false;
+        }
+        uint8_t reg = 0x00;  // chip reset register (readable)
+        uint8_t val = 0;
+        bool ok = i2c_master_transmit_receive(dev, &reg, 1, &val, 1, 50) == ESP_OK;
+        i2c_master_bus_rm_device(dev);
+        return ok;
     }
 
     void InitializeSpi() {
@@ -102,6 +127,12 @@ public:
     BigscreenS3Board(): boot_button_(BOOT_BUTTON_GPIO)
     {
         InitializeI2c();
+        es8311_present_ = ProbeEs8311();
+        if (!es8311_present_) {
+            ESP_LOGW(TAG, "ES8311 not detected on I2C (SCL=%d SDA=%d addr=0x%02x); "
+                          "audio falls back to raw I2S. Check wiring/config.h.",
+                     AUDIO_CODEC_I2C_SCL_PIN, AUDIO_CODEC_I2C_SDA_PIN, AUDIO_CODEC_ES8311_ADDR);
+        }
         InitializeSpi();
         InitializeLcdDisplay();
         InitializeButtons();
@@ -109,10 +140,16 @@ public:
     }
 
     virtual AudioCodec* GetAudioCodec() override {
-        static Es8311AudioCodec audio_codec(codec_i2c_bus_, AUDIO_CODEC_I2C_NUM,
-            AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE, AUDIO_I2S_GPIO_MCLK, AUDIO_I2S_GPIO_BCLK,
-            AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN, AUDIO_CODEC_PA_PIN,
-            AUDIO_CODEC_ES8311_ADDR, true, true);
+        if (es8311_present_) {
+            static Es8311AudioCodec audio_codec(codec_i2c_bus_, AUDIO_CODEC_I2C_NUM,
+                AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE, AUDIO_I2S_GPIO_MCLK, AUDIO_I2S_GPIO_BCLK,
+                AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN, AUDIO_CODEC_PA_PIN,
+                AUDIO_CODEC_ES8311_ADDR, true, true);
+            return &audio_codec;
+        }
+        // 降级：无硬件 codec 时仍提供数字 I2S 通道（输入/输出直通）。
+        static NoAudioCodecDuplex audio_codec(AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
+            AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN);
         return &audio_codec;
     }
 
