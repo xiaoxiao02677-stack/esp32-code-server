@@ -145,12 +145,92 @@ stream 层日志同步记录：`117.67.194.234 [09/Oct/2026:14:51:17 +0800] -> 1
 
 ---
 
-## 四、遗留建议（未做，需你点头）
+## 四、收尾：端口收敛 + 公共 location 抽 snippet
 
-1. **9001 / 9443 仍公网暴露**，设备现在走 9002/9444 了，这两个端口对设备已无必要。
-   改成 `listen 127.0.0.1:9001` 可收掉公网面，但**要先确认没有外部客户端直连**（我曾看到扫描流量，
-   但不确定是否有合法直连）。
-2. **9002/9444 与 9001/9443 的 location 是两份拷贝**，改 `xiaozhi-manager` 时必须同步改
-   `xiaozhi-device-pp`，否则两边行为会漂移。更彻底的做法是把公共 location 抽到
-   `/etc/nginx/snippets/` 里 `include`，但这次为了可回滚没动。
-3. 当前 `app.log` 只保留 14 天。若要更长保留期（比如按设备追查历史问题），改 `rotate 14` 即可。
+### 1. 端口收敛（9001/9443 收为仅本机）
+
+先取证据再动手，不凭猜：
+
+| 证据 | 结果 |
+|---|---|
+| 给访问日志加 `$server_port` 采样 150s | 9001/9443 **零请求**，只有 9002 有设备连接 |
+| 历史日志 `host:port` 统计（近 5 天，9796 条） | 只有 `sandyun.top:8001`，**9001/9443/8443 一次都没出现** |
+
+结论：设备与浏览器全都走 8001，9001/9443 已沦为纯内部上游 → 收成 `listen 127.0.0.1:...`。
+8443 保持公网不变（它是独立的 HTTPS 入口，与本次改造无关）。
+
+### 2. 公共 location 抽成 snippet
+
+新增 `/etc/nginx/snippets/xiaozhi-common.conf`，装 `root` / `index` 和全部 location；
+两个 server 块各自只留 listen、ssl、real_ip，然后 `include` 同一份。
+**从根上消除"改一处漏一处"**——就是那个把 `/admincc/` 搞成 404 的坑。
+
+### ⚠️ 又一个坑：reload 改不了 listen 地址，必须 restart
+
+第一次部署后 `nginx -t` 通过、`reload` 也"成功"，但 `ss` 里仍是 `0.0.0.0:9001`。
+查 error.log 才看到：
+
+```
+[emerg] bind() to 127.0.0.1:9443 failed (98: Address already in use)
+[emerg] bind() to 127.0.0.1:9001 failed (98: Address already in use)
+[emerg] still could not bind()
+```
+
+原因：**旧 worker 还占着 `0.0.0.0` 的 listen socket**（它们身上挂着长连接不会主动退出），
+新的 `127.0.0.1` 地址绑不上。nginx 会静默继续用旧 socket 服务 —— 所以没造成中断，
+但改动**完全没生效**，而且不看 error.log 根本发现不了。
+
+**改 listen 地址必须 `systemctl restart nginx`，reload 不够。**（已执行，重启后绑定正常。）
+
+### 3. 最终状态
+
+```
+0.0.0.0:8001     stream 入口（设备 ws/wss + 浏览器 https）
+0.0.0.0:8443     独立 HTTPS 入口（未动）
+127.0.0.1:9002   stream 明文下游（proxy_protocol）
+127.0.0.1:9444   stream TLS 下游（proxy_protocol）
+127.0.0.1:9001   旧端口，仅回环（保留作秒级回滚兜底）
+127.0.0.1:9443   旧端口，仅回环（保留作秒级回滚兜底）
+```
+
+回归验证（重启后）：
+
+| 项 | 结果 |
+|---|---|
+| `https://8001/` `/admincc/` `/cc/` | 全部 200，标题 `屿禾工坊` |
+| `https://8443/` | 200（公网入口不受影响） |
+| `192.168.50.4:9001` / `:9443` | **REFUSED**（已从非回环收掉） |
+| `127.0.0.1:9001` / `:9443` | 200（回滚兜底仍在） |
+| ws:// 探针 | stream → 9002，Python 日志 `117.67.194.234` |
+| wss:// 探针 | stream → 9444，Python 日志 `117.67.194.234` |
+
+### 4. 真实设备闭环确认
+
+```
+14:45:46  127.0.0.1       14:c1:9f:d1:33:48   改前
+14:46:40  127.0.0.1       14:c1:9f:d1:33:48   改前
+15:00:49  117.67.194.234  14:c1:9f:d1:33:48   改后 ← 真实设备拿到真实 IP
+```
+
+原来是 `127.0.0.1`，现在能直接看到设备公网 IP，**可以按 IP 定位问题了**。
+
+---
+
+## 五、备份与回滚
+
+| 文件 | 备份 |
+|---|---|
+| `/etc/nginx/nginx.conf` | `nginx.conf.bak-20261009T064900Z` |
+| `sites-available/xiaozhi-manager` | `xiaozhi-manager.bak-20261009T070300Z` |
+| `sites-available/xiaozhi-device-pp` | `xiaozhi-device-pp.bak-20261009T070300Z` |
+
+**回滚真实 IP**：把 `nginx.conf` 里 stream 的 map 改回 `127.0.0.1:9001 / 9443`，
+删掉 `proxy_protocol on;`，然后 **`systemctl restart nginx`**（reload 不行，见上）。
+
+**回滚端口**：把 `xiaozhi-manager` 里的 `listen 127.0.0.1:9001` / `127.0.0.1:9443 ssl`
+改回 `listen 9001` / `listen 9443 ssl`，restart。
+
+## 六、小提示
+
+`app.log` 目前只保留 14 天。若要更长的保留期（比如跨月追查某台设备的历史问题），
+改 `/etc/logrotate.d/xiaozhi` 里的 `rotate 14` 即可。
