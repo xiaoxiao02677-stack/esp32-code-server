@@ -33,6 +33,20 @@
 | MISO | 13 | Freenove 官方 |
 | 背光 | 45 | Freenove 官方（99 文档误标为 I2S WS） |
 
+### SD 卡（SDMMC 4-bit，背面卡槽）
+
+| 功能 | GPIO | 来源 |
+|---|---|---|
+| CLK | 38 | Freenove 官方例程 Sketch_06.1_SDMMC_Test（2.8" 分支） |
+| CMD | 40 | 同上 |
+| D0 | 39 | 同上 |
+| D1 | 41 | 同上 |
+| D2 | 48 | 同上 |
+| D3 | 47 | 同上 |
+
+> 用途：`/sdcard/bg.gif` 大体积动画背景（≤4MB，FAT32）。
+> 与显示/音频/BOOT 引脚零冲突。无卡时固件自动回退 Flash 内置背景。
+
 ## 防崩溃机制
 
 `bigscreen-s3.cc` 启动时先探测 ES8311（I2C 地址 0x30）：

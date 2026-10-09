@@ -4,6 +4,7 @@
 #include "application.h"
 #include "assets/lang_config.h"
 #include "boards/common/board.h"
+#include "config.h"
 #include "lvgl_theme.h"
 
 #include <esp_log.h>

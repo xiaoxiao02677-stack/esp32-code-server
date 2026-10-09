@@ -175,7 +175,6 @@ private:
                 esp_err_t ret = esp_vfs_fat_sdmmc_mount(SD_CARD_MOUNT_POINT, &host, &slot,
                                                         &mount_config, &card);
                 if (ret == ESP_OK) {
-                    sdmmc_card_print_info(stdout, card);
                     ESP_LOGI(TAG, "SD card mounted at %s", SD_CARD_MOUNT_POINT);
                     if (self->display_ != nullptr) {
                         self->display_->OnSdCardMounted();

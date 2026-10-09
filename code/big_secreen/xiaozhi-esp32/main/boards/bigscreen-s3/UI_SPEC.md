@@ -127,7 +127,31 @@ ARGB8888 画布（LVGL PSRAM 池），`LvglGif` 驱动循环播放。
 9. 内存：GIF 画布 ~300KB 在 PSRAM（LVGL 池），不挤占音频缓冲。
 10. ES8311 缺失时降级纯 I2S，UI 不受影响。
 
-## 7. 已知取舍
+## 7. SD 卡大背景（可选升级，v3 新增）
+
+板背面有 microSD 卡槽（SDMMC 4-bit：CLK=38 CMD=40 D0=39 D1=41 D2=48 D3=47，
+与显示/音频/BOOT 零冲突，引脚来自 Freenove 官方例程）。
+
+**用法**：
+1. SD 卡格式化为 **FAT32**（>32GB 的卡默认 exFAT，必须重新格成 FAT32）。
+2. 放入 `bg.gif`（320x240 循环 GIF，**≤4MB**；用 `tools/mp4_to_gif_bg.py`
+   调大 `GRAY_LEVELS`/降 `DIFF_THRESH` 可生成更高画质版本，如 16 灰阶+全帧率）。
+3. 插卡上电。串口看到 `SD card mounted` + `SD background playing` 即生效。
+
+**降级链**（任何一步失败自动回退，设备永不错过启动）：
+```
+SD 挂载失败(无卡/exFAT/接触不良) → Flash 内置 835KB 背景
+bg.gif 不存在/超 4MB/非 GIF 魔数 → Flash 内置背景
+GIF 解码失败 → Flash 内置背景
+```
+
+**内存账本**：4MB GIF 数据（PSRAM 直读）+ 320x240 解码画布 ~384KB（LVGL
+PSRAM 池）+ 音频/WebSocket 缓冲 —— 8MB Octal PSRAM 内安全。
+
+**性能提示**：SDMMC HighSpeed 40MHz 4-bit 实测读 ~2-4MB/s，开机一次性
+读入 4MB 约 1-2 秒（后台任务，不阻塞 UI/配网）。
+
+## 8. 已知取舍
 
 - 12 级灰阶 + σ1.0 模糊是 835KB 预算内的画质平衡点；黑白漫画风格损失可接受。
 - 相似帧合并后实际帧率 ~8.5fps（171 帧/20 秒），手绘动画观感够用。
