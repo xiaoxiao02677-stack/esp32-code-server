@@ -7,17 +7,17 @@
 import requests
 import json
 import time
-from typing import Dict, Optional, Any
-from sm2_helper import SM2Helper
+from typing import Dict, Optional, Any, List, Tuple
+from sm2_helper import login, get_sm2_helper
 
 
 class AdminAPIClient:
     """管理后台 API 客户端"""
-    
+
     BASE_URL = "https://sandyun.top:8001/xiaozhi"
-    VERIFY_SSL = False  # 跳过 SSL 验证
-    
-    def __init__(self):
+    VERIFY_SSL = False
+
+    def __init__(self, username: str = "demo", password: str = "P@ssword123"):
         self.session = requests.Session()
         self.session.verify = self.VERIFY_SSL
         self.session.headers.update({
@@ -25,141 +25,131 @@ class AdminAPIClient:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
         self.token: Optional[str] = None
-        self.sm2_helper: Optional[SM2Helper] = None
-        self.pub_config: Optional[Dict] = None
-        
-    def get_pub_config(self) -> Dict:
-        """获取公共配置（包含 SM2 公钥）"""
-        resp = self.session.get(f"{self.BASE_URL}/user/pub-config")
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get('code') == 0:
-                self.pub_config = data.get('data', {})
-                pub_key = self.pub_config.get('sm2PublicKey', '')
-                if pub_key:
-                    self.sm2_helper = SM2Helper(pub_key)
-                return data
-        raise Exception(f"获取公共配置失败: {resp.status_code} {resp.text[:200]}")
-    
-    def login(self, username: str, password: str, captcha: str = "") -> Dict:
-        """
-        登录获取 token
-        
-        Args:
-            username: 用户名
-            password: 密码
-            captcha: 验证码
-            
-        Returns:
-            登录响应数据
-        """
-        if not self.sm2_helper:
-            self.get_pub_config()
-        
-        if not self.sm2_helper:
-            raise Exception("无法初始化 SM2 加密器")
-        
-        # 获取验证码 UUID
-        captcha_uuid = f"test-{int(time.time() * 1000)}"
-        
-        # 加密密码（密码 + 验证码）
-        encrypted_password = self.sm2_helper.encrypt_with_prefix(captcha + password)
-        
-        # 发送登录请求
-        login_data = {
-            "username": username,
-            "password": encrypted_password,
-            "captchaId": captcha_uuid
-        }
-        
-        resp = self.session.post(
-            f"{self.BASE_URL}/user/login",
-            json=login_data
-        )
-        
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get('code') == 0 and data.get('data', {}).get('token'):
-                self.token = data['data']['token']
-                self.session.headers['Authorization'] = f"Bearer {self.token}"
-                return data
-            else:
-                # 可能返回错误码，记录详细信息
-                return data
-        else:
-            raise Exception(f"登录失败: HTTP {resp.status_code}")
-    
-    def get_token(self) -> str:
-        """获取登录 token"""
-        return self.token
-    
-    def request(self, method: str, path: str, **kwargs) -> Dict:
+        self.username = username
+        self.password = password
+        self.test_results: List[Dict] = []
+        self.issues: List[Dict] = []
+        self.no_response_items: List[Dict] = []
+        self.unexpected_items: List[Dict] = []
+
+    def authenticate(self) -> bool:
+        """登录获取 token"""
+        try:
+            self.token = login(self.username, self.password)
+            self.session.headers['Authorization'] = f"Bearer {self.token}"
+            print(f"登录成功! Token: {self.token[:20]}...")
+            return True
+        except Exception as e:
+            print(f"登录失败: {e}")
+            return False
+
+    def request(self, method: str, path: str, **kwargs) -> Tuple[int, Dict]:
         """
         发送 API 请求
-        
+
         Args:
-            method: HTTP 方法 (GET/POST/PUT/DELETE)
+            method: HTTP 方法
             path: API 路径
             **kwargs: 其他请求参数
-            
+
         Returns:
-            API 响应数据
+            (status_code, response_data)
         """
         url = f"{self.BASE_URL}{path}"
-        
+
         # 确保有 token
         if not self.token and path not in ['/user/login', '/user/captcha', '/user/pub-config']:
-            raise Exception("未登录，请先调用 login()")
-        
-        resp = self.session.request(method, url, **kwargs)
-        
-        if resp.status_code == 200:
-            return resp.json()
-        elif resp.status_code == 401:
-            raise Exception(f"未授权访问: {path}")
-        else:
-            raise Exception(f"API 请求失败: {method} {path} -> HTTP {resp.status_code} {resp.text[:200]}")
-    
-    def get(self, path: str, params: Optional[Dict] = None) -> Dict:
+            if not self.authenticate():
+                return 401, {"error": "未登录"}
+
+        try:
+            resp = self.session.request(method, url, timeout=30, **kwargs)
+            try:
+                data = resp.json()
+            except:
+                data = {"raw": resp.text[:500]}
+
+            return resp.status_code, data
+        except requests.exceptions.Timeout:
+            return 408, {"error": "请求超时"}
+        except requests.exceptions.ConnectionError:
+            return 503, {"error": "连接失败"}
+        except Exception as e:
+            return 500, {"error": str(e)}
+
+    def get(self, path: str, params: Optional[Dict] = None) -> Tuple[int, Dict]:
         """发送 GET 请求"""
         return self.request('GET', path, params=params)
-    
-    def post(self, path: str, data: Optional[Dict] = None) -> Dict:
+
+    def post(self, path: str, data: Optional[Dict] = None) -> Tuple[int, Dict]:
         """发送 POST 请求"""
         return self.request('POST', path, json=data)
-    
-    def put(self, path: str, data: Optional[Dict] = None) -> Dict:
+
+    def put(self, path: str, data: Optional[Dict] = None) -> Tuple[int, Dict]:
         """发送 PUT 请求"""
         return self.request('PUT', path, json=data)
-    
-    def delete(self, path: str) -> Dict:
+
+    def delete(self, path: str) -> Tuple[int, Dict]:
         """发送 DELETE 请求"""
         return self.request('DELETE', path)
 
+    def record_result(self, test_name: str, passed: bool, details: str = "", severity: str = "一般"):
+        """记录测试结果"""
+        result = {
+            "name": test_name,
+            "passed": passed,
+            "details": details,
+            "severity": severity,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        self.test_results.append(result)
 
-def test_client():
-    """测试客户端功能"""
+        if not passed:
+            if "无响应" in details or "超时" in details or "连接失败" in details:
+                self.no_response_items.append(result)
+            elif "不达预期" in details or "错误" in details:
+                self.unexpected_items.append(result)
+            else:
+                self.issues.append(result)
+
+    def get_test_summary(self) -> Dict:
+        """获取测试摘要"""
+        total = len(self.test_results)
+        passed = sum(1 for r in self.test_results if r['passed'])
+        failed = total - passed
+
+        return {
+            "total": total,
+            "passed": passed,
+            "failed": failed,
+            "success_rate": f"{(passed/total*100):.1f}%" if total > 0 else "0%",
+            "issues": len(self.issues),
+            "no_response": len(self.no_response_items),
+            "unexpected": len(self.unexpected_items)
+        }
+
+
+def test_api_client():
+    """测试 API 客户端功能"""
     client = AdminAPIClient()
-    
-    # 测试获取公共配置
-    print("测试获取公共配置...")
-    config = client.get_pub_config()
-    print(f"配置获取成功: {list(config.get('data', {}).keys())}")
-    
-    # 测试登录
-    print("\n测试登录...")
-    try:
-        login_result = client.login('demo', 'P@ssword123', '')
-        print(f"登录结果: {login_result}")
-        if login_result.get('code') == 0:
-            print(f"登录成功! Token: {client.token[:20]}...")
-        else:
-            print(f"登录失败: {login_result.get('msg')}")
-    except Exception as e:
-        print(f"登录异常: {e}")
-    
+
+    # 登录
+    if not client.authenticate():
+        print("认证失败，退出测试")
+        return None
+
+    # 测试获取用户信息
+    print("\n测试获取用户信息...")
+    status, data = client.get('/user/info')
+    print(f"状态码: {status}, 结果: {json.dumps(data, ensure_ascii=False)[:200]}")
+
+    # 测试获取智能体列表
+    print("\n测试获取智能体列表...")
+    status, data = client.get('/agent/list')
+    print(f"状态码: {status}, 结果: {json.dumps(data, ensure_ascii=False)[:200]}")
+
     return client
 
 
 if __name__ == "__main__":
-    test_client()
+    test_api_client()

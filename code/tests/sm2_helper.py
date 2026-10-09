@@ -4,17 +4,17 @@
 SM2 加密辅助模块 - 用于管理后台登录
 """
 
-from gmssl import sm2, func
-import base64
+from gmssl import sm2
+import time
 
 
 class SM2Helper:
     """SM2 加密工具类"""
-    
+
     def __init__(self, public_key_hex: str):
         """
         初始化 SM2 加密器
-        
+
         Args:
             public_key_hex: SM2 公钥（十六进制字符串，不带 04 前缀）
         """
@@ -25,63 +25,87 @@ class SM2Helper:
             self.pub_key = public_key_hex
         # SM2 公钥格式：04 + 64字节 (X:32字节 + Y:32字节)
         self.full_pub_key = '04' + self.pub_key
-        
+        # 初始化 C1C3C2 模式（与后端 BouncyCastle 一致）
+        self.crypt = sm2.CryptSM2(
+            public_key=self.pub_key,
+            private_key='0' * 64,
+            mode=True  # C1C3C2 模式
+        )
+
     def encrypt(self, plaintext: str) -> str:
         """
         使用 SM2 公钥加密明文
-        
+
         Args:
             plaintext: 明文内容
-            
-        Returns:
-            加密后的十六进制字符串
-        """
-        try:
-            # SM2 加密
-            sm2_crypt = sm2.CryptSM2(
-                public_key=self.full_pub_key,
-                private_key='0' * 64  # 只需公钥加密
-            )
-            encrypted = sm2_crypt.encrypt(plaintext.encode('utf-8'))
-            return encrypted.hex()
-        except Exception as e:
-            raise Exception(f"SM2 加密失败: {e}")
-    
-    def encrypt_with_prefix(self, plaintext: str) -> str:
-        """
-        加密并添加 04 前缀（前端 sm-crypto 库的加密格式）
-        
-        Args:
-            plaintext: 明文内容
-            
+
         Returns:
             加密后的十六进制字符串（带 04 前缀）
         """
-        encrypted = self.encrypt(plaintext)
-        return '04' + encrypted
+        encrypted = self.crypt.encrypt(plaintext.encode('utf-8'))
+        return '04' + encrypted.hex()
 
 
-def test_sm2():
-    """测试 SM2 加密功能"""
-    # 使用项目中的公钥
-    pub_key = "003312490a186fedb2b8dab3e848110f3fc5a967ea24b0ff2cc59bb5a5f9a60272b2dd4f222c9d6b0595dde84368e341795765fe6d35fa21f3cb3e5ee6851a4e"
-    
-    helper = SM2Helper(pub_key)
-    
-    # 测试加密
-    test_plain = "test1234"
-    encrypted = helper.encrypt(test_plain)
-    print(f"明文: {test_plain}")
-    print(f"密文: {encrypted}")
-    print(f"密文长度: {len(encrypted)}")
-    
-    # 测试带前缀的加密
-    encrypted_with_prefix = helper.encrypt_with_prefix(test_plain)
-    print(f"带前缀密文: {encrypted_with_prefix}")
-    print(f"密文长度: {len(encrypted_with_prefix)}")
-    
-    return True
+def get_sm2_helper():
+    """获取 SM2 加密器实例"""
+    import requests
+    BASE_URL = "https://sandyun.top:8001/xiaozhi"
+
+    resp = requests.get(f"{BASE_URL}/user/pub-config", verify=False)
+    config = resp.json()
+    pub_key = config['data']['sm2PublicKey']
+
+    return SM2Helper(pub_key)
+
+
+def login(username: str, password: str, captcha_text: str = "") -> str:
+    """
+    登录获取 token
+
+    Args:
+        username: 用户名
+        password: 密码
+        captcha_text: 验证码文本（可选，如果不提供则自动获取并识别）
+
+    Returns:
+        token 字符串
+    """
+    import requests
+    import ddddocr
+    from io import BytesIO
+    from PIL import Image
+
+    BASE_URL = "https://sandyun.top:8001/xiaozhi"
+    sm2_helper = get_sm2_helper()
+
+    # 获取验证码
+    captcha_uuid = f"test-{int(time.time() * 1000)}"
+    resp = requests.get(f"{BASE_URL}/user/captcha?uuid={captcha_uuid}", verify=False)
+
+    # OCR 识别验证码
+    ocr = ddddocr.DdddOcr(show_ad=False)
+    captcha_text = ocr.classification(resp.content)
+    print(f"识别验证码: {captcha_text}")
+
+    # 加密密码（captcha + password）
+    encrypted_password = sm2_helper.encrypt(captcha_text + password)
+
+    # 发送登录请求
+    login_data = {
+        "username": username,
+        "password": encrypted_password,
+        "captchaId": captcha_uuid
+    }
+
+    resp = requests.post(f"{BASE_URL}/user/login", json=login_data, verify=False)
+    result = resp.json()
+
+    if result.get('code') == 0 and result.get('data', {}).get('token'):
+        return result['data']['token']
+    else:
+        raise Exception(f"登录失败: {result.get('msg')}")
 
 
 if __name__ == "__main__":
-    test_sm2()
+    token = login("demo", "P@ssword123")
+    print(f"登录成功! Token: {token[:30]}...")
