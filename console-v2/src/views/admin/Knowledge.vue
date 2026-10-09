@@ -271,7 +271,9 @@ async function runRetrieval() {
   rt.meta = null
   const started = performance.now()
   try {
-    const res = await api.post(`/datasets/${rt.datasetId}/retrieval-test`, queryText)
+    // 后端契约（manager-api RetrievalDTO.TestReq）：JSON 对象，question 必填；
+    // datasetIds 为空时 Controller 自动回填路径 datasetId；page/pageSize 后端有强管控默认值
+    const res = await api.post(`/datasets/${rt.datasetId}/retrieval-test`, { question: queryText })
     rt.results = normalizeResults(res.data)
     rt.byDistance = rt.results.some(r => r.byDistance)
     rt.meta = { count: rt.results.length, cost: Math.max(1, Math.round(performance.now() - started)) }
