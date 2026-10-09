@@ -114,6 +114,7 @@ const adminItems = [
   { to: '/admin/servers', icon: '🖥', label: '服务器' },
   { to: '/admin/mcp', icon: '🔗', label: 'MCP' },
   { to: '/admin/linksim', icon: '🧪', label: '链路模拟' },
+  { to: '/admin/wake-word', icon: '🔊', label: '唤醒词' },
   { to: '/admin/apis', icon: '🛠', label: 'API调试' }
 ]
 const items = computed(() => (props.role === 'admin' ? adminItems : customerItems))
