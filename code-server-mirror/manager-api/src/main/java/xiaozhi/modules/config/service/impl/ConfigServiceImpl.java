@@ -222,7 +222,10 @@ public class ConfigServiceImpl implements ConfigService {
 
         // 唤醒词合并下发：agent 自定义 wake_words 优先在前，与全局 wakeup_words
         // （sys_params 310，分号分隔）合并去重；两者皆空时兜底「你好」（默认唤醒词）
-        result.put("wakeup_words", buildWakeupWords(agent.getWakeWords()));
+        // 双键下发：wakeup_words 为历史主键，wake_words 为语义别名键，防止中间层过滤丢失
+        List<String> mergedWakeupWords = buildWakeupWords(agent.getWakeWords());
+        result.put("wakeup_words", mergedWakeupWords);
+        result.put("wake_words", mergedWakeupWords);
 
         // 设备云端配置下发（B线：开机恢复链路，design §3.2；查表有值才注入，无值整个 key 不出现）
         DeviceConfigEntity deviceConfig = deviceConfigService.getByDeviceId(device.getId());

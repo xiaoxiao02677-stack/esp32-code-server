@@ -925,10 +925,15 @@ class ConnectionHandler:
             intent_conf["functions"] = expanded_functions
         if private_config.get("prompt", None) is not None:
             self.config["prompt"] = private_config["prompt"]
-        # 唤醒词合并：agent 级 wake_words（Java 下发，分号串）并入全局
-        # wakeup_words（列表），去重后写回 conn.config["wakeup_words"]，
-        # helloHandle / listenMessageHandler 两处匹配逻辑无需改动
-        wake_words = parse_wake_words_field(private_config.get("wake_words"))
+        # 唤醒词合并：agent 级唤醒词并入全局 wakeup_words（列表），
+        # 去重后写回 conn.config["wakeup_words"]，
+        # helloHandle / listenMessageHandler 两处匹配逻辑无需改动。
+        # Java ConfigServiceImpl 下发键为 wakeup_words（List<String> 或分号串），
+        # 旧键 wake_words（分号串）仅作兼容保留，两者 parse_wake_words_field 均可解析
+        agent_wake = private_config.get("wake_words")
+        if not agent_wake:
+            agent_wake = private_config.get("wakeup_words")
+        wake_words = parse_wake_words_field(agent_wake)
         if wake_words:
             merged = merge_wake_words(
                 wake_words, self.config.get("wakeup_words") or []
