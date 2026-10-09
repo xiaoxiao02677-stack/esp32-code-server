@@ -114,9 +114,19 @@ class HeartbeatServer:
         peer_str = f"{peer[0]}:{peer[1]}" if peer else "unknown"
         device_id = None
         buffer = b""
+        # 半开连接治理：设备 NAT 换源端口后旧连接无 FIN/RST，read 会永久阻塞。
+        # 读超时 = 判死阈值×2（70s）：正常心跳 25~30s 间隔远小于此，超时即可判定
+        # 半开，break 走 finally 关闭 socket，防止协程与 fd 泄漏线性累积。
+        read_timeout = HEARTBEAT_STALE_SECONDS * 2
         try:
             while True:
-                chunk = await reader.read(1024)
+                try:
+                    chunk = await asyncio.wait_for(reader.read(1024), timeout=read_timeout)
+                except asyncio.TimeoutError:
+                    self.logger.bind(tag=TAG).info(
+                        f"心跳连接读超时({int(read_timeout)}s)视为半开，主动关闭 {peer_str}"
+                    )
+                    break
                 if not chunk:
                     break
                 buffer += chunk
