@@ -7,8 +7,10 @@
 #include "lvgl_theme.h"
 
 #include <esp_log.h>
+#include <esp_heap_caps.h>
 #include <noto_emoji.h>
 
+#include <cstdio>
 #include <cstring>
 
 // 动画背景 GIF（由 tools/mp4_to_gif_bg.py 从 big_screen.mp4 生成，320x240 循环）
@@ -238,6 +240,109 @@ void BigscreenDisplay::RestartBackgroundGif() {
         lv_image_set_src(bg_gif_obj_, bg_gif_->image_dsc());
         bg_gif_->Start();
     }
+}
+
+void BigscreenDisplay::OnSdCardMounted() {
+    // 板级后台任务在 SD 挂载成功后调用。此时 SetupUI 可能尚未执行
+    // （启动竞态：SD 挂载快于 Application::Start 主流程），此时不切换，
+    // Flash 背景继续用——简单且安全。
+    if (!setup_ui_called_ || bg_gif_obj_ == nullptr) {
+        ESP_LOGW(TAG, "SD mounted before SetupUI; skip SD background switch");
+        return;
+    }
+
+    const char* path = SD_CARD_MOUNT_POINT "/bg.gif";
+    FILE* f = fopen(path, "rb");
+    if (f == nullptr) {
+        ESP_LOGW(TAG, "No %s on SD card; keep flash background", path);
+        return;
+    }
+
+    // 尺寸检查：GIF 数据 + 解码画布（宽x高x5 ARGB8888+索引）都要进 LVGL
+    // PSRAM 池。4MB 文件 + 320x240 画布(~384KB) 在 8MB PSRAM 内安全；
+    // 超过 4MB 拒绝（防 OOM 拖垮音频/WebSocket）。
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    constexpr long kMaxSdGifBytes = 4 * 1024 * 1024;
+    if (size <= 0 || size > kMaxSdGifBytes) {
+        ESP_LOGW(TAG, "bg.gif size %ld out of range (0, %ld]; keep flash background",
+                 size, kMaxSdGifBytes);
+        fclose(f);
+        return;
+    }
+
+    uint8_t* buf = (uint8_t*)heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf == nullptr) {
+        ESP_LOGW(TAG, "No PSRAM for bg.gif (%ld bytes); keep flash background", size);
+        fclose(f);
+        return;
+    }
+    size_t rd = fread(buf, 1, size, f);
+    fclose(f);
+    if (rd != (size_t)size) {
+        ESP_LOGW(TAG, "bg.gif read %u/%ld bytes; keep flash background", (unsigned)rd, size);
+        heap_caps_free(buf);
+        return;
+    }
+    // GIF 魔数校验（防误放文件）
+    if (size < 6 || buf[0] != 'G' || buf[1] != 'I' || buf[2] != 'F') {
+        ESP_LOGW(TAG, "bg.gif bad magic; keep flash background");
+        heap_caps_free(buf);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Loading SD background %s (%ld KB)", path, size / 1024);
+
+    DisplayLockGuard lock(this);
+    // 停掉 Flash 背景再切换（旧 LvglGif 持有旧画布，先释放避免双份内存）
+    if (bg_gif_) {
+        bg_gif_->Stop();
+        bg_gif_.reset();
+    }
+
+    lv_img_dsc_t dsc = {};
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.flags = LV_IMAGE_FLAGS_MODIFIABLE;
+    dsc.header.cf = LV_COLOR_FORMAT_RAW;
+    dsc.data = buf;
+    dsc.data_size = size;
+    auto gif = std::make_unique<LvglGif>(&dsc);
+    if (!gif->IsLoaded()) {
+        ESP_LOGW(TAG, "SD bg.gif failed to decode; revert to flash background");
+        gif.reset();
+        heap_caps_free(buf);
+        // 回退：重建 Flash 背景
+        lv_img_dsc_t fb_dsc = {};
+        fb_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+        fb_dsc.header.flags = LV_IMAGE_FLAGS_MODIFIABLE;
+        fb_dsc.header.cf = LV_COLOR_FORMAT_RAW;
+        fb_dsc.data = (const uint8_t*)bigscreen_bg_gif;
+        fb_dsc.data_size = bigscreen_bg_gif_len;
+        bg_gif_ = std::make_unique<LvglGif>(&fb_dsc);
+        if (bg_gif_->IsLoaded()) {
+            bg_gif_->SetFrameCallback([this]() {
+                if (bg_gif_obj_ != nullptr) {
+                    lv_image_set_src(bg_gif_obj_, bg_gif_->image_dsc());
+                }
+            });
+            lv_image_set_src(bg_gif_obj_, bg_gif_->image_dsc());
+            bg_gif_->Start();
+        }
+        return;
+    }
+
+    // 提交 SD 背景：缓冲归成员管理（皮肤生命周期内常驻）
+    sd_gif_data_ = buf;
+    bg_gif_ = std::move(gif);
+    bg_gif_->SetFrameCallback([this]() {
+        if (bg_gif_obj_ != nullptr) {
+            lv_image_set_src(bg_gif_obj_, bg_gif_->image_dsc());
+        }
+    });
+    lv_image_set_src(bg_gif_obj_, bg_gif_->image_dsc());
+    bg_gif_->Start();
+    ESP_LOGI(TAG, "SD background playing (%dx%d)", bg_gif_->width(), bg_gif_->height());
 }
 
 void BigscreenDisplay::SetBubbleText(const char* text) {

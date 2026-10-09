@@ -17,6 +17,9 @@
 #include <esp_log.h>
 #include <driver/i2c_master.h>
 #include <driver/spi_common.h>
+#include <driver/sdmmc_host.h>
+#include <driver/sdmmc_types.h>
+#include <esp_vfs_fat.h>
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -140,6 +143,53 @@ private:
         });
     }
 
+    // SD 卡初始化：挂载 /sdcard（FAT32）。后台任务执行——SDMMC 无卡时
+    // 探测超时可达 1-2 秒，不能阻塞板构造（否则拖慢开机/配网时序）。
+    // 失败仅打日志（设备无 SD 也必须能正常跑，UI 回退 Flash 内置背景）。
+    // 挂载成功后通知 BigscreenDisplay 切换到 SD 大背景。
+    void InitializeSdCard() {
+        xTaskCreate(
+            [](void* arg) {
+                auto* self = static_cast<BigscreenS3Board*>(arg);
+                sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+                host.slot = SDMMC_HOST_SLOT_1;
+                host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
+
+                sdmmc_slot_config_t slot = {};
+                slot.clk = SD_MMC_GPIO_CLK;
+                slot.cmd = SD_MMC_GPIO_CMD;
+                slot.d0 = SD_MMC_GPIO_D0;
+                slot.d1 = SD_MMC_GPIO_D1;
+                slot.d2 = SD_MMC_GPIO_D2;
+                slot.d3 = SD_MMC_GPIO_D3;
+                slot.cd = SDMMC_SLOT_NO_CD;
+                slot.wp = SDMMC_SLOT_NO_WP;
+                slot.width = 4;
+
+                esp_vfs_fat_sdmmc_mount_config_t mount_config = {};
+                mount_config.format_if_mount_failed = false;
+                mount_config.max_files = 2;
+                mount_config.allocation_unit_size = 16 * 1024;
+
+                sdmmc_card_t* card = nullptr;
+                esp_err_t ret = esp_vfs_fat_sdmmc_mount(SD_CARD_MOUNT_POINT, &host, &slot,
+                                                        &mount_config, &card);
+                if (ret == ESP_OK) {
+                    sdmmc_card_print_info(stdout, card);
+                    ESP_LOGI(TAG, "SD card mounted at %s", SD_CARD_MOUNT_POINT);
+                    if (self->display_ != nullptr) {
+                        self->display_->OnSdCardMounted();
+                    }
+                } else {
+                    // 无卡/非 FAT32/接触不良都走这里——正常降级路径
+                    ESP_LOGW(TAG, "SD card not mounted (%s); UI keeps flash background",
+                             esp_err_to_name(ret));
+                }
+                vTaskDelete(nullptr);
+            },
+            "sd_init", 4096, this, 5, nullptr);
+    }
+
     void InitializeLcdDisplay() {
         esp_lcd_panel_io_handle_t panel_io = nullptr;
         esp_lcd_panel_handle_t panel = nullptr;
@@ -205,6 +255,7 @@ public:
         InitializeLcdDisplay();
         InitializeButtons();
         InitializeTickTimer();
+        InitializeSdCard();
         GetBacklight()->SetBrightness(100);
     }
 

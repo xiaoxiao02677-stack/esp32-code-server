@@ -34,6 +34,19 @@
 // ---------- BOOT 按键 ----------
 #define BOOT_BUTTON_GPIO GPIO_NUM_0
 
+// ---------- SD 卡（SDMMC 4-bit，Freenove 官方布线，背面卡槽）----------
+// 引脚来自 Freenove 官方例程 Sketch_06.1_SDMMC_Test（FNK0104A/B 2.8" 分支，
+// 官方注释 "Please do not modify it"）。与 LCD（10/11/12/13/46/45）、
+// 音频（1/4/5/6/7/8/15/16）、BOOT（0）零冲突。
+// 用途：/sdcard/bg.gif 大体积动画背景（SD 缺失时回退 Flash 内置版）。
+#define SD_CARD_MOUNT_POINT "/sdcard"
+#define SD_MMC_GPIO_CLK GPIO_NUM_38
+#define SD_MMC_GPIO_CMD GPIO_NUM_40
+#define SD_MMC_GPIO_D0  GPIO_NUM_39
+#define SD_MMC_GPIO_D1  GPIO_NUM_41
+#define SD_MMC_GPIO_D2  GPIO_NUM_48
+#define SD_MMC_GPIO_D3  GPIO_NUM_47
+
 // ---------- 显示（ILI9341 2.8" 320x240 横屏，Freenove 官方布线）----------
 #define DISPLAY_BACKLIGHT_PIN GPIO_NUM_45
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false

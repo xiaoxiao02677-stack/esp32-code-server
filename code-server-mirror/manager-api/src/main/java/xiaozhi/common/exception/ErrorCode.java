@@ -263,6 +263,14 @@ public interface ErrorCode {
     int MCP_CONFIG_JSON_INVALID = 10212; // MCP配置JSON格式无效
     int MCP_CONFIG_ALREADY_EXISTS = 10213; // 该智能体已存在MCP配置
 
+    // 唤醒词相关错误码
+    int WAKE_WORD_AGENT_NOT_FOUND = 10214; // 智能体不存在
+    int WAKE_WORD_SAVE_FAILED = 10215; // 保存唤醒词失败
+    int WAKE_WORD_EMPTY = 10216; // 唤醒词不能为空
+    int WAKE_WORD_TOO_LONG = 10217; // 唤醒词长度超限（最多30字符）
+    int WAKE_WORD_TOO_MANY = 10218; // 唤醒词数量超限（最多10个）
+    int WAKE_WORD_INVALID_CHAR = 10219; // 唤醒词包含非法字符
+
     // 替换词相关错误码
     int CORRECT_WORD_FILE_NAME_EXISTS = 10203; // 文件名已存在
     int FILE_SIZE_OVER_LIMIT = 10204; // 文件大小超过限制

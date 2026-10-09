@@ -46,6 +46,11 @@ public:
     // 1 秒节拍（板级 esp_timer 调用）：彩蛋超时恢复 + 自动行为
     void Tick1s();
 
+    // SD 卡挂载成功回调（板级后台任务调用）：若 /sdcard/bg.gif 存在且
+    // 合法（<=4MB），停掉 Flash 背景，改为播放 SD 大背景。
+    // 任何失败都静默保持现状（Flash 背景继续播）。
+    void OnSdCardMounted();
+
 private:
     void BuildMainScreen();
     void SetBubbleText(const char* text);
@@ -60,6 +65,7 @@ private:
     lv_obj_t* hint_label_ = nullptr;        // 底部操作提示
     lv_obj_t* bg_gif_obj_ = nullptr;        // GIF 背景图层（lv_image）
     std::unique_ptr<LvglGif> bg_gif_;       // GIF 播放控制器
+    uint8_t* sd_gif_data_ = nullptr;        // SD 背景文件缓冲（PSRAM，OnSdCardMounted 分配）
 
     // 皮肤配色（深色系，叠加在黑白动画上保证文字可读）
     static constexpr uint32_t kColorBubbleBg = 0x1A1020;    // 气泡底（近黑）
