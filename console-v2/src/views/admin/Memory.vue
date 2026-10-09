@@ -3,10 +3,10 @@
     <div class="page-head">
       <div>
         <h1>记忆 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">契约对齐 /cc/：引擎配置 / 分类筛选 / 状态审核 / 编辑分类 / 信任度</p>
+        <p class="sub">契约对齐 /cc/：引擎配置 / 列表·时间轴·图谱三视图 / 审核编辑 / 信任度</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-primary" @click="creator.show = true">＋ 新增记忆</button>
+        <button class="btn btn-primary" :disabled="!currentAgentId" @click="creator.show = true">＋ 新增记忆</button>
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
@@ -50,8 +50,8 @@
       </div>
     </div>
 
-    <!-- 筛选工具条（契约：category/status query） -->
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <!-- 筛选工具条 + 三视图切换（契约同 cc-console mem-toolbar / mem-view-switch） -->
+    <div class="mem-toolbar">
       <select v-model="filterCategory" class="mini-select" @change="loadFacts">
         <option value="">全部分类</option>
         <option value="preference">偏好</option>
@@ -65,38 +65,80 @@
         <option value="active">生效中</option>
         <option value="rejected">已驳回</option>
       </select>
+      <div class="mem-view-switch">
+        <button class="mem-view-btn" :class="{ 'is-on': memViewMode === 'list' }" @click="switchMemView('list')">☰ 列表</button>
+        <button class="mem-view-btn" :class="{ 'is-on': memViewMode === 'timeline' }" @click="switchMemView('timeline')">🕐 时间轴</button>
+        <button class="mem-view-btn" :class="{ 'is-on': memViewMode === 'graph' }" @click="switchMemView('graph')">🕸 实体图谱</button>
+      </div>
     </div>
 
-    <DataTable title="记忆事实">
-      <table class="data-table">
-        <thead><tr><th>分类</th><th>内容</th><th>状态/信任</th><th>操作</th></tr></thead>
-        <tbody>
-          <tr v-for="f in facts" :key="f.fact_id">
-            <td><span class="badge badge-gray">{{ catZh(f.category) }}</span></td>
-            <td>
-              <div class="cell-main">{{ f.content }}</div>
-              <div class="cell-sub">{{ f.created_at || '' }}</div>
-            </td>
-            <td>
-              <span class="badge" :class="f.status === 'active' || f.status === undefined ? 'badge-green' : 'badge-gray'">
-                {{ f.status === 'rejected' ? '已驳回' : '生效中' }}
-              </span>
-              <span v-if="f.trust_score !== undefined" class="cell-sub" style="margin-top:3px">信任 {{ Number(f.trust_score).toFixed(2) }}</span>
-            </td>
-            <td>
-              <div class="row-actions">
-                <button class="link-btn" @click="feedback(f, true)">👍 有用</button>
-                <button class="link-btn" @click="feedback(f, false)">👎 没用</button>
-                <button v-if="f.status !== 'active'" class="link-btn" @click="review(f, 'approve')">✓ 通过</button>
-                <button v-else class="link-btn" @click="review(f, 'reject')">✕ 驳回</button>
-                <button class="link-btn" @click="openFactEdit(f)">✎ 编辑</button>
-                <button class="link-btn danger" @click="remove(f)">🗑 删除</button>
+    <DataTable title="记忆事实" :hint="factsHint">
+      <!-- 时间轴视图（移植 cc-console MemoryTimeline：日期分组倒序 + 组内时间倒序） -->
+      <div v-if="memViewMode === 'timeline'" class="mem-timeline-wrap">
+        <div class="mem-timeline-track">
+          <div v-for="group in memTimelineGroups" :key="group.date" class="mem-tl-group">
+            <div class="mem-tl-date">
+              <span class="mem-tl-date-dot"></span>
+              <span class="mem-tl-date-text">{{ group.date }}</span>
+              <span class="mem-tl-date-count">{{ group.items.length }}</span>
+            </div>
+            <div class="mem-tl-items">
+              <div v-for="f in group.items" :key="f.fact_id" class="mem-tl-item" :class="'mem-tl-item--' + (f.category || 'general')">
+                <div class="mem-tl-item-head">
+                  <span class="mem-tl-cat">{{ catZh(f.category) }}</span>
+                  <span class="mem-tl-time">{{ memTimeOf(f.created_at) }}</span>
+                  <span v-if="f.trust_score != null" class="mem-tl-trust" :style="memTrustStyle(f.trust_score)">{{ Number(f.trust_score).toFixed(2) }}</span>
+                  <span v-if="f.retrieval_count" class="mem-tl-rc">↺{{ f.retrieval_count }}</span>
+                </div>
+                <div class="mem-tl-content">{{ f.content }}</div>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-if="facts.length === 0" class="empty-state"><div class="empty-icon">🧠</div><strong>还没有记忆，多跟小智聊聊，它会自动记住你的喜好</strong></div>
+            </div>
+          </div>
+        </div>
+        <div v-if="!facts.length" class="empty-state"><div class="empty-icon">🕐</div><strong>暂无记忆数据</strong></div>
+      </div>
+
+      <!-- 实体图谱视图（Canvas 手绘免 ECharts：实体聚合 → 环形布局 → 记忆小点连线） -->
+      <div v-else-if="memViewMode === 'graph'" class="mem-graph-wrap">
+        <canvas ref="memGraphCanvas" class="mem-graph-canvas" width="900" height="560"></canvas>
+        <div class="mem-graph-legend">
+          <span class="legend-item"><i class="dot dot--entity"></i>实体</span>
+          <span class="legend-item"><i class="dot dot--fact"></i>记忆</span>
+          <span class="legend-item"><i class="dot dot--hot"></i>高频实体</span>
+        </div>
+        <div v-if="!facts.length" class="empty-state"><div class="empty-icon">🕸</div><strong>暂无记忆数据</strong></div>
+      </div>
+
+      <!-- 列表视图 fact-card（信任度进度条 + 召回次数徽标） -->
+      <template v-else>
+        <div v-if="facts.length" class="fact-list">
+          <div v-for="f in facts" :key="f.fact_id" class="fact-card">
+            <div class="fact-top">
+              <span class="fact-cat" :class="'fact-cat--' + (f.category || 'general')">{{ catZh(f.category) }}</span>
+              <span v-if="f.status && f.status !== 'active'" class="fact-status">{{ f.status === 'rejected' ? '已驳回' : f.status }}</span>
+              <span v-if="f.retrieval_count" class="fact-rc" title="被召回次数">↺{{ f.retrieval_count }}</span>
+              <span class="fact-date">{{ f.created_at }}</span>
+            </div>
+            <div class="fact-content">{{ f.content }}</div>
+            <div v-if="f.trust_score != null" class="fact-trust">
+              <div class="trust-bar"><div class="trust-fill" :style="{ width: (Number(f.trust_score) * 100) + '%' }"></div></div>
+              <span class="trust-num">信任 {{ Number(f.trust_score).toFixed(2) }}</span>
+            </div>
+            <div class="fact-actions">
+              <button class="link-btn" @click="feedback(f, true)">👍 有用</button>
+              <button class="link-btn" @click="feedback(f, false)">👎 没用</button>
+              <button v-if="f.status !== 'active'" class="link-btn" @click="review(f, 'approve')">✓ 通过</button>
+              <button v-else class="link-btn" @click="review(f, 'reject')">✕ 驳回</button>
+              <button class="link-btn" @click="openFactEdit(f)">✎ 编辑</button>
+              <button class="link-btn danger" @click="remove(f)">🗑 删除</button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <div class="empty-icon">🧠</div>
+          <strong>还没有记忆，多跟小智聊聊，它会自动记住你的喜好</strong>
+        </div>
+      </template>
     </DataTable>
 
     <!-- 新增记忆（契约：POST /memory/facts {agent_id, content}） -->
@@ -136,8 +178,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, reactive, ref } from 'vue'
-import StatCard from '../../components/StatCard.vue'
+import { computed, inject, nextTick, onMounted, reactive, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
@@ -153,6 +194,10 @@ const filterStatus = ref('')
 const creator = reactive({ show: false, content: '' })
 const factEditor = reactive({ show: false, factId: '', content: '', category: 'general' })
 
+// 三视图（A1）：list | timeline | graph
+const memViewMode = ref('list')
+const memGraphCanvas = ref(null)
+
 // 引擎配置（契约对齐 cc-console memoryEngine/applyMemoryEngine）
 const memoryEngine = ref('')
 const memorySummaryLlm = ref('')
@@ -162,14 +207,38 @@ const engineApplied = ref('')
 const engineOpts = ref([])
 const llmOpts = ref([])
 
+// A15：完整 7 条引擎 hint（cc-console App.vue:1137-1147 原文照抄）
 const ENGINE_HINTS = {
-  Memory_mem_holographic: '本地全息记忆：自动抽取事实/时间线/实体，功能最全',
-  Memory_mem_local_short: '短期记忆：对话摘要总结，轻量省 token',
+  Memory_mem_hybrid: '⭐ 推荐：短期 LLM 滚动总结 + Holographic 长期事实库 + LLM 自动沉淀（隐式信息也能记住）',
+  Memory_mem_holographic: '长期事实库（正则抽取，零 LLM 成本，只抓显式表达）',
+  Memory_mem_local_short: '纯短期总结（LLM 压缩对话档案，无长期事实库）',
   Memory_mem_report_only: '仅上报聊天记录，不生成记忆',
-  Memory_nomem: '完全关闭记忆'
+  Memory_nomem: '完全关闭记忆',
+  Memory_mem0ai: '需要 Mem0AI API Key（模型管理里配置后启用）',
+  Memory_powermem: '需要 PowerMem 凭据（模型管理里配置后启用）'
 }
 const engineHint = computed(() => ENGINE_HINTS[memoryEngine.value] || '')
 const engineNeedsSummary = computed(() => memoryEngine.value === 'Memory_mem_hybrid' || memoryEngine.value === 'Memory_mem_local_short')
+
+const VIEW_ZH = { list: '卡片', timeline: '时间轴', graph: '实体图谱' }
+const factsHint = computed(() => `${facts.value.length} 条 · ${VIEW_ZH[memViewMode.value] || ''}视图`)
+
+// A1：时间轴分组（cc-console App.vue:1190-1204）——分组日期倒序、组内时间倒序
+const memTimelineGroups = computed(() => {
+  const map = new Map()
+  const list = facts.value || []
+  list.forEach(f => {
+    const d = String(f.created_at || '').slice(0, 10) || '—'
+    if (!map.has(d)) map.set(d, [])
+    map.get(d).push(f)
+  })
+  return Array.from(map.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, items]) => ({
+      date,
+      items: items.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+    }))
+})
 
 function catZh(c) {
   const map = { preference: '偏好', profile: '画像', habit: '习惯', event: '事件', general: '通用' }
@@ -179,7 +248,7 @@ function catZh(c) {
 async function load() {
   loading.value = true
   try {
-    // 引擎下拉数据源（契约：/models/names?modelType=Memory）
+    // 引擎下拉数据源（契约：/models/names?modelType=Memory，api.js 已封装为 modelNames）
     const [memNames, llmNames] = await Promise.all([adminApi.modelNames('Memory'), adminApi.modelNames('LLM')])
     engineOpts.value = memNames.data || []
     llmOpts.value = llmNames.data || []
@@ -201,7 +270,7 @@ async function load() {
 
 async function loadFacts() {
   if (!currentAgentId.value) { facts.value = []; return }
-  // 契约：?agent_id=&page=&size=&category=&status=
+  // 契约：?agent_id=&page=&size=&category=&status=（注意是 size 不是 limit）
   const qs = { agent_id: currentAgentId.value, page: 1, size: 50 }
   if (filterCategory.value) qs.category = filterCategory.value
   if (filterStatus.value) qs.status = filterStatus.value
@@ -209,6 +278,8 @@ async function loadFacts() {
     const res = await adminApi.memoryFacts(qs)
     facts.value = res.data?.list || []
   } catch (e) { toast(e.msg || '记忆加载失败', 'error'); facts.value = [] }
+  // 图谱视图下数据刷新后重绘
+  if (memViewMode.value === 'graph') nextTick(drawMemGraph)
 }
 
 function selectMemAgent(id) {
@@ -216,7 +287,118 @@ function selectMemAgent(id) {
   loadFacts()
 }
 
+// ===== 三视图（A1，移植 cc-console App.vue:2220-2326） =====
+function switchMemView(mode) {
+  memViewMode.value = mode
+  if (mode === 'graph') nextTick(drawMemGraph)
+}
+
+function memTimeOf(ts) {
+  return String(ts || '').slice(11, 19) || ''
+}
+
+function memTrustStyle(v) {
+  const n = Number(v)
+  let color = '#a08e96'
+  if (n >= 0.75) color = '#FF8FAB'
+  else if (n >= 0.4) color = '#d98a2b'
+  return { color, borderColor: color }
+}
+
+function drawMemGraph() {
+  const canvas = memGraphCanvas.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const W = canvas.width, H = canvas.height
+  ctx.clearRect(0, 0, W, H)
+  const list = facts.value || []
+  if (!list.length) return
+
+  // 实体聚合（f.entities 数组；无实体归「未关联」）
+  const entityMap = new Map()
+  list.forEach(f => {
+    const ents = Array.isArray(f.entities) && f.entities.length ? f.entities : []
+    if (!ents.length) {
+      const key = '__orphan__'
+      if (!entityMap.has(key)) entityMap.set(key, { count: 0, facts: [], name: '未关联' })
+      entityMap.get(key).count += 1
+      entityMap.get(key).facts.push(f)
+    }
+    ents.forEach(e => {
+      const name = typeof e === 'string' ? e : (e.name || String(e))
+      if (!entityMap.has(name)) entityMap.set(name, { count: 0, facts: [], name })
+      entityMap.get(name).count += 1
+      entityMap.get(name).facts.push(f)
+    })
+  })
+
+  const PALETTE = ['#FF8FAB', '#FFB6C6', '#FFD86B', '#9EE6D0', '#B8A9F5', '#8FC7FF', '#FFC3A0', '#A8E6CF']
+  // 实体节点环形布局
+  const entities = Array.from(entityMap.values())
+  const cx = W / 2, cy = H / 2
+  const R = Math.min(W, H) * 0.34
+  const nodes = entities.map((e, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(entities.length, 1) - Math.PI / 2
+    return {
+      ...e,
+      x: cx + R * Math.cos(angle),
+      y: cy + R * Math.sin(angle),
+      r: Math.min(16 + e.count * 5, 34),
+      color: e.count >= 3 ? '#FF8FAB' : PALETTE[i % PALETTE.length],
+      hot: e.count >= 3
+    }
+  })
+
+  // 连线（实体→其记忆小点：布在实体外侧小圆）
+  ctx.lineWidth = 1.2
+  nodes.forEach(n => {
+    n.facts.forEach((_, fi) => {
+      const fa = Math.atan2(n.y - cy, n.x - cx)
+      const fr = R + 60 + (fi % 4) * 26
+      const fx = cx + fr * Math.cos(fa)
+      const fy = cy + fr * Math.sin(fa)
+      ctx.strokeStyle = 'rgba(180,150,170,0.35)'
+      ctx.beginPath()
+      ctx.moveTo(n.x, n.y)
+      ctx.lineTo(fx, fy)
+      ctx.stroke()
+      // 记忆小点
+      ctx.fillStyle = 'rgba(184,169,245,0.75)'
+      ctx.beginPath()
+      ctx.arc(fx, fy, 3.4, 0, 2 * Math.PI)
+      ctx.fill()
+    })
+  })
+
+  // 实体节点 + 标签 + 高频发光
+  nodes.forEach(n => {
+    if (n.hot) {
+      ctx.shadowBlur = 14; ctx.shadowColor = 'rgba(255,143,171,0.5)'
+    } else {
+      ctx.shadowBlur = 5; ctx.shadowColor = 'rgba(255,143,171,0.25)'
+    }
+    ctx.fillStyle = n.color
+    ctx.beginPath()
+    ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI)
+    ctx.fill()
+    ctx.shadowBlur = 0
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    // 标签
+    ctx.fillStyle = '#4b3b44'
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(n.name.length > 10 ? n.name.slice(0, 10) + '…' : n.name, n.x, n.y + n.r + 14)
+    ctx.fillStyle = '#a08e96'
+    ctx.font = '10px system-ui, sans-serif'
+    ctx.fillText(String(n.count), n.x, n.y + 4)
+  })
+}
+
+// ===== 记忆 CRUD（契约对齐 cc-console） =====
 async function createFact() {
+  if (!currentAgentId.value) { toast('请先选择智能体', 'error'); return }
   try {
     await adminApi.createFact(currentAgentId.value, creator.content)
     toast('已添加'); creator.show = false; creator.content = ''
@@ -239,7 +421,7 @@ async function feedback(f, helpful) {
   try {
     // 契约：返回新的 trust_score 就地更新
     const res = await adminApi.factFeedback(f.fact_id, currentAgentId.value, helpful)
-    if (res.data?.trust_score) f.trust_score = res.data.trust_score
+    if (res.data && res.data.trust_score !== undefined) f.trust_score = res.data.trust_score
     toast(helpful ? '已反馈 👍' : '已反馈 👎')
   } catch (e) { toast(e.msg || '操作失败', 'error') }
 }
@@ -308,7 +490,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
+.chip { padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
 .chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
 .mini-select { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: #fff; }
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -316,6 +498,71 @@ onMounted(load)
 .form-row input, .form-row textarea, .form-row select { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; font-family: var(--font); background: #fff; }
 .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
-.bind-box { border: 1.5px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; background: var(--bg-soft, #F8FAFD); }
+.bind-box { border: 1.5px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; background: var(--bg, #F8FAFD); }
 .bind-label { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+
+/* ===== 工具条 + 三视图切换（移植 cc-console mem-toolbar / mem-view-switch） ===== */
+.mem-toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.mem-view-switch { display: flex; gap: 6px; margin-left: auto; }
+.mem-view-btn { border: 1.5px solid var(--border); background: var(--surface); color: var(--text-sub); border-radius: var(--radius-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.mem-view-btn:hover { border-color: var(--primary); color: var(--primary); }
+.mem-view-btn.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ===== 时间轴视图（移植 cc-console .mem-tl-*） ===== */
+.mem-timeline-wrap { position: relative; max-height: 560px; overflow-y: auto; padding: 10px 12px; background: #FBFCFE; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.mem-timeline-track { position: relative; padding-left: 18px; }
+.mem-timeline-track::before {
+  content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 3px; background: linear-gradient(180deg, #FF8FAB, #FFD86B, #9EE6D0); opacity: 0.5;
+}
+.mem-tl-group { margin-bottom: 18px; }
+.mem-tl-group:last-child { margin-bottom: 4px; }
+.mem-tl-date { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.mem-tl-date-dot { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 3px solid #FF8FAB; box-shadow: 0 0 8px rgba(255,143,171,.5); flex-shrink: 0; }
+.mem-tl-date-text { font-weight: 700; font-size: 13.5px; }
+.mem-tl-date-count { font-size: 11.5px; background: #F0F2F6; color: var(--text-sub); border-radius: var(--radius-pill); padding: 1px 9px; }
+.mem-tl-items { display: flex; flex-direction: column; gap: 8px; }
+.mem-tl-item { background: var(--surface); border: 1px solid #E3E9F2; border-radius: 12px; padding: 10px 14px; }
+.mem-tl-item--preference { border-left: 4px solid #FF8FAB; }
+.mem-tl-item--profile { border-left: 4px solid #8FC7FF; }
+.mem-tl-item--habit { border-left: 4px solid #FFD86B; }
+.mem-tl-item--event { border-left: 4px solid #9EE6D0; }
+.mem-tl-item--general { border-left: 4px solid #B8A9F5; }
+.mem-tl-item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.mem-tl-cat { font-size: 11.5px; font-weight: 600; background: #FFF0F5; color: var(--text-sub); border-radius: var(--radius-pill); padding: 2px 10px; }
+.mem-tl-time { font-size: 11.5px; color: var(--text-sub); font-family: 'Menlo', 'Consolas', monospace; }
+.mem-tl-trust { font-size: 11.5px; font-weight: 700; border: 1.5px solid; border-radius: var(--radius-pill); padding: 0 8px; line-height: 18px; }
+.mem-tl-rc { font-size: 11.5px; color: #D96A1F; font-weight: 600; }
+.mem-tl-content { font-size: 13px; line-height: 1.55; word-break: break-word; }
+
+/* ===== 实体图谱视图（移植 cc-console .mem-graph-*，Canvas 手绘免 ECharts） ===== */
+.mem-graph-wrap { background: #FBFCFE; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; position: relative; }
+.mem-graph-canvas { width: 100%; height: auto; display: block; }
+.mem-graph-legend { display: flex; gap: 14px; justify-content: center; padding-top: 8px; font-size: 12px; color: var(--text-sub); }
+.legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.legend-item .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot--entity { background: #B8A9F5; }
+.dot--fact { background: rgba(184,169,245,.75); }
+.dot--hot { background: #FF8FAB; box-shadow: 0 0 6px rgba(255,143,171,.6); }
+
+/* ===== 列表视图 fact-card（移植 cc-console .fact-*，适配 v2 设计令牌） ===== */
+.fact-list { display: flex; flex-direction: column; gap: 12px; }
+.fact-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px 18px; }
+.fact-card:hover { border-color: #C9D6EA; }
+.fact-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.fact-cat { border-radius: var(--radius-pill); padding: 3px 12px; font-size: 12px; font-weight: 600; background: #fff3d6; color: #b8860b; }
+.fact-cat--preference { background: #ffe3ec; color: #d0568b; }
+.fact-cat--profile { background: #e3ecff; color: #5b7bd5; }
+.fact-cat--habit { background: #dff5ef; color: #2d8a6b; }
+.fact-cat--event { background: #f3efff; color: #8b6fd5; }
+.fact-cat--general { background: #f5f0eb; color: #8a7a6d; }
+.fact-status { font-size: 12px; color: #d05656; background: #ffe3e3; border-radius: var(--radius-pill); padding: 3px 10px; }
+.fact-rc { font-size: 12px; font-weight: 600; color: #D96A1F; background: #FFF3EA; border-radius: var(--radius-pill); padding: 2px 9px; }
+.fact-date { margin-left: auto; font-size: 12px; color: var(--text-sub); }
+.fact-content { font-size: 14px; font-weight: 500; margin-bottom: 10px; line-height: 1.6; word-break: break-word; }
+.fact-trust { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.trust-bar { flex: 1; max-width: 200px; height: 8px; border-radius: var(--radius-pill); background: var(--primary-soft); overflow: hidden; }
+.trust-fill { height: 100%; border-radius: var(--radius-pill); background: linear-gradient(90deg, #FF8FAB, #F9A8D4); transition: width 0.4s; }
+.trust-num { font-size: 12px; color: var(--text-sub); }
+.fact-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>

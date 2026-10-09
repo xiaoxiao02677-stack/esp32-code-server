@@ -21,14 +21,23 @@
     </div>
 
     <div v-if="agentId" style="display:flex;gap:10px;margin-bottom:16px">
-      <button class="btn btn-primary" :disabled="loading" @click="loadAddress">{{ loading ? '获取中…' : '获取 MCP 地址' }}</button>
-      <button class="btn btn-ghost" :disabled="loading" @click="loadTools">列出工具</button>
-      <button class="btn btn-ghost" :disabled="loading" @click="runTest">连通测试</button>
+      <button class="btn btn-primary" :disabled="loading || testing" @click="loadAddress">{{ loading ? '获取中…' : '获取 MCP 地址' }}</button>
+      <button class="btn btn-ghost" :disabled="loading || testing" @click="loadTools">列出工具</button>
+      <button class="btn btn-ghost" :disabled="loading || testing" @click="runTest">{{ testing ? '测试中…' : '⚡ 连通测试' }}</button>
     </div>
 
-    <div v-if="mcpUrl" class="DataTable card" style="margin-bottom:16px;padding:16px;border-radius:24px;background:var(--bg-card)">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px">MCP 接入地址</div>
-      <code style="font-size:12px;word-break:break-all;background:var(--bg-soft);padding:10px 12px;border-radius:10px;display:block">{{ mcpUrl }}</code>
+    <div v-if="mcpTestResult" class="mcp-test-panel" :class="mcpTestResult.ok ? 'mcp-test-ok' : 'mcp-test-fail'">
+      <div class="mcp-test-label">测试结果（{{ mcpTestResult.elapsed_ms }}ms）</div>
+      <div class="mcp-test-msg">{{ mcpTestResult.ok ? '✅ ' : '❌ ' }}{{ mcpTestResult.message }}</div>
+      <div v-if="mcpTestResult.address" class="mcp-test-addr">{{ mcpTestResult.address }}</div>
+    </div>
+
+    <div v-if="mcpUrl" class="mcp-panel">
+      <div class="mcp-panel-title">MCP 接入地址</div>
+      <div class="mcp-address-row">
+        <code class="mcp-address">{{ mcpUrl }}</code>
+        <button class="btn btn-ghost mcp-copy-btn" @click="copyMcpAddress">⧉ 复制</button>
+      </div>
     </div>
 
     <DataTable title="工具列表">
@@ -47,7 +56,7 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
@@ -57,8 +66,15 @@ const agents = ref([])
 const agentId = ref('')
 const mcpUrl = ref('')
 const tools = ref([])
-const testResult = ref('—')
+const mcpTestResult = ref(null)
 const loading = ref(false)
+const testing = ref(false)
+
+const testResult = computed(() => {
+  if (testing.value) return '测试中…'
+  if (!mcpTestResult.value) return '—'
+  return mcpTestResult.value.ok ? '✓ 连通' : '✗ 失败'
+})
 
 async function load() {
   try {
@@ -71,7 +87,7 @@ function pick(a) {
   agentId.value = a.id
   mcpUrl.value = ''
   tools.value = []
-  testResult.value = '—'
+  mcpTestResult.value = null
 }
 
 async function loadAddress() {
@@ -95,21 +111,69 @@ async function loadTools() {
 }
 
 async function runTest() {
-  loading.value = true
-  testResult.value = '测试中…'
+  testing.value = true
+  mcpTestResult.value = null
   try {
     const res = await adminApi.mcpTest(agentId.value)
-    testResult.value = '✓ 连通'
-    toast('MCP 连通测试通过')
-    if (res.data?.tools) tools.value = res.data.tools
-  } catch (e) { testResult.value = '✗ 失败'; toast(e.msg || 'MCP 测试失败', 'error') }
-  finally { loading.value = false }
+    const d = res.data
+    if (d && typeof d === 'object') {
+      mcpTestResult.value = {
+        ok: !!d.ok,
+        message: d.message || (d.ok ? '测试成功' : '测试失败'),
+        elapsed_ms: d.elapsed_ms ?? 0,
+        address: d.address || ''
+      }
+    } else {
+      mcpTestResult.value = { ok: false, message: (res && res.msg) || '测试失败', elapsed_ms: 0, address: '' }
+    }
+    if (mcpTestResult.value.ok) toast('MCP 连通测试通过')
+    else toast(mcpTestResult.value.message, 'error')
+    if (d?.tools) tools.value = d.tools
+  } catch (e) {
+    mcpTestResult.value = { ok: false, message: '请求异常：' + (e.msg || e.message || '未知错误'), elapsed_ms: 0, address: '' }
+    toast(mcpTestResult.value.message, 'error')
+  } finally { testing.value = false }
+}
+
+async function copyMcpAddress() {
+  const text = mcpUrl.value
+  if (!text) return
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const el = document.createElement('textarea')
+      el.value = text
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
+    toast('已复制')
+  } catch (e) {
+    toast('复制失败', 'error')
+  }
 }
 
 onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
+.chip { padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
 .chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+
+/* ===== A3 接入点地址 + 复制按钮 ===== */
+.mcp-panel { margin-bottom: 16px; padding: 16px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.mcp-panel-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.mcp-address-row { display: flex; align-items: center; gap: 10px; }
+.mcp-address { flex: 1; min-width: 0; font-size: 12px; word-break: break-all; background: var(--bg, #F5F7FA); padding: 10px 12px; border-radius: 10px; display: block; }
+.mcp-copy-btn { padding: 8px 14px; font-size: 12.5px; flex-shrink: 0; }
+
+/* ===== A12 测试结果面板 ===== */
+.mcp-test-panel { border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 16px; }
+.mcp-test-ok { background: rgba(47, 191, 113, .10); border: 1px solid rgba(47, 191, 113, .28); }
+.mcp-test-fail { background: rgba(240, 83, 77, .10); border: 1px solid rgba(240, 83, 77, .28); }
+.mcp-test-label { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
+.mcp-test-msg { font-size: 13.5px; font-weight: 600; }
+.mcp-test-addr { font-size: 12px; word-break: break-all; margin-top: 6px; color: var(--text-sub); font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
 </style>

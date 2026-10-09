@@ -6,30 +6,39 @@
         <p class="sub">契约对齐 /cc/：9 类型 / 供应器动态表单 / 新增编辑删除 / 启停测试</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-primary" @click="openCreate">＋ 新增模型</button>
-        <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
+        <button class="btn btn-primary" @click="openCreate">＋ 新增{{ activeType }}模型</button>
+        <button class="btn btn-ghost" @click="loadAll" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🧩" label="模型总数" :value="models.length" :note="activeType" />
-      <StatCard icon="✅" label="启用中" :value="models.filter(m => m.isEnabled).length" />
+      <StatCard icon="🧩" label="模型总数" :value="totalCount" :note="`当前 ${activeType}`" />
+      <StatCard icon="✅" label="启用中" :value="enabledCount" :note="`${activeType} 类型`" />
       <StatCard icon="🔌" label="连通测试" :value="lastTest || '—'" />
     </div>
 
-    <!-- 契约对齐 cc-console MODEL_TYPES：9 类型 -->
+    <!-- 契约对齐 cc-console MODEL_TYPES：9 类型（预加载全量计数） -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <div v-for="t in MODEL_TYPES" :key="t.value" class="chip" :class="{ active: activeType === t.value }" @click="pickType(t.value)">
-        {{ t.label }}
+        {{ t.label }} ({{ modelTypeCount(t.value) }})
       </div>
     </div>
 
-    <DataTable title="模型列表">
+    <DataTable title="模型列表" :total="models.length" :page="1" :pages="1">
+      <template #actions>
+        <button class="link-btn" @click="loadAll" :disabled="loading">{{ loading ? '加载中…' : '↻ 刷新' }}</button>
+      </template>
       <table class="data-table">
         <thead><tr><th>模型</th><th>类型</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="m in models" :key="m.id">
-            <td><div class="cell-main">{{ m.modelName }}</div><div class="cell-sub">{{ m.id }}</div></td>
+            <td>
+              <div class="cell-main">{{ m.modelName }}</div>
+              <div class="cell-sub">{{ m.id }}</div>
+              <div v-if="testState[m.id] && testState[m.id].text" class="model-test-result" :class="testState[m.id].ok === true ? 'test-ok' : (testState[m.id].ok === false ? 'test-fail' : '')">
+                {{ testState[m.id].text }}
+              </div>
+            </td>
             <td>{{ m.modelType || activeType }}</td>
             <td>
               <span class="badge" :class="m.isEnabled ? 'badge-green' : 'badge-gray'">
@@ -38,7 +47,9 @@
             </td>
             <td>
               <div class="row-actions">
-                <button class="link-btn" @click="test(m)">测试</button>
+                <button class="link-btn" :disabled="testState[m.id] && testState[m.id].loading" @click="test(m)">
+                  {{ testState[m.id] && testState[m.id].loading ? '测试中…' : '测试' }}
+                </button>
                 <button class="link-btn" @click="toggle(m)">{{ m.isEnabled ? '停用' : '启用' }}</button>
                 <button class="link-btn" @click="openEdit(m)">编辑</button>
                 <button class="link-btn danger" @click="remove(m)">删除</button>
@@ -47,7 +58,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="models.length === 0" class="empty-state"><div class="empty-icon">🧩</div><strong>此类型暂无模型</strong></div>
+      <div v-if="models.length === 0" class="empty-state"><div class="empty-icon">🧩</div><strong>此类型暂无模型</strong><p>点右上「＋ 新增{{ activeType }}模型」创建</p></div>
     </DataTable>
 
     <!-- 模型编辑弹窗（契约对齐 cc-console openModelEdit/saveModelConfig） -->
@@ -57,6 +68,7 @@
         <div class="form-row"><label>供应器</label>
           <select v-model="editor.providerCode" @change="onProviderChange">
             <option v-for="p in providers" :key="p.providerCode" :value="p.providerCode">{{ p.providerName || p.providerCode }}</option>
+            <option value="__custom_openai__">⭐ 自定义接口（OpenAI 兼容）</option>
           </select>
         </div>
         <div class="form-row"><label>模型名</label><input v-model="editor.modelName" placeholder="显示名称" /></div>
@@ -65,7 +77,10 @@
         </div>
         <div v-for="f in providerFields" :key="f.key" class="form-row">
           <label>{{ f.label }}</label>
-          <input :type="f.type" v-model="editor.config[f.key]" :placeholder="f.placeholder" />
+          <div style="display:flex;gap:8px;align-items:center">
+            <input :type="f.type" v-model="editor.config[f.key]" :placeholder="f.placeholder" style="flex:1" />
+            <button v-if="editor.providerCode === '__custom_openai__'" class="link-btn danger" title="删除字段" @click="removeCustomField(f.key)">✕</button>
+          </div>
         </div>
         <div class="form-row"><label>新增自定义字段</label>
           <div style="display:flex;gap:8px">
@@ -83,14 +98,15 @@
 </template>
 
 <script setup>
-import { inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
-// 契约对齐 cc-console MODEL_TYPES
+
+// 契约对齐 cc-console App.vue:948-958 MODEL_TYPES（9 类，含 emoji 标签）
 const MODEL_TYPES = [
   { value: 'TTS', label: '🔊 TTS 语音合成' },
   { value: 'LLM', label: '🧠 LLM 大语言' },
@@ -102,8 +118,11 @@ const MODEL_TYPES = [
   { value: 'Plugin', label: '🔌 Plugin 插件' },
   { value: 'RAG', label: '📚 RAG 知识库' }
 ]
-const models = ref([])
-const activeType = ref('LLM')
+
+// 契约对齐 cc-console modelsByType / activeModelType / testState
+const modelsByType = reactive({})
+const testState = reactive({})
+const activeType = ref('TTS')
 const loading = ref(false)
 const saving = ref(false)
 const lastTest = ref('')
@@ -112,23 +131,57 @@ const providerFields = ref([])
 const newCustomFieldKey = ref('')
 const editor = reactive({ show: false, id: '', providerCode: '', modelName: '', customType: 'openai', config: {} })
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await adminApi.modelList(activeType.value)
-    models.value = res.data?.list || []
-  } catch (e) { toast(e.msg || '加载失败', 'error') }
-  finally { loading.value = false }
+// 当前类型缓存视图（切换 tab 不重复请求）
+const models = computed(() => modelsByType[activeType.value] || [])
+const totalCount = computed(() => MODEL_TYPES.reduce((n, t) => n + modelTypeCount(t.value), 0))
+const enabledCount = computed(() => models.value.filter(m => m.isEnabled).length)
+
+function modelTypeCount(t) {
+  return (modelsByType[t] || []).length
 }
 
-function pickType(t) { activeType.value = t; load() }
+// 进入页面一次性并行预加载全部 9 类；单类型失败不阻塞其他（置空数组）
+async function loadAll() {
+  loading.value = true
+  await Promise.all(MODEL_TYPES.map(async t => {
+    try {
+      const res = await adminApi.modelList(t.value)
+      modelsByType[t.value] = res.data?.list || []
+    } catch (e) {
+      modelsByType[t.value] = []
+      if (t.value === activeType.value) toast(`「${t.label}」加载失败: ${e.msg || ''}`, 'error')
+    }
+  }))
+  loading.value = false
+}
 
+async function load() {
+  try {
+    const res = await adminApi.modelList(activeType.value)
+    modelsByType[activeType.value] = res.data?.list || []
+  } catch (e) { toast(e.msg || '加载失败', 'error') }
+}
+
+function pickType(t) {
+  activeType.value = t
+  if (!modelsByType[t]) load()
+}
+
+// 契约对齐 cc-console testModel：testState[id] = {loading, ok, text}
 async function test(m) {
+  testState[m.id] = { loading: true, ok: null, text: '⏳ 测试中…' }
   lastTest.value = m.modelName
   try {
     const res = await adminApi.modelTest(m.id, activeType.value)
-    toast(`「${m.modelName}」连通: ${res.data?.message || res.msg || 'OK'}`)
-  } catch (e) { toast(`「${m.modelName}」测试失败: ${e.msg || ''}`, 'error') }
+    const d = res.data || {}
+    testState[m.id] = {
+      loading: false,
+      ok: !!d.ok,
+      text: (d.ok ? '✅ ' : '❌ ') + (d.message || '') + (d.elapsed_ms != null ? `（${d.elapsed_ms}ms）` : '')
+    }
+  } catch (e) {
+    testState[m.id] = { loading: false, ok: false, text: '❌ 请求异常：' + (e.msg || e.message || '') }
+  }
 }
 
 async function toggle(m) {
@@ -145,8 +198,11 @@ function remove(m) {
   askConfirm({
     title: '删除模型', message: `确定删除「${m.modelName}」吗？`, danger: true,
     onOk: async () => {
-      try { await adminApi.deleteModel(m.id); toast('已删除'); load() }
-      catch (e) { toast(e.msg || '删除失败', 'error') }
+      try {
+        await adminApi.deleteModel(m.id)
+        toast('已删除')
+        await load()
+      } catch (e) { toast(e.msg || '删除失败', 'error') }
     }
   })
 }
@@ -197,6 +253,11 @@ function addCustomField() {
   newCustomFieldKey.value = ''
 }
 
+function removeCustomField(k) {
+  providerFields.value = providerFields.value.filter(f => f.key !== k)
+  delete editor.config[k]
+}
+
 async function openCreate() {
   await loadProviders()
   Object.assign(editor, {
@@ -220,6 +281,7 @@ async function openEdit(m) {
     config: { ...cfg }
   })
   providerFields.value = parseProviderFields(editor.providerCode)
+  // 自定义接口编辑：把 configJson 现有键都展示为可编辑字段
   if (editor.providerCode === '__custom_openai__' && editor.id) {
     const extra = Object.keys(editor.config).filter(k => !providerFields.value.some(f => f.key === k))
     providerFields.value = [...providerFields.value, ...extra.map(k => ({ key: k, label: k, type: 'text', placeholder: k }))]
@@ -241,12 +303,14 @@ async function save() {
     } else {
       await adminApi.createModel(activeType.value, providerCode, body)
     }
-    toast('已保存'); editor.show = false; load()
+    toast('已保存')
+    editor.show = false
+    await load()
   } catch (e) { toast(e.msg || '保存失败（可能需要超级管理员权限）', 'error') }
   finally { saving.value = false }
 }
 
-onMounted(() => { load() })
+onMounted(loadAll)
 </script>
 
 <style scoped>
@@ -256,4 +320,7 @@ onMounted(() => { load() })
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input, .form-row select { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; font-family: var(--font); background: #fff; }
 .form-row input:focus, .form-row select:focus { border-color: var(--primary); }
+.model-test-result { margin-top: 6px; font-size: 12px; line-height: 1.5; }
+.model-test-result.test-ok { color: var(--success); }
+.model-test-result.test-fail { color: var(--danger); }
 </style>

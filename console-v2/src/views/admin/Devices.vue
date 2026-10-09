@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>设备 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">迁移自 /cc/ 设备页：全量设备 / 改名 / 手动添加 / 解绑</p>
+        <p class="sub">你的小智设备状态（改名 / 绑定 / 解绑）</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" @click="manual.show = true">＋ 手动添加</button>
@@ -12,18 +12,18 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="📡" label="设备总数" :value="devices.length" />
+      <StatCard icon="📡" label="设备总数" :value="total" />
       <StatCard icon="🟢" label="在线" :value="devices.filter(d => d.online).length" />
       <StatCard icon="🔗" label="已绑定智能体" :value="devices.filter(d => d.agentId).length" />
     </div>
 
-    <DataTable title="设备列表">
+    <DataTable title="设备列表" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
       <table class="data-table">
         <thead><tr><th>设备</th><th>MAC / IP</th><th>智能体</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="d in devices" :key="d.id">
-            <td><div class="cell-main">{{ d.name || d.deviceName || '未命名' }}</div><div class="cell-sub">{{ d.lastSeen || d.updateDate || '' }}</div></td>
-            <td style="font-size:12px">{{ d.macAddress || d.mac || '—' }}<br />{{ d.ip || '' }}</td>
+            <td><div class="cell-main">{{ d.name }}</div><div class="cell-sub">{{ d.lastSeen || d.updateDate || '' }}</div></td>
+            <td style="font-size:12px">{{ d.mac || '—' }}<br />{{ d.ip || '' }}</td>
             <td>{{ d.agentName || d.agentId || '—' }}</td>
             <td>
               <span class="badge" :class="d.online ? 'badge-green' : 'badge-gray'">
@@ -32,8 +32,9 @@
             </td>
             <td>
               <div class="row-actions">
-                <button class="link-btn" @click="openRename(d)">改名</button>
-                <button class="link-btn danger" @click="unbind(d)">解绑</button>
+                <button class="link-btn" @click="openRename(d)">✎ 改名</button>
+                <button class="link-btn" @click="openBind(d)">⇄ 绑定</button>
+                <button class="link-btn danger" @click="unbind(d)">⤫ 解绑</button>
               </div>
             </td>
           </tr>
@@ -54,6 +55,24 @@
       </div>
     </div>
 
+    <!-- 绑定智能体弹窗 -->
+    <div v-if="bind.show" class="modal-mask" @click.self="bind.show = false">
+      <div class="modal">
+        <h3>绑定智能体</h3>
+        <p class="bind-sub">{{ bind.device.name }} → 选择要绑定的智能体</p>
+        <div class="form-row">
+          <label>智能体</label>
+          <select v-model="bind.agentId">
+            <option v-for="a in agents" :key="a.id" :value="a.id">{{ a.name }}</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="bind.show = false">取消</button>
+          <button class="btn btn-primary" :disabled="!bind.agentId || saving" @click="doBind">{{ saving ? '绑定中…' : '绑定' }}</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 手动添加弹窗 -->
     <div v-if="manual.show" class="modal-mask" @click.self="manual.show = false">
       <div class="modal">
@@ -70,36 +89,73 @@
 </template>
 
 <script setup>
-import { inject, onMounted, reactive, ref } from 'vue'
+import { inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi } from '../../lib/api'
+import { adminApi, api } from '../../lib/api'
 
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
 const devices = ref([])
+const agents = ref([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(20)
+const pages = ref(1)
 const loading = ref(false)
 const saving = ref(false)
 const rename = reactive({ show: false, id: null, name: '' })
+const bind = reactive({ show: false, device: null, agentId: '' })
 const manual = reactive({ show: false, mac: '', name: '' })
 
 async function load() {
   loading.value = true
   try {
-    const res = await adminApi.devicePage({ page: 1, limit: 200 })
+    // 管理员视角全量设备列表（分页）：GET /admin/device/all
+    const res = await adminApi.devicePage({ page: page.value, limit: pageSize.value })
     const data = res.data || {}
-    devices.value = (data.list || data || []).map(d => ({
-      id: d.id || d.macAddress,
-      name: d.alias || d.name || d.deviceName || (d.macAddress ? '设备 ' + d.macAddress.slice(-5) : '未命名'),
-      mac: d.macAddress || d.mac || d.id,
-      ip: d.ip || '',
-      agentId: d.agentId,
-      agentName: d.agentName || d.bindUserName,
-      online: d.status === 1 || d.online || !!d.lastConnectedAtTimestamp,
-      lastSeen: d.recentChatTime || d.lastSeen || d.updateDate
-    }))
-  } catch (e) { toast(e.msg || '加载失败', 'error') }
-  finally { loading.value = false }
+    devices.value = (data.list || data || []).map(normalize)
+    total.value = data.total ?? devices.value.length
+  } catch (e) {
+    // 降级：绑定视角 —— 取第一个智能体再查其绑定设备（原控制台 loadDevices 思路）
+    try {
+      const agentRes = await adminApi.agentList()
+      const agentId = (agentRes.data || [])[0] && (agentRes.data || [])[0].id
+      if (!agentId) { devices.value = []; total.value = 0 }
+      else {
+        const res = await adminApi.boundDevices(agentId)
+        devices.value = ((res.data || {}).list || res.data || []).map(normalize)
+        total.value = devices.value.length
+      }
+      page.value = 1
+      if (agents.value.length === 0) agents.value = (agentRes.data || []).map(a => ({ id: a.id, name: a.agentName || a.name || '未命名' }))
+    } catch (e2) {
+      toast(e2.msg || e.msg || '加载失败', 'error')
+    }
+  } finally {
+    pages.value = Math.max(1, Math.ceil(total.value / pageSize.value))
+    loading.value = false
+  }
+}
+
+function normalize(d) {
+  return {
+    id: d.id || d.macAddress,
+    name: d.alias || d.name || d.deviceName || (d.macAddress ? '设备 ' + d.macAddress.slice(-5) : '未命名'),
+    mac: d.macAddress || d.mac || d.id,
+    ip: d.ip || '',
+    agentId: d.agentId,
+    agentName: d.agentName || d.bindUserName,
+    online: d.status === 1 || d.online || !!d.lastConnectedAtTimestamp,
+    lastSeen: d.recentChatTime || d.lastSeen || d.updateDate
+  }
+}
+
+async function loadAgents() {
+  try {
+    const res = await adminApi.agentList()
+    agents.value = (res.data || []).map(a => ({ id: a.id, name: a.agentName || a.name || '未命名' }))
+  } catch (e) { toast(e.msg || '智能体加载失败', 'error') }
 }
 
 function openRename(d) { rename.id = d.id; rename.name = d.name || ''; rename.show = true }
@@ -111,6 +167,24 @@ async function doRename() {
     await adminApi.deviceUpdate(rename.id, { alias: rename.name })
     toast('已改名'); rename.show = false; load()
   } catch (e) { toast(e.msg || '改名失败', 'error') }
+  finally { saving.value = false }
+}
+
+function openBind(d) {
+  bind.device = d
+  bind.agentId = ''
+  bind.show = true
+}
+async function doBind() {
+  if (!bind.agentId || !bind.device) return
+  saving.value = true
+  try {
+    // cc-console 契约：POST /device/bind/{agentId}/{macAddress|id}（api.js 未封装，直接调用）
+    await api.post(`/device/bind/${bind.agentId}/${encodeURIComponent(bind.device.mac || bind.device.id)}`)
+    bind.show = false
+    toast('已绑定')
+    load()
+  } catch (e) { toast(e.msg || '绑定失败', 'error') }
   finally { saving.value = false }
 }
 
@@ -135,12 +209,19 @@ function unbind(d) {
   })
 }
 
-onMounted(load)
+watch([page, pageSize], () => load())
+
+onMounted(() => { load(); loadAgents() })
 </script>
 
 <style scoped>
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
-.form-row input { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; }
-.form-row input:focus { border-color: var(--primary); }
+.form-row input, .form-row select {
+  border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px;
+  font-size: 14px; outline: none; background: #fff; color: var(--text);
+}
+.form-row input:focus, .form-row select:focus { border-color: var(--primary); }
+.bind-sub { color: var(--text-sub); font-size: 13px; margin-bottom: 16px; }
+.modal h3 { font-size: 17px; margin-bottom: 18px; }
 </style>

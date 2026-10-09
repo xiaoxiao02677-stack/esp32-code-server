@@ -31,6 +31,8 @@
         <StatCard icon="🤖" label="模板" :value="templateCount" note="智能体模板" />
         <StatCard icon="📡" label="设备" :value="deviceTotal" :note="onlineText" />
         <StatCard icon="🧠" label="记忆智能体" :value="memoryAgentCount" note="有记忆数据" />
+        <StatCard icon="💬" label="会话数" :value="sessionTotal" note="首个智能体" />
+        <StatCard icon="🔊" label="TTS 引擎数" :value="ttsModelCount" note="已接入" />
       </div>
     </div>
 
@@ -67,6 +69,23 @@
         <strong>暂无设备</strong>
       </div>
     </DataTable>
+
+    <div class="panel sessions-panel">
+      <div class="panel-head">
+        <h3>最近会话<span class="hint">首个智能体的最新对话</span></h3>
+        <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="router.push('/admin/chat')">查看全部</button>
+      </div>
+      <div v-if="recentSessions.length" class="sess-list">
+        <div v-for="s in recentSessions" :key="s.id" class="sess-item" @click="router.push('/admin/chat')">
+          <div class="cell-main">{{ s.title }}</div>
+          <div class="cell-sub">{{ s.createdAt }} · {{ s.chatCount }} 条</div>
+        </div>
+      </div>
+      <div v-else class="empty-state">
+        <div class="empty-icon">💬</div>
+        <strong>暂无会话，去跟设备说句话吧</strong>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -86,9 +105,27 @@ const devices = ref([])
 const deviceTotal = ref(0)
 const templateCount = ref(0)
 const memoryAgentCount = ref(0)
+const sessionTotal = ref(0)
+const ttsModelCount = ref(0)
+const recentSessions = ref([])
 const loading = ref(false)
 
 const onlineText = computed(() => `${devices.value.filter(d => d.online).length} 在线`)
+
+// 契约对齐 cc-console loadSessions/loadTtsModels（原 1282-1306）
+async function loadFirstAgentSessions(agents) {
+  const first = agents[0]
+  if (!first) return
+  const res = await adminApi.agentSessions(first.id, { page: 1, limit: 10 })
+  const data = res?.data || {}
+  sessionTotal.value = data.total ?? 0
+  recentSessions.value = (data.list || []).slice(0, 5).map(s => ({
+    id: s.sessionId ?? s.id,
+    title: s.title || '未命名会话',
+    createdAt: s.createdAt ? String(s.createdAt).slice(0, 16).replace('T', ' ') : '—',
+    chatCount: s.chatCount ?? 0
+  }))
+}
 
 async function load() {
   loading.value = true
@@ -119,6 +156,14 @@ async function load() {
     adminApi.memoryAgents().then(res => {
       const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
       memoryAgentCount.value = list.length
+    }).catch(() => {}),
+    adminApi.agentList().then(async res => {
+      const agents = Array.isArray(res.data) ? res.data : (res.data?.list || [])
+      await loadFirstAgentSessions(agents)
+    }).catch(() => {}),
+    adminApi.modelList('TTS').then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
+      ttsModelCount.value = list.length
     }).catch(() => {})
   ]
   await Promise.all(jobs)
@@ -133,7 +178,9 @@ function exportReport() {
     ['设备总数', deviceTotal.value],
     ['在线设备', devices.value.filter(d => d.online).length],
     ['模板数', templateCount.value],
-    ['记忆智能体', memoryAgentCount.value]
+    ['记忆智能体', memoryAgentCount.value],
+    ['会话总数', sessionTotal.value],
+    ['TTS 引擎数', ttsModelCount.value]
   ]
   const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
@@ -147,3 +194,15 @@ function exportReport() {
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* 6 张统计卡：仅本页覆盖全局 4 列布局为 3 列两行 */
+.stats-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.sessions-panel { margin-top: 20px; }
+.sess-list { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 16px; }
+.sess-item { padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.sess-item:hover { background: #F5F8FD; }
+</style>

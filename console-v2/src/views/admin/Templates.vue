@@ -21,14 +21,20 @@
         <div class="blob-3d">🧩</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🧩" label="模板" :value="templates.length" />
-        <StatCard icon="✅" label="已配置" :value="templates.length" />
+        <StatCard icon="🧩" label="模板" :value="total" />
+        <StatCard icon="✅" label="已配置" :value="total" />
         <StatCard icon="🏷" label="分类" value="4" note="角色/教学/陪伴/工具" />
         <StatCard icon="🔥" label="最热门" value="英语老师" note="历史模板" />
       </div>
     </div>
 
-    <DataTable title="模板清单" :total="templates.length" :page="1" :pages="Math.max(1, Math.ceil(templates.length / 4))">
+    <DataTable
+      title="模板清单"
+      :total="total"
+      v-model:page="page"
+      v-model:pageSize="pageSize"
+      :pages="pages"
+    >
       <template #actions>
         <input v-model="keyword" placeholder="搜索模板" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none" />
       </template>
@@ -41,6 +47,11 @@
             <td>
               <div class="cell-main">{{ t.name }}</div>
               <div class="cell-sub">{{ t.author }} · 智能体模板</div>
+              <div class="tpl-meta">
+                <div class="cell-sub">编号：{{ t.agentCode || '—' }}</div>
+                <div class="cell-sub">LLM：{{ t.llmModelId || '—' }}</div>
+                <div class="cell-sub">TTS：{{ t.ttsModelId || '—' }}</div>
+              </div>
             </td>
             <td>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -48,7 +59,7 @@
                 <span v-if="t.systemPrompt" class="badge badge-blue">人设</span>
               </div>
             </td>
-            <td>{{ i + 1 }}</td>
+            <td>{{ (page - 1) * pageSize + i + 1 }}</td>
             <td>
               <div class="row-actions">
                 <button class="link-btn" @click="createFromTemplate(t)">⚡ 用模板创建</button>
@@ -98,7 +109,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
@@ -111,7 +122,12 @@ const loading = ref(false)
 const saving = ref(false)
 const keyword = ref('')
 const previewing = ref(null)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 const editor = reactive({ show: false, id: null, agentName: '', systemPrompt: '', langCode: 'zh' })
+
+const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 
 const filtered = computed(() => {
   if (!keyword.value) return templates.value
@@ -121,14 +137,18 @@ const filtered = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await adminApi.templateList()
-    const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
-    templates.value = list.map(t => ({
+    const res = await adminApi.templatePage({ page: page.value, limit: pageSize.value })
+    const data = res.data || {}
+    total.value = data.total ?? 0
+    templates.value = (data.list || []).map(t => ({
       id: t.id,
       name: t.agentName || t.name || '未命名模板',
       author: t.creatorName || '社区',
       langCode: t.langCode || 'zh',
-      systemPrompt: t.systemPrompt || ''
+      systemPrompt: t.systemPrompt || '',
+      agentCode: t.agentCode || '',
+      llmModelId: t.llmModelId ?? '',
+      ttsModelId: t.ttsModelId ?? ''
     }))
   } catch (e) {
     toast(e.msg || '加载失败', 'error')
@@ -136,6 +156,12 @@ async function load() {
     loading.value = false
   }
 }
+
+watch(page, () => load())
+watch(pageSize, () => {
+  if (page.value !== 1) page.value = 1
+  else load()
+})
 
 function openCreate() {
   Object.assign(editor, { show: true, id: null, agentName: '', systemPrompt: '', langCode: 'zh' })
@@ -203,4 +229,5 @@ onMounted(load)
   font-size: 14px; outline: none; font-family: var(--font); transition: border .15s;
 }
 .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+.tpl-meta { margin-top: 6px; display: flex; flex-direction: column; gap: 1px; }
 </style>

@@ -193,6 +193,7 @@ const bindBusy = ref(false)
 const manual = reactive({ board: '', appVersion: '', macAddress: '' })
 
 const MEM_HINTS = {
+  Memory_mem_hybrid: '⭐ 推荐：短期 LLM 滚动总结 + Holographic 长期事实库 + LLM 自动沉淀（隐式信息也能记住）',
   Memory_mem_holographic: '本地全息记忆：自动抽取事实/时间线/实体，功能最全',
   Memory_mem_local_short: '短期记忆：对话摘要总结，轻量省 token',
   Memory_mem_report_only: '仅上报聊天记录，不生成记忆',
