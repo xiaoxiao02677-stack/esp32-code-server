@@ -1,7 +1,7 @@
 <template>
   <div class="dock-wrap">
     <nav class="dock">
-      <!-- 导航自适应展开：单击在 展开(88px) ↔ 收起(仅图标 56px) 间切换，状态存 localStorage 'cc_dock_collapsed' -->
+      <!-- 导航自适应展开：单击在 展开(自适应文字宽度 72~140px) ↔ 收起(仅图标 56px) 间切换，状态存 localStorage 'cc_dock_collapsed' -->
       <button class="dock-toggle" :title="collapsed ? '展开导航栏' : '收起导航栏'" @click="toggleDock">
         <span class="ic">{{ collapsed ? '☰' : '«' }}</span>
         <span class="dock-label">{{ collapsed ? '展开' : '收起' }}</span>
@@ -49,6 +49,7 @@ const router = useRouter()
 // 导航自适应展开：收起/展开状态（key 'cc_dock_collapsed'），仅布局自适应，文字字号 13px 不变。
 // 类挂在 <html> 上：CSS 变量 --dock-w 只能向下继承，挂 <html> 才能同时联动 .app-shell 左 padding 与 dock 宽度。
 const DOCK_CLASS = 'dock-collapsed'
+const collapsed = ref(false)
 function applyDockClass() {
   document.documentElement.classList.toggle(DOCK_CLASS, collapsed.value)
 }
@@ -134,7 +135,7 @@ function toggle() {
   font-family: var(--font); transition: all .18s; white-space: nowrap; position: relative;
 }
 .dock-toggle .ic { font-size: 18px; line-height: 1; flex-shrink: 0; transition: transform .18s; }
-.dock-toggle .dock-label { overflow: hidden; text-overflow: ellipsis; }
+.dock-toggle .dock-label { white-space: nowrap; }
 .dock-toggle:hover { color: var(--primary); background: var(--primary-soft); }
 .dock-toggle:hover .ic { transform: scale(1.12); }
 

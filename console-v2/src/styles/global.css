@@ -269,13 +269,14 @@ body {
 .page-btn.wide { border-radius: var(--radius-pill); }
 
 /* ============ 左侧竖排 Dock 导航（C1-C5：由底部居中悬浮改为最左全高侧栏） ============ */
-/* 导航自适应展开：--dock-w 已在 :root 设计系统定义（默认 88px）；
-   收起态类 .dock-collapsed 由 DockNav 挂在 <html> 上，使 .app-shell 的左 padding
-   与 .dock/.dock-wrap 宽度共用同一变量联动（变量只能向下继承，挂子元素无法影响 shell） */
+/* 导航自适应文字长度：dock 宽度由内容决定（fit-content），72px~148px 钳制；
+   收起态类 .dock-collapsed 由 DockNav 挂在 <html> 上固定 56px（仅图标）。
+   .app-shell 左 padding 用最大宽度预留（160px），dock 窄时自然留白。 */
+:root { --dock-w: 88px; }
 html.dock-collapsed { --dock-w: 56px; }
 .dock-wrap {
   position: fixed; left: 0; top: 0; bottom: auto; height: 100vh; transform: none; z-index: 50;
-  width: var(--dock-w); transition: width .25s ease;
+  width: fit-content; transition: width .25s ease;
 }
 /* C2 */
 .dock {
@@ -286,7 +287,7 @@ html.dock-collapsed { --dock-w: 56px; }
   background: rgba(255,255,255,.92); backdrop-filter: blur(18px);
   border-radius: 0 22px 22px 0; padding: 12px 8px;
   box-shadow: var(--shadow-dock); border: 1px solid rgba(255,255,255,.6);
-  width: var(--dock-w); height: 100vh;
+  width: fit-content; min-width: 72px; max-width: 148px; height: 100vh;
   overflow-x: visible; overflow-y: auto;
   scrollbar-width: thin;
   transition: width .25s ease;
@@ -303,10 +304,8 @@ html.dock-collapsed { --dock-w: 56px; }
   white-space: nowrap;
 }
 .dock-item .ic { font-size: 18px; line-height: 1; transition: transform .18s; flex-shrink: 0; }
-/* 导航自适应文字：超出省略（「自适应」指布局自适应非字号缩放，字号 13px 不变） */
-.dock-item .dock-label {
-  max-width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+/* 导航自适应文字：容器随文字自然撑开（fit-content），长文字不截断 */
+.dock-item .dock-label { overflow: visible; }
 .dock-item:hover { color: var(--primary); }
 .dock-item:hover .ic { transform: scale(1.12); }
 .dock-item.active { color: var(--primary); background: var(--primary-soft); }
