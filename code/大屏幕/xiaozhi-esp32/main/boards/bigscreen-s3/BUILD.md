@@ -5,14 +5,23 @@
 
 ## 1. 编译
 
+**方式 0（最简单）：双击一键编译脚本**
+
+```
+build-bigscreen.bat   （固件根目录，自动探测 ESP-IDF 环境并编译）
+```
+
+**方式 A：项目自带构建脚本（自动读本板 config.json 的 sdkconfig_append）**
+
 ```bash
 cd G:/demo/21_xiaozhi/code/大屏幕/xiaozhi-esp32
-
-# 方式 A：项目自带构建脚本（推荐，自动读本板 config.json 的 sdkconfig_append）
 python scripts/build.py bigscreen-s3
 # 查看所有板：python scripts/build.py --list-boards
+```
 
-# 方式 B：idf.py 手动（先 set target 再选板型）
+**方式 B：idf.py 手动（先 set target 再选板型）**
+
+```bash
 idf.py set-target esp32s3
 idf.py menuconfig   # Board type → "Bigscreen S3 (ES8311 + ILI9341 2.8-inch, 大屏幕)"
 idf.py build
