@@ -26,6 +26,13 @@ public interface SysParamsService extends BaseService<SysParamsEntity> {
     void delete(String[] ids);
 
     /**
+     * 根据ID删除参数（内置参数不允许删除）
+     *
+     * @param id 参数id
+     */
+    void deleteById(Long id);
+
+    /**
      * 根据参数编码，获取参数的value值
      *
      * @param paramCode 参数编码

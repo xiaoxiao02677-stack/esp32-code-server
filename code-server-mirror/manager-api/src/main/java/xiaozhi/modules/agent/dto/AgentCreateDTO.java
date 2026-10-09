@@ -21,4 +21,7 @@ public class AgentCreateDTO implements Serializable {
 
     @Schema(description = "创建来源模板ID（可选，指定后以该模板为基准而非默认模板）")
     private String templateId;
+
+    @Schema(description = "智能体自定义唤醒词，分号分隔；为空则使用全局 wakeup_words（默认「你好」）", example = "你好;早上好")
+    private String wakeWords;
 }

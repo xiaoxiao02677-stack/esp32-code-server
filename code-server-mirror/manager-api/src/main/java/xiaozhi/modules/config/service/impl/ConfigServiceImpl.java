@@ -1,8 +1,10 @@
 package xiaozhi.modules.config.service.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -217,6 +219,10 @@ public class ConfigServiceImpl implements ConfigService {
         }
         // 获取智能体ID（记忆按Agent隔离，xiaozhi-server 以 agent_id 作为记忆命名空间）
         result.put("agent_id", agent.getId());
+
+        // 唤醒词合并下发：agent 自定义 wake_words 优先在前，与全局 wakeup_words
+        // （sys_params 310，分号分隔）合并去重；两者皆空时兜底「你好」（默认唤醒词）
+        result.put("wakeup_words", buildWakeupWords(agent.getWakeWords()));
 
         // 设备云端配置下发（B线：开机恢复链路，design §3.2；查表有值才注入，无值整个 key 不出现）
         DeviceConfigEntity deviceConfig = deviceConfigService.getByDeviceId(device.getId());
@@ -438,8 +444,44 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     /**
+     * 唤醒词合并下发：agent 自定义唤醒词优先在前，与全局列表合并去重
+     *
+     * @param agentWakeWords 智能体自定义唤醒词（分号分隔，可空）
+     * @return 合并后的唤醒词列表；agent 与全局皆空时返回默认「你好」
+     */
+    private List<String> buildWakeupWords(String agentWakeWords) {
+        // 默认唤醒词：agent 与全局均未配置时的兜底
+        final String defaultWakeWord = "你好";
+
+        List<String> agentWords = splitWakeWords(agentWakeWords);
+        List<String> globalWords = splitWakeWords(sysParamsService.getValue("wakeup_words", true));
+
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        merged.addAll(agentWords);
+        merged.addAll(globalWords);
+
+        if (merged.isEmpty()) {
+            merged.add(defaultWakeWord);
+        }
+        return new ArrayList<>(merged);
+    }
+
+    /**
+     * 将分号分隔的唤醒词字符串拆分为去空白的非空词列表
+     */
+    private List<String> splitWakeWords(String wakeWords) {
+        if (StringUtils.isBlank(wakeWords) || "null".equals(wakeWords)) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(wakeWords.split(";"))
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 构建模块配置
-     * 
+     *
      * @param prompt         提示词
      * @param voice          音色
      * @param referenceAudio 参考音频路径

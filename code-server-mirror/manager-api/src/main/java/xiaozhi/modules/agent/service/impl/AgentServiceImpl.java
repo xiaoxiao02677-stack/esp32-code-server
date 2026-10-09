@@ -267,6 +267,7 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         dto.setId(agent.getId());
         dto.setAgentName(agent.getAgentName());
         dto.setSystemPrompt(agent.getSystemPrompt());
+        dto.setWakeWords(agent.getWakeWords());
 
         // 获取 TTS 模型名称
         dto.setTtsModelName(modelConfigService.getModelNameById(agent.getTtsModelId()));
@@ -440,6 +441,9 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
         if (dto.getSummaryMemory() != null) {
             existingEntity.setSummaryMemory(dto.getSummaryMemory());
+        }
+        if (dto.getWakeWords() != null) {
+            existingEntity.setWakeWords(dto.getWakeWords());
         }
         if (dto.getChatHistoryConf() != null) {
             existingEntity.setChatHistoryConf(dto.getChatHistoryConf());

@@ -260,4 +260,9 @@ public interface ErrorCode {
     // 替换词相关错误码
     int CORRECT_WORD_FILE_NAME_EXISTS = 10203; // 文件名已存在
     int FILE_SIZE_OVER_LIMIT = 10204; // 文件大小超过限制
+
+    // 系统参数相关错误码
+    int PARAM_CODE_EXISTS = 10205; // 参数编码已存在
+    int PARAM_NOT_EXIST = 10206; // 参数不存在
+    int PARAM_BUILTIN_DELETE_FORBIDDEN = 10207; // 内置参数不可删除
 }

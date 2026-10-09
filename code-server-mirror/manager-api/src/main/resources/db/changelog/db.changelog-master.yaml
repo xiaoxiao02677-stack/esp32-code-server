@@ -857,3 +857,22 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610090130.sql
+  - changeSet:
+      id: 202610100930
+      author: team-lead
+      # 唤醒词自定义：ai_agent.wake_words。
+      # MySQL 无 ADD COLUMN IF NOT EXISTS，列已存在时（手工 ALTER 加过）
+      # onFail=MARK_RAN 跳过，避免 Duplicate column 让 Spring Boot 启动失败。
+      # 写法参考 202610090130（ai_tts_voice 同类问题）。
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        onFailMessage: ai_agent 已存在 wake_words 列（手工建过），跳过
+        not:
+          columnExists:
+            tableName: ai_agent
+            columnName: wake_words
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610100930.sql

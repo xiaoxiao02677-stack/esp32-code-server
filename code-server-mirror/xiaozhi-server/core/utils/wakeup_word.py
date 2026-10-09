@@ -4,7 +4,36 @@ import yaml
 import time
 import hashlib
 import portalocker
-from typing import Dict
+from typing import Dict, List, Optional, Union
+
+
+def parse_wake_words_field(value) -> List[str]:
+    """把 Java agent config 下发的 wake_words 字段解析为列表。
+
+    下发格式为分号分隔字符串（如 "你好;你好小智"），兼容列表 /
+    None / 空串，去除空白项。
+    """
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [w.strip() for w in value.split(";") if w.strip()]
+    if isinstance(value, (list, tuple)):
+        return [str(w).strip() for w in value if str(w).strip()]
+    return []
+
+
+def merge_wake_words(
+    wake_words: Optional[Union[str, list]], wakeup_words: Optional[list]
+) -> List[str]:
+    """合并 agent 级唤醒词（wake_words，新字段）与全局唤醒词（wakeup_words，旧字段）。
+
+    两者均去重；wake_words 在前仅代表来源顺序，匹配语义为集合成员判断。
+    """
+    merged = list(parse_wake_words_field(wake_words))
+    for word in parse_wake_words_field(wakeup_words):
+        if word not in merged:
+            merged.append(word)
+    return merged
 
 
 class FileLock:

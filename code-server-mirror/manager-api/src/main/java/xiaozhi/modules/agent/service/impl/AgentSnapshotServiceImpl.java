@@ -346,6 +346,7 @@ public class AgentSnapshotServiceImpl extends BaseServiceImpl<AgentSnapshotDao, 
         data.setChatHistoryConf(agent.getChatHistoryConf());
         data.setSystemPrompt(agent.getSystemPrompt());
         data.setSummaryMemory(agent.getSummaryMemory());
+        data.setWakeWords(agent.getWakeWords());
         data.setLangCode(agent.getLangCode());
         data.setLanguage(agent.getLanguage());
         data.setSort(agent.getSort());

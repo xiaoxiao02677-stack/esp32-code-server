@@ -42,6 +42,7 @@ from core.providers.tts.dto.dto import ContentType, TTSMessageDTO, SentenceType
 from config.logger import setup_logging, build_module_string, create_connection_logger
 from config.manage_api_client import DeviceNotFoundException, DeviceBindException, generate_and_save_chat_title
 from core.utils.prompt_manager import PromptManager
+from core.utils.wakeup_word import parse_wake_words_field, merge_wake_words
 from core.utils.voiceprint_provider import VoiceprintProvider
 from core.utils.util import get_system_error_response
 from core.utils import textUtils
@@ -924,6 +925,18 @@ class ConnectionHandler:
             intent_conf["functions"] = expanded_functions
         if private_config.get("prompt", None) is not None:
             self.config["prompt"] = private_config["prompt"]
+        # 唤醒词合并：agent 级 wake_words（Java 下发，分号串）并入全局
+        # wakeup_words（列表），去重后写回 conn.config["wakeup_words"]，
+        # helloHandle / listenMessageHandler 两处匹配逻辑无需改动
+        wake_words = parse_wake_words_field(private_config.get("wake_words"))
+        if wake_words:
+            merged = merge_wake_words(
+                wake_words, self.config.get("wakeup_words") or []
+            )
+            self.config["wakeup_words"] = merged
+            self.logger.bind(tag=TAG).info(
+                f"已合并 agent 级唤醒词: {merged}"
+            )
         # 获取声纹信息
         if private_config.get("voiceprint", None) is not None:
             self.config["voiceprint"] = private_config["voiceprint"]

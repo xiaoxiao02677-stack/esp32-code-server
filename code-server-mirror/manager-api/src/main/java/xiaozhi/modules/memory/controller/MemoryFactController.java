@@ -23,6 +23,7 @@ import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.utils.Result;
 import xiaozhi.modules.memory.dto.MemoryFactDTO;
+import xiaozhi.modules.memory.service.AgentMemorySummarizeService;
 import xiaozhi.modules.memory.service.MemoryFactService;
 import xiaozhi.modules.memory.vo.FeedbackVO;
 import xiaozhi.modules.memory.vo.MemoryAgentVO;
@@ -38,6 +39,7 @@ import xiaozhi.modules.security.user.SecurityUser;
 public class MemoryFactController {
 
     private final MemoryFactService memoryFactService;
+    private final AgentMemorySummarizeService agentMemorySummarizeService;
 
     @GetMapping("/agents")
     @Operation(summary = "有记忆数据的智能体列表")
@@ -45,6 +47,15 @@ public class MemoryFactController {
     public Result<List<MemoryAgentVO>> listAgents() {
         List<MemoryAgentVO> agents = memoryFactService.listAgents(SecurityUser.getUserId());
         return new Result<List<MemoryAgentVO>>().ok(agents);
+    }
+
+    @PostMapping("/agents/{agentId}/summarize")
+    @Operation(summary = "一键总结智能体近期会话并写入记忆条目")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<String> summarizeAgentChats(
+            @Parameter(name = "agentId", description = "智能体ID", required = true) @PathVariable("agentId") String agentId) {
+        String summary = agentMemorySummarizeService.summarizeAgentChats(agentId, SecurityUser.getUserId());
+        return new Result<String>().ok(summary);
     }
 
     @GetMapping("/facts")

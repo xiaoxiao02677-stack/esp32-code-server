@@ -77,6 +77,9 @@ public class AgentEntity {
             "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String summaryMemory;
 
+    @Schema(description = "智能体自定义唤醒词，分号分隔；为空则使用全局 wakeup_words（默认「你好」）", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String wakeWords;
+
     @Schema(description = "语言编码")
     private String langCode;
 

@@ -115,6 +115,11 @@
           </div>
         </div>
 
+        <div class="form-row"><label>唤醒词（多个用分号 ; 分隔，留空使用默认）</label>
+          <input v-model.trim="editor.wakeWords" placeholder="如：你好;你好小智" />
+          <p class="field-hint">设备待机唤醒由固件本地模型负责；此处唤醒词用于服务器识别与快速应答</p>
+        </div>
+
         <div class="form-row"><label>人设提示词（小智怎么说话）</label>
           <textarea v-model="form.systemPrompt" rows="5" placeholder="比如：你是温柔可爱的助手，说话简短口语化"></textarea>
         </div>
@@ -178,8 +183,8 @@ const boundTotal = ref(0)
 const sessionCount = ref(0)
 const sessions = reactive({ show: false, agentName: '', agentId: null, list: [] })
 
-// 编辑弹窗状态（契约字段与 cc-console editForm 一致）
-const editor = reactive({ show: false, id: '' })
+// 编辑弹窗状态（契约字段与 cc-console editForm 一致；wakeWords 分号分隔，空=默认「你好」）
+const editor = reactive({ show: false, id: '', wakeWords: '' })
 const form = reactive({
   agentName: '', llmModelId: '', ttsModelId: '', ttsVoiceId: '',
   memModelId: '', intentModelId: '', asrModelId: '',
@@ -262,6 +267,7 @@ async function openCreate() {
   await loadModelOptions()
   resetForm()
   editor.id = ''
+  editor.wakeWords = ''
   boundDevices.value = []
   bindCode.value = ''
   editor.show = true
@@ -285,6 +291,7 @@ async function openEdit(a) {
     systemPrompt: d.systemPrompt || ''
   })
   editor.id = d.id || a.id
+  editor.wakeWords = d.wakeWords || ''
   bindCode.value = ''
   manual.board = ''; manual.appVersion = ''; manual.macAddress = ''
   editor.show = true
@@ -304,7 +311,8 @@ async function persist() {
     asrModelId: form.asrModelId,
     chatHistoryConf: form.chatHistoryConf,
     systemPrompt: form.systemPrompt,
-    ttsRate: form.ttsRate
+    ttsRate: form.ttsRate,
+    wakeWords: editor.wakeWords || ''
   }
   if (editor.id) {
     await adminApi.updateAgent(editor.id, payload)

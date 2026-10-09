@@ -448,8 +448,8 @@ function summarizeMemory() {
       try {
         const res = await adminApi.memorySummarize(currentAgentId.value)
         const d = res?.data
-        const brief = typeof d === 'string' ? d.slice(0, 40)
-          : (d && typeof d === 'object' ? String(d.summary || d.content || '完成') : '完成')
+        const brief = (typeof d === 'string' ? d
+          : (d && typeof d === 'object' ? String(d.summary || d.content || '') : '')).slice(0, 40) || '完成'
         toast('总结已写入记忆：' + brief)
         await loadFacts()
       } catch (e) { toast(e.msg || '总结失败', 'error') }

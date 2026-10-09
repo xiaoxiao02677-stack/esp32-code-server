@@ -1,10 +1,16 @@
 <template>
   <div class="dock-wrap">
     <nav class="dock">
+      <!-- 导航自适应展开：单击在 展开(88px) ↔ 收起(仅图标 56px) 间切换，状态存 localStorage 'cc_dock_collapsed' -->
+      <button class="dock-toggle" :title="collapsed ? '展开导航栏' : '收起导航栏'" @click="toggleDock">
+        <span class="ic">{{ collapsed ? '☰' : '«' }}</span>
+        <span class="dock-label">{{ collapsed ? '展开' : '收起' }}</span>
+      </button>
       <router-link
         v-for="item in items" :key="item.to"
         :to="item.to" class="dock-item"
         :class="{ active: isActive(item.to) }"
+        :title="item.label"
       >
         <span class="ic">{{ item.icon }}</span>
         <span class="dock-label">{{ item.label }}</span>
@@ -40,6 +46,18 @@ const emit = defineEmits(['toggle-compact'])
 const route = useRoute()
 const router = useRouter()
 
+// 导航自适应展开：收起/展开状态（key 'cc_dock_collapsed'），仅布局自适应，文字字号 13px 不变。
+// 类挂在 <html> 上：CSS 变量 --dock-w 只能向下继承，挂 <html> 才能同时联动 .app-shell 左 padding 与 dock 宽度。
+const DOCK_CLASS = 'dock-collapsed'
+function applyDockClass() {
+  document.documentElement.classList.toggle(DOCK_CLASS, collapsed.value)
+}
+function toggleDock() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem('cc_dock_collapsed', collapsed.value ? '1' : '0')
+  applyDockClass()
+}
+
 // A9 主题（key 'cc_theme' 与原控制台互通，参照 App.vue:978-985、2543-2547）
 const THEMES = [
   { id: 'blue', name: '蓝白（默认）', dot: 'linear-gradient(135deg,#2563EB,#0EA5E9)' },
@@ -67,6 +85,8 @@ function restore() {
   document.documentElement.setAttribute('data-theme', saved)
   compact.value = localStorage.getItem('cc_compact') === '1'
   emit('toggle-compact', compact.value)
+  collapsed.value = localStorage.getItem('cc_dock_collapsed') === '1'
+  applyDockClass()
 }
 onMounted(restore)
 
@@ -106,6 +126,18 @@ function toggle() {
 </script>
 
 <style scoped>
+/* 折叠/展开切换按钮（布局与 .dock-item 对齐，收起态样式由 global.css .dock-collapsed 统一控制） */
+.dock-toggle {
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+  gap: 10px; padding: 10px 12px; margin-bottom: 6px; border: none; background: none; cursor: pointer;
+  border-radius: 14px; color: var(--text-sub); font-size: 13px; font-weight: 600;
+  font-family: var(--font); transition: all .18s; white-space: nowrap; position: relative;
+}
+.dock-toggle .ic { font-size: 18px; line-height: 1; flex-shrink: 0; transition: transform .18s; }
+.dock-toggle .dock-label { overflow: hidden; text-overflow: ellipsis; }
+.dock-toggle:hover { color: var(--primary); background: var(--primary-soft); }
+.dock-toggle:hover .ic { transform: scale(1.12); }
+
 .dock-foot {
   margin-top: auto;
   padding-top: 10px;
