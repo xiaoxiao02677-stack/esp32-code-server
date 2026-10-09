@@ -7,6 +7,7 @@
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="!currentAgentId" @click="creator.show = true">＋ 新增记忆</button>
+        <button class="btn btn-primary btn-sm" :disabled="!currentAgentId || summarizing" :title="!currentAgentId ? '请先在下方选择智能体' : '用 LLM 总结该智能体近期对话并写入一条记忆'" @click="summarizeMemory">{{ summarizing ? '总结中…' : '⚡ 快速总结' }}</button>
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
@@ -191,6 +192,7 @@ const currentAgentId = ref('')
 const loading = ref(false)
 const filterCategory = ref('')
 const filterStatus = ref('')
+const summarizing = ref(false)
 const creator = reactive({ show: false, content: '' })
 const factEditor = reactive({ show: false, factId: '', content: '', category: 'general' })
 
@@ -435,6 +437,27 @@ async function review(f, action) {
   } catch (e) { toast(e.msg || '操作失败', 'error') }
 }
 
+// ===== 快速总结（契约：POST /memory/agents/{agentId}/summarize，返回总结文本或 {summary|content}） =====
+function summarizeMemory() {
+  if (!currentAgentId.value || summarizing.value) return
+  askConfirm({
+    title: '⚡ 快速总结',
+    message: '将用 LLM 总结该智能体的近期对话并写入一条记忆（category=summary）。确定执行？',
+    onOk: async () => {
+      summarizing.value = true
+      try {
+        const res = await adminApi.memorySummarize(currentAgentId.value)
+        const d = res?.data
+        const brief = typeof d === 'string' ? d.slice(0, 40)
+          : (d && typeof d === 'object' ? String(d.summary || d.content || '完成') : '完成')
+        toast('总结已写入记忆：' + brief)
+        await loadFacts()
+      } catch (e) { toast(e.msg || '总结失败', 'error') }
+      finally { summarizing.value = false }
+    }
+  })
+}
+
 function remove(f) {
   askConfirm({
     title: '删除记忆', message: '确定删除这条记忆吗？不可恢复', danger: true,
@@ -490,6 +513,8 @@ onMounted(load)
 </script>
 
 <style scoped>
+/* 快速总结按钮（小尺寸，对齐全局 .btn 设计令牌） */
+.btn-sm { padding: 7px 16px; font-size: 13px; }
 .chip { padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
 .chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
 .mini-select { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: #fff; }

@@ -53,8 +53,11 @@ import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
+const askConfirm = inject('askConfirm')
 const servers = ref([])
 const loading = ref(false)
+const restartingPy = ref(false)
+const restartingJava = ref(false)
 
 async function load() {
   loading.value = true
@@ -71,5 +74,57 @@ async function load() {
   finally { loading.value = false }
 }
 
+function confirmRestartPy() {
+  // 需要一个启用的 WS 节点作为 emit-action 目标
+  const target = servers.value.find(s => s.enable && s.wsUrl)
+  if (!target) {
+    toast('未获取到可用的 WS 节点地址，请先刷新节点列表', 'error')
+    load()
+    return
+  }
+  askConfirm({
+    title: '重启语音服务',
+    message: `将向节点 ${target.wsUrl} 下发重启指令，xiaozhi-server 会平滑自重启，设备短暂断线后自动重连。确定继续吗？`,
+    danger: true,
+    onOk: async () => {
+      restartingPy.value = true
+      try {
+        // 既有链路：POST /admin/server/emit-action {targetWs, action:'restart'} → Python handle_restart()
+        await adminApi.serverAction({ targetWs: target.wsUrl, action: 'restart' })
+        toast('重启指令已发出，设备将短暂断线后自动重连')
+      } catch (e) {
+        toast(e.msg || '重启指令发送失败', 'error')
+      } finally {
+        restartingPy.value = false
+      }
+    }
+  })
+}
+
+function confirmRestartJava() {
+  askConfirm({
+    title: '重启管理服务',
+    message: '将重启 manager-api 管理服务，当前页面会短暂不可用，约 10 秒后自动恢复。确定继续吗？',
+    danger: true,
+    onOk: async () => {
+      restartingJava.value = true
+      try {
+        await adminApi.restartJavaApi()
+        toast('重启指令已发出，约 10 秒后生效')
+      } catch (e) {
+        // 服务自杀重启时该请求可能无响应/报错，属正常现象
+        toast('重启指令已发出；若页面无响应属正常，请稍后刷新')
+      } finally {
+        restartingJava.value = false
+      }
+    }
+  })
+}
+
 onMounted(load)
 </script>
+
+<style scoped>
+.btn-restart { color: var(--primary); font-weight: 600; }
+.btn-restart:disabled { opacity: 0.55; cursor: not-allowed; }
+</style>

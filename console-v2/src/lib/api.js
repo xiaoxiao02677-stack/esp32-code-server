@@ -197,7 +197,8 @@ export const adminApi = {
   deleteParam: (id) => api.del(`/admin/params/${id}`),
 
   // ===== 运维：服务重启 =====
-  restartPyServer: () => api.post('/admin/server/restart-python', {}),
+  // Python 重启走既有 emit-action 链路（ServerSideManageController → WS 下发 restart → Python handle_restart 自重启）
+  serverAction: (data) => api.post('/admin/server/emit-action', data),
   restartJavaApi: () => api.post('/admin/server/restart-manager', {}),
 
   // ===== 记忆：快速总结 =====
