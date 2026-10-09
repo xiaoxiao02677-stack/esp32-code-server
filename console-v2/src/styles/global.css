@@ -20,8 +20,9 @@
   --radius-pill: 999px;
   --shadow-dock: 0 8px 32px rgba(27, 44, 80, 0.14);
   --shadow-card: 0 2px 12px rgba(27, 44, 80, 0.05);
-  /* 导航自适应展开：dock 宽度统一走变量（默认展开 88px，收起 56px 由 .dock-collapsed 覆盖） */
-  --dock-w: 88px;
+  /* 导航自适应文字：dock 本体宽度随最长文字项自适应（fit-content，72~140px 夹取，见 .dock）；
+     --dock-w 不再控制 dock 宽度，只作 .app-shell 左侧预留宽联动（展开=内容最大宽 140px，收起 56px 由 .dock-collapsed 覆盖） */
+  --dock-w: 140px;
   --font: "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
@@ -43,7 +44,8 @@ body {
     radial-gradient(900px 400px at 0% 110%, rgba(55,200,168,0.07), transparent 60%),
     #E9EDF3;
   /* C6：左侧为侧栏 dock 让位，底部收回（原 20px 24px 120px）——宽度随 --dock-w 联动 */
-  padding: 20px 24px 32px calc(var(--dock-w) + 12px);
+  /* dock 最宽 148px（fit-content 自适应），左 padding 按最大宽度预留 */
+  padding: 20px 24px 32px 160px;
   /* 导航自适应展开：padding 与 dock 宽度同步过渡 */
   transition: padding .25s ease;
 }
@@ -341,8 +343,8 @@ html.dock-collapsed .compact-btn { width: 34px; }
   .dock-item { padding: 10px 8px; justify-content: center; }
   .dock-item .dock-label { display: none; }
   .dock-item.active::after { height: 26px; }
-  .app-shell { padding: 20px 16px 32px calc(var(--dock-w) + 12px); }
-  .app-canvas { max-width: calc(100vw - calc(var(--dock-w) + 28px)); }
+  .app-shell { padding: 20px 16px 32px 76px; }
+  .app-canvas { max-width: calc(100vw - 92px); }
 }
 
 /* ============ A9：六套主题（html[data-theme] 覆盖，key cc_theme 与原控制台互通） ============ */
