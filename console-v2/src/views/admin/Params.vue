@@ -116,7 +116,7 @@ async function saveParam(p) {
   try {
     await adminApi.updateParam({ id: p.id, paramCode: p.paramCode, paramValue: p._newValue, paramName: p.paramName, type: p.type, remark: p.remark })
     p.paramValue = p._newValue; p._dirty = false; editingId.value = null
-    toast(`「${p.paramCode}」已保存`)
+    toast(`「${p.paramCode}」已保存。部分参数需重启服务后生效，可在「服务器」页一键重启`)
   } catch (e) {
     p._dirty = true
     toast(e.msg || '保存失败', 'error')
@@ -143,7 +143,7 @@ async function createParam() {
       type: creator.type
     })
     creator.show = false
-    toast(`「${creator.paramCode.trim()}」已新增`)
+    toast(`「${creator.paramCode.trim()}」已新增。部分参数需重启服务后生效，可在「服务器」页一键重启`)
     await load()
   } catch (e) {
     toast(e.msg || '新增失败', 'error')

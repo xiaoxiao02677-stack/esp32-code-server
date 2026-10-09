@@ -204,6 +204,61 @@ async function test(m) {
   }
 }
 
+// 自定义接口直连测试（保存前）：POST {base_url}/chat/completions，10s 超时
+async function testCustomNow() {
+  if (customTest.loading) return
+  const cfg = editor.config || {}
+  const baseUrl = String(cfg.base_url || '').trim().replace(/\/+$/, '')
+  const modelName = String(cfg.model_name || '').trim()
+  const apiKey = String(cfg.api_key || '').trim()
+  if (!baseUrl || !modelName) { customTest.ok = false; customTest.text = '❌ 请先填写接口地址和模型名'; return }
+
+  customTest.loading = true
+  customTest.ok = null
+  customTest.text = '⏳ 连接中…'
+  const startedAt = performance.now()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000)
+  try {
+    const res = await fetch(baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+      body: JSON.stringify({ model: modelName, messages: [{ role: 'user', content: 'ping' }] }),
+      signal: controller.signal
+    })
+    const elapsed = Math.round(performance.now() - startedAt)
+    if (res.ok) {
+      customTest.ok = true
+      customTest.text = `✅ 连接成功（HTTP ${res.status}，${elapsed}ms）`
+    } else {
+      const bodyText = await res.text().catch(() => '')
+      let detail = `HTTP ${res.status}`
+      try { const j = JSON.parse(bodyText); detail = j.error?.message || j.message || detail } catch (e) { if (bodyText) detail = bodyText.slice(0, 120) }
+      customTest.ok = false
+      customTest.text = `❌ 接口返回失败：${detail}（${elapsed}ms）`
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      customTest.ok = false
+      customTest.text = '❌ 测试超时（10s），请检查接口地址或网络'
+    } else {
+      // fetch TypeError = 网络错 / CORS 拦截
+      customTest.ok = false
+      customTest.text = '❌ 直接测试失败（可能被浏览器 CORS 拦截）'
+      toast('直接测试失败（可能被浏览器 CORS 拦截），请保存后用「一键测试」走服务端测试', 'error')
+    }
+  } finally {
+    clearTimeout(timer)
+    customTest.loading = false
+  }
+}
+
+function resetCustomTest() {
+  customTest.loading = false
+  customTest.ok = null
+  customTest.text = ''
+}
+
 async function toggle(m) {
   // 契约：PUT /models/enable/{id}/{newStatus}，isEnabled 就地翻转
   const next = m.isEnabled ? 0 : 1
@@ -255,6 +310,7 @@ function parseProviderFields(providerCode) {
 }
 
 function onProviderChange() {
+  resetCustomTest()
   providerFields.value = parseProviderFields(editor.providerCode)
   if (editor.providerCode === '__custom_openai__') {
     editor.customType = editor.customType || 'openai'
@@ -280,6 +336,7 @@ function removeCustomField(k) {
 
 async function openCreate() {
   await loadProviders()
+  resetCustomTest()
   Object.assign(editor, {
     show: true, id: '',
     providerCode: (providers.value[0] || {}).providerCode || '__custom_openai__',
@@ -290,6 +347,7 @@ async function openCreate() {
 
 async function openEdit(m) {
   await loadProviders()
+  resetCustomTest()
   const res = await adminApi.modelDetail(m.id)
   const d = res.data || {}
   const cfg = d.configJson || {}
@@ -341,6 +399,9 @@ onMounted(loadAll)
 .form-row input, .form-row select { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; font-family: var(--font); background: #fff; }
 .form-row input:focus, .form-row select:focus { border-color: var(--primary); }
 .model-test-result { margin-top: 6px; font-size: 12px; line-height: 1.5; }
+.model-test-result.inline { margin-top: 0; }
 .model-test-result.test-ok { color: var(--success); }
 .model-test-result.test-fail { color: var(--danger); }
+.custom-test-row .custom-test-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.custom-test-row .custom-test-hint { margin: 2px 0 0; font-size: 12px; color: var(--text-sub); line-height: 1.5; }
 </style>

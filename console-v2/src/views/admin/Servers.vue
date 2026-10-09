@@ -6,6 +6,16 @@
         <p class="sub">迁移自 /cc/ 服务器节点页：WS 接入节点列表</p>
       </div>
       <div class="head-actions">
+        <button
+          class="btn btn-ghost btn-restart"
+          @click="confirmRestartPy"
+          :disabled="restartingPy || restartingJava || loading"
+        >{{ restartingPy ? '重启中…' : '♻️ 重启语音服务' }}</button>
+        <button
+          class="btn btn-ghost btn-restart"
+          @click="confirmRestartJava"
+          :disabled="restartingPy || restartingJava || loading"
+        >{{ restartingJava ? '重启中…' : '♻️ 重启管理服务' }}</button>
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>

@@ -140,8 +140,11 @@ export const adminApi = {
   chatHistory: (agentId, sessionId) => api.get(`/agent/${agentId}/chat-history/${sessionId}`),
   chatHistoryAudio: (audioId) => api.post(`/agent/audio/${audioId}`),
   deleteChatSession: (agentId, sessionId) => api.del(`/agent/${agentId}/chat-history/${sessionId}`),
-  // 音频两段式播放：POST /agent/audio/{id} → realId → GET /voiceClone/play/{realId}（blob）
-  playAudioBlob: (realId) => fetch(API_BASE + '/voiceClone/play/' + realId, {
+  // 音频两段式播放：POST /agent/audio/{id} → realId → GET /agent/play/{realId}（blob）
+  // 注意：第二段必须走 /agent/play/（官方 manager-web 同款）。
+  // 不能用 /voiceClone/play/——该端点查 Redis 的 uuid 命名空间与 agent 音频命名空间不同，
+  // 聊天记录的 realId 在 voiceClone 命名空间查不到必 404（曾致 /admin/chat 语音无法播放）。
+  playAudioBlob: (realId) => fetch(API_BASE + '/agent/play/' + realId, {
     headers: { Authorization: 'Bearer ' + getToken() }
   }).then(r => { if (!r.ok) throw { code: r.status, msg: '音频加载失败' }; return r.blob() }),
 
@@ -192,6 +195,13 @@ export const adminApi = {
   updateParam: (body) => api.put('/admin/params', body),
   createParam: (body) => api.post('/admin/params', body),
   deleteParam: (id) => api.del(`/admin/params/${id}`),
+
+  // ===== 运维：服务重启 =====
+  restartPyServer: () => api.post('/admin/server/restart-python', {}),
+  restartJavaApi: () => api.post('/admin/server/restart-manager', {}),
+
+  // ===== 记忆：快速总结 =====
+  memorySummarize: (agentId) => api.post(`/memory/agents/${agentId}/summarize`, {}),
 
   // ===== 用户 =====
   userPage: (params) => api.get('/admin/users', params),

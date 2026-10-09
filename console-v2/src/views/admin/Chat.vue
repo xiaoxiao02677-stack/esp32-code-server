@@ -121,18 +121,32 @@ async function loadMessages() {
   } catch (e) { toast(e.msg || '消息加载失败', 'error'); messages.value = [] }
 }
 
-// 契约对齐 cc-console playChatAudio：POST /agent/audio/{id} → realId → blob 播放
+// 契约对齐 cc-console playChatAudio：POST /agent/audio/{id} → realId → GET /agent/play/{realId}（blob）播放
 async function playAudio(audioId) {
   playingAudio.value = audioId
   try {
     const res = await adminApi.chatHistoryAudio(audioId)
-    const realId = res.data?.data ? res.data.data : res.data
-    const blob = await adminApi.playAudioBlob(realId)
-    if (!audioRef.value) return
-    audioRef.value.src = URL.createObjectURL(blob)
-    await audioRef.value.play().catch(() => toast('播放失败', 'error'))
-  } catch (e) { toast('音频加载失败', 'error') }
-  finally { playingAudio.value = '' }
+    // 后端可能返回裸字符串或 { data: 'xxx' } 包装，兼容取值
+    const realId = typeof res.data === 'string' ? res.data : (res.data?.data || res.data?.id || '')
+    if (!realId) throw new Error('empty realId')
+    let blobUrl = ''
+    try {
+      const blob = await adminApi.playAudioBlob(realId)
+      blobUrl = URL.createObjectURL(blob)
+    } finally {
+      // 播放完成后释放 blob URL，防止内存泄漏
+      const audio = audioRef.value
+      if (audio) {
+        audio.addEventListener('ended', () => URL.revokeObjectURL(blobUrl), { once: true })
+        audio.addEventListener('error', () => URL.revokeObjectURL(blobUrl), { once: true })
+      }
+    }
+    if (!audioRef.value) { URL.revokeObjectURL(blobUrl); return }
+    audioRef.value.src = blobUrl
+    await audioRef.value.play().catch(() => toast('播放失败（浏览器拦截了自动播放，请点击页面后重试）', 'error'))
+  } catch (e) {
+    toast(e?.msg || '音频加载失败（该消息可能没有语音文件）', 'error')
+  } finally { playingAudio.value = '' }
 }
 
 function removeSession() {
