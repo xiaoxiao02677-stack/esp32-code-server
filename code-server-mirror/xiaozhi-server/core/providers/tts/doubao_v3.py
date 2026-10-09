@@ -58,18 +58,22 @@ class TTSProvider(TTSProviderBase):
     """豆包语音合成大模型（火山引擎 v3 HTTP 单向流式合成端点）。
 
     端点：POST https://openspeech.bytedance.com/api/v3/tts/unidirectional
-    通信方式（对齐火山官方 声音复刻 V3 脚本）：
-      - payload 顶层三件套：user / namespace("BidirectionalTTS") / req_params
+    通信方式（严格对齐火山官方 声音复刻 V3 脚本）：
+      - 用 json 提交：requests.post(url, json=payload, stream=True)
+      - 顶层三件套：user.uid / namespace("BidirectionalTTS") / req_params
+      - req_params：text / speaker / audio_params / additions
       - 复刻音色：prepaid 用 speaker=S_xxx；postpaid 用 speaker="custom_speaker_id"
                   外加 req_params.custom_speaker_id
-      - 情感：audio_params.enable_emotion + emotion + emotion_scale(1~5)
-      - 指令：req_params.additions = JSON 字符串，含 explicit_language / context_texts
-      - 请求：requests.post(..., stream=True) + resp.iter_lines(decode_unicode=True)
-      - 终止：读到 code==20000000 结束；code 非 0/20000000 判错
+      - 语气指令：additions.context_texts = [用户传入的语气指令]  <- 官方指令通道
+      - 情感：audio_params.emotion（官方脚本唯一情感字段）；
+              enable_emotion / emotion_scale 为可选扩展，配置里不给就不发
+      - 解析：resp.iter_lines(decode_unicode=True)，code==20000000 且
+              message.lower()=="ok" 结束；code 非 0/20000000 判错
     """
 
     DEFAULT_API_URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
     DEFAULT_NAMESPACE = "BidirectionalTTS"
+    DEFAULT_UID = "xiaozhi-esp32-server"
 
     def __init__(self, config, delete_audio_file):
         super().__init__(config, delete_audio_file)
@@ -97,20 +101,30 @@ class TTSProvider(TTSProviderBase):
         self.loudness_rate = int(float(config.get("loudness_rate", 0)))
 
         # 语音风格指令（2.0 音色支持指令遵循，如「用标准大陆普通话说话，不要台湾腔」）
+        # 用户每轮传入的「语气指令」经 set_dynamic_instruction() 覆盖这里，
+        # 最终作为 additions.context_texts 发出（官方唯一指令通道）。
         self.voice_instruction = config.get("voice_instruction")
 
-        # 情感控制（对齐官方脚本 EMOTION / EMOTION_SCALE / ENABLE_EMOTION）
+        # 情感控制（严格对齐官方脚本）
+        # 官方脚本 audio_params 里只有 EMOTION 一个情感字段：
+        #     if EMOTION: req_params["audio_params"]["emotion"] = EMOTION
+        # enable_emotion / emotion_scale 不是官方脚本字段，默认 None 即不发送，
+        # 只有在配置里显式写了才附带（保留回退能力）。
         self.emotion = config.get("emotion")
-        self.enable_emotion = bool(config.get("enable_emotion", True))
-        self.emotion_scale = self._clamp_emotion_scale(
-            config.get("emotion_scale", 4)
-        )
+        self.enable_emotion = config.get("enable_emotion")
+        self.emotion_scale = config.get("emotion_scale")
+        if self.emotion_scale is not None:
+            self.emotion_scale = self._clamp_emotion_scale(self.emotion_scale)
         # 是否允许从语气指令里自动推断 emotion（默认开）
         self.auto_emotion = bool(config.get("auto_emotion", True))
         # 显式语言（官方脚本 EXPLICIT_LANGUAGE）
         self.explicit_language = config.get("explicit_language", "zh")
         # namespace（官方脚本固定 BidirectionalTTS；实测复刻/非复刻均安全）
         self.namespace = config.get("namespace", self.DEFAULT_NAMESPACE)
+        # model：官方脚本不传该字段；复刻音色确需时可显式配置
+        self.model = config.get("model")
+        # user.uid（官方脚本 UID）
+        self.uid = config.get("uid", self.DEFAULT_UID)
 
         model_key_msg = check_model_key(
             "TTS", self.api_key or self.access_token or ""
@@ -171,8 +185,29 @@ class TTSProvider(TTSProviderBase):
         return headers
 
     def _build_payload(self, text):
-        """按火山官方 声音复刻 V3 脚本的结构组装请求体。"""
-        # 1) audio_params：格式/采样率/语速/音量 + 情感三件套
+        """按火山官方 声音复刻 V3 脚本逐字段组装请求体。
+
+        官方脚本结构（本方法与其一一对应）：
+            payload = {
+                "user":      {"uid": UID},
+                "namespace": "BidirectionalTTS",
+                "req_params": {
+                    "text":         TEXT,
+                    "speaker":      SPEAKER_ID | "custom_speaker_id",
+                    "audio_params": {format, sample_rate, speech_rate,
+                                     loudness_rate, emotion?},
+                    "additions":    JSON字符串 {explicit_language?,
+                                                context_texts?},
+                },
+            }
+
+        用户每轮传入的「语气指令」= additions.context_texts（官方指令通道）。
+        """
+        # 1) 语气指令：优先动态指令（connection 每轮注入），回落固定指令。
+        #    这就是用户在控制台/对话里传进来的那句「用开心的语气说话」。
+        instruction = self._dynamic_instruction or self.voice_instruction
+
+        # 2) audio_params：官方脚本顺序 format/sample_rate/speech_rate/loudness_rate
         audio_params = {
             "format": self.audio_file_type,
             "sample_rate": self.sample_rate,
@@ -180,54 +215,59 @@ class TTSProvider(TTSProviderBase):
             "loudness_rate": self.loudness_rate,
         }
 
-        # 2) 指令与情感
-        #    优先用动态指令（由 connection 每轮注入），取不到再回落到固定指令
-        instruction = self._dynamic_instruction or self.voice_instruction
+        # 3) 情感：官方脚本只发 emotion 单字段
+        #    （if EMOTION: audio_params["emotion"] = EMOTION）
         emotion = self.emotion
         if not emotion and self.auto_emotion:
             emotion = self._infer_emotion(instruction)
         if emotion:
-            audio_params["enable_emotion"] = bool(self.enable_emotion)
             audio_params["emotion"] = emotion
-            audio_params["emotion_scale"] = self._clamp_emotion_scale(
-                self.emotion_scale
-            )
+            # 非官方脚本字段，仅在配置显式指定时附带
+            if self.enable_emotion is not None:
+                audio_params["enable_emotion"] = bool(self.enable_emotion)
+            if self.emotion_scale is not None:
+                audio_params["emotion_scale"] = self._clamp_emotion_scale(
+                    self.emotion_scale
+                )
 
-        # 3) additions：explicit_language + context_texts
-        #    官方唯一指令通道，见 docs/6561/1329505、docs/6561/2528925
-        #    - 仅「豆包语音合成模型 2.0」音色生效
+        # 4) speaker：prepaid=S_xxx；postpaid="custom_speaker_id"
+        if self.speaker_type == "postpaid":
+            speaker = "custom_speaker_id"
+        else:
+            speaker = self.voice
+
+        req_params = {
+            "text": text,
+            "speaker": speaker,
+            "audio_params": audio_params,
+        }
+
+        # 后付费复刻：真实音色走 custom_speaker_id
+        if self.speaker_type == "postpaid":
+            if self.custom_speaker_id or self.voice:
+                req_params["custom_speaker_id"] = (
+                    self.custom_speaker_id or self.voice
+                )
+
+        # model：官方脚本不传；复刻音色确需时可在配置里显式指定
+        if self.model:
+            req_params["model"] = self.model
+
+        # 5) additions：context_texts = 用户语气指令（官方唯一指令通道）
         #    - 官方明确「当前字符串列表只第一个值有效」→ 只放 1 条指令
         additions = {}
         if self.explicit_language:
             additions["explicit_language"] = self.explicit_language
         if instruction:
             additions["context_texts"] = [instruction]
-
-        # 4) req_params
-        req_params = {
-            "text": text,
-            "audio_params": audio_params,
-        }
-        if self.speaker_type == "postpaid":
-            # 后付费复刻：speaker 固定占位 + 真实音色走 custom_speaker_id
-            req_params["speaker"] = "custom_speaker_id"
-            if self.custom_speaker_id or self.voice:
-                req_params["custom_speaker_id"] = (
-                    self.custom_speaker_id or self.voice
-                )
-        else:
-            req_params["speaker"] = self.voice
         if additions:
             req_params["additions"] = json.dumps(
                 additions, ensure_ascii=False
             )
-        # 复刻/克隆音色：官方要求 model=seed-tts-2.0-expressive 才支持指令与情感
-        if self._is_clone_resource():
-            req_params["model"] = "seed-tts-2.0-expressive"
 
-        # 5) 顶层：user + namespace + req_params（对齐官方脚本）
+        # 6) 顶层三件套：user / namespace / req_params（顺序对齐官方脚本）
         payload = {
-            "user": {"uid": "xiaozhi-esp32-server"},
+            "user": {"uid": self.uid},
             "req_params": req_params,
         }
         if self.namespace:
@@ -245,13 +285,15 @@ class TTSProvider(TTSProviderBase):
         return base64.b64decode(clean + "=" * padding)
 
     def _parse_chunked_response(self, response):
-        """按官方脚本方式解析：iter_lines 逐行读，code==20000000 终止。
+        """按官方脚本方式解析：iter_lines 逐行读，收完 data 后自然结束。
 
         官方脚本判定：
-          - code == 20000000 且 message == "ok" -> 正常结束
-          - code 非 0 且非 20000000 -> 报错
-        实测火山返回的结束 message 是 "OK"（大写），故这里只判 code，
-        避免大小写差异导致误判为错误。
+          - code == 20000000 且 message == "ok" -> 正常结束，break
+          - code 非 0 且非 20000000           -> 报错
+        实测火山结束帧的 message 是 "OK"（大写），官方脚本的 "ok" 判定
+        永远不会命中，它是靠「流读完」才退出的。这里保留同样的行为，
+        但把大小写差异抹平（.lower() == "ok"），既能正常 break，
+        又不会因 message 文案变化而漏收音频。
         """
         audio = bytearray()
         for line in response.iter_lines(decode_unicode=True):
@@ -261,18 +303,26 @@ class TTSProvider(TTSProviderBase):
                 obj = json.loads(line)
             except json.JSONDecodeError as e:
                 raise Exception(f"响应包含无法解析的分片: {e}")
+
             code = obj.get("code")
+            data = obj.get("data")
+
             if code == 20000000:
-                # 末片：data 为 null，结束
-                data = obj.get("data")
+                # 结束帧：先收尾片数据（通常 data 为 null），再退出
                 if isinstance(data, str) and data:
                     audio.extend(self._decode_base64_chunk(data))
-                break
+                message = str(obj.get("message") or "").strip().lower()
+                if message == "ok":
+                    break
+                # message 不是 ok（火山曾返回大写 OK，未来可能改文案）：
+                # 继续读，流结束自然退出，不报错、不丢数据
+                continue
+
             if code not in (0, None):
                 raise Exception(
                     f"code={code}, message={obj.get('message', '')}"
                 )
-            data = obj.get("data")
+
             if isinstance(data, str) and data:
                 audio.extend(self._decode_base64_chunk(data))
         return bytes(audio)
