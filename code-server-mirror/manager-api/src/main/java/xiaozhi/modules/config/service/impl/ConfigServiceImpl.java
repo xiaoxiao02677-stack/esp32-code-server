@@ -710,7 +710,7 @@ public class ConfigServiceImpl implements ConfigService {
 
         result.put("selected_module", selectedModule);
         if (StringUtils.isNotBlank(prompt)) {
-            prompt = prompt.replace("{{assistant_name}}", StringUtils.isBlank(assistantName) ? "小智" : assistantName);
+            prompt = prompt.replace("{{assistant_name}}", StringUtils.isBlank(assistantName) ? "小禾" : assistantName);
         }
         result.put("prompt", prompt);
         result.put("summaryMemory", summaryMemory);

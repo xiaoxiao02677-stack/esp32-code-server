@@ -138,7 +138,7 @@ public class AgentMemorySummarizeServiceImpl implements AgentMemorySummarizeServ
             }
             boolean isUser = message.getChatType() != null
                     && message.getChatType() == AgentChatHistoryType.USER.getValue();
-            conversation.append(isUser ? "用户" : "小智").append("：").append(content).append("\n");
+            conversation.append(isUser ? "用户" : "助手").append("：").append(content).append("\n");
         }
         return conversation.toString();
     }
