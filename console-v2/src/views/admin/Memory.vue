@@ -123,7 +123,7 @@
         </div>
         <div v-else class="empty-state">
           <div class="empty-icon">🧠</div>
-          <strong>还没有记忆，多跟小智聊聊，它会自动记住你的喜好</strong>
+          <strong>还没有记忆，多聊聊天，它会自动记住你的喜好</strong>
         </div>
       </template>
     </DataTable>

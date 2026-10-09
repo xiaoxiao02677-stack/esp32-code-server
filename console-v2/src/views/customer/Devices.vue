@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>设备 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">绑定与查看你的小智设备</p>
+        <p class="sub">绑定与查看你的设备</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-ghost" :disabled="loading" @click="load">{{ loading ? '加载中…' : '↻ 刷新' }}</button>

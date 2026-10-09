@@ -76,7 +76,7 @@
           </button>
         </div>
         <div class="sim-input-row" style="margin-top:10px">
-          <input v-model.trim="simInputText" class="sim-input" placeholder="输入要发给小智的话（也可手动修改识别结果）" @keyup.enter="runSimPipeline" />
+          <input v-model.trim="simInputText" class="sim-input" placeholder="输入要发送的话（也可手动修改识别结果）" @keyup.enter="runSimPipeline" />
           <button class="btn btn-primary" :disabled="!simInputText || !simAgentId || simBusy" @click="runSimPipeline">
             {{ simBusy ? '链路运行中…' : '▶ 运行全链路' }}
           </button>

@@ -116,11 +116,11 @@
         </div>
 
         <div class="form-row"><label>唤醒词（多个用分号 ; 分隔，留空使用默认）</label>
-          <input v-model.trim="editor.wakeWords" placeholder="如：你好;你好小智" />
+          <input v-model.trim="editor.wakeWords" placeholder="如：你好;早上好" />
           <p class="field-hint">设备待机唤醒由固件本地模型负责；此处唤醒词用于服务器识别与快速应答</p>
         </div>
 
-        <div class="form-row"><label>人设提示词（小智怎么说话）</label>
+        <div class="form-row"><label>人设提示词（它怎么说话）</label>
           <textarea v-model="form.systemPrompt" rows="5" placeholder="比如：你是温柔可爱的助手，说话简短口语化"></textarea>
         </div>
 

@@ -20,7 +20,7 @@
   --radius-pill: 999px;
   --shadow-dock: 0 8px 32px rgba(27, 44, 80, 0.14);
   --shadow-card: 0 2px 12px rgba(27, 44, 80, 0.05);
-  /* 导航自适应文字：dock 本体宽度随最长文字项自适应（fit-content，72~140px 夹取，见 .dock）；
+  /* 导航自适应文字：dock 本体宽度随最长文字项自适应（max-content，72~140px 夹取，见 .dock）；
      --dock-w 不再控制 dock 宽度，只作 .app-shell 左侧预留宽联动（展开=内容最大宽 140px，收起 56px 由 .dock-collapsed 覆盖） */
   --dock-w: 140px;
   --font: "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", system-ui, sans-serif;
@@ -43,9 +43,9 @@ body {
     radial-gradient(1200px 500px at 85% -10%, rgba(27,108,255,0.06), transparent 60%),
     radial-gradient(900px 400px at 0% 110%, rgba(55,200,168,0.07), transparent 60%),
     #E9EDF3;
-  /* C6：左侧为侧栏 dock 让位，底部收回（原 20px 24px 120px）——宽度随 --dock-w 联动 */
-  /* dock 最宽 148px（fit-content 自适应），左 padding 按最大宽度预留 */
-  padding: 20px 24px 32px 160px;
+  /* C6：左侧为侧栏 dock 让位，底部收回（原 20px 24px 120px）——预留宽随 --dock-w 联动 */
+  /* dock 展开态 72~140px 自适应（最宽 140px），收起 56px；--dock-w 同步，padding 平滑过渡 */
+  padding: 20px 24px 32px calc(var(--dock-w) + 12px);
   /* 导航自适应展开：padding 与 dock 宽度同步过渡 */
   transition: padding .25s ease;
 }
@@ -271,14 +271,14 @@ body {
 .page-btn.wide { border-radius: var(--radius-pill); }
 
 /* ============ 左侧竖排 Dock 导航（C1-C5：由底部居中悬浮改为最左全高侧栏） ============ */
-/* 导航自适应文字长度：dock 宽度由内容决定（fit-content），72px~148px 钳制；
-   收起态类 .dock-collapsed 由 DockNav 挂在 <html> 上固定 56px（仅图标）。
-   .app-shell 左 padding 用最大宽度预留（160px），dock 窄时自然留白。 */
-:root { --dock-w: 88px; }
+/* 导航自适应文字：dock 宽度 = max-content 夹取在 [72px, 140px]（最长文字项不截断，短则不浪费空间）；
+   宽度过渡用 min/max-width 插值（width 在 auto/fit-content ↔ length 间不可插值）；
+   收起态类 .dock-collapsed 由 DockNav 挂在 <html> 上：dock 固定 56px 仅图标，--dock-w 只联动 .app-shell 左 padding 预留 */
 html.dock-collapsed { --dock-w: 56px; }
 .dock-wrap {
   position: fixed; left: 0; top: 0; bottom: auto; height: 100vh; transform: none; z-index: 50;
-  width: fit-content; transition: width .25s ease;
+  width: max-content; min-width: 72px; max-width: 140px;
+  transition: min-width .25s ease, max-width .25s ease;
 }
 /* C2 */
 .dock {
@@ -289,11 +289,14 @@ html.dock-collapsed { --dock-w: 56px; }
   background: rgba(255,255,255,.92); backdrop-filter: blur(18px);
   border-radius: 0 22px 22px 0; padding: 12px 8px;
   box-shadow: var(--shadow-dock); border: 1px solid rgba(255,255,255,.6);
-  width: fit-content; min-width: 72px; max-width: 148px; height: 100vh;
+  width: max-content; min-width: 72px; max-width: 140px; height: 100vh;
   overflow-x: visible; overflow-y: auto;
   scrollbar-width: thin;
-  transition: width .25s ease;
+  transition: min-width .25s ease, max-width .25s ease;
 }
+/* 收起态：dock 本体固定 56px（覆盖展开态自适应宽度），min/max 同步锁死保证过渡可插值 */
+html.dock-collapsed .dock-wrap { min-width: 56px; max-width: 56px; }
+html.dock-collapsed .dock { min-width: 56px; max-width: 56px; }
 .dock::-webkit-scrollbar { width: 6px; }
 .dock::-webkit-scrollbar-thumb { background: rgba(27,44,80,.18); border-radius: 6px; }
 .dock::-webkit-scrollbar-track { background: transparent; }
@@ -306,8 +309,8 @@ html.dock-collapsed { --dock-w: 56px; }
   white-space: nowrap;
 }
 .dock-item .ic { font-size: 18px; line-height: 1; transition: transform .18s; flex-shrink: 0; }
-/* 导航自适应文字：容器随文字自然撑开（fit-content），长文字不截断 */
-.dock-item .dock-label { overflow: visible; }
+/* 导航自适应文字：容器随最长文字项自然撑开（max-content），长文字不截断 */
+.dock-item .dock-label { white-space: nowrap; }
 .dock-item:hover { color: var(--primary); }
 .dock-item:hover .ic { transform: scale(1.12); }
 .dock-item.active { color: var(--primary); background: var(--primary-soft); }
@@ -338,13 +341,17 @@ html.dock-collapsed .compact-btn { width: 34px; }
   .hero-row { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .searchbox { display: none; }
-  /* 小屏展开态收窄为 64px；收起态保持 56px 不放宽 */
+  /* 小屏展开态收窄为 64px 预留（仅图标，label 隐藏）；收起态保持 56px 不放宽 */
   html:not(.dock-collapsed) { --dock-w: 64px; }
+  html:not(.dock-collapsed) .dock-wrap { min-width: 64px; max-width: 64px; }
+  html:not(.dock-collapsed) .dock { min-width: 64px; max-width: 64px; }
   .dock-item { padding: 10px 8px; justify-content: center; }
   .dock-item .dock-label { display: none; }
+  .dock-toggle { padding: 10px 8px; justify-content: center; }
+  .dock-toggle .dock-label { display: none; }
   .dock-item.active::after { height: 26px; }
-  .app-shell { padding: 20px 16px 32px 76px; }
-  .app-canvas { max-width: calc(100vw - 92px); }
+  .app-shell { padding: 20px 16px 32px calc(var(--dock-w) + 12px); }
+  .app-canvas { max-width: calc(100vw - calc(var(--dock-w) + 28px)); }
 }
 
 /* ============ A9：六套主题（html[data-theme] 覆盖，key cc_theme 与原控制台互通） ============ */

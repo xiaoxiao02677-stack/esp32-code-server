@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>设备 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">你的小智设备状态（改名 / 绑定 / 解绑）</p>
+        <p class="sub">你的设备状态（改名 / 绑定 / 解绑）</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" @click="manual.show = true">＋ 手动添加</button>
