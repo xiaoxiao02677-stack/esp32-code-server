@@ -407,7 +407,6 @@ html[data-theme="morandi"] .app-canvas { background: #F5F4F2; }
 
 /* ============ A9：紧凑模式 ============ */
 .app-shell.shell-compact .app-canvas { padding: 12px 18px 20px; }
-.app-shell.shell-compact .app-shell { gap: 10px; }
 .app-shell.shell-compact .data-table td { padding: 8px 14px; }
 .app-shell.shell-compact .data-table th { padding: 8px 14px; }
 .app-shell.shell-compact .panel-head { padding: 10px 16px 6px; }

@@ -12,7 +12,7 @@
           <p>{{ confirm.message }}</p>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="confirm.show = false">取消</button>
-            <button class="btn btn-primary" :class="{ danger: confirm.danger }" @click="confirm.onOk && confirm.onOk()">
+            <button class="btn btn-primary" :class="{ danger: confirm.danger }" @click="runConfirmOk">
               {{ confirm.okText || '确定' }}
             </button>
           </div>
@@ -52,6 +52,13 @@ function askConfirm({ title, message, okText, danger, onOk }) {
   Object.assign(confirm, { show: true, title, message, okText: okText || '确定', danger: !!danger, onOk })
 }
 provide('askConfirm', askConfirm)
+
+// OK 立即关窗再执行回调（异步操作失败由调用方 toast 提示）
+function runConfirmOk() {
+  const cb = confirm.onOk
+  confirm.show = false
+  if (cb) cb()
+}
 
 function switchRole(r) {
   router.push(r === 'admin' ? '/admin' : '/customer')
