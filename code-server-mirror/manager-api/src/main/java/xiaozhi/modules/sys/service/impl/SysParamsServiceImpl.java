@@ -35,6 +35,12 @@ import xiaozhi.modules.sys.service.SysParamsService;
 @AllArgsConstructor
 @Service
 public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParamsEntity> implements SysParamsService {
+    /**
+     * 内置参数id上限：id小于该值的均为系统初始化内置参数（100~5xx段），
+     * 不允许删除；页面新增的参数使用雪花ID，均远大于该值
+     */
+    private static final long BUILTIN_PARAM_MAX_ID = 1000L;
+
     private final SysParamsRedis sysParamsRedis;
     private final AgentPluginMappingService agentPluginMappingService;
 
@@ -171,12 +177,6 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
         // 删除
         deleteBatchIds(Arrays.asList(ids));
     }
-
-    /**
-     * 内置参数id上限：id小于该值的均为系统初始化内置参数（100~5xx段），
-     * 不允许删除；页面新增的参数使用雪花ID，均远大于该值
-     */
-    private static final long BUILTIN_PARAM_MAX_ID = 1000L;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
