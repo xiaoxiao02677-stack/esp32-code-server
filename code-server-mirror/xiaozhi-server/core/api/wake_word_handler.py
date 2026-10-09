@@ -11,15 +11,9 @@ TAG = __name__
 
 
 def _json_response(code: int, msg: str, data=None, status: int = 200) -> web.Response:
-    body = json.dumps(
-        {"code": code, "msg": msg, "data": data},
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
+    body = json.dumps({"code": code, "msg": msg, "data": data}, ensure_ascii=False, separators=(",", ":"))
     resp = web.Response(text=body, content_type="application/json", status=status)
-    resp.headers["Access-Control-Allow-Headers"] = (
-        "client-id, content-type, device-id, authorization"
-    )
+    resp.headers["Access-Control-Allow-Headers"] = "client-id, content-type, device-id, authorization"
     resp.headers["Access-Control-Allow-Credentials"] = "true"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
@@ -51,17 +45,10 @@ class WakeWordHandler(BaseHandler):
             if not wake_words or not isinstance(wake_words, list):
                 return _json_response(400, "wake_words 不能为空", status=400)
             if not agent_id and not device_id:
-                return _json_response(
-                    400, "agent_id 和 device_id 至少需要指定一个", status=400
-                )
+                return _json_response(400, "agent_id 和 device_id 至少需要指定一个", status=400)
             if self.wake_word_service is None:
                 return _json_response(503, "WakeWordService 未初始化", status=503)
-            result = await self.wake_word_service.push_wake_words(
-                agent_id=agent_id,
-                device_id=device_id,
-                wake_words=wake_words,
-                tts_rate=tts_rate,
-            )
+            result = await self.wake_word_service.push_wake_words(agent_id=agent_id, device_id=device_id, wake_words=wake_words, tts_rate=tts_rate)
             return _json_response(0, "success", data=result)
         except json.JSONDecodeError:
             return _json_response(400, "请求体 JSON 解析失败", status=400)
@@ -78,9 +65,7 @@ class WakeWordHandler(BaseHandler):
             filter_agent = request.query.get("agent_id")
             online = self.wake_word_service.get_online_devices()
             if filter_agent:
-                agent_devices = self.wake_word_service._agent_devices.get(
-                    filter_agent, set()
-                )
+                agent_devices = self.wake_word_service._agent_devices.get(filter_agent, set())
                 online = [d for d in online if d in agent_devices]
             return _json_response(0, "success", data={"devices": online})
         except Exception as e:

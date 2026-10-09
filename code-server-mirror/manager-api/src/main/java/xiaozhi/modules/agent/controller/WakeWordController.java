@@ -1,19 +1,26 @@
 package xiaozhi.modules.agent.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import xiaozhi.common.constant.Constant;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.user.UserDetail;
 import xiaozhi.common.utils.Result;
@@ -21,6 +28,7 @@ import xiaozhi.modules.agent.entity.AgentEntity;
 import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentWakeWordService;
 import xiaozhi.modules.security.user.SecurityUser;
+import xiaozhi.modules.sys.service.SysParamsService;
 
 /**
  * 唤醒词管理
@@ -35,9 +43,13 @@ public class WakeWordController {
 
     private static final int MAX_WAKE_WORDS = 10;
     private static final int MAX_WAKE_WORD_LENGTH = 30;
+    private static final String DEFAULT_HTTP_PORT = "8003";
+    private static final String PARAM_HTTP_PORT = "server.http_port";
 
     private final AgentService agentService;
     private final AgentWakeWordService agentWakeWordService;
+    private final SysParamsService sysParamsService;
+    private final RestTemplate restTemplate;
 
     /**
      * 获取指定智能体的唤醒词列表
@@ -97,10 +109,43 @@ public class WakeWordController {
         String wakeWordsStr = wakeWords.stream().collect(Collectors.joining(";"));
         agentService.updateAgentWakeWords(agentId, wakeWordsStr, user.getId());
 
-        // TODO: 推送配置给在线设备（需引入 ConnectionManager）
-        // connectionManager.pushWakeWordToAgent(agentId, wakeWords);
+        // 推送唤醒词给在线设备
+        pushWakeWordsToDevices(agentId, wakeWords);
 
         return new Result<Void>().ok(null);
+    }
+
+    /**
+     * 推送唤醒词给指定智能体的所有在线设备
+     */
+    private void pushWakeWordsToDevices(String agentId, List<String> wakeWords) {
+        try {
+            String httpPort = sysParamsService.getValue(PARAM_HTTP_PORT, true);
+            if (httpPort == null || httpPort.isBlank()) {
+                httpPort = DEFAULT_HTTP_PORT;
+            }
+            String secret = sysParamsService.getValue(Constant.SERVER_SECRET, true);
+            if (secret == null || secret.isBlank()) {
+                return;
+            }
+            String url = String.format("http://127.0.0.1:%s/api/wake-word/push", httpPort);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + secret);
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            Map<String, Object> body = Map.of(
+                "agent_id", agentId,
+                "wake_words", wakeWords
+            );
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("[WakeWord] 推送成功 agentId=" + agentId);
+            } else {
+                System.err.println("[WakeWord] 推送失败 agentId=" + agentId + " status=" + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            System.err.println("[WakeWord] 推送异常 agentId=" + agentId + ": " + e.getMessage());
+        }
     }
 
     /**

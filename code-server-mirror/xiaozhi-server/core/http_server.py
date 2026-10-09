@@ -8,6 +8,7 @@ from core.api.tts_preview_handler import TtsPreviewHandler
 from core.api.asr_recognize_handler import AsrRecognizeHandler
 from core.api.llm_preview_handler import LlmPreviewHandler
 from core.api.model_test_handler import ModelTestHandler
+from core.api.wake_word_handler import WakeWordHandler
 
 TAG = __name__
 
@@ -98,12 +99,20 @@ class SimpleHttpServer:
         self.asr_recognize_handler = AsrRecognizeHandler(config)
         self.llm_preview_handler = LlmPreviewHandler(config)
         self.model_test_handler = ModelTestHandler(config)
+        self.wake_word_handler = None
         # Expose the instances to the module-scope middlewares (auth check).
         global _MEMORY_HANDLER, _TTS_PREVIEW_HANDLER, _LLM_PREVIEW_HANDLER, _MODEL_TEST_HANDLER
         _MEMORY_HANDLER = self.memory_handler
         _TTS_PREVIEW_HANDLER = self.tts_preview_handler
         _LLM_PREVIEW_HANDLER = self.llm_preview_handler
         _MODEL_TEST_HANDLER = self.model_test_handler
+        _WAKE_WORD_HANDLER = None
+
+    def set_wake_word_service(self, wake_word_service):
+        self.wake_word_handler = WakeWordHandler(self.config, wake_word_service)
+        global _WAKE_WORD_HANDLER
+        _WAKE_WORD_HANDLER = self.wake_word_handler
+        self.logger.bind(tag=TAG).info("WakeWordHandler 已绑定")
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -267,6 +276,21 @@ class SimpleHttpServer:
                         ),
                     ]
                 )
+
+                # 内部唤醒词推送 API（manager-api 经 server.secret 鉴权代理转发）
+                if self.wake_word_handler is not None:
+                    app.add_routes(
+                        [
+                            web.post(
+                                "/api/wake-word/push",
+                                self.wake_word_handler.handle_push,
+                            ),
+                            web.get(
+                                "/api/wake-word/devices",
+                                self.wake_word_handler.handle_list_devices,
+                            ),
+                        ]
+                    )
 
                 await runner.setup()
                 site = web.TCPSite(runner, host, port)

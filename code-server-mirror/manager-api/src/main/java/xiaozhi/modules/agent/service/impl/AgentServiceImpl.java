@@ -791,4 +791,20 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
     }
 
+    @Override
+    public void updateAgentWakeWords(String agentId, String wakeWords, Long userId) {
+        AgentEntity lockedAgent = agentDao.selectByIdForUpdate(agentId);
+        if (lockedAgent == null) {
+            throw new RenException(ErrorCode.WAKE_WORD_AGENT_NOT_FOUND);
+        }
+        requireAgentPermission(lockedAgent, userId);
+
+        AgentEntity existingEntity = this.getAgentById(agentId);
+        existingEntity.setWakeWords(wakeWords);
+        existingEntity.setUpdater(userId);
+        existingEntity.setUpdatedAt(new Date());
+        baseDao.updateById(existingEntity);
+        System.out.println("[AgentService] 更新唤醒词 agentId=" + agentId + ", wakeWords=" + wakeWords);
+    }
+
 }

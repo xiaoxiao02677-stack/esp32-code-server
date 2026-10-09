@@ -43,6 +43,7 @@ from config.logger import setup_logging, build_module_string, create_connection_
 from config.manage_api_client import DeviceNotFoundException, DeviceBindException, generate_and_save_chat_title
 from core.utils.prompt_manager import PromptManager
 from core.utils.wakeup_word import parse_wake_words_field, merge_wake_words
+from core.services.wake_word_service import WakeWordService
 from core.utils.voiceprint_provider import VoiceprintProvider
 from core.utils.util import get_system_error_response
 from core.utils import textUtils
@@ -145,6 +146,7 @@ class ConnectionHandler:
 
         # 为每个连接单独管理声纹识别
         self.voiceprint_provider = None
+        self.wake_word_service = None
 
         # vad相关变量
         self.client_audio_buffer = bytearray()
@@ -222,6 +224,11 @@ class ConnectionHandler:
             )
 
             self.device_id = self.headers.get("device-id", None)
+            # 唤醒词服务注册
+            if hasattr(self.server, "wake_word_service"):
+                self.wake_word_service = self.server.wake_word_service
+                if self.wake_word_service:
+                    await self.wake_word_service.register_connection(self.device_id, self)
 
             # 认证通过,继续处理
             self.websocket = ws
@@ -950,6 +957,9 @@ class ConnectionHandler:
         # 记忆命名空间用：Java ConfigServiceImpl.getAgentModels 下发的 agent_id（design §3.5）
         if private_config.get("agent_id", None) is not None:
             self.agent_id = private_config["agent_id"]
+            # 注册设备到agent映射
+            if self.wake_word_service and self.agent_id and self.device_id:
+                self.wake_word_service.register_agent_device(self.agent_id, self.device_id)
         if private_config.get("device_max_output_size", None) is not None:
             self.max_output_size = int(private_config["device_max_output_size"])
         if private_config.get("chat_history_conf", None) is not None:
@@ -1849,6 +1859,12 @@ class ConnectionHandler:
             if self.asr:
                 await self.asr.close()
 
+            # 唤醒词服务注销
+            if self.wake_word_service and self.device_id:
+                try:
+                    await self.wake_word_service.unregister_connection(self.device_id)
+                except Exception:
+                    pass
             # 最后关闭线程池（避免阻塞）
             if self.executor:
                 try:

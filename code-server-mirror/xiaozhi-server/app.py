@@ -74,6 +74,8 @@ async def main():
     ws_task = asyncio.create_task(ws_server.start())
     # 启动 Simple http 服务器
     ota_server = SimpleHttpServer(config)
+    # 绑定唤醒词服务（必须在使用路由前完成）
+    ota_server.set_wake_word_service(ws_server.wake_word_service)
     ota_task = asyncio.create_task(ota_server.start())
 
     # 启动心跳监听服务（12399，TCP/UDP；失败不影响主服务）

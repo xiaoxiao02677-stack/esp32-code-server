@@ -35,6 +35,7 @@ from config.config_loader import get_config_from_api_async
 from core.auth import AuthManager, AuthenticationError
 from core.utils.modules_initialize import initialize_modules
 from core.utils.util import check_vad_update, check_asr_update
+from core.services.wake_word_service import WakeWordService
 
 TAG = __name__
 
@@ -67,6 +68,10 @@ class WebSocketServer:
         secret_key = self.config["server"]["auth_key"]
         expire_seconds = auth_config.get("expire_seconds", None)
         self.auth = AuthManager(secret_key=secret_key, expire_seconds=expire_seconds)
+
+        # 唤醒词推送服务
+        self.wake_word_service = WakeWordService()
+        self.logger.bind(tag=TAG).info("WakeWordService 已在 WebSocketServer 中初始化")
 
     async def start(self):
         server_config = self.config["server"]

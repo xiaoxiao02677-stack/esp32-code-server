@@ -169,4 +169,13 @@ public interface AgentService extends BaseService<AgentEntity> {
      * @return 引用该模型的智能体数量
      */
     long countByModelId(String modelId);
+
+    /**
+     * 更新智能体唤醒词
+     *
+     * @param agentId   智能体ID
+     * @param wakeWords 唤醒词（分号分隔，如 "你好;早上好"）
+     * @param userId    操作者用户ID
+     */
+    void updateAgentWakeWords(String agentId, String wakeWords, Long userId);
 }
