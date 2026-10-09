@@ -36,6 +36,13 @@ public:
     bool GetWakeWordOpus(std::vector<uint8_t>& opus);
     const std::string& GetLastDetectedWakeWord() const { return last_detected_wake_word_; }
 
+    // 服务器下发动态唤醒词：用拼音短语热更新命令表（不打断运行中的检测，
+    // 在 input_buffer_mutex_ 保护下原子替换；拼音为空则回退默认命令表）。
+    // 返回是否真正发生了变更。
+    bool UpdateCommands(const std::vector<std::string>& pinyin_texts, const std::vector<std::string>& display_texts);
+    // 当前命令表快照（text 列表）
+    std::vector<std::string> GetCommandTexts() const;
+
 private:
     struct Command {
         std::string command;

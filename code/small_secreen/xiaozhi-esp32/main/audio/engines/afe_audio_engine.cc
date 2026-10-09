@@ -628,3 +628,12 @@ bool AfeAudioEngine::GetWakeWordOpus(std::vector<uint8_t>& opus) {
     wake_word_opus_.pop_front();
     return !opus.empty();
 }
+
+bool AfeAudioEngine::UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
+                                            const std::vector<std::string>& display_texts) {
+    if (wake_detector_ != WakeDetector::kMultiNet || custom_wake_word_ == nullptr) {
+        ESP_LOGW(TAG, "UpdateWakeWordCommands ignored: MultiNet detector not active");
+        return false;
+    }
+    return custom_wake_word_->UpdateCommands(pinyin_texts, display_texts);
+}

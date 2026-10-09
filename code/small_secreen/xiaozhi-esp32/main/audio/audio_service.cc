@@ -923,6 +923,23 @@ bool AudioService::IsAfeWakeWord() {
     return audio_engine_initialized_ && audio_engine_->IsAfeWakeWord();
 }
 
+bool AudioService::UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
+                                          const std::vector<std::string>& display_texts) {
+    if (!audio_engine_initialized_) {
+        // 引擎未就绪：缓存待引擎初始化后自动应用（见 InitializeAudioEngine 尾部）
+        pending_wake_word_pinyins_ = std::make_unique<std::vector<std::string>>(pinyin_texts);
+        pending_wake_word_displays_ = std::make_unique<std::vector<std::string>>(display_texts);
+        ESP_LOGI(TAG, "Wake-word commands cached (%zu) until audio engine initializes",
+                 pinyin_texts.size());
+        return true;
+    }
+    return audio_engine_->UpdateWakeWordCommands(pinyin_texts, display_texts);
+}
+
+bool AudioService::SupportsDynamicWakeWords() const {
+    return audio_engine_initialized_ && audio_engine_->SupportsDynamicWakeWords();
+}
+
 bool AudioService::InitializeAudioEngine() {
     if (!audio_engine_) {
         return false;
@@ -936,5 +953,15 @@ bool AudioService::InitializeAudioEngine() {
     }
     audio_engine_initialized_ = true;
     audio_engine_->EnableDeviceAec(device_aec_enabled_);
+    // 引擎就绪后应用缓存的动态唤醒词（device_config 可能先于引擎初始化到达）
+    if (pending_wake_word_pinyins_ && !pending_wake_word_pinyins_->empty()) {
+        if (audio_engine_->UpdateWakeWordCommands(*pending_wake_word_pinyins_,
+                                                  *pending_wake_word_displays_)) {
+            ESP_LOGI(TAG, "Applied pending wake-word commands (%zu) after engine init",
+                     pending_wake_word_pinyins_->size());
+        }
+        pending_wake_word_pinyins_.reset();
+        pending_wake_word_displays_.reset();
+    }
     return true;
 }

@@ -240,6 +240,22 @@ public class ConfigServiceImpl implements ConfigService {
                 if (configMap.get("brightness") instanceof Integer b && b >= 0 && b <= 100) {
                     sanitized.put("brightness", b);
                 }
+                // 动态待机唤醒词（固件 MultiNet 引擎消费）：字符串或字符串数组，
+                // 单串 ≤32 字符 / 数组 ≤5 项×每项 ≤32 字符，超限静默丢弃防滥用
+                Object wakeWord = configMap.get("wake_word");
+                if (wakeWord instanceof String ws && !ws.isBlank() && ws.length() <= 32) {
+                    sanitized.put("wake_word", ws.trim());
+                } else if (wakeWord instanceof List<?> wl && wl.size() > 0 && wl.size() <= 5) {
+                    List<String> words = new ArrayList<>();
+                    for (Object w : wl) {
+                        if (w instanceof String s && !s.isBlank() && s.length() <= 32) {
+                            words.add(s.trim());
+                        }
+                    }
+                    if (!words.isEmpty()) {
+                        sanitized.put("wake_word", words);
+                    }
+                }
                 if (!sanitized.isEmpty()) {
                     result.put("device_config", sanitized);
                 }

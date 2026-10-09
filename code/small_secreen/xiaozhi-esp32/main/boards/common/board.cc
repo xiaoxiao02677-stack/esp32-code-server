@@ -4,15 +4,82 @@
 #include "display/display.h"
 #include "settings.h"
 #include "system_info.h"
+#include "application.h"
 
 #include <esp_chip_info.h>
 #include <esp_log.h>
 #include <esp_ota_ops.h>
 #include <esp_random.h>
 
+#include <cJSON.h>
 #include <cmath>
 
 #define TAG "Board"
+
+// 汉字→拼音映射表（服务器下发中文唤醒词 → MultiNet 拼音命令）。
+// 覆盖常见唤醒词用字；未收录的字会打 WARN 并跳过该词（该词不参与匹配，
+// 其余词不受影响）。服务器也可直接下发拼音（跳过转换）。
+static const struct { const char* han; const char* pinyin; } kWakeWordPinyinMap[] = {
+    {"你", "ni3"}, {"好", "hao3"}, {"小", "xiao3"}, {"智", "zhi4"}, {"嗨", "hai1"},
+    {"嘿", "hei1"}, {"乐", "le4"}, {"鑫", "xin1"}, {"爱", "ai4"}, {"同", "tong2"},
+    {"学", "xue2"}, {"猫", "mao1"}, {"咪", "mi1"}, {"狗", "gou3"}, {"宝", "bao3"},
+    {"贝", "bei4"}, {"阿", "a1"}, {"福", "fu2"}, {"安", "an1"}, {"妮", "ni2"},
+    {"克", "ke4"}, {"丽", "li4"}, {"亚", "ya4"}, {"米", "mi3"}, {"娅", "ya4"},
+    {"醒", "xing3"}, {"开", "kai1"}, {"始", "shi3"}, {"停", "ting2"}, {"休", "xiu1"},
+    {"等", "deng3"}, {"待", "dai4"}, {"在", "zai4"}, {"吗", "ma5"}, {"吧", "ba5"},
+    {"啊", "a5"}, {"呀", "ya5"}, {"哦", "o5"}, {"哈", "ha1"}, {"啦", "la5"},
+    {"屿", "yu3"}, {"禾", "he2"}, {"工", "gong1"}, {"坊", "fang1"}, {"小禾", "xiao3 he2"},
+    {"琳", "lin2"}, {"玲", "ling2"}, {"明", "ming2"}, {"敏", "min3"}, {"君", "jun1"},
+    {"帅", "shuai4"}, {"哥", "ge1"}, {"姐", "jie3"}, {"美", "mei3"}, {"女", "nv3"},
+    {"神", "shen2"}, {"仙", "xian1"}, {"侠", "xia2"}, {"客", "ke4"}, {"主", "zhu3"},
+    {"人", "ren2"}, {"老", "lao3"}, {"板", "ban3"}, {"爸", "ba4"}, {"妈", "ma1"},
+    {"爷", "ye2"}, {"奶", "nai3"}, {"叔", "shu1"}, {"姨", "yi2"}, {"哥", "ge1"},
+    {"弟", "di4"}, {"妹", "mei4"}, {"朋", "peng2"}, {"友", "you3"}, {"同", "tong2"},
+    {"事", "shi4"}, {"喂", "wei4"}, {"哈喽", "ha1 lou2"}, {"hello", "hello"},
+};
+
+// 汉字短语 → 拼音串（逐字查表，空格分隔；含未收录字符返回 false）
+static bool HanziToPinyin(const std::string& hanzi, std::string& pinyin_out) {
+    // 已经是纯 ASCII（服务器直接下发拼音，如 "ni3 hao3"）则原样使用
+    bool all_ascii = true;
+    for (unsigned char c : hanzi) {
+        if (c > 127) { all_ascii = false; break; }
+    }
+    if (all_ascii) {
+        pinyin_out = hanzi;
+        return true;
+    }
+    pinyin_out.clear();
+    size_t i = 0;
+    bool ok = true;
+    while (i < hanzi.size()) {
+        // 多字词条优先匹配（如 "小禾"/"哈喽"）
+        bool matched = false;
+        for (const auto& kv : kWakeWordPinyinMap) {
+            size_t len = strlen(kv.han);
+            if (hanzi.compare(i, len, kv.han) == 0) {
+                if (!pinyin_out.empty()) pinyin_out += " ";
+                pinyin_out += kv.pinyin;
+                i += len;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            // 跳过标点/空白继续（允许"你好!"这类带标点的下发值）
+            if (hanzi[i] == ' ' || hanzi[i] == ';' || hanzi[i] == ',' ||
+                hanzi[i] == '!' || hanzi[i] == '.' || (unsigned char)hanzi[i] == 0xEF) {
+                i += 1;
+                continue;
+            }
+            // 未知汉字：跳 3 字节（UTF-8 中文），标记失败
+            ESP_LOGW(TAG, "Wake-word pinyin map miss: byte@%zu in '%s'", i, hanzi.c_str());
+            ok = false;
+            i += 3;
+        }
+    }
+    return ok && !pinyin_out.empty();
+}
 
 Board::Board() {
     Settings settings("board", true);
@@ -109,6 +176,48 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
         }
     } else if (brightness != nullptr) {
         ESP_LOGW(TAG, "Ignore invalid device_config brightness value");
+    }
+
+    // 服务器下发动态唤醒词（MultiNet 引擎）：字符串或字符串数组，多词任意一个命中即唤醒
+    auto wake_word = cJSON_GetObjectItem(payload, "wake_word");
+    if (cJSON_IsString(wake_word) || cJSON_IsArray(wake_word)) {
+        std::vector<std::string> hanzi_words;
+        if (cJSON_IsString(wake_word)) {
+            hanzi_words.push_back(wake_word->valuestring);
+        } else {
+            cJSON* item = nullptr;
+            cJSON_ArrayForEach(item, wake_word) {
+                if (cJSON_IsString(item) && item->valuestring[0] != '\0') {
+                    hanzi_words.push_back(item->valuestring);
+                }
+            }
+        }
+        if (!hanzi_words.empty()) {
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            if (audio.SupportsDynamicWakeWords()) {
+                std::vector<std::string> pinyins;
+                std::vector<std::string> displays;
+                for (const auto& w : hanzi_words) {
+                    std::string py;
+                    if (HanziToPinyin(w, py)) {
+                        pinyins.push_back(py);
+                        displays.push_back(w);
+                    }
+                }
+                if (!pinyins.empty()) {
+                    if (audio.UpdateWakeWordCommands(pinyins, displays)) {
+                        changed = true;
+                        ESP_LOGI(TAG, "应用云端唤醒词: %zu 个（首个: %s）",
+                                 pinyins.size(), hanzi_words[0].c_str());
+                    }
+                } else {
+                    ESP_LOGW(TAG, "云端唤醒词全部无法转换为拼音，忽略");
+                }
+            } else {
+                ESP_LOGW(TAG, "当前音频引擎不支持动态唤醒词（需 MultiNet 模型），忽略 wake_word 配置");
+            }
+        }
     }
     // Extension point: future cloud-managed keys (e.g. theme) get a new case here.
 

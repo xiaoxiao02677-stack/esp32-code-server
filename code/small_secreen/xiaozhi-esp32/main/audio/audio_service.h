@@ -153,11 +153,20 @@ public:
     void ResetDecoder();
     void SetModelsList(srmodel_list_t* models_list);
 
+    // 服务器下发动态唤醒词：转发给音频引擎（MultiNet 引擎热更新命令表；
+    // WakeNet 引擎安全忽略返回 false）。引擎未就绪时缓存，就绪后自动应用。
+    bool UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
+                                const std::vector<std::string>& display_texts);
+    bool SupportsDynamicWakeWords() const;
+
 private:
     AudioCodec* codec_ = nullptr;
     AudioServiceCallbacks callbacks_;
     std::unique_ptr<AudioEngine> audio_engine_;
     std::unique_ptr<AudioDebugger> audio_debugger_;
+    // 引擎就绪前缓存的动态唤醒词（device_config 早于引擎初始化到达时）
+    std::unique_ptr<std::vector<std::string>> pending_wake_word_pinyins_;
+    std::unique_ptr<std::vector<std::string>> pending_wake_word_displays_;
     void* opus_encoder_ = nullptr;
     void* opus_decoder_ = nullptr;
     std::mutex decoder_mutex_;

@@ -35,6 +35,17 @@ public:
     virtual void EncodeWakeWordData() = 0;
     virtual bool GetWakeWordOpus(std::vector<uint8_t>& opus) = 0;
     virtual const std::string& GetLastDetectedWakeWord() const = 0;
+
+    // 服务器下发动态唤醒词（MultiNet 拼音短语）。默认实现返回 false：
+    // 不支持动态命令表的引擎（WakeNet 单词模型）安全忽略。
+    virtual bool UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
+                                        const std::vector<std::string>& display_texts) {
+        (void)pinyin_texts;
+        (void)display_texts;
+        return false;
+    }
+    // 当前引擎是否支持动态唤醒命令（MultiNet）
+    virtual bool SupportsDynamicWakeWords() const { return false; }
 };
 
 #endif
