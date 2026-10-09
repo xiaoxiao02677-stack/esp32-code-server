@@ -110,6 +110,53 @@
         </div>
       </div>
     </div>
+
+    <!-- 检索测试弹窗 -->
+    <div v-if="rt.show" class="modal-mask" @click.self="rt.show = false">
+      <div class="modal rt-modal">
+        <h3>检索测试 — {{ rt.name }}</h3>
+        <p class="rt-tip">输入查询文本，验证该知识库的向量召回效果</p>
+        <div class="rt-input-row">
+          <input
+            v-model="rt.query"
+            placeholder="输入查询文本，回车或点击「测试」"
+            :disabled="rt.loading"
+            @keyup.enter="runRetrieval"
+          />
+          <button class="btn btn-primary" :disabled="rt.loading" @click="runRetrieval">
+            {{ rt.loading ? '测试中…' : '测试' }}
+          </button>
+        </div>
+        <div v-if="rt.meta" class="rt-meta">
+          召回 <strong>{{ rt.meta.count }}</strong> 条 · 耗时 <strong>{{ rt.meta.cost }}</strong> ms
+          <span v-if="rt.byDistance">（distance 越小越相关）</span>
+        </div>
+        <div class="rt-results">
+          <div v-if="rt.loading" class="rt-loading">检索中，请稍候…</div>
+          <template v-else-if="rt.done">
+            <div v-if="rt.results.length === 0" class="rt-empty">
+              <strong>未召回任何内容</strong>
+              <p>可尝试更换查询文本，或确认知识库已完成文档解析</p>
+            </div>
+            <div v-for="(item, i) in rt.results" :key="i" class="rt-item">
+              <div class="rt-item-head">
+                <span class="rt-idx">#{{ i + 1 }}</span>
+                <span v-if="item.scoreText" class="rt-score" :class="{ dist: item.byDistance }">
+                  {{ item.byDistance ? 'distance' : '相似度' }} {{ item.scoreText }}
+                </span>
+              </div>
+              <p class="rt-content">{{ item.expanded ? item.text : item.short }}</p>
+              <button v-if="item.long" class="rt-toggle" @click="item.expanded = !item.expanded">
+                {{ item.expanded ? '收起' : '展开全文' }}
+              </button>
+            </div>
+          </template>
+        </div>
+        <div class="modal-actions" style="margin-top:14px">
+          <button class="btn btn-ghost" @click="rt.show = false">关闭</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -117,7 +164,7 @@
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi } from '../../lib/api'
+import { adminApi, api } from '../../lib/api'
 
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
@@ -129,6 +176,7 @@ const saving = ref(false)
 const ragModels = ref([])
 const creator = reactive({ show: false, name: '', description: '', ragModelId: '' })
 const docs = reactive({ show: false, name: '', list: [], total: 0 })
+const rt = reactive({ show: false, datasetId: null, name: '', query: '', loading: false, done: false, results: [], meta: null, byDistance: false })
 
 const docTotal = computed(() => datasets.value.reduce((s, k) => s + (k.documentCount || 0), 0))
 const chunkTotal = computed(() => datasets.value.reduce((s, k) => s + (k.chunkCount || 0), 0))
@@ -192,7 +240,47 @@ async function viewDocs(k) {
   }
 }
 function retrievalTest(k) {
-  toast(`「${k.name}」检索测试需关联智能体，请在原控制台执行`, 'info')
+  Object.assign(rt, { show: true, datasetId: k.id, name: k.name, query: '', loading: false, done: false, results: [], meta: null, byDistance: false })
+}
+function extractScore(chunk) {
+  const raw = chunk.score ?? chunk.similarity ?? chunk.distance
+  if (raw === undefined || raw === null || raw === '' || isNaN(Number(raw))) return null
+  return { value: Number(raw), byDistance: chunk.distance !== undefined && chunk.score === undefined && chunk.similarity === undefined }
+}
+function normalizeResults(data) {
+  const list = Array.isArray(data) ? data : (data?.list || data?.chunks || data?.results || [])
+  return list.map(c => {
+    const text = String(c.content ?? c.text ?? c.chunk ?? '').trim()
+    const score = extractScore(c)
+    return {
+      text,
+      short: text.length > 200 ? text.slice(0, 200) + '…' : text,
+      long: text.length > 200,
+      expanded: false,
+      scoreText: score ? score.value.toFixed(4) : '',
+      byDistance: score?.byDistance || false
+    }
+  })
+}
+async function runRetrieval() {
+  if (rt.loading) return
+  const queryText = (rt.query || '').trim()
+  if (!queryText) { toast('请输入查询文本', 'error'); return }
+  rt.loading = true
+  rt.done = false
+  rt.meta = null
+  const started = performance.now()
+  try {
+    const res = await api.post(`/datasets/${rt.datasetId}/retrieval-test`, queryText)
+    rt.results = normalizeResults(res.data)
+    rt.byDistance = rt.results.some(r => r.byDistance)
+    rt.meta = { count: rt.results.length, cost: Math.max(1, Math.round(performance.now() - started)) }
+    rt.done = true
+  } catch (e) {
+    toast(e.msg || '检索测试失败', 'error')
+  } finally {
+    rt.loading = false
+  }
 }
 function remove(k) {
   askConfirm({
@@ -218,4 +306,35 @@ onMounted(() => { load(); loadRagModels() })
   font-size: 14px; outline: none; font-family: var(--font); transition: border .15s;
 }
 .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+
+/* 检索测试弹窗 */
+.rt-modal { width: min(620px, 94vw); }
+.rt-tip { color: var(--text-sub); font-size: 12.5px; margin: 6px 0 12px; }
+.rt-input-row { display: flex; gap: 10px; }
+.rt-input-row input {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px;
+  font-size: 14px; outline: none; font-family: var(--font); transition: border .15s;
+}
+.rt-input-row input:focus { border-color: var(--primary); }
+.rt-input-row input:disabled { background: #F5F7FA; cursor: not-allowed; }
+.rt-meta { margin-top: 10px; font-size: 12.5px; color: var(--text-sub); }
+.rt-meta strong { color: var(--primary); }
+.rt-results { margin-top: 12px; max-height: min(46vh, 420px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.rt-loading { text-align: center; color: var(--text-sub); font-size: 13px; padding: 18px 0; }
+.rt-empty {
+  text-align: center; padding: 26px 0 20px; color: var(--text-sub);
+  border: 1.5px dashed var(--border); border-radius: 14px;
+}
+.rt-empty strong { display: block; color: var(--text); margin-bottom: 4px; }
+.rt-empty p { font-size: 12.5px; margin: 0; }
+.rt-item { border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.rt-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rt-idx { font-size: 12px; font-weight: 700; color: var(--text-sub); }
+.rt-score { font-size: 12px; font-weight: 700; color: var(--primary); background: rgba(27,108,255,.08); padding: 2px 8px; border-radius: 999px; }
+.rt-score.dist { color: #C77700; background: rgba(199,119,0,.1); }
+.rt-content { margin: 0; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.rt-toggle {
+  border: none; background: none; padding: 0; margin-top: 4px; cursor: pointer;
+  font-size: 12.5px; color: var(--primary); font-family: var(--font);
+}
 </style>

@@ -6,9 +6,17 @@
 import { sm2 } from 'sm-crypto'
 
 const API_BASE = '/xiaozhi'
-const TOKEN_KEY = 'v2_token'
+const TOKEN_KEY = 'cc_token'
 
 export function getToken() {
+  // 一次性迁移：v2_token → cc_token（与原控制台登录态互通）
+  if (!localStorage.getItem(TOKEN_KEY)) {
+    const legacy = localStorage.getItem('v2_token')
+    if (legacy) {
+      localStorage.setItem(TOKEN_KEY, legacy)
+      localStorage.removeItem('v2_token')
+    }
+  }
   try { return JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null')?.token || localStorage.getItem(TOKEN_KEY) || '' } catch { return '' }
 }
 export function setToken(raw) { localStorage.setItem(TOKEN_KEY, raw) }
@@ -24,13 +32,17 @@ function buildQuery(params) {
   return s ? '?' + s : ''
 }
 
-async function request(method, path, { body, params, formData, raw } = {}) {
+async function request(method, path, { body, params, formData, raw, rawBody, contentType } = {}) {
   const url = API_BASE + path + buildQuery(params)
   const headers = {}
   const token = getToken()
   if (token) headers.Authorization = 'Bearer ' + token
   const init = { method, headers }
-  if (formData) {
+  if (rawBody !== undefined) {
+    // 二进制/原始请求体：不做 JSON.stringify（如 ASR 音频 Blob）
+    headers['Content-Type'] = contentType
+    init.body = rawBody
+  } else if (formData) {
     init.body = formData
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
@@ -147,7 +159,7 @@ export const adminApi = {
   ttsVoiceCreate: (body) => api.post('/ttsVoice', body),
   ttsVoiceUpdate: (id, body) => api.put(`/ttsVoice/${id}`, body),
   ttsVoiceDelete: (id) => api.post('/ttsVoice/delete', id ? [id] : []),
-  voiceClonePlay: (id) => api.post(`/voiceClone/play/${id}`),
+  voiceClonePlay: (id) => api.get('/voiceClone/play/' + id),
 
   // ===== 记忆 =====
   memoryAgents: () => api.get('/memory/agents'),
@@ -196,7 +208,7 @@ export const adminApi = {
   tagList: () => api.get('/agent/tag/list'),
 
   // ===== 知识库 =====
-  datasetPage: (params) => api.get('/datasets', params),
+  datasetPage: (params) => api.get('/datasets', params || { page: 1, page_size: 50 }),
   datasetDetail: (id) => api.get(`/datasets/${id}`),
   createDataset: (body) => api.post('/datasets', body),
   updateDataset: (body, id) => api.put(`/datasets/${id}`, body),
@@ -214,7 +226,7 @@ export const adminApi = {
     }).then(r => r.json())
   },
   deleteOta: (id) => api.del(`/otaMag/${id}`),
-  otaDownloadUrl: (id) => API_BASE + '/otaMag/download/' + id,
+  otaDownloadUrl: (id) => API_BASE + '/otaMag/getDownloadUrl/' + id,
 
   // ===== 数据字典 =====
   dictTypePage: (params) => api.get('/admin/dict/type/page', params || { page: 1, limit: 100 }),
@@ -232,7 +244,7 @@ export const adminApi = {
   serverList: () => api.get('/admin/server/server-list'),
 
   // ===== 链路模拟 =====
-  asrRecognize: (modelId) => api.post(`/models/asrRecognize?modelId=${encodeURIComponent(modelId)}`),
+  asrRecognize: (modelId, blob) => request('POST', '/models/asrRecognize', { params: { modelId }, rawBody: blob, contentType: (blob && blob.type) || 'audio/webm' }),
   llmPreview: (modelId, text, systemPrompt) => api.get('/models/llmPreview', {
     modelId, text, systemPrompt: systemPrompt || ''
   })

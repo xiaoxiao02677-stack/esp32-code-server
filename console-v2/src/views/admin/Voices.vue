@@ -37,7 +37,9 @@
             <td>{{ v.languages || '—' }}</td>
             <td>
               <div class="row-actions">
-                <button class="link-btn" @click="preview(v)">▶ 试听</button>
+                <button class="link-btn" :disabled="playingVoice === v.id" @click="playVoice(v)">
+                  {{ playingVoice === v.id ? '试听中…' : '▶ 试听' }}
+                </button>
                 <button class="link-btn" @click="openEdit(v)">编辑</button>
                 <button class="link-btn danger" @click="remove(v)">删除</button>
               </div>
@@ -47,7 +49,6 @@
       </table>
       <div v-if="voices.length === 0" class="empty-state"><div class="empty-icon">🎙</div><strong>此引擎暂无音色</strong></div>
     </DataTable>
-    <audio ref="audioRef" hidden></audio>
 
     <!-- 音色编辑（契约对齐 cc-console openVoiceEdit/saveVoice：payload 带 ttsModelId） -->
     <div v-if="editor.show" class="modal-mask" @click.self="editor.show = false">
@@ -72,7 +73,7 @@
           </select>
         </div>
         <div class="form-row"><label>试听链接 voice_demo（可直接粘贴一个音频 URL）</label>
-          <input v-model="editor.voiceDemo" placeholder="https://... 可选" /></div>
+          <input v-model.trim="editor.voiceDemo" placeholder="https://... 可选" /></div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="editor.show = false">取消</button>
           <button class="btn btn-primary" :disabled="saving || !editor.name || !editor.ttsVoice" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
@@ -97,7 +98,7 @@ const activeModelName = ref('')
 const defaultTtsName = ref('未设置')
 const loading = ref(false)
 const saving = ref(false)
-const audioRef = ref(null)
+const playingVoice = ref('')
 const llmOpts = ref([])
 const editor = reactive({ show: false, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '', dynamicInstruction: false, instructionLlmId: '' })
 
@@ -130,23 +131,30 @@ async function pickModel(m, silent) {
     voices.value = (res.data || []).map(v => ({
       id: v.id, ttsVoice: v.ttsVoice, name: v.name || v.voiceName || v.ttsVoice,
       desc: v.description || '', languages: v.languages,
-      isClone: v.isClone,
+      isClone: v.isClone, sort: v.sort,
       voiceInstruction: v.voiceInstruction || '',
+      voiceDemo: v.voiceDemo || '',
       dynamicInstruction: !!v.dynamicInstruction,
       instructionLlmId: v.instructionLlmId || ''
     }))
   } catch (e) { toast(e.msg || '音色加载失败', 'error'); voices.value = [] }
 }
 
-async function preview(v) {
-  // 契约：voice 参数用 ttsVoice（如 "Cherry"），返回音频 blob
-  const voice = v.ttsVoice || v.id
+// 契约对齐 cc-console playVoice：置播放态 → ttsPreview 取 blob → 播放 → 1.5s 后复位
+async function playVoice(v) {
+  playingVoice.value = v.id
   try {
-    const blob = await adminApi.ttsPreview(activeModelId.value, voice, '你好，这是试听文本')
-    if (!audioRef.value) return
-    audioRef.value.src = URL.createObjectURL(blob)
-    audioRef.value.play().catch(() => toast('播放失败', 'error'))
-  } catch (e) { toast(e.msg || '试听失败', 'error') }
+    const blob = await adminApi.ttsPreview(activeModelId.value, v.ttsVoice || v.id, '你好，这是试听文本')
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    audio.onended = () => URL.revokeObjectURL(url)
+    audio.onerror = () => URL.revokeObjectURL(url)
+    audio.play().catch(() => toast('播放失败', 'error'))
+  } catch (e) {
+    toast('试听失败：' + (e.msg || e.message || '网络异常'), 'error')
+  } finally {
+    setTimeout(() => { playingVoice.value = '' }, 1500)
+  }
 }
 
 function openCreate() {
@@ -203,4 +211,6 @@ onMounted(load)
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; }
 .form-row input:focus { border-color: var(--primary); }
+.link-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.link-btn:disabled:hover { text-decoration: none; }
 </style>
