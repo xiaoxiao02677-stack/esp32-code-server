@@ -190,6 +190,8 @@ export const adminApi = {
   // ===== 系统参数 =====
   paramPage: (params) => api.get('/admin/params/page', params || { page: 1, limit: 100 }),
   updateParam: (body) => api.put('/admin/params', body),
+  createParam: (body) => api.post('/admin/params', body),
+  deleteParam: (id) => api.del(`/admin/params/${id}`),
 
   // ===== 用户 =====
   userPage: (params) => api.get('/admin/users', params),

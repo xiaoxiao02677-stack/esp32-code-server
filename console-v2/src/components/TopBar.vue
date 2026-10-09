@@ -71,7 +71,6 @@ const adminNav = [
   { label: '用户', path: '/admin/users', icon: '👥' },
   { label: 'OTA', path: '/admin/ota', icon: '📦' },
   { label: '字典', path: '/admin/dicts', icon: '📖' },
-  { label: '替换词', path: '/admin/correctwords', icon: '🔤' },
   { label: '服务器', path: '/admin/servers', icon: '🖥' },
   { label: 'MCP', path: '/admin/mcp', icon: '🔗' },
   { label: '链路模拟', path: '/admin/linksim', icon: '🧪' },

@@ -90,7 +90,6 @@ const adminItems = [
   { to: '/admin/users', icon: '👥', label: '用户' },
   { to: '/admin/ota', icon: '📦', label: 'OTA' },
   { to: '/admin/dicts', icon: '📖', label: '字典' },
-  { to: '/admin/correctwords', icon: '🔤', label: '替换词' },
   { to: '/admin/servers', icon: '🖥', label: '服务器' },
   { to: '/admin/mcp', icon: '🔗', label: 'MCP' },
   { to: '/admin/linksim', icon: '🧪', label: '链路模拟' },

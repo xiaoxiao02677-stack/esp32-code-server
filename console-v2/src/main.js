@@ -21,7 +21,6 @@ import AdminDevices from './views/admin/Devices.vue'
 import AdminParams from './views/admin/Params.vue'
 import AdminOta from './views/admin/Ota.vue'
 import AdminDicts from './views/admin/Dicts.vue'
-import AdminCorrectWords from './views/admin/CorrectWords.vue'
 import AdminServers from './views/admin/Servers.vue'
 import AdminApiDebug from './views/admin/ApiDebug.vue'
 import AdminMcp from './views/admin/Mcp.vue'
@@ -50,7 +49,6 @@ const router = createRouter({
     { path: '/admin/users', component: AdminUsers },
     { path: '/admin/ota', component: AdminOta },
     { path: '/admin/dicts', component: AdminDicts },
-    { path: '/admin/correctwords', component: AdminCorrectWords },
     { path: '/admin/servers', component: AdminServers },
     { path: '/admin/apis', component: AdminApiDebug },
     { path: '/admin/mcp', component: AdminMcp },
