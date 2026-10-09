@@ -265,5 +265,9 @@ export const adminApi = {
   asrRecognize: (modelId, blob) => request('POST', '/models/asrRecognize', { params: { modelId }, rawBody: blob, contentType: (blob && blob.type) || 'audio/webm' }),
   llmPreview: (modelId, text, systemPrompt) => api.get('/models/llmPreview', {
     modelId, text, systemPrompt: systemPrompt || ''
-  })
+  }),
+
+  // ===== 唤醒词管理 =====
+  getAgentWakeWords: (agentId) => api.get(`/agent/wake-word/${agentId}`),
+  setAgentWakeWords: (agentId, wakeWords) => api.post(`/agent/wake-word/${agentId}`, { wakeWords })
 }

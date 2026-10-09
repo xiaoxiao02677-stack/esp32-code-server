@@ -25,6 +25,7 @@ import AdminServers from './views/admin/Servers.vue'
 import AdminApiDebug from './views/admin/ApiDebug.vue'
 import AdminMcp from './views/admin/Mcp.vue'
 import AdminLinkSimulator from './views/admin/LinkSimulator.vue'
+import AdminWakeWord from './views/admin/WakeWord.vue'
 import Login from './views/Login.vue'
 
 const router = createRouter({
@@ -52,7 +53,8 @@ const router = createRouter({
     { path: '/admin/servers', component: AdminServers },
     { path: '/admin/apis', component: AdminApiDebug },
     { path: '/admin/mcp', component: AdminMcp },
-    { path: '/admin/linksim', component: AdminLinkSimulator }
+    { path: '/admin/linksim', component: AdminLinkSimulator },
+    { path: '/admin/wake-word', component: AdminWakeWord }
   ]
 })
 
