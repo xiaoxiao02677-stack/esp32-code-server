@@ -37,7 +37,7 @@ set "IDF_PATH=D:\INSTALL\esp\v6.1\esp-idf"
 set "IDF_TOOLS_PATH=D:\INSTALL\esp\tools"
 set "IDF_PYTHON_ENV_PATH=D:\INSTALL\esp\tools\python\v6.1\venv"
 set "ESP_IDF_VERSION=6.1"
-set "PATH=D:\INSTALL\esp\tools\python\v6.1\venv\Scripts;D:\INSTALL\esp\tools\idf-exe\1.0.3;D:\INSTALL\esp\tools\cmake\4.0.3\bin;D:\INSTALL\esp\tools\ninja\1.12.1;D:\INSTALL\esp\tools\xtensa-esp-elf\esp-15.2.0_20251204\xtensa-esp-elf\bin;D:\INSTALL\esp\tools\ccache\4.12.1\windows-x86_64;D:\Git\cmd;C:\Windows\System32;C:\Windows"
+set "PATH=D:\INSTALL\esp\tools\python\v6.1\venv\Scripts;D:\INSTALL\esp\tools\idf-exe\1.0.3;D:\INSTALL\esp\tools\cmake\4.0.3\bin;D:\INSTALL\esp\tools\ninja\1.12.1;D:\INSTALL\esp\tools\xtensa-esp-elf\esp-15.2.0_20251204\xtensa-esp-elf\bin;D:\INSTALL\esp\tools\ccache\4.12.1\ccache-4.12.1-windows-x86_64;D:\INSTALL\Git\cmd;C:\Windows\System32;C:\Windows"
 set "PYTHON=D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe"
 echo [1/3] ESP-IDF v6.1 environment ready (EIM layout)
 
