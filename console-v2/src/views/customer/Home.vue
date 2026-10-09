@@ -6,8 +6,8 @@
         <p class="sub">智能体与设备管理</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-primary" @click="showCreate = true">＋ 新增智能体</button>
-        <button class="btn btn-ghost" @click="refresh">↻ 刷新列表</button>
+        <button class="btn btn-primary" :disabled="creating" @click="createAgent">{{ creating ? '创建中…' : '＋ 新增智能体' }}</button>
+        <button class="btn btn-ghost" :disabled="loading" @click="load">{{ loading ? '加载中…' : '↻ 刷新列表' }}</button>
       </div>
     </div>
 
@@ -19,8 +19,8 @@
           <p>统一管理你的设备、智能体与音色</p>
         </div>
         <div class="blob-actions">
-          <button class="btn btn-primary" @click="showCreate = true">开始使用</button>
-          <button class="btn btn-ghost" @click="$router.push('/customer/devices')">查看设备</button>
+          <button class="btn btn-primary" @click="$router.push('/customer/devices')">管理设备</button>
+          <button class="btn btn-ghost" @click="$router.push('/customer/voices')">查看音色</button>
         </div>
         <div class="blob-3d">🤖</div>
       </div>
@@ -28,7 +28,7 @@
         <StatCard icon="🤖" label="智能体" :value="agents.length" note="已创建" />
         <StatCard icon="📡" label="设备" :value="deviceCount" note="已绑定" />
         <StatCard icon="🎙" label="音色" :value="voices" note="可用" />
-        <StatCard icon="💎" label="可用积分" :value="points" note="余额" />
+        <StatCard icon="💎" label="可用积分" value="—" note="敬请期待" />
       </div>
     </div>
 
@@ -47,15 +47,14 @@
               <div class="cell-sub">{{ a.model }}</div>
             </td>
             <td>
-              <span class="badge" :class="a.device ? 'badge-green' : 'badge-gray'">
-                <span class="dot"></span>{{ a.device || '未绑定' }}
+              <span class="badge" :class="a.deviceCount ? 'badge-green' : 'badge-gray'">
+                <span class="dot"></span>{{ a.deviceCount ? a.deviceCount + ' 台' : '未绑定' }}
               </span>
             </td>
             <td style="color:var(--text-sub)">{{ a.lastActive }}</td>
             <td>
               <div class="row-actions">
-                <button class="link-btn">配置</button>
-                <button class="link-btn danger">删除</button>
+                <button class="link-btn" @click="$router.push('/customer/devices')">查看设备</button>
               </div>
             </td>
           </tr>
@@ -73,12 +72,9 @@
         <h3>新增智能体</h3>
         <div class="form-row"><label>智能体名称</label><input v-model="draft.name" placeholder="例如：小何" /></div>
         <div class="form-row"><label>角色提示词</label><textarea v-model="draft.prompt" rows="3" placeholder="描述智能体的性格与说话风格"></textarea></div>
-        <div class="form-row"><label>默认音色</label>
-          <select v-model="draft.voice"><option>豆包小何</option><option>温柔姐姐</option><option>元气少年</option></select>
-        </div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="showCreate = false">取消</button>
-          <button class="btn btn-primary" @click="createAgent">创建</button>
+          <button class="btn btn-primary" :disabled="creating || !draft.name" @click="createAgent">创建</button>
         </div>
       </div>
     </div>
@@ -86,52 +82,97 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { customerApi, authApi } from '../../lib/api'
+import { customerApi } from '../../lib/api'
+
+const toast = inject('toast')
 
 const showCreate = ref(false)
-const draft = ref({ name: '', prompt: '', voice: '豆包小何' })
+const draft = ref({ name: '', prompt: '' })
 const agents = ref([])
-const loadErr = ref('')
-const points = ref('—')
+const loading = ref(false)
+const creating = ref(false)
 const deviceCount = ref(0)
 const voices = ref(0)
+let warned = false
+
+function fmtTime(s) {
+  if (!s) return '—'
+  const str = String(s)
+  return str.length >= 16 ? str.slice(5, 16) : str
+}
 
 async function load() {
-  loadErr.value = ''
+  loading.value = true
   try {
-    // GET /agent/list —— 真实接口
+    // GET /agent/list → data 为数组（契约 ResultListAgentDTO）
     const res = await customerApi.agentList()
     const list = res.data || []
     agents.value = list.map(a => ({
-      id: a.agentId || a.id,
-      name: a.agentName || a.name,
-      model: a.llmModel || a.modelName || '默认模型',
-      device: a.deviceName || null,
-      lastActive: a.updateTime ? String(a.updateTime).slice(5, 16) : '—'
+      id: a.id || a.agentId,
+      name: a.agentName || a.name || '未命名',
+      model: [a.llmModelName, a.ttsModelName].filter(Boolean).join(' · ') || a.llmModel || '默认模型',
+      deviceCount: a.deviceCount != null ? a.deviceCount : (a.deviceName || a.macAddress ? 1 : 0),
+      lastActive: fmtTime(a.lastConnectedAt || a.updateTime)
     }))
-    deviceCount.value = list.filter(a => a.deviceName || a.macAddress).length
+    // 设备总数：对所有智能体调用 boundDevices 汇总去重（契约 deviceCount 字段不可用时回退统计）
+    const withCount = list.filter(a => a.deviceCount != null)
+    if (withCount.length === list.length && list.length > 0) {
+      deviceCount.value = withCount.reduce((s, a) => s + (Number(a.deviceCount) || 0), 0)
+    } else {
+      deviceCount.value = await loadDeviceCount(list)
+    }
+    // 音色资源计数
+    try {
+      const v = await customerApi.ttsVoicePage({ page: 1, limit: 1 })
+      voices.value = v.data?.total ?? (v.data?.list ? v.data.list.length : 0)
+    } catch { voices.value = 0 }
   } catch (e) {
-    loadErr.value = e.msg || '加载失败'
+    agents.value = []
+    deviceCount.value = 0
+    voices.value = 0
+    if (!warned) { warned = true; toast(e.msg || '数据加载失败', 'error') }
+  } finally {
+    loading.value = false
   }
-  // 音色资源计数
-  try {
-    const v = await customerApi.voiceResourcePage({ page: 1, limit: 100 })
-    voices.value = (v.data && (v.data.list ? v.data.list.length : v.data.total)) ?? 0
-  } catch { voices.value = 0 }
 }
 
-function createAgent() {
-  if (!draft.value.name) return
-  customerApi.createAgent({ agentName: draft.value.name, systemPrompt: draft.value.prompt })
-    .then(() => { showCreate.value = false; load() })
-    .catch(e => { loadErr.value = e.msg })
+async function loadDeviceCount(agentsList) {
+  try {
+    const results = await Promise.all(
+      agentsList.map(a => customerApi.boundDevices(a.id || a.agentId).catch(() => ({ data: [] })))
+    )
+    const seen = new Set()
+    let n = 0
+    results.forEach(r => {
+      (r.data || []).forEach(d => {
+        const key = d.id || d.macAddress
+        if (key && !seen.has(key)) { seen.add(key); n++ }
+      })
+    })
+    return n
+  } catch { return 0 }
+}
+
+async function createAgent() {
+  if (!draft.value.name.trim()) return
+  creating.value = true
+  try {
+    await customerApi.createAgent({ agentName: draft.value.name.trim(), systemPrompt: draft.value.prompt })
+    toast('已创建')
+    showCreate.value = false
+    draft.value = { name: '', prompt: '' }
+    load()
+  } catch (e) {
+    toast(e.msg || '创建失败', 'error')
+  } finally {
+    creating.value = false
+  }
 }
 
 onMounted(load)
-const refresh = load
 </script>
 
 <style scoped>
@@ -140,10 +181,10 @@ const refresh = load
 .modal h3 { font-size: 17px; margin-bottom: 18px; }
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
-.form-row input, .form-row textarea, .form-row select {
+.form-row input, .form-row textarea {
   border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px;
   font-size: 14px; outline: none; font-family: var(--font); transition: border .15s;
 }
-.form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+.form-row input:focus, .form-row textarea:focus { border-color: var(--primary); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 </style>
