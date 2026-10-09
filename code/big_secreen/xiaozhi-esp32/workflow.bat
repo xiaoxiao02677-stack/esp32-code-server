@@ -19,7 +19,7 @@ if "%ACTION%"=="all" goto :all
 
 :build
 echo [1/3] 编译固件...
-call build_my_s3_tft.bat
+call build-bigscreen.bat
 if errorlevel 1 (
     echo [ERR] 编译失败
     exit /b 1
@@ -44,7 +44,7 @@ goto :eof
 
 :all
 echo [1/3] 编译固件...
-call build_my_s3_tft.bat
+call build-bigscreen.bat
 if errorlevel 1 (
     echo [ERR] 编译失败
     exit /b 1
