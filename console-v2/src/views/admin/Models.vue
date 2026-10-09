@@ -88,6 +88,17 @@
             <button class="btn btn-ghost" @click="addCustomField">添加</button>
           </div>
         </div>
+        <!-- 自定义接口：保存前直连测试（跨域被拦时提示改走服务端「一键测试」） -->
+        <div v-if="isCustomOpenAI" class="form-row custom-test-row">
+          <label>连接测试</label>
+          <div class="custom-test-bar">
+            <button class="btn btn-ghost" :disabled="customTest.loading || !customTestReady" @click="testCustomNow">
+              {{ customTest.loading ? '测试中…' : '⚡ 测试连接' }}
+            </button>
+            <span v-if="customTest.text" class="model-test-result inline" :class="customTest.ok === true ? 'test-ok' : (customTest.ok === false ? 'test-fail' : '')">{{ customTest.text }}</span>
+          </div>
+          <p class="custom-test-hint">保存前从浏览器直连测试；若被 CORS 拦截，保存后可用列表行「测试」走服务端测试（权威）。</p>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="editor.show = false">取消</button>
           <button class="btn btn-primary" :disabled="saving || !editor.modelName" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
@@ -130,11 +141,20 @@ const providers = ref([])
 const providerFields = ref([])
 const newCustomFieldKey = ref('')
 const editor = reactive({ show: false, id: '', providerCode: '', modelName: '', customType: 'openai', config: {} })
+// 自定义接口直连测试（保存前）：{loading, ok, text}
+const customTest = reactive({ loading: false, ok: null, text: '' })
 
 // 当前类型缓存视图（切换 tab 不重复请求）
 const models = computed(() => modelsByType[activeType.value] || [])
 const totalCount = computed(() => MODEL_TYPES.reduce((n, t) => n + modelTypeCount(t.value), 0))
 const enabledCount = computed(() => models.value.filter(m => m.isEnabled).length)
+const isCustomOpenAI = computed(() => activeType.value === 'LLM' && editor.providerCode === '__custom_openai__')
+// baseUrl / apiKey / model 至少各有一项才允许发起测试（apiKey 允许为空，兼容本地网关）
+const customTestReady = computed(() => {
+  if (!isCustomOpenAI.value) return false
+  const cfg = editor.config || {}
+  return !!(String(cfg.base_url || '').trim() && String(cfg.model_name || '').trim())
+})
 
 function modelTypeCount(t) {
   return (modelsByType[t] || []).length
