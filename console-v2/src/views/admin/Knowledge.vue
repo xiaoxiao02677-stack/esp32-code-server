@@ -184,7 +184,7 @@ const chunkTotal = computed(() => datasets.value.reduce((s, k) => s + (k.chunkCo
 async function load() {
   loading.value = true
   try {
-    const res = await adminApi.datasetPage({ page: 1, limit: 100 })
+    const res = await adminApi.datasetPage({ page: 1, page_size: 100 })
     const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
     datasets.value = list.map(k => ({
       id: k.id || k.datasetId,
@@ -231,7 +231,7 @@ async function viewDocs(k) {
   docs.name = k.name
   docs.list = []
   try {
-    const res = await adminApi.datasetDocs(k.id, { page: 1, limit: 20 })
+    const res = await adminApi.datasetDocs(k.id, { page: 1, page_size: 20 })
     const data = res.data || {}
     docs.list = data.list || []
     docs.total = data.total ?? docs.list.length

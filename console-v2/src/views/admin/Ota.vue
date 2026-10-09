@@ -76,10 +76,17 @@ async function onFilePicked(e) {
   finally { uploading.value = false; e.target.value = '' }
 }
 
-function download(o) {
-  // 契约：GET /otaMag/download/{uuid|id}（新窗口）
-  window.open(adminApi.otaDownloadUrl(o.uuid || o.id), '_blank')
+async function download(o) {
+  // 两段式（契约 D3）：先 GET /otaMag/getDownloadUrl/{id} 取 JSON 包装的真实 URL，再新窗口下载；
+  // 失败时回退直连二进制流端点 /otaMag/download/{uuid}（与原控制台行为一致）
+  try {
+    const res = await adminApi.get('/otaMag/getDownloadUrl/' + (o.uuid || o.id))
+    const url = (res && res.data) || ''
+    if (url) { window.open(url, '_blank'); return }
+  } catch (e) { /* 回退直连 */ }
+  window.open(API_BASE_FALLBACK + '/otaMag/download/' + (o.uuid || o.id), '_blank')
 }
+const API_BASE_FALLBACK = '/xiaozhi'
 
 function remove(o) {
   askConfirm({

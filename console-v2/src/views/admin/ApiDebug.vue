@@ -89,7 +89,12 @@ async function send() {
   try {
     let path = selected.value.p
     const args = pathArgs.value.split(',').map(s => s.trim()).filter(Boolean)
-    args.forEach(arg => { path = path.replace(/\$\{[^}]+\}/, encodeURIComponent(arg)) })
+    // 缺参占位符替换为键名（对齐原控制台行为），避免 ${xxx} 字面量进 URL
+    let argIdx = 0
+    path = path.replace(/\$\{([^}]+)\}/g, (_, key) => {
+      const arg = args[argIdx++]
+      return encodeURIComponent(arg !== undefined ? arg : key)
+    })
     const method = selected.value.h
     let queryObj = {}
     if (reqQuery.value.trim()) {
@@ -101,7 +106,6 @@ async function send() {
       try { bodyObj = JSON.parse(reqBody.value) }
       catch { toast('Body 不是合法 JSON', 'error'); sending.value = false; return }
     }
-    // 路径 ${} 已消费的 query 键不再拼到 URL（参照原控制台 App.vue:2452-2461）
     const qs = new URLSearchParams()
     Object.entries(queryObj).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') qs.append(k, v)

@@ -83,12 +83,15 @@ function startEdit(p) { editingId.value = p.id }
 function cancelEdit() { editingId.value = null; params.value.forEach(p => { p._newValue = p.paramValue; p._dirty = false }) }
 
 async function saveParam(p) {
-  if (p._newValue === p.paramValue) { editingId.value = null; return }
+  if (p._newValue === p.paramValue) { editingId.value = null; p._dirty = false; return }
   try {
     await adminApi.updateParam({ id: p.id, paramCode: p.paramCode, paramValue: p._newValue, paramName: p.paramName, type: p.type, remark: p.remark })
     p.paramValue = p._newValue; p._dirty = false; editingId.value = null
     toast(`「${p.paramCode}」已保存`)
-  } catch (e) { toast(e.msg || '保存失败', 'error') }
+  } catch (e) {
+    p._dirty = true
+    toast(e.msg || '保存失败', 'error')
+  }
 }
 
 onMounted(load)
