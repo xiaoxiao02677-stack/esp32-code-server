@@ -1,0 +1,21 @@
+import paramiko
+HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
+c = paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=20, look_for_keys=False, allow_agent=False)
+def sh(cmd, t=120):
+    _, o, e = c.exec_command(cmd, timeout=t)
+    return o.read().decode("utf-8","replace").strip(), e.read().decode("utf-8","replace").strip()
+print("=== 所有 systemd unit ===")
+print(sh("ls /etc/systemd/system/*.service")[0])
+print("\n=== 各 unit 的 StandardOutput/ExecStart ===")
+print(sh("grep -H -E 'StandardOutput|StandardError|ExecStart' /etc/systemd/system/*.service")[0])
+print("\n=== 全盘找 > 覆盖写日志 ===")
+print(sh(r"grep -rnE '[^>]>[^>]' /root/*.sh /root/xiaozhi-server -r --include='*.sh' 2>/dev/null | grep -iE '\.log|nohup' | head -20")[0] or "(无 .sh)")
+print("\n=== crontab ===")
+print(sh("crontab -l 2>&1 | head -20")[0])
+print("\n=== logrotate 现状 ===")
+print(sh("ls /etc/logrotate.d/ 2>/dev/null")[0])
+print(sh("cat /etc/logrotate.conf 2>/dev/null | grep -vE '^\s*#|^$' | head -20")[0])
+print("\n=== app.log / data 目录 ===")
+print(sh("ls -la /root/xiaozhi-server/main/xiaozhi-server/data/ | head -20")[0])
+c.close()
