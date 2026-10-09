@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-豆包声音复刻 —— TTS 请求包独立测试脚本
-=============================================
+豆包声音复刻 —— TTS 请求包独立测试脚本（对齐官方 声音复刻 V3 脚本）
+==================================================================
 
 用途：把项目现在正在发的 TTS 请求包，原样抽成一份可以直接双击跑的脚本，
-      你自己听一听「音色指令 / 语气指令」到底有没有生效。
+      你自己听一听「语气指令 / 音色指令」到底有没有生效。
 
-来源：xiaozhi-server/core/providers/tts/doubao_v3.py
-      （aoci 索引只覆盖固件 xiaozhi-esp32，固件是瘦客户端不含 TTS 请求包，
-        所以按服务端源码转换）
+来源：xiaozhi-server/core/providers/tts/doubao_v3.py（已对齐官方脚本）
 
 依赖：pip install requests      （只这一个）
-
 运行：python tts_voice_probe.py
-产物：脚本同目录下的 out_*.mp3，直接双击试听
+产物：脚本同目录下 tts_out/*.mp3，直接双击试听
+
+==================================================================
+重要结论（实测，务必先看）
+==================================================================
+火山 TTS 输出是「非确定性」的：同一份请求连跑两次，md5 都不一样。
+所以——**不要用文件大小 / md5 / 波形去判断情感有没有生效**，
+那些差异全是随机噪声。唯一可靠的判定方式是人耳试听。
 """
 
 import base64
@@ -26,7 +30,6 @@ import requests
 
 # ==========================================================
 # 一、线上真实配置（取自 ai_model_config 的 config_json）
-#     想换成你自己的，改这里就行
 # ==========================================================
 API_KEY = "d9f77dba-01ca-47fa-a4d3-7002adf6b6a4"
 API_URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
@@ -34,6 +37,8 @@ RESOURCE_ID = "seed-icl-2.0"        # 声音复刻资源
 SPEAKER = "S_N8pC5xwg2"             # 复刻音色（S_ 开头）
 FORMAT = "mp3"
 SAMPLE_RATE = 24000
+UID = "xiaozhi-esp32-server"
+NAMESPACE = "BidirectionalTTS"
 
 # 如果你想用「后付费复刻」而不是预付费，把这两行打开：
 # SPEAKER_TYPE = "postpaid"
@@ -41,12 +46,17 @@ SAMPLE_RATE = 24000
 SPEAKER_TYPE = "prepaid"
 CUSTOM_SPEAKER_ID = None
 
-# 可选：手动指定情感（留空则由语气指令自动推断）
-EMOTION = None                      # 例如 "happy" / "sad" / "angry"
-EMOTION_SCALE = 4                   # 实测有效范围 1~5，越界会返回空音频
+# ---- 可选开关（默认全部关闭 = 严格对齐官方脚本）----
+# 官方脚本的 req_params 里没有 model，也没有 enable_emotion / emotion_scale。
+# 打开这些开关可以做「对齐 vs 全字段」的 A/B 对比。
+USE_MODEL = False                   # True → 加 model=seed-tts-2.0-expressive
+USE_EMOTION_SCALE = False           # True → 加 enable_emotion + emotion_scale
+EXPLICIT_LANGUAGE = ""              # 官方脚本默认留空；中文可不填
+
+# ---- 情感 ----
+EMOTION = None                      # 手动指定，如 "happy"/"sad"/"angry"；留空则自动推断
+EMOTION_SCALE = 4                   # 仅在 USE_EMOTION_SCALE=True 时发送（有效 1~5）
 AUTO_EMOTION = True                 # 从中文语气指令自动推断 emotion
-EXPLICIT_LANGUAGE = "zh"
-NAMESPACE = "BidirectionalTTS"      # 官方脚本固定值
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts_out")
 
@@ -76,7 +86,7 @@ EMOTION_SCALE_MIN, EMOTION_SCALE_MAX = 1, 5
 
 
 def clamp_emotion_scale(value):
-    """实测：emotion_scale 为 0 或 >=6 时火山返回「空音频」，必须钳制。"""
+    """emotion_scale 为 0 或 >=6 时火山返回「空音频」，必须钳制。"""
     try:
         scale = int(float(value))
     except (TypeError, ValueError):
@@ -96,14 +106,11 @@ def infer_emotion(instruction):
     return None
 
 
-def is_clone_resource():
-    return str(RESOURCE_ID).startswith("seed-icl") or str(SPEAKER).startswith("S_")
-
-
 # ==========================================================
 # 三、请求包构造（与 doubao_v3.py 的 _build_payload 逐字段一致）
 # ==========================================================
-def build_payload(text, instruction=None):
+def build_payload(text, instruction=None, emotion_override=None):
+    # 1) audio_params（官方脚本顺序）
     audio_params = {
         "format": FORMAT,
         "sample_rate": SAMPLE_RATE,
@@ -111,35 +118,47 @@ def build_payload(text, instruction=None):
         "loudness_rate": 0,
     }
 
-    emotion = EMOTION
+    # 2) 情感：官方脚本只发 emotion 单字段
+    emotion = emotion_override or EMOTION
     if not emotion and AUTO_EMOTION:
         emotion = infer_emotion(instruction)
     if emotion:
-        audio_params["enable_emotion"] = True
         audio_params["emotion"] = emotion
-        audio_params["emotion_scale"] = clamp_emotion_scale(EMOTION_SCALE)
+        if USE_EMOTION_SCALE:
+            audio_params["enable_emotion"] = True
+            audio_params["emotion_scale"] = clamp_emotion_scale(EMOTION_SCALE)
 
+    # 3) speaker
+    if SPEAKER_TYPE == "postpaid":
+        speaker = "custom_speaker_id"
+    else:
+        speaker = SPEAKER
+
+    req_params = {
+        "text": text,
+        "speaker": speaker,
+        "audio_params": audio_params,
+    }
+    if SPEAKER_TYPE == "postpaid":
+        req_params["custom_speaker_id"] = CUSTOM_SPEAKER_ID or SPEAKER
+    if USE_MODEL:
+        req_params["model"] = "seed-tts-2.0-expressive"
+
+    # 4) additions：context_texts = 用户语气指令（官方唯一指令通道）
     additions = {}
     if EXPLICIT_LANGUAGE:
         additions["explicit_language"] = EXPLICIT_LANGUAGE
     if instruction:
         additions["context_texts"] = [instruction]
-
-    req_params = {"text": text, "audio_params": audio_params}
-    if SPEAKER_TYPE == "postpaid":
-        req_params["speaker"] = "custom_speaker_id"
-        req_params["custom_speaker_id"] = CUSTOM_SPEAKER_ID or SPEAKER
-    else:
-        req_params["speaker"] = SPEAKER
     if additions:
         req_params["additions"] = json.dumps(additions, ensure_ascii=False)
-    if is_clone_resource():
-        req_params["model"] = "seed-tts-2.0-expressive"
 
-    payload = {"user": {"uid": "xiaozhi-esp32-server"}, "req_params": req_params}
-    if NAMESPACE:
-        payload["namespace"] = NAMESPACE
-    return payload
+    # 5) 顶层三件套：user / req_params / namespace（对齐官方脚本）
+    return {
+        "user": {"uid": UID},
+        "req_params": req_params,
+        "namespace": NAMESPACE,
+    }
 
 
 def build_headers():
@@ -156,11 +175,9 @@ def decode_chunk(data):
     return base64.b64decode(clean + "=" * ((-len(clean)) % 4))
 
 
-# ==========================================================
-# 四、发请求（与 doubao_v3.py 一致：stream=True + iter_lines）
-# ==========================================================
-def synth(text, instruction=None, out_name="out.mp3", dump=False):
-    payload = build_payload(text, instruction)
+def synth(text, instruction=None, out_name="out.mp3", dump=False,
+          emotion_override=None):
+    payload = build_payload(text, instruction, emotion_override)
     if dump:
         print("  [请求体] " + json.dumps(payload, ensure_ascii=False, indent=2))
 
@@ -177,9 +194,13 @@ def synth(text, instruction=None, out_name="out.mp3", dump=False):
         obj = json.loads(line)
         code = obj.get("code")
         if code == 20000000:
+            # 官方脚本判 message=="ok"；实测火山返回 "OK"（大写），
+            # 这里抹平大小写，其余靠流读完自然退出
             if obj.get("data"):
                 audio.extend(decode_chunk(obj["data"]))
-            break
+            if str(obj.get("message") or "").strip().lower() == "ok":
+                break
+            continue
         if code not in (0, None):
             print(f"  错误 code={code} message={obj.get('message')}")
             return None
@@ -187,52 +208,54 @@ def synth(text, instruction=None, out_name="out.mp3", dump=False):
             audio.extend(decode_chunk(obj["data"]))
 
     if not audio:
-        print("  !! 返回空音频（注意：emotion_scale 越界会静默返回空音频）")
+        print("  !! 返回空音频（emotion_scale 越界会静默返回空音频）")
         return None
 
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, out_name)
     with open(path, "wb") as f:
         f.write(bytes(audio))
-    print(f"  -> {path}  ({len(audio)} 字节)")
+    print(f"  -> {out_name}  ({len(audio)} 字节)")
     return path
 
 
 # ==========================================================
-# 五、测试用例
+# 四、测试用例
 # ==========================================================
 TEXT = "今天真是个好日子，我们一起出去玩吧！"
 
 CASES = [
-    ("01_基线_无指令",        None,                              None),
-    ("02_开心指令",           "用非常开心、兴奋、雀跃的语气说话",   None),
-    ("03_生气指令",           "用很生气愤怒的语气说话",             None),
-    ("04_难过指令",           "用难过伤心、带哭腔的语气说话",        None),
-    ("05_撒娇指令",           "用撒娇、可爱、甜美的语气说话",        None),
-    ("06_固定emotion_happy",  None,                              "happy"),
-    ("07_固定emotion_angry",  None,                              "angry"),
+    ("01_基线_无指令",        None,                             None),
+    ("02_开心指令",           "用非常开心、兴奋、雀跃的语气说话",  None),
+    ("03_生气指令",           "用很生气愤怒的语气说话",            None),
+    ("04_难过指令",           "用难过伤心、带哭腔的语气说话",       None),
+    ("05_撒娇指令",           "用撒娇、可爱、甜美的语气说话",       None),
+    ("06_固定emotion_happy",  None,                             "happy"),
+    ("07_固定emotion_angry",  None,                             "angry"),
 ]
 
 
 def main():
     print("=" * 66)
-    print("豆包声音复刻 TTS 音色指令测试")
+    print("豆包声音复刻 TTS 音色指令测试（对齐官方脚本）")
     print(f"音色 {SPEAKER} | 资源 {RESOURCE_ID} | 格式 {FORMAT}")
+    print(f"开关: model={USE_MODEL} emotion_scale={USE_EMOTION_SCALE} "
+          f"explicit_language={EXPLICIT_LANGUAGE or '(空)'}")
     print("=" * 66)
 
     for name, instruction, forced in CASES:
-        global EMOTION
-        EMOTION = forced
         print(f"\n--- {name} ---")
         if instruction:
             guess = infer_emotion(instruction)
             print(f"  指令: {instruction}")
-            print(f"  推断 emotion: {guess or '(无关键词命中，不发送 emotion)'}")
-        synth(TEXT, instruction, f"{name}.mp3", dump=(name.startswith("01")))
+            print(f"  推断 emotion: {guess or '(无关键词命中)'}")
+        synth(TEXT, instruction, f"{name}.mp3",
+              dump=(name.startswith("01")), emotion_override=forced)
 
     print("\n" + "=" * 66)
     print(f"全部完成，音频在：{OUT_DIR}")
-    print("重点对比：01 基线 vs 02/03/04 —— 听语气差别")
+    print("重点对比：01 基线 vs 02/03/04 —— 人耳听语气差别")
+    print("注意：文件大小不同不代表情感生效，火山输出本身非确定性")
     print("=" * 66)
 
 

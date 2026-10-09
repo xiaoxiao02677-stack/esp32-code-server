@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""部署 doubao_v3「对齐官方声音复刻 V3 脚本」改造：
+备份 → 上传 → 语法校验 → 线上实测（真实 API）→ 重启 → 验活。
+"""
+import hashlib
+import time
+
+import paramiko
+
+HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
+
+LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server"
+REMOTE_ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_MISC = r"G:\demo\21_xiaozhi\code\.workbuddy"
+PY_FILE = "core/providers/tts/doubao_v3.py"
+
+STAMP = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+
+
+def md5(path):
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+
+def main():
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(HOST, port=PORT, username=USER, password=PASSWORD,
+                   timeout=20, look_for_keys=False, allow_agent=False)
+    sftp = client.open_sftp()
+
+    def sh(cmd, timeout=180, quiet=False):
+        _, out, err = client.exec_command(cmd, timeout=timeout)
+        o = out.read().decode("utf-8", "replace").strip()
+        e = err.read().decode("utf-8", "replace").strip()
+        if not quiet:
+            if o:
+                print(o)
+            if e:
+                print("[ERR]", e)
+        return o, e
+
+    print("=" * 64)
+    print("步骤 1: 备份 + 上传 doubao_v3.py")
+    print("=" * 64)
+    local = LOCAL_ROOT + "\\" + PY_FILE.replace("/", "\\")
+    remote = f"{REMOTE_ROOT}/{PY_FILE}"
+    sh(f"cp -a {remote} {remote}.bak-{STAMP}")
+    sh(f"ls -l {remote}.bak-{STAMP}")
+    sftp.put(local, remote)
+    lm, rm = md5(local), sh(f"md5sum {remote}", quiet=True)[0].split()[0]
+    print(f"local md5 = {lm}")
+    print(f"remote md5= {rm}")
+    assert lm == rm, "md5 不一致，上传失败"
+    print("md5 一致 ✔")
+
+    print()
+    print("=" * 64)
+    print("步骤 2: 语法校验（服务器 venv）")
+    print("=" * 64)
+    o, e = sh(f"cd {REMOTE_ROOT} && .venv/bin/python -m py_compile {PY_FILE} "
+              f"&& echo COMPILE_OK")
+    assert "COMPILE_OK" in o or "COMPILE_OK" in e, "py_compile 失败"
+    print("编译通过 ✔")
+
+    print()
+    print("=" * 64)
+    print("步骤 3: 线上实测（真实 API，验证对齐后请求包能出音频）")
+    print("=" * 64)
+    sftp.put(LOCAL_MISC + r"\server_official_probe.py",
+             "/tmp/server_official_probe.py")
+    sh(f"cd {REMOTE_ROOT} && .venv/bin/python /tmp/server_official_probe.py",
+       timeout=240)
+
+    print()
+    print("=" * 64)
+    print("步骤 4: 重启服务并验活")
+    print("=" * 64)
+    sh("systemctl restart xiaozhi-server")
+    time.sleep(12)
+    sh("systemctl is-active xiaozhi-server")
+    sh("ss -lntp | grep -E ':8000|:8003' | head")
+    sh("journalctl -u xiaozhi-server -n 12 --no-pager")
+
+    sftp.close()
+    client.close()
+    print("\n部署完成。")
+
+
+if __name__ == "__main__":
+    main()

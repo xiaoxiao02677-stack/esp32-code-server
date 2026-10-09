@@ -11,6 +11,7 @@
 - **`scope apply` / `scope plan` / `scope preview` 在本环境有缺陷**：全量重扫且不套用 `exclude_dirs`，会把 index 从 ~1071 暴涨到 ~9000+（41196 等）。严禁使用，会用它"修复对齐"会破坏索引。
 - `governance_aligned: false` 是**结构性、既存、无害**的：工具 computed scope 要 9016 index（忽略 exclude_dirs 缺陷）vs 策展基线 1074 index → `policy_identity ≠ active_policy_identity`。它代表 scope 策略指纹不符，**不代表内容漂移**（code_drift 恒为空）。
 - 安全增量流程：`aoci update-entry --repo ... --source-sha256 <sha> <file[tag]>` 写条目；基线指纹刷新走**手动 Python 编辑** baseline.json（套用 exclude_dirs + .git/.aoci/.workbuddy），不触发重扫。
+- **基线 reconcile 铁律（2026-10-09 踩坑）**：同步指纹时**只比较 raw sha256（实际内容），仅当 raw 不同才刷新 sha256/size/normalized_sha256 三项**；raw 相同则原样保留 baseline 中原始的 normalized_sha256，绝不按自算的 LF 归一化值批量覆盖。否则会把数千文件误判为"changed"并改写 normalized_sha256，导致 aoci verify 出现伪漂移。`.workbuddy` 目录走扫描排除但基线已有条目须 preserve（不 drop）。size 在 baseline 中以 int 存储。
 
 ## 基线/索引关键事实
 - 基线 baseline.json：`{files:{相对路径:{role,sha256,size,normalized_sha256}}}`，role∈index/observe/exclude。

@@ -117,8 +117,9 @@ class TTSProvider(TTSProviderBase):
             self.emotion_scale = self._clamp_emotion_scale(self.emotion_scale)
         # 是否允许从语气指令里自动推断 emotion（默认开）
         self.auto_emotion = bool(config.get("auto_emotion", True))
-        # 显式语言（官方脚本 EXPLICIT_LANGUAGE）
-        self.explicit_language = config.get("explicit_language", "zh")
+        # 显式语言（官方脚本 EXPLICIT_LANGUAGE，默认 "" 即留空=自动/中英混）
+        # 官方脚本注释：「中文可不填」，故默认不发送该字段。
+        self.explicit_language = config.get("explicit_language")
         # namespace（官方脚本固定 BidirectionalTTS；实测复刻/非复刻均安全）
         self.namespace = config.get("namespace", self.DEFAULT_NAMESPACE)
         # model：官方脚本不传该字段；复刻音色确需时可显式配置

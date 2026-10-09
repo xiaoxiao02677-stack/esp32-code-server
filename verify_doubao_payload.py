@@ -66,10 +66,15 @@ sys.modules["core.providers"] = prov_pkg
 sys.modules["core.providers.tts"] = tts_pkg
 sys.modules["core.providers.tts.base"] = base_mod
 
-sys.path.insert(0, r"G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server")
-import importlib
+# 直接按文件路径加载（上面的 stub 包已抢占 core.providers.tts 的真实路径）
+import importlib.util
 
-mod = importlib.import_module(MOD)
+spec = importlib.util.spec_from_file_location(
+    MOD, r"G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server/core/providers/tts/doubao_v3.py"
+)
+mod = importlib.util.module_from_spec(spec)
+sys.modules[MOD] = mod
+spec.loader.exec_module(mod)
 TTSProvider = mod.TTSProvider
 
 BASE_CFG = {
