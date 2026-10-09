@@ -103,6 +103,14 @@ public interface AgentService extends BaseService<AgentEntity> {
     boolean checkAgentPermission(String agentId, Long userId);
 
     /**
+     * 判断智能体是否存在
+     *
+     * @param agentId 智能体ID
+     * @return 是否存在
+     */
+    boolean exists(String agentId);
+
+    /**
      * 更新智能体
      *
      * @param agentId 智能体ID

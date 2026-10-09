@@ -257,6 +257,12 @@ public interface ErrorCode {
     int MCP_ACCESS_POINT_ADDRESS_NOT_CONFIGURED = 10201; // 请联系管理员进入参数管理配置mcp接入点地址
     int MCP_ACCESS_POINT_TOOLS_LIST_NO_PERMISSION = 10202; // 没有权限查看该智能体的MCP工具列表
 
+    // 智能体MCP Server 配置相关错误码（per-agent JSON）
+    int MCP_CONFIG_AGENT_NOT_FOUND = 10210; // 智能体不存在
+    int MCP_CONFIG_SAVE_FAILED = 10211; // 保存MCP配置失败
+    int MCP_CONFIG_JSON_INVALID = 10212; // MCP配置JSON格式无效
+    int MCP_CONFIG_ALREADY_EXISTS = 10213; // 该智能体已存在MCP配置
+
     // 替换词相关错误码
     int CORRECT_WORD_FILE_NAME_EXISTS = 10203; // 文件名已存在
     int FILE_SIZE_OVER_LIMIT = 10204; // 文件大小超过限制

@@ -135,6 +135,11 @@ export const adminApi = {
   mcpAddress: (agentId) => api.get(`/agent/mcp/address/${agentId}`),
   mcpTools: (agentId) => api.get(`/agent/mcp/tools/${agentId}`),
   mcpTest: (agentId) => api.get(`/agent/mcp/test/${agentId}`),
+  // MCP Server 配置（per-agent JSON）
+  mcpConfig: (agentId) => api.get(`/agent/mcp/config/${agentId}`),
+  saveMcpConfig: (body) => api.post('/agent/mcp/config', body),
+  deleteMcpConfig: (agentId) => api.del(`/agent/mcp/config/${agentId}`),
+  validateMcpJson: (serverJson) => api.post('/agent/mcp/config/validate', { serverJson }),
 
   // ===== 聊天记录 =====
   chatHistory: (agentId, sessionId) => api.get(`/agent/${agentId}/chat-history/${sessionId}`),

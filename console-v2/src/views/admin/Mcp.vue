@@ -52,11 +52,50 @@
       </table>
       <div v-if="agentId && tools.length === 0" class="empty-state"><div class="empty-icon">🛠</div><strong>点击「列出工具」查看</strong></div>
     </DataTable>
+
+    <!-- ===== MCP Server 配置面板 ===== -->
+    <div class="mcp-config-section" style="margin-top:28px">
+      <div class="mcp-config-title">📋 MCP Server 配置</div>
+      <div class="mcp-config-hint">
+        配置 per-agent 的 MCP Server JSON（`mcpServers` 对象，每个 key 为一个 server）。
+        修改后需重启智能体服务生效。
+      </div>
+
+      <div class="mcp-config-form">
+        <div class="form-row">
+          <label class="form-label">配置名称</label>
+          <input class="form-input" v-model="configName" placeholder="如：搜索工具、日历助手" />
+        </div>
+        <div class="form-row form-row-full">
+          <label class="form-label">JSON 配置内容</label>
+          <textarea
+            class="form-textarea"
+            v-model="serverJson"
+            placeholder='{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/folder"],\n      "env": {}\n    }\n  }\n}'
+            spellcheck="false"
+          ></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" :disabled="configLoading" @click="handleSave">
+            {{ configLoading ? '保存中…' : '保存配置' }}
+          </button>
+          <button class="btn btn-ghost" :disabled="configLoading" @click="handleValidate">
+            校验 JSON
+          </button>
+          <button class="btn btn-danger" :disabled="configLoading || !agentId" @click="handleDelete">
+            删除配置
+          </button>
+        </div>
+        <div v-if="configResult" class="mcp-config-result" :class="configResult.ok ? 'result-ok' : 'result-fail'">
+          {{ configResult.ok ? '✅ ' : '❌ ' }}{{ configResult.message }}
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
@@ -75,6 +114,114 @@ const testResult = computed(() => {
   if (!mcpTestResult.value) return '—'
   return mcpTestResult.value.ok ? '✓ 连通' : '✗ 失败'
 })
+
+// ===== MCP Server 配置 =====
+const configName = ref('')
+const serverJson = ref('')
+const configResult = ref(null)
+const configLoading = ref(false)
+
+async function loadConfig() {
+  if (!agentId.value) return
+  try {
+    const res = await adminApi.mcpConfig(agentId.value)
+    const data = res.data
+    if (data) {
+      // 尝试解析为 JSON 对象获取 name，否则回退
+      if (typeof data === 'object' && data.name) {
+        configName.value = data.name
+      } else {
+        configName.value = ''
+      }
+      // serverJson 字段或直接整个响应
+      serverJson.value = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+    } else {
+      configName.value = ''
+      serverJson.value = ''
+    }
+    configResult.value = null
+  } catch (e) {
+    // 无配置时返回空即可
+    configName.value = ''
+    serverJson.value = ''
+  }
+}
+
+function parseJson() {
+  try {
+    const obj = JSON.parse(serverJson.value)
+    return { ok: true, obj }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+}
+
+async function handleValidate() {
+  configResult.value = null
+  if (!serverJson.value.trim()) {
+    configResult.value = { ok: false, message: 'JSON 内容为空' }
+    return
+  }
+  const parsed = parseJson()
+  if (!parsed.ok) {
+    configResult.value = { ok: false, message: 'JSON 格式错误：' + parsed.error }
+    return
+  }
+  try {
+    const res = await adminApi.validateMcpJson(JSON.stringify(parsed.obj))
+    configResult.value = { ok: true, message: '✅ JSON 校验通过' }
+    toast('JSON 校验通过')
+  } catch (e) {
+    configResult.value = { ok: false, message: '❌ 校验失败：' + (e.msg || '未知错误') }
+    toast(e.msg || 'JSON 校验失败', 'error')
+  }
+}
+
+async function handleSave() {
+  configResult.value = null
+  if (!agentId.value) { toast('请先选择一个智能体', 'error'); return }
+  if (!serverJson.value.trim()) { configResult.value = { ok: false, message: 'JSON 内容为空' }; return }
+
+  const parsed = parseJson()
+  if (!parsed.ok) {
+    configResult.value = { ok: false, message: 'JSON 格式错误：' + parsed.error }
+    toast('JSON 格式错误，请先校验', 'error')
+    return
+  }
+
+  configLoading.value = true
+  try {
+    // 先校验
+    await adminApi.validateMcpJson(JSON.stringify(parsed.obj))
+    // 再保存
+    await adminApi.saveMcpConfig({ agent_id: agentId.value, name: configName.value, serverJson: JSON.stringify(parsed.obj) })
+    configResult.value = { ok: true, message: '✅ 配置已保存' }
+    toast('配置保存成功')
+  } catch (e) {
+    configResult.value = { ok: false, message: '❌ 保存失败：' + (e.msg || '未知错误') }
+    toast(e.msg || '保存失败', 'error')
+  } finally {
+    configLoading.value = false
+  }
+}
+
+async function handleDelete() {
+  if (!agentId.value) { toast('请先选择一个智能体', 'error'); return }
+  if (!confirm('确认删除该智能体的 MCP Server 配置？此操作不可撤销。')) return
+  configLoading.value = true
+  try {
+    await adminApi.deleteMcpConfig(agentId.value)
+    configResult.value = { ok: true, message: '✅ 配置已删除' }
+    configName.value = ''
+    serverJson.value = ''
+    toast('配置已删除')
+  } catch (e) {
+    configResult.value = { ok: false, message: '❌ 删除失败：' + (e.msg || '未知错误') }
+    toast(e.msg || '删除失败', 'error')
+  } finally {
+    configLoading.value = false
+  }
+}
 
 async function load() {
   try {
@@ -156,6 +303,9 @@ async function copyMcpAddress() {
 }
 
 onMounted(load)
+
+// 监听 agentId 变化，自动加载对应配置
+watch(agentId, () => { loadConfig() })
 </script>
 
 <style scoped>
@@ -176,4 +326,21 @@ onMounted(load)
 .mcp-test-label { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
 .mcp-test-msg { font-size: 13.5px; font-weight: 600; }
 .mcp-test-addr { font-size: 12px; word-break: break-all; margin-top: 6px; color: var(--text-sub); font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+
+/* ===== MCP Server 配置面板 ===== */
+.mcp-config-section { padding: 20px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.mcp-config-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.mcp-config-hint { font-size: 12px; color: var(--text-sub); margin-bottom: 16px; }
+.mcp-config-form { display: flex; flex-direction: column; gap: 12px; }
+.form-row { display: flex; align-items: flex-start; gap: 12px; }
+.form-row-full { flex-direction: column; }
+.form-label { font-size: 13px; font-weight: 600; min-width: 80px; padding-top: 8px; color: var(--text-primary); }
+.form-input { flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-size: 14px; background: var(--input-bg, #fff); color: var(--text-primary); outline: none; transition: border-color .15s; }
+.form-input:focus { border-color: var(--primary); }
+.form-textarea { width: 100%; min-height: 220px; padding: 12px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; line-height: 1.6; background: var(--input-bg, #fff); color: var(--text-primary); outline: none; resize: vertical; transition: border-color .15s; box-sizing: border-box; }
+.form-textarea:focus { border-color: var(--primary); }
+.form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.mcp-config-result { margin-top: 4px; padding: 10px 14px; border-radius: var(--radius-md); font-size: 13.5px; font-weight: 600; }
+.result-ok { background: rgba(47, 191, 113, .10); border: 1px solid rgba(47, 191, 113, .28); color: #1a7a42; }
+.result-fail { background: rgba(240, 83, 77, .10); border: 1px solid rgba(240, 83, 77, .28); color: #c0392b; }
 </style>

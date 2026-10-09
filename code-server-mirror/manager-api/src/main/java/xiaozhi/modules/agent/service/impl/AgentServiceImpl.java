@@ -343,6 +343,11 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         return hasAgentPermission(agent, userId);
     }
 
+    @Override
+    public boolean exists(String agentId) {
+        return agentDao.selectById(agentId) != null;
+    }
+
     // 根据id更新智能体信息
     @Override
     @Transactional(rollbackFor = Exception.class)
