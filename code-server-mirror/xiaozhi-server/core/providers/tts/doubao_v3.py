@@ -6,6 +6,7 @@ import requests
 
 from config.logger import setup_logging
 from core.utils.util import check_model_key
+from core.utils.tts import convert_percentage_to_range
 from core.providers.tts.base import TTSProviderBase
 
 TAG = __name__
@@ -97,7 +98,14 @@ class TTSProvider(TTSProviderBase):
         self.sample_rate = int(float(config.get("sample_rate", 24000)))
 
         # 音频参数（v3 语义：speech_rate/loudness_rate 范围 [-50,100]）
-        self.speech_rate = int(float(config.get("speech_rate", 0)))
+        # 管理台下发的 ttsRate（-50~100 百分比）优先：经百分比→范围映射后生效；
+        # 未下发时回落模型自身配置的 speech_rate 原始键（默认 0）
+        if "ttsRate" in config:
+            self.speech_rate = int(
+                convert_percentage_to_range(config["ttsRate"], -50, 100, 0)
+            )
+        else:
+            self.speech_rate = int(float(config.get("speech_rate", 0)))
         self.loudness_rate = int(float(config.get("loudness_rate", 0)))
 
         # 语音风格指令（2.0 音色支持指令遵循，如「用标准大陆普通话说话，不要台湾腔」）

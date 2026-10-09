@@ -353,7 +353,8 @@ async function openEdit(m) {
   const cfg = d.configJson || {}
   Object.assign(editor, {
     show: true, id: m.id,
-    providerCode: d.providerCode || (cfg.type ? '__custom_openai__' : (providers.value[0] || {}).providerCode),
+    // 供应器 code 为 'openai' 的即「自定义接口（OpenAI 兼容）」——回显为自定义表单
+    providerCode: d.providerCode === 'openai' ? '__custom_openai__' : (d.providerCode || (cfg.type ? '__custom_openai__' : (providers.value[0] || {}).providerCode)),
     modelName: d.modelName || m.modelName,
     customType: cfg.type || 'openai',
     config: { ...cfg }
@@ -370,9 +371,12 @@ async function save() {
   if (!editor.modelName) return
   saving.value = true
   try {
-    // 契约对齐 cc-console saveModelConfig：config.type 必须注入
+    // 契约对齐 cc-console saveModelConfig：config.type 必须注入。
+    // 自定义接口的供应器真实 code 是 'openai'（ai_model_provider 表内置，
+    // 字段 api_key/base_url/model_name 与自定义表单天然一致）——
+    // 发送 'custom' 会被后端 validateModelProvider 判「供应器不存在」
     const isCustom = editor.providerCode === '__custom_openai__'
-    const providerCode = isCustom ? 'custom' : editor.providerCode
+    const providerCode = isCustom ? 'openai' : editor.providerCode
     const config = { ...editor.config }
     config.type = isCustom ? (editor.customType || 'openai') : providerCode
     const body = { modelName: editor.modelName, isDefault: 0, isEnabled: 1, configJson: config }

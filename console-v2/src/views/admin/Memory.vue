@@ -12,37 +12,23 @@
       </div>
     </div>
 
-    <!-- 记忆引擎配置（契约对齐 cc-console applyMemoryEngine） -->
+    <!-- 记忆引擎面板：每智能体独立选择四档引擎 -->
     <div class="bind-box">
-      <div class="bind-label">🧠 记忆引擎（{{ memoryAgents.length }} 个智能体使用中）</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-        <div class="form-row" style="flex:1;min-width:200px">
-          <label>引擎</label>
-          <select v-model="memoryEngine" @change="engineApplied = ''">
-            <option v-for="m in engineOpts" :key="m.id" :value="m.id">{{ m.modelName }}</option>
-          </select>
-          <p v-if="engineHint" class="field-hint">{{ engineHint }}</p>
+      <div class="bind-label">🧠 记忆引擎（每智能体独立选择，切换后设备重连生效）</div>
+      <div v-for="a in agents" :key="a.id" class="engine-row">
+        <div class="engine-agent">
+          <span class="engine-name">{{ a.name || '未命名' }}</span>
+          <span class="badge" :class="engineBadgeClass(a.memModelId)">{{ engineZh(a.memModelId) }}</span>
         </div>
-        <div class="form-row" v-if="engineNeedsSummary" style="flex:1;min-width:200px">
-          <label>总结 LLM（记忆压缩/事实沉淀用）</label>
-          <select v-model="memorySummaryLlm">
-            <option value="">跟随主 LLM</option>
-            <option v-for="m in llmOpts" :key="m.id" :value="m.id">{{ m.modelName }}</option>
-          </select>
-          <p class="field-hint">独立于对话主脑：选便宜的模型做总结更省 token</p>
-        </div>
-        <div class="form-row" style="flex:1;min-width:220px">
-          <label>应用到智能体</label>
-          <select v-model="engineTargetAgentId">
-            <option value="">选择智能体…</option>
-            <option v-for="a in agents" :key="a.id" :value="a.id">{{ a.name }}</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" :disabled="!engineTargetAgentId || !memoryEngine || engineSaving" @click="applyEngine">
-          {{ engineSaving ? '应用中…' : '应用引擎配置' }}
-        </button>
+        <select class="engine-select" :value="a.memModelId || ''" @change="switchEngine(a, $event.target.value)">
+          <option value="" disabled>选择引擎…</option>
+          <option v-for="e in ENGINE_CHOICES" :key="e.id" :value="e.id">{{ e.label }}</option>
+        </select>
       </div>
-      <p v-if="engineApplied" class="field-hint" style="color:#16a34a">{{ engineApplied }}</p>
+      <div v-if="!agents.length" class="field-hint">暂无智能体，请先到「智能体」页创建。</div>
+      <p class="field-hint" style="margin-top:8px">
+        短期总结=对话摘要轻量省token · 仅上报=只存聊天记录不做记忆 · Holographic=本地正则事实库零LLM成本 · 混合=短期总结+长期事实+LLM沉淀（推荐）
+      </p>
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
@@ -200,27 +186,46 @@ const factEditor = reactive({ show: false, factId: '', content: '', category: 'g
 const memViewMode = ref('list')
 const memGraphCanvas = ref(null)
 
-// 引擎配置（契约对齐 cc-console memoryEngine/applyMemoryEngine）
-const memoryEngine = ref('')
-const memorySummaryLlm = ref('')
-const engineTargetAgentId = ref('')
-const engineSaving = ref(false)
-const engineApplied = ref('')
-const engineOpts = ref([])
-const llmOpts = ref([])
+// 引擎面板：四档可选引擎（用户指定），切换走 PUT agent {memModelId}
+const ENGINE_CHOICES = [
+  { id: 'Memory_mem_hybrid', label: '混合记忆（短期+长期+LLM沉淀）', zh: '混合记忆', badge: 'badge-green' },
+  { id: 'Memory_mem_holographic', label: 'Holographic 本地记忆（零LLM成本）', zh: 'Holographic', badge: 'badge-gray' },
+  { id: 'Memory_mem_local_short', label: '短期总结（对话摘要）', zh: '短期总结', badge: 'badge-gray' },
+  { id: 'Memory_mem_report_only', label: '仅上报聊天记录（不做记忆）', zh: '仅上报', badge: 'badge-gray' }
+]
+const engineSavingId = ref('')
 
-// A15：完整 7 条引擎 hint（cc-console App.vue:1137-1147 原文照抄）
-const ENGINE_HINTS = {
-  Memory_mem_hybrid: '⭐ 推荐：短期 LLM 滚动总结 + Holographic 长期事实库 + LLM 自动沉淀（隐式信息也能记住）',
-  Memory_mem_holographic: '长期事实库（正则抽取，零 LLM 成本，只抓显式表达）',
-  Memory_mem_local_short: '纯短期总结（LLM 压缩对话档案，无长期事实库）',
-  Memory_mem_report_only: '仅上报聊天记录，不生成记忆',
-  Memory_nomem: '完全关闭记忆',
-  Memory_mem0ai: '需要 Mem0AI API Key（模型管理里配置后启用）',
-  Memory_powermem: '需要 PowerMem 凭据（模型管理里配置后启用）'
+function engineZh(id) {
+  const hit = ENGINE_CHOICES.find(e => e.id === id)
+  return hit ? hit.zh : (id ? '其他引擎' : '未设置')
 }
-const engineHint = computed(() => ENGINE_HINTS[memoryEngine.value] || '')
-const engineNeedsSummary = computed(() => memoryEngine.value === 'Memory_mem_hybrid' || memoryEngine.value === 'Memory_mem_local_short')
+function engineBadgeClass(id) {
+  const hit = ENGINE_CHOICES.find(e => e.id === id)
+  return hit ? hit.badge : 'badge-gray'
+}
+async function switchEngine(a, newEngineId) {
+  if (!newEngineId || newEngineId === (a.memModelId || '') || engineSavingId.value) return
+  engineSavingId.value = a.id
+  try {
+    const dres = await adminApi.agentDetail(a.id)
+    const d = dres.data || {}
+    await adminApi.updateAgent(a.id, {
+      agentName: d.agentName || a.name,
+      llmModelId: d.llmModelId,
+      ttsModelId: d.ttsModelId,
+      ttsVoiceId: d.ttsVoiceId,
+      memModelId: newEngineId,
+      intentModelId: d.intentModelId,
+      asrModelId: d.asrModelId,
+      chatHistoryConf: d.chatHistoryConf ?? 2,
+      systemPrompt: d.systemPrompt,
+      ttsRate: d.ttsRate ?? 0
+    })
+    a.memModelId = newEngineId
+    toast(`「${a.name}」已切换为 ${engineZh(newEngineId)}，设备重连后生效`)
+  } catch (e) { toast(e.msg || '切换失败', 'error') }
+  finally { engineSavingId.value = '' }
+}
 
 const VIEW_ZH = { list: '卡片', timeline: '时间轴', graph: '实体图谱' }
 const factsHint = computed(() => `${facts.value.length} 条 · ${VIEW_ZH[memViewMode.value] || ''}视图`)
@@ -250,21 +255,19 @@ function catZh(c) {
 async function load() {
   loading.value = true
   try {
-    // 引擎下拉数据源（契约：/models/names?modelType=Memory，api.js 已封装为 modelNames）
-    const [memNames, llmNames] = await Promise.all([adminApi.modelNames('Memory'), adminApi.modelNames('LLM')])
-    engineOpts.value = memNames.data || []
-    llmOpts.value = llmNames.data || []
-    if (!memoryEngine.value && engineOpts.value.length) memoryEngine.value = engineOpts.value[0].id
-
     // 记忆智能体（契约：{agent_id, name, fact_count}）
     const res = await adminApi.memoryAgents()
     memoryAgents.value = res.data || []
     if (!currentAgentId.value && memoryAgents.value.length) {
       currentAgentId.value = memoryAgents.value[0].agent_id
     }
-    // 全量智能体（引擎应用目标）
+    // 全量智能体（引擎面板行 + 引擎现状：memModelId 从列表接口取，缺失时从详情补）
     const ares = await adminApi.agentList()
-    agents.value = (ares.data || []).map(a => ({ id: a.id, name: a.agentName || a.name || '未命名' }))
+    agents.value = (ares.data || []).map(a => ({
+      id: a.id,
+      name: a.agentName || a.name || '未命名',
+      memModelId: a.memModelId || ''
+    }))
     if (currentAgentId.value) await loadFacts()
   } catch (e) { toast(e.msg || '加载失败', 'error') }
   finally { loading.value = false }
@@ -468,47 +471,6 @@ function remove(f) {
   })
 }
 
-// 契约对齐 cc-console applyMemoryEngine：改 memModelId + 更新模型 config.llm → PUT agent
-async function applyEngine() {
-  engineSaving.value = true
-  engineApplied.value = ''
-  try {
-    const dres = await adminApi.agentDetail(engineTargetAgentId.value)
-    const d = dres.data
-    if (!d) { toast('拉取智能体详情失败', 'error'); return }
-    if (engineNeedsSummary.value) {
-      const cfgRes = await adminApi.modelDetail(memoryEngine.value)
-      const cfg = cfgRes.data
-      let rawConfig = cfg?.configJson || null
-      if (rawConfig && typeof rawConfig === 'object') {
-        rawConfig = { ...rawConfig, llm: memorySummaryLlm.value || rawConfig.llm }
-        const providerCode = rawConfig.type || 'custom'
-        await adminApi.updateModel('Memory', providerCode, memoryEngine.value, {
-          modelName: cfg.modelName || memoryEngine.value,
-          isDefault: cfg.isDefault || 0,
-          isEnabled: cfg.isEnabled != null ? cfg.isEnabled : 1,
-          configJson: rawConfig
-        }).catch(e => console.warn('[memory-engine] 更新总结 LLM 失败', e.msg))
-      }
-    }
-    await adminApi.updateAgent(engineTargetAgentId.value, {
-      agentName: d.agentName,
-      llmModelId: d.llmModelId,
-      ttsModelId: d.ttsModelId,
-      ttsVoiceId: d.ttsVoiceId,
-      memModelId: memoryEngine.value,
-      intentModelId: d.intentModelId,
-      asrModelId: d.asrModelId,
-      chatHistoryConf: d.chatHistoryConf ?? 2,
-      systemPrompt: d.systemPrompt,
-      ttsRate: d.ttsRate ?? 0
-    })
-    engineApplied.value = '✅ 已应用到「' + (agents.value.find(a => a.id === engineTargetAgentId.value)?.name || engineTargetAgentId.value) + '」'
-    toast('引擎配置已应用')
-  } catch (e) { toast(e.msg || '应用失败', 'error') }
-  finally { engineSaving.value = false }
-}
-
 onMounted(load)
 </script>
 
@@ -525,6 +487,14 @@ onMounted(load)
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
 .bind-box { border: 1.5px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; background: var(--bg, #F8FAFD); }
 .bind-label { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+
+/* ===== 引擎面板：每智能体一行 ===== */
+.engine-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.engine-row:last-of-type { border-bottom: none; }
+.engine-agent { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.engine-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.engine-select { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: var(--surface, #fff); color: var(--text); min-width: 240px; }
+.engine-select:focus { border-color: var(--primary); }
 
 /* ===== 工具条 + 三视图切换（移植 cc-console mem-toolbar / mem-view-switch） ===== */
 .mem-toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
