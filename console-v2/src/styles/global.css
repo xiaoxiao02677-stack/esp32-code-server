@@ -40,13 +40,15 @@ body {
     radial-gradient(1200px 500px at 85% -10%, rgba(27,108,255,0.06), transparent 60%),
     radial-gradient(900px 400px at 0% 110%, rgba(55,200,168,0.07), transparent 60%),
     #E9EDF3;
-  padding: 20px 24px 120px;
+  /* C6：左侧为侧栏 dock 让位，底部收回（原 20px 24px 120px） */
+  padding: 20px 24px 32px 100px;
 }
 
 /* 参考站特有的“圆角画布”容器 */
 .app-canvas {
   width: 100%;
-  max-width: 1280px;
+  /* C7：防被左侧侧栏压盖 */
+  max-width: min(1280px, calc(100vw - 152px));
   border-radius: 28px;
   background: var(--bg);
   box-shadow: 0 20px 60px rgba(27, 44, 80, 0.10);
@@ -262,42 +264,152 @@ body {
 .page-btn:disabled { opacity: .4; cursor: not-allowed; }
 .page-btn.wide { border-radius: var(--radius-pill); }
 
-/* ============ 底部 Dock 导航（参考站 Mac Dock 风格） ============ */
-.dock-wrap { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 50; }
+/* ============ 左侧竖排 Dock 导航（C1-C5：由底部居中悬浮改为最左全高侧栏） ============ */
+/* C1 */
+.dock-wrap { position: fixed; left: 0; top: 0; bottom: auto; height: 100vh; transform: none; z-index: 50; }
+/* C2 */
 .dock {
-  display: flex; align-items: center; gap: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   background: rgba(255,255,255,.92); backdrop-filter: blur(18px);
-  border-radius: 22px; padding: 8px 10px;
+  border-radius: 0 22px 22px 0; padding: 12px 8px;
   box-shadow: var(--shadow-dock); border: 1px solid rgba(255,255,255,.6);
-  max-width: min(96vw, 1180px); overflow-x: auto; overflow-y: visible;
-  scrollbar-width: none;
+  width: 88px; height: 100vh;
+  overflow-x: visible; overflow-y: auto;
+  scrollbar-width: thin;
 }
-.dock::-webkit-scrollbar { display: none; }
+.dock::-webkit-scrollbar { width: 6px; }
+.dock::-webkit-scrollbar-thumb { background: rgba(27,44,80,.18); border-radius: 6px; }
+.dock::-webkit-scrollbar-track { background: transparent; }
+/* C3：图标左、文字右 */
 .dock-item {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 8px 17px; border: none; background: none; cursor: pointer;
-  border-radius: 16px; color: var(--text-sub); font-size: 11.5px; font-weight: 600;
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+  gap: 10px; padding: 10px 12px; border: none; background: none; cursor: pointer;
+  border-radius: 14px; color: var(--text-sub); font-size: 13px; font-weight: 600;
   font-family: var(--font); transition: all .18s; position: relative; text-decoration: none;
+  white-space: nowrap;
 }
-.dock-item .ic { font-size: 20px; line-height: 1; transition: transform .18s; }
+.dock-item .ic { font-size: 18px; line-height: 1; transition: transform .18s; flex-shrink: 0; }
+.dock-item .dock-label { overflow: hidden; text-overflow: ellipsis; }
 .dock-item:hover { color: var(--primary); }
-.dock-item:hover .ic { transform: translateY(-3px) scale(1.12); }
+.dock-item:hover .ic { transform: scale(1.12); }
 .dock-item.active { color: var(--primary); background: var(--primary-soft); }
+/* C4：左侧竖条指示 */
 .dock-item.active::after {
-  content: ""; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
-  width: 16px; height: 3px; border-radius: 2px; background: var(--primary);
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px; border-radius: 2px; background: var(--primary);
 }
+/* C5：角色切换按钮沉到侧栏底部 */
 .dock-more {
   width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
   background: var(--primary); color: #fff; font-size: 16px; font-weight: 700;
-  display: grid; place-items: center; margin-left: 6px; flex-shrink: 0;
+  display: grid; place-items: center; margin: 6px auto 0; flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(27,108,255,.4); transition: transform .15s;
 }
 .dock-more:hover { transform: rotate(90deg); }
 
-/* ============ 小屏适配 ============ */
+/* ============ C8：小屏适配（侧栏收窄 64px 仅留图标） ============ */
 @media (max-width: 900px) {
   .hero-row { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .searchbox { display: none; }
+  .dock-wrap, .dock { width: 64px; }
+  .dock-item { padding: 10px 8px; justify-content: center; }
+  .dock-item .dock-label { display: none; }
+  .dock-item.active::after { height: 26px; }
+  .app-shell { padding: 20px 16px 32px 76px; }
+  .app-canvas { max-width: calc(100vw - 92px); }
 }
+
+/* ============ A9：六套主题（html[data-theme] 覆盖，key cc_theme 与原控制台互通） ============ */
+/* kawaii 奶油粉 */
+html[data-theme="kawaii"] {
+  --primary: #F06CA8;
+  --primary-hover: #E04E92;
+  --primary-soft: #FFEAF3;
+  --bg: #FFF6FA;
+  --surface: #FFFFFF;
+  --text: #4B3B44;
+  --text-sub: #A08E96;
+  --border: #FFD9E6;
+}
+html[data-theme="kawaii"] body { background: #FFE9F1; }
+html[data-theme="kawaii"] .app-canvas { background: #FFF6FA; }
+html[data-theme="kawaii"] .role-admin .app-canvas { background: #FFF3F8; }
+
+/* dark 深色 */
+html[data-theme="dark"] {
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-soft: rgba(59,130,246,.16);
+  --bg: #0F1626;
+  --surface: #16213A;
+  --text: #E6ECF8;
+  --text-sub: #8A94A6;
+  --border: #26324D;
+  --shadow-card: 0 2px 12px rgba(0,0,0,.35);
+  --shadow-dock: 0 8px 32px rgba(0,0,0,.5);
+}
+html[data-theme="dark"] body { background: #0B1120; color: var(--text); }
+html[data-theme="dark"] .app-canvas { background: #0F1626; }
+html[data-theme="dark"] .role-admin .app-canvas { background: #111A2E; }
+html[data-theme="dark"] .dock { background: rgba(22,33,58,.92); border-color: rgba(59,130,246,.25); }
+html[data-theme="dark"] .data-table th { background: #131D33; color: var(--text-sub); }
+html[data-theme="dark"] .data-table tbody tr:hover { background: #1A2742; }
+html[data-theme="dark"] .data-table td { border-bottom-color: #202C48; }
+html[data-theme="dark"] .badge-gray { background: #202C48; color: #8A94A6; }
+html[data-theme="dark"] .searchbox { background: #16213A; }
+html[data-theme="dark"] .modal { background: #16213A; }
+
+/* purple 紫色 */
+html[data-theme="purple"] {
+  --primary: #7C3AED;
+  --primary-hover: #6D28D9;
+  --primary-soft: #F1E9FE;
+  --bg: #F8F5FE;
+  --surface: #FFFFFF;
+  --text: #2A2233;
+  --text-sub: #8A7A9B;
+  --border: #E4D8F5;
+}
+html[data-theme="purple"] body { background: #EFE8FB; }
+html[data-theme="purple"] .app-canvas { background: #F8F5FE; }
+
+/* green 绿色 */
+html[data-theme="green"] {
+  --primary: #16A34A;
+  --primary-hover: #12803C;
+  --primary-soft: #E6F7EE;
+  --bg: #F4FBF6;
+  --surface: #FFFFFF;
+  --text: #1D3327;
+  --text-sub: #7E9A89;
+  --border: #D6EEDF;
+}
+html[data-theme="green"] body { background: #E7F4EC; }
+html[data-theme="green"] .app-canvas { background: #F4FBF6; }
+
+/* morandi 莫兰迪 */
+html[data-theme="morandi"] {
+  --primary: #8B9DAF;
+  --primary-hover: #75899C;
+  --primary-soft: #EDF1F4;
+  --bg: #F5F4F2;
+  --surface: #FFFFFF;
+  --text: #44474B;
+  --text-sub: #9A9C9E;
+  --border: #E2E1DD;
+}
+html[data-theme="morandi"] body { background: #ECEAE6; }
+html[data-theme="morandi"] .app-canvas { background: #F5F4F2; }
+
+/* ============ A9：紧凑模式 ============ */
+.app-shell.shell-compact .app-canvas { padding: 12px 18px 20px; }
+.app-shell.shell-compact .app-shell { gap: 10px; }
+.app-shell.shell-compact .data-table td { padding: 8px 14px; }
+.app-shell.shell-compact .data-table th { padding: 8px 14px; }
+.app-shell.shell-compact .panel-head { padding: 10px 16px 6px; }
+.app-shell.shell-compact .page-head { margin-bottom: 8px; }
+.app-shell.shell-compact .pager { padding: 8px 14px 10px; }

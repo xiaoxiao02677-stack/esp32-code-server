@@ -6,6 +6,7 @@
         <p class="sub">迁移自 /cc/ 系统参数页：分页列表 / 编辑保存</p>
       </div>
       <div class="head-actions">
+        <input v-model="paramFilter" placeholder="搜索参数编码/名称…" style="border:1.5px solid var(--border);border-radius:999px;padding:8px 16px;font-size:13px;outline:none;width:220px" />
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
@@ -19,7 +20,7 @@
       <table class="data-table">
         <thead><tr><th>参数编码</th><th>名称</th><th>值</th><th>操作</th></tr></thead>
         <tbody>
-          <tr v-for="p in params" :key="p.id">
+          <tr v-for="p in filteredParams" :key="p.id">
             <td style="font-size:12px">{{ p.paramCode }}</td>
             <td>{{ p.paramName || p.remark || '—' }}</td>
             <td>
@@ -55,7 +56,18 @@ const toast = inject('toast')
 const params = ref([])
 const loading = ref(false)
 const editingId = ref(null)
+const paramFilter = ref('')
 const dirtyCount = computed(() => params.value.filter(p => p._dirty).length)
+
+// A10：参数编码/名称/备注过滤（参照原控制台 App.vue:1178-1182 filteredParams）
+const filteredParams = computed(() => {
+  const kw = paramFilter.value.trim().toLowerCase()
+  if (!kw) return params.value
+  return params.value.filter(p =>
+    (p.paramCode || '').toLowerCase().includes(kw) ||
+    (p.paramName || '').toLowerCase().includes(kw) ||
+    (p.remark || '').toLowerCase().includes(kw))
+})
 
 async function load() {
   loading.value = true

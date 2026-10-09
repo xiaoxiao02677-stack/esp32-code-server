@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './styles/global.css'
+import { getToken } from './lib/api'
 
 import CustomerHome from './views/customer/Home.vue'
 import CustomerDevices from './views/customer/Devices.vue'
@@ -55,6 +56,14 @@ const router = createRouter({
     { path: '/admin/mcp', component: AdminMcp },
     { path: '/admin/linksim', component: AdminLinkSimulator }
   ]
+})
+
+// A7 路由守卫：无 token 一律跳登录；已登录不再回登录页
+router.beforeEach((to) => {
+  const has = !!getToken()
+  if (!has && to.path !== '/login') return '/login'
+  if (has && to.path === '/login') return '/customer'
+  return true
 })
 
 createApp(App).use(router).mount('#app')

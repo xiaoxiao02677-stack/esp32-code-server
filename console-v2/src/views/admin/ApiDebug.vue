@@ -30,7 +30,8 @@
         <DataTable :title="selected ? selected.h + ' ' + selected.p : '请求面板'">
           <template v-if="selected">
             <div class="form-row"><label>路径参数（${} 占位，逗号分隔值）</label><input v-model="pathArgs" :placeholder="selected.pa" /></div>
-            <div class="form-row"><label>Query / Body（JSON，可选）</label><textarea v-model="reqBody" rows="4" placeholder='{"page":1,"limit":10}'></textarea></div>
+            <div class="form-row"><label>Query（JSON，可选，键值对附加到 URL）</label><textarea v-model="reqQuery" rows="2" placeholder='{"page":1,"limit":10}'></textarea></div>
+            <div class="form-row"><label>Body（JSON，可选，POST/PUT 请求体）</label><textarea v-model="reqBody" rows="3" placeholder='{"name":"示例"}'></textarea></div>
             <div style="display:flex;gap:10px;align-items:center">
               <button class="btn btn-primary" :disabled="sending" @click="send">{{ sending ? '请求中…' : '发送请求' }}</button>
               <span v-if="statusText" style="font-size:13px;font-weight:600" :style="{color: statusOk ? '#16a34a' : '#dc2626'}">{{ statusText }}</span>
@@ -48,12 +49,13 @@
 import { computed, inject, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import API_CATALOG from '../../lib/apiCatalog'
-import { api } from '../../lib/api'
+import { getToken } from '../../lib/api'
 
 const toast = inject('toast')
 const search = ref('')
 const selected = ref(null)
 const pathArgs = ref('')
+const reqQuery = ref('')
 const reqBody = ref('')
 const respText = ref('')
 const statusText = ref('')
@@ -75,8 +77,8 @@ function select(a) {
   selected.value = a
   respText.value = ''
   statusText.value = ''
-  const phCount = (a.p.match(/\$\{/g) || []).length
-  pathArgs.value = phCount ? '' : ''
+  pathArgs.value = ''
+  reqQuery.value = ''
   reqBody.value = ''
 }
 
@@ -88,21 +90,49 @@ async function send() {
     let path = selected.value.p
     const args = pathArgs.value.split(',').map(s => s.trim()).filter(Boolean)
     args.forEach(arg => { path = path.replace(/\$\{[^}]+\}/, encodeURIComponent(arg)) })
-    const method = selected.value.h.toLowerCase()
-    let params
-    if (reqBody.value.trim()) {
-      try { params = JSON.parse(reqBody.value) }
+    const method = selected.value.h
+    let queryObj = {}
+    if (reqQuery.value.trim()) {
+      try { queryObj = JSON.parse(reqQuery.value) }
+      catch { toast('Query 不是合法 JSON', 'error'); sending.value = false; return }
+    }
+    let bodyObj = null
+    if (reqBody.value.trim() && method !== 'GET' && method !== 'DELETE') {
+      try { bodyObj = JSON.parse(reqBody.value) }
       catch { toast('Body 不是合法 JSON', 'error'); sending.value = false; return }
     }
-    const fn = method === 'get' ? api.get : method === 'post' ? api.post : method === 'put' ? api.put : api.del
-    const res = await fn(path, params)
-    statusText.value = '✓ code=' + (res.code ?? 0)
-    statusOk.value = res.code === 0
-    respText.value = JSON.stringify(res, null, 2).slice(0, 8000)
-  } catch (e) {
-    statusText.value = '✗ ' + (e.code || '') + ' ' + (e.msg || '请求失败')
-    statusOk.value = false
-    respText.value = JSON.stringify(e, null, 2)
+    // 路径 ${} 已消费的 query 键不再拼到 URL（参照原控制台 App.vue:2452-2461）
+    const qs = new URLSearchParams()
+    Object.entries(queryObj).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.append(k, v)
+    })
+    const qsStr = qs.toString()
+    const url = '/xiaozhi' + path + (qsStr ? (path.includes('?') ? '&' : '?') + qsStr : '')
+    const headers = {}
+    const token = getToken()
+    if (token) headers.Authorization = 'Bearer ' + token
+    const opts = { method, headers }
+    if (bodyObj !== null) {
+      headers['Content-Type'] = 'application/json'
+      opts.body = JSON.stringify(bodyObj)
+    }
+    const t0 = performance.now()
+    let resp
+    try {
+      resp = await fetch(url, opts)
+    } catch {
+      const ms = Math.round(performance.now() - t0)
+      statusOk.value = false
+      statusText.value = `网络异常 · ${ms}ms`
+      respText.value = '请求失败：无法连接服务器'
+      return
+    }
+    const ms = Math.round(performance.now() - t0)
+    let text = await resp.text()
+    try { text = JSON.stringify(JSON.parse(text), null, 2) } catch { /* 非 JSON 原样展示 */ }
+    statusOk.value = resp.ok
+    statusText.value = `HTTP ${resp.status} · ${ms}ms`
+    respText.value = text.slice(0, 8000)
   } finally { sending.value = false }
 }
 </script>
