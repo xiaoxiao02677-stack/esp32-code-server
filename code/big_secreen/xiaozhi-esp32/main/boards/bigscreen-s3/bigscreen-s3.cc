@@ -12,10 +12,12 @@
 #include "config.h"
 #include "system_reset.h"
 #include "esp_lcd_ili9341.h"
+#include "bigscreen_display.h"
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
 #include <driver/spi_common.h>
+#include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -26,15 +28,19 @@
 // 原理图修正，见 config.h 顶部说明。无电池、无可用触摸（I2C 触摸 init 失败，暂不启用）。
 // YH 心跳协议（sandyun.top:12399）与 OTA 经 config.json 的 sdkconfig_append 启用。
 //
+// 皮肤：BigscreenDisplay（big_screen.mp4 GIF 动画背景 + 左上时间 + 右上表情
+// 徽章 + 中下气泡 + 底部提示）。单 BOOT 键三事件交互（短按/双击/长按）。
+//
 // 防重启循环：ES8311 的 I2C 探测失败（无 ACK）时不再走 ESP_ERROR_CHECK abort，
 // 而是降级为 NoAudioCodecDuplex（纯 I2S 数字音频，无硬件 codec 控制），
 // 设备仍能进配网/联网，串口会打印 "[WARN] ES8311 not detected" 便于排查。
 class BigscreenS3Board : public WifiBoard {
 private:
     Button boot_button_;
-    LcdDisplay *display_;
+    BigscreenDisplay* display_;
     i2c_master_bus_handle_t codec_i2c_bus_ = nullptr;
     bool es8311_present_ = false;
+    esp_timer_handle_t tick_timer_ = nullptr;
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -81,13 +87,56 @@ private:
         ESP_ERROR_CHECK(spi_bus_initialize(LCD_SPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
     }
 
+    // 单 BOOT 键三事件（适配提示词交互表 + my-s3-tft 验证过的防误触策略）：
+    // - 短按：Starting -> 配网（原逻辑）；Idle/Speaking -> ToggleChatState（开聊/打断）
+    // - 双击：待机 -> 表情彩蛋轮播（BigscreenDisplay::NextEasterEgg）
+    // - 长按 1s：Starting 前 30s -> 配网；Listening/Speaking -> 取消/打断；
+    //            Idle -> 静音切换
+    //
+    // Button 构造显式 long_press_time=1000ms：默认 0 会回退到 iot_button 注册
+    // 校验强制值（= short_press_ticks 180ms），导致普通按压被误判为长按
+    // （my-s3-tft 2026-10-08 同款教训）。
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
-            auto &app = Application::GetInstance();
+            auto& app = Application::GetInstance();
             if (app.GetDeviceState() == kDeviceStateStarting) {
                 EnterWifiConfigMode();
+                return;
             }
             app.ToggleChatState();
+            display_->HandleKeyEvent(0);
+        });
+        boot_button_.OnDoubleClick([this]() {
+            display_->HandleKeyEvent(1);
+        });
+        boot_button_.OnLongPress([this]() {
+            auto& app = Application::GetInstance();
+            auto state = app.GetDeviceState();
+            ESP_LOGI(TAG, "BOOT long-press (state=%d)", static_cast<int>(state));
+            if (state == kDeviceStateStarting) {
+                // 仅开机前 30 秒允许长按配网；此后 Starting 中的长按视为误触忽略，
+                // 避免服务器连接慢时"按键重进配网"循环
+                int64_t uptime_ms = esp_timer_get_time() / 1000;
+                if (uptime_ms < 30000) {
+                    EnterWifiConfigMode();
+                } else {
+                    ESP_LOGW(TAG, "Long-press ignored in Starting (uptime %lldms > 30s)",
+                              (long long)uptime_ms);
+                }
+                return;
+            }
+            if (state == kDeviceStateListening || state == kDeviceStateSpeaking) {
+                // 聆听中：取消录音；说话中：打断 TTS —— 均经 ToggleChatState 返回待机
+                app.ToggleChatState();
+            } else if (state == kDeviceStateIdle) {
+                // 待机长按：静音切换
+                auto codec = Board::GetInstance().GetAudioCodec();
+                int v = codec->output_volume();
+                int nv = (v == 0) ? 70 : 0;
+                codec->SetOutputVolume(nv);
+                ESP_LOGI(TAG, "Long-press mute toggle: %d -> %d", v, nv);
+            }
+            display_->HandleKeyEvent(2);
         });
     }
 
@@ -117,14 +166,33 @@ private:
         esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
         esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
         esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-        display_ = new SpiLcdDisplay(panel_io, panel,
+
+        // 大屏皮肤：GIF 动画背景 + 时间/表情徽章/气泡/提示
+        display_ = new BigscreenDisplay(panel_io, panel,
             DISPLAY_WIDTH, DISPLAY_HEIGHT,
             DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
             DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
+    // 1 秒节拍：彩蛋超时恢复 + 整分钟自动行为（夜间/早晨提醒）
+    void InitializeTickTimer() {
+        esp_timer_create_args_t args = {
+            .callback =
+                [](void* arg) {
+                    auto* disp = static_cast<BigscreenDisplay*>(arg);
+                    disp->Tick1s();
+                },
+            .arg = display_,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "bigscreen_ui_tick",
+            .skip_unhandled_events = true,
+        };
+        ESP_ERROR_CHECK(esp_timer_create(&args, &tick_timer_));
+        ESP_ERROR_CHECK(esp_timer_start_periodic(tick_timer_, 1000000));  // 1s
+    }
+
 public:
-    BigscreenS3Board(): boot_button_(BOOT_BUTTON_GPIO)
+    BigscreenS3Board(): boot_button_(BOOT_BUTTON_GPIO, false, 1000)
     {
         InitializeI2c();
         es8311_present_ = ProbeEs8311();
@@ -136,6 +204,7 @@ public:
         InitializeSpi();
         InitializeLcdDisplay();
         InitializeButtons();
+        InitializeTickTimer();
         GetBacklight()->SetBrightness(100);
     }
 
@@ -153,9 +222,9 @@ public:
         return &audio_codec;
     }
 
-    virtual Display *GetDisplay() override { return display_; }
+    virtual Display* GetDisplay() override { return display_; }
 
-    virtual Backlight *GetBacklight() override {
+    virtual Backlight* GetBacklight() override {
         static PwmBacklight backlight(DISPLAY_BACKLIGHT_PIN, DISPLAY_BACKLIGHT_OUTPUT_INVERT);
         return &backlight;
     }

@@ -66,7 +66,8 @@ private:
     std::string last_detected_wake_word_;
     std::atomic<bool> running_ = false;
     std::vector<int16_t> input_buffer_;
-    std::mutex input_buffer_mutex_;
+    // mutable：const 成员函数（GetCommandTexts）也需要加锁读命令表
+    mutable std::mutex input_buffer_mutex_;
 
     TaskHandle_t wake_word_encode_task_ = nullptr;
     StaticTask_t* wake_word_encode_task_buffer_ = nullptr;

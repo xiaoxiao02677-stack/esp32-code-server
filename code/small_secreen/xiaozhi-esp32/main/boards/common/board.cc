@@ -72,10 +72,10 @@ static bool HanziToPinyin(const std::string& hanzi, std::string& pinyin_out) {
                 i += 1;
                 continue;
             }
-            // 未知汉字：跳 3 字节（UTF-8 中文），标记失败
+            // 未知字符：逐字节跳过（兼容4字节UTF-8如emoji/罕见字）
             ESP_LOGW(TAG, "Wake-word pinyin map miss: byte@%zu in '%s'", i, hanzi.c_str());
             ok = false;
-            i += 3;
+            i += 1;
         }
     }
     return ok && !pinyin_out.empty();
@@ -195,27 +195,28 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
         if (!hanzi_words.empty()) {
             auto& app = Application::GetInstance();
             auto& audio = app.GetAudioService();
-            if (audio.SupportsDynamicWakeWords()) {
-                std::vector<std::string> pinyins;
-                std::vector<std::string> displays;
-                for (const auto& w : hanzi_words) {
-                    std::string py;
-                    if (HanziToPinyin(w, py)) {
-                        pinyins.push_back(py);
-                        displays.push_back(w);
-                    }
+            // 不预查 SupportsDynamicWakeWords：引擎未初始化时 AudioService 内部会
+            // 缓存（InitializeAudioEngine 成功后自动应用）；仅引擎就绪但不是
+            // MultiNet（如纯 WakeNet 构建）时才真正丢弃。
+            std::vector<std::string> pinyins;
+            std::vector<std::string> displays;
+            for (const auto& w : hanzi_words) {
+                std::string py;
+                if (HanziToPinyin(w, py)) {
+                    pinyins.push_back(py);
+                    displays.push_back(w);
                 }
-                if (!pinyins.empty()) {
-                    if (audio.UpdateWakeWordCommands(pinyins, displays)) {
-                        changed = true;
-                        ESP_LOGI(TAG, "应用云端唤醒词: %zu 个（首个: %s）",
-                                 pinyins.size(), hanzi_words[0].c_str());
-                    }
+            }
+            if (!pinyins.empty()) {
+                if (audio.UpdateWakeWordCommands(pinyins, displays)) {
+                    changed = true;
+                    ESP_LOGI(TAG, "应用云端唤醒词: %zu 个（首个: %s）",
+                             pinyins.size(), hanzi_words[0].c_str());
                 } else {
-                    ESP_LOGW(TAG, "云端唤醒词全部无法转换为拼音，忽略");
+                    ESP_LOGW(TAG, "当前音频引擎不支持动态唤醒词（需 MultiNet 模型），已忽略");
                 }
             } else {
-                ESP_LOGW(TAG, "当前音频引擎不支持动态唤醒词（需 MultiNet 模型），忽略 wake_word 配置");
+                ESP_LOGW(TAG, "云端唤醒词全部无法转换为拼音，忽略");
             }
         }
     }
