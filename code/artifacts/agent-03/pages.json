@@ -4,50 +4,30 @@
   {
    "page": "🧠 记忆",
    "slug": "memory",
-   "load_apis": 0,
+   "load_apis": 3,
    "buttons": [
     {
      "page": "🧠 记忆",
-     "button_text": "⬇ 导出报表",
+     "button_text": "＋ 新增记忆",
      "selector": "BUTTON>>2",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-03\\memory_2_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧠 记忆",
-     "button_text": "查看用户",
-     "selector": "BUTTON>>3",
-     "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
-     "api_calls": 1,
-     "console_errors": 0
-    },
-    {
-     "page": "🧠 记忆",
-     "button_text": "智能体管理",
-     "selector": "BUTTON>>4",
-     "type": "BUTTON",
-     "status": "PASS",
-     "detail": "UI 变化: dom 184->191, 弹窗 3",
+     "detail": "UI 变化: dom 152->161, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 41,
+   "total_buttons": 34,
    "load_api_failures": [],
-   "tested_buttons": 3,
-   "no_response": 1,
+   "tested_buttons": 1,
+   "no_response": 0,
    "fail": 0,
-   "pass": 2
+   "pass": 1
   }
  ],
- "buttons_total": 41,
- "pass": 2,
- "fail": 6,
- "no_response": 1,
- "skipped": 32
+ "buttons_total": 34,
+ "pass": 1,
+ "fail": 5,
+ "no_response": 0,
+ "skipped": 28
 }

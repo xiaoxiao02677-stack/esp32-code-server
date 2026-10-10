@@ -4,21 +4,21 @@
   {
    "page": "👥 用户",
    "slug": "users",
-   "load_apis": 0,
+   "load_apis": 1,
    "buttons": [
     {
      "page": "👥 用户",
-     "button_text": "⬇ 导出报表",
+     "button_text": "↻ 刷新",
      "selector": "BUTTON>>2",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-07\\users_2_noresp.png",
+     "status": "PASS",
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "api_calls": 1,
      "console_errors": 0
     },
     {
      "page": "👥 用户",
-     "button_text": "查看用户",
+     "button_text": "搜索",
      "selector": "BUTTON>>3",
      "type": "BUTTON",
      "status": "PASS",
@@ -28,8 +28,8 @@
     },
     {
      "page": "👥 用户",
-     "button_text": "智能体管理",
-     "selector": "BUTTON>>4",
+     "button_text": "封禁",
+     "selector": "BUTTON>>5",
      "type": "BUTTON",
      "status": "PASS",
      "detail": "UI 变化: dom 184->191, 弹窗 3",
@@ -40,14 +40,14 @@
    "total_buttons": 41,
    "load_api_failures": [],
    "tested_buttons": 3,
-   "no_response": 1,
+   "no_response": 0,
    "fail": 0,
-   "pass": 2
+   "pass": 3
   }
  ],
  "buttons_total": 41,
- "pass": 2,
- "fail": 6,
- "no_response": 1,
- "skipped": 32
+ "pass": 3,
+ "fail": 2,
+ "no_response": 0,
+ "skipped": 36
 }

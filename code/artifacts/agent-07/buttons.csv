@@ -1,19 +1,19 @@
 ﻿page,button_text,selector,type,status,detail,api_calls,screenshot
 👥 用户,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 👥 用户,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-👥 用户,⬇ 导出报表,BUTTON>>2,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_2_noresp.png
-👥 用户,查看用户,BUTTON>>3,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
-👥 用户,智能体管理,BUTTON>>4,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
-👥 用户,设备,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_5_timeout.png
-👥 用户,聊天记录,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_6_timeout.png
-👥 用户,模板,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_7_timeout.png
-👥 用户,↻ 刷新,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_8_timeout.png
-👥 用户,首页,BUTTON>>9,BUTTON,跳过-禁用,按钮为禁用态,,
-👥 用户,‹,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
-👥 用户,1,BUTTON>>11,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_11_timeout.png
-👥 用户,›,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
-👥 用户,下一页,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
-👥 用户,查看全部,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_14_timeout.png
+👥 用户,↻ 刷新,BUTTON>>2,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+👥 用户,搜索,BUTTON>>3,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+👥 用户,重置密码,BUTTON>>4,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+👥 用户,封禁,BUTTON>>5,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
+👥 用户,删除,BUTTON>>6,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+👥 用户,重置密码,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+👥 用户,封禁,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_8_timeout.png
+👥 用户,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+👥 用户,首页,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
+👥 用户,‹,BUTTON>>11,BUTTON,跳过-禁用,按钮为禁用态,,
+👥 用户,1,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_12_timeout.png
+👥 用户,›,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+👥 用户,下一页,BUTTON>>14,BUTTON,跳过-禁用,按钮为禁用态,,
 👥 用户,« 收起,BUTTON>>15,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 👥 用户,🏠 概览,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 👥 用户,🤖 智能体,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

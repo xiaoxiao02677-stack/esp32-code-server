@@ -4,63 +4,44 @@
   {
    "page": "🧩 模型",
    "slug": "models",
-   "load_apis": 0,
+   "load_apis": 9,
    "buttons": [
     {
      "page": "🧩 模型",
-     "button_text": "⬇ 导出报表",
+     "button_text": "＋ 新增TTS模型",
      "selector": "BUTTON>>2",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-06\\models_2_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧩 模型",
-     "button_text": "查看用户",
-     "selector": "BUTTON>>3",
-     "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "detail": "API 正常 (1): GET models/TTS/provideTypes->200",
      "api_calls": 1,
      "console_errors": 0
-    },
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 64,
+   "load_api_failures": [],
+   "tested_buttons": 1,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 1
+  },
+  {
+   "page": "📡 设备",
+   "slug": "devices",
+   "load_apis": 2,
+   "buttons": [
     {
-     "page": "🧩 模型",
-     "button_text": "智能体管理",
-     "selector": "BUTTON>>4",
+     "page": "📡 设备",
+     "button_text": "＋ 手动添加",
+     "selector": "BUTTON>>2",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "UI 变化: dom 184->191, 弹窗 3",
+     "detail": "UI 变化: dom 173->185, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
    "total_buttons": 41,
-   "load_api_failures": [],
-   "tested_buttons": 3,
-   "no_response": 1,
-   "fail": 0,
-   "pass": 2
-  },
-  {
-   "page": "📡 设备",
-   "slug": "devices",
-   "load_apis": 0,
-   "buttons": [
-    {
-     "page": "📡 设备",
-     "button_text": "取消",
-     "selector": "BUTTON>>41",
-     "type": "BUTTON",
-     "status": "PASS",
-     "detail": "UI 变化: dom 191->184, 弹窗 0",
-     "console_errors": 0
-    }
-   ],
-   "console_errors": [],
-   "total_buttons": 43,
    "load_api_failures": [],
    "tested_buttons": 1,
    "no_response": 0,
@@ -68,9 +49,9 @@
    "pass": 1
   }
  ],
- "buttons_total": 84,
- "pass": 3,
- "fail": 12,
- "no_response": 1,
- "skipped": 68
+ "buttons_total": 105,
+ "pass": 2,
+ "fail": 30,
+ "no_response": 0,
+ "skipped": 73
 }
