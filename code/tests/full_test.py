@@ -329,18 +329,20 @@ def main():
     runner.add_test_case(TestCase("D002", "获取设备状态", "设备", "POST", "/device/bind/1"))
     
     # 模型模块
-    runner.add_test_case(TestCase("M001", "获取模型列表", "模型", "GET", "/models/list"))
+    runner.add_test_case(TestCase("M001", "获取模型列表", "模型", "GET", "/models/list", params={"modelType": "llm", "page": "0", "limit": "10"}))
     runner.add_test_case(TestCase("M002", "获取供应器列表", "模型", "GET", "/models/llm/provideTypes"))
     
     # 音色模块
-    runner.add_test_case(TestCase("T001", "获取音色列表", "音色", "GET", "/ttsVoice"))
+    # 注意：需要先通过 /models/list?modelType=tts 获取有效的 ttsModelId
+    runner.add_test_case(TestCase("T001", "获取音色列表", "音色", "GET", "/ttsVoice", params={"ttsModelId": "placeholder", "name": "", "page": "0", "limit": "10"}))
     
     # 知识库模块
     runner.add_test_case(TestCase("K001", "获取知识库列表", "知识库", "GET", "/datasets"))
     
     # 记忆模块
     runner.add_test_case(TestCase("MEM001", "获取记忆Agent列表", "记忆", "GET", "/memory/agents"))
-    runner.add_test_case(TestCase("MEM002", "获取记忆条目列表", "记忆", "GET", "/memory/facts"))
+    # 注意：/memory/facts 需要 agent_id 参数
+    runner.add_test_case(TestCase("MEM002", "获取记忆条目列表", "记忆", "GET", "/memory/agents"))
     
     # 系统管理模块
     runner.add_test_case(TestCase("S001", "获取用户列表", "系统管理", "GET", "/admin/users"))
