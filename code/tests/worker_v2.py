@@ -198,7 +198,10 @@ class WorkerV2:
         t0 = time.time()
         try:
             # 管理员视图真实路由是 #/admin/xxx，必须使用 nav['href']（如 #/admin/agents）
-            target = nav["href"] if nav["href"].startswith("#/") else FRONT + nav["slug"]
+            if nav["href"].startswith("#/"):
+                target = "https://sandyun.top:8001/admincc/" + nav["href"]
+            else:
+                target = FRONT + nav["slug"]
             page.goto(target, wait_until="domcontentloaded", timeout=20000)
             page.wait_for_timeout(3500)
         except Exception as e:
