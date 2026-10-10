@@ -1,0 +1,42 @@
+{
+  "menus": [
+    {"group": "概览", "key": "overview", "zh": "总览", "icon": "⌂"},
+    {"group": "智能体", "key": "agents", "zh": "智能体", "icon": "◈"},
+    {"group": "智能体", "key": "templates", "zh": "智能体模板", "icon": "📋"},
+    {"group": "智能体", "key": "mcp", "zh": "MCP 接入点", "icon": "🔗"},
+    {"group": "内容", "key": "memory", "zh": "记忆管理", "icon": "🧠"},
+    {"group": "内容", "key": "knowledge", "zh": "知识库", "icon": "📚"},
+    {"group": "内容", "key": "correctwords", "zh": "替换词", "icon": "✎"},
+    {"group": "音视", "key": "voices", "zh": "音色试听", "icon": "♪"},
+    {"group": "音视", "key": "chat", "zh": "聊天记录", "icon": "💬"},
+    {"group": "系统", "key": "devices", "zh": "设备管理", "icon": "⚙"},
+    {"group": "系统", "key": "models", "zh": "模型管理", "icon": "◇"},
+    {"group": "系统", "key": "params", "zh": "系统参数", "icon": "🎛"},
+    {"group": "系统", "key": "users", "zh": "用户管理", "icon": "👥"},
+    {"group": "系统", "key": "ota", "zh": "OTA 固件", "icon": "📦"},
+    {"group": "系统", "key": "dicts", "zh": "数据字典", "icon": "📖"},
+    {"group": "系统", "key": "servers", "zh": "服务器节点", "icon": "🖥"},
+    {"group": "调试", "key": "simulator", "zh": "链路模拟器", "icon": "🧪"},
+    {"group": "调试", "key": "apis", "zh": "API 调试", "icon": "⌘"}
+  ],
+  "hashRoutes": [
+    {"key": "overview", "hash": "#/overview"},
+    {"key": "agents", "hash": "#/agents"},
+    {"key": "templates", "hash": "#/templates"},
+    {"key": "mcp", "hash": "#/mcp"},
+    {"key": "memory", "hash": "#/memory"},
+    {"key": "knowledge", "hash": "#/knowledge"},
+    {"key": "correctwords", "hash": "#/correctwords"},
+    {"key": "voices", "hash": "#/voices"},
+    {"key": "chat", "hash": "#/chat"},
+    {"key": "devices", "hash": "#/devices"},
+    {"key": "models", "hash": "#/models"},
+    {"key": "params", "hash": "#/params"},
+    {"key": "users", "hash": "#/users"},
+    {"key": "ota", "hash": "#/ota"},
+    {"key": "dicts", "hash": "#/dicts"},
+    {"key": "servers", "hash": "#/servers"},
+    {"key": "simulator", "hash": "#/simulator"},
+    {"key": "apis", "hash": "#/apis"}
+  ]
+}

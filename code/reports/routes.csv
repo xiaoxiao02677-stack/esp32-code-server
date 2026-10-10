@@ -1,0 +1,19 @@
+﻿key,page,url,loader_api
+overview,总览,/admincc/#/overview,/agent/list;/models/list?modelType=TTS&page=1&limit=50;/device/bind/{agentId}
+agents,智能体,/admincc/#/agents,/agent/list
+templates,智能体模板,/admincc/#/templates,/agent/template/page?page=1&limit=100
+mcp,MCP 接入点,/admincc/#/mcp,/agent/mcp/address/{agentId};/agent/mcp/tools/{agentId}
+memory,记忆管理,/admincc/#/memory,/memory/agents;/models/names?modelType=Memory
+knowledge,知识库,/admincc/#/knowledge,/datasets?page=1&page_size=50
+correctwords,替换词,/admincc/#/correctwords,/correct-word/file/list?page=1&limit=100
+voices,音色试听,/admincc/#/voices,/models/list?modelType=TTS&page=1&limit=50;/models/{voiceTtsModel}/voices
+chat,聊天记录,/admincc/#/chat,/agent/{agentId}/sessions?page=1&limit=10
+devices,设备管理,/admincc/#/devices,/admin/device/all?page=1&limit=200;/device/bind/{agentId}
+models,模型管理,/admincc/#/models,/models/list?modelType=LLM;/models/provider
+params,系统参数,/admincc/#/params,/admin/params/page?page=1&limit=100
+users,用户管理,/admincc/#/users,/admin/users?page=1&limit=100
+ota,OTA 固件,/admincc/#/ota,/otaMag?page=1&limit=100
+dicts,数据字典,/admincc/#/dicts,/admin/dict/type/page?page=1&limit=100
+servers,服务器节点,/admincc/#/servers,/admin/server/server-list
+simulator,链路模拟器,/admincc/#/simulator,(无)
+apis,API 调试,/admincc/#/apis,(无)

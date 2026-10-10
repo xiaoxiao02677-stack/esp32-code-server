@@ -1,0 +1,2 @@
+﻿worker,page,button_text,selector,type,status,expected,actual,api_requests,screenshot,time
+00,overview,(页面加载),page,page,FAIL,登录态注入后进入已登录页面,未登录: https://sandyun.top:8001/admincc/#/overview,,G:/demo/21_xiaozhi/code/artifacts\agent-00\overview_login_fail_20261010163259.png,2026-10-10T16:33:04.291318

@@ -1,0 +1,118 @@
+{
+  "overview": [
+    {"button": "刷新总览", "event": "loadAll", "apis": ["GET /agent/list", "GET /models/list?modelType=TTS", "POST /device/bind/{agentId}"]}
+  ],
+  "agents": [
+    {"button": "刷新", "event": "loadAgents", "apis": ["GET /agent/list"]},
+    {"button": "查看聊天", "event": "openChat", "apis": ["GET /agent/{agentId}/sessions"]},
+    {"button": "编辑", "event": "openAgentEdit", "apis": ["GET /agent/{agentId}", "GET /models/names?modelType=*", "GET /models/{ttsModelId}/voices", "POST /device/bind/{agentId}"]},
+    {"button": "删除", "event": "deleteAgent", "apis": ["DELETE /agent/{agentId}"]},
+    {"button": "＋ 新建智能体", "event": "createAgent", "apis": ["GET /models/names?modelType=*"]},
+    {"button": "保存", "event": "saveAgent/persistAgent", "apis": ["POST /agent", "PUT /agent/{agentId}"]},
+    {"button": "绑定设备(6位码)", "event": "bindDeviceByCode", "apis": ["POST /device/bind/{agentId}/{code}"]},
+    {"button": "手动添加设备", "event": "manualAddDevice", "apis": ["POST /device/manual-add"]},
+    {"button": "解绑设备", "event": "unbindAgentDevice", "apis": ["POST /device/unbind"]}
+  ],
+  "templates": [
+    {"button": "刷新", "event": "loadTemplates", "apis": ["GET /agent/template/page"]},
+    {"button": "从模板创建", "event": "createAgentFromTemplate", "apis": ["POST /agent", "GET /agent/template"]},
+    {"button": "编辑模板", "event": "editTemplate", "apis": ["PUT /agent/template"]},
+    {"button": "删除模板", "event": "deleteTemplate", "apis": ["DELETE /agent/template/{id}"]}
+  ],
+  "mcp": [
+    {"button": "刷新", "event": "loadMcpInfo", "apis": ["GET /agent/mcp/address/{agentId}", "GET /agent/mcp/tools/{agentId}"]}
+  ],
+  "memory": [
+    {"button": "刷新", "event": "loadMemoryAgents", "apis": ["GET /memory/agents"]},
+    {"button": "应用引擎配置", "event": "applyMemoryEngine", "apis": ["GET /agent/{agentId}", "GET /models/{engine}", "PUT /models/Memory/{provider}/{id}", "PUT /agent/{agentId}"]},
+    {"button": "添加记忆", "event": "factCreate", "apis": ["POST /memory/facts"]},
+    {"button": "编辑记忆", "event": "saveFactEdit", "apis": ["PUT /memory/facts/{factId}"]},
+    {"button": "删除记忆", "event": "factDelete", "apis": ["DELETE /memory/facts/{factId}"]},
+    {"button": "点赞/点踩", "event": "factFeedback", "apis": ["POST /memory/facts/{factId}/feedback"]},
+    {"button": "审核通过/驳回", "event": "factReview", "apis": ["POST /memory/facts/{factId}/review"]}
+  ],
+  "knowledge": [
+    {"button": "刷新", "event": "loadDatasets", "apis": ["GET /datasets"]},
+    {"button": "创建知识库", "event": "createDataset", "apis": ["POST /datasets"]},
+    {"button": "删除知识库", "event": "deleteDataset", "apis": ["DELETE /datasets/{id}"]},
+    {"button": "上传文档", "event": "uploadDocument", "apis": ["POST /datasets/{id}/documents"]},
+    {"button": "解析文档", "event": "parseDocument", "apis": ["POST /datasets/{id}/chunks"]},
+    {"button": "召回测试", "event": "retrievalTest", "apis": ["POST /datasets/{id}/retrieval-test"]}
+  ],
+  "correctwords": [
+    {"button": "刷新", "event": "loadCorrectFiles", "apis": ["GET /correct-word/file/list"]},
+    {"button": "新增/编辑", "event": "saveCorrectFile", "apis": ["POST /correct-word/file", "PUT /correct-word/file/{id}"]},
+    {"button": "删除", "event": "deleteCorrectFile", "apis": ["DELETE /correct-word/file/{id}"]},
+    {"button": "下载", "event": "downloadCorrectFile", "apis": ["GET /correct-word/file/download/{id}"]}
+  ],
+  "voices": [
+    {"button": "刷新音色", "event": "loadVoices", "apis": ["GET /models/{voiceTtsModel}/voices"]},
+    {"button": "试听", "event": "playVoice", "apis": ["GET /models/ttsPreview"]},
+    {"button": "新增音色", "event": "saveVoice", "apis": ["POST /ttsVoice"]},
+    {"button": "编辑音色", "event": "saveVoice", "apis": ["PUT /ttsVoice/{id}"]},
+    {"button": "删除音色", "event": "deleteVoice", "apis": ["POST /ttsVoice/delete"]}
+  ],
+  "chat": [
+    {"button": "刷新会话", "event": "reloadChatSessions", "apis": ["GET /agent/{agentId}/sessions"]},
+    {"button": "加载聊天记录", "event": "loadChatHistory", "apis": ["GET /agent/{agentId}/chat-history/{sessionId}"]},
+    {"button": "播放音频", "event": "playChatAudio", "apis": ["POST /agent/audio/{audioId}", "GET /voiceClone/play/{id}"]},
+    {"button": "删除会话", "event": "deleteChatSession", "apis": ["DELETE /agent/{agentId}/chat-history/{sessionId}"]}
+  ],
+  "devices": [
+    {"button": "刷新", "event": "loadAllDevices", "apis": ["GET /admin/device/all"]},
+    {"button": "重命名", "event": "saveDeviceRename", "apis": ["PUT /device/update/{id}"]},
+    {"button": "绑定", "event": "saveDeviceBind", "apis": ["POST /device/bind/{agentId}/{code}"]},
+    {"button": "解绑", "event": "unbindDevice", "apis": ["POST /device/unbind"]}
+  ],
+  "models": [
+    {"button": "刷新", "event": "loadModelsByType", "apis": ["GET /models/list?modelType=*", "GET /models/provider"]},
+    {"button": "启用/禁用", "event": "toggleModel", "apis": ["PUT /models/enable/{id}/{status}"]},
+    {"button": "编辑", "event": "saveModelConfig", "apis": ["PUT /models/{type}/{provider}/{id}"]},
+    {"button": "删除", "event": "deleteModelConfig", "apis": ["DELETE /models/{id}"]},
+    {"button": "设为默认", "event": "setDefaultModel", "apis": ["PUT /models/default/{id}"]},
+    {"button": "新增供应器", "event": "addModelProvider", "apis": ["POST /models/provider"]},
+    {"button": "一键测试", "event": "testModel", "apis": ["POST /api/model/test"]}
+  ],
+  "params": [
+    {"button": "刷新", "event": "loadParams", "apis": ["GET /admin/params/page"]},
+    {"button": "编辑", "event": "saveParam", "apis": ["PUT /admin/params"]},
+    {"button": "新增", "event": "addParam", "apis": ["POST /admin/params"]},
+    {"button": "删除", "event": "deleteParam", "apis": ["POST /admin/params/delete"]}
+  ],
+  "users": [
+    {"button": "刷新", "event": "loadUsers", "apis": ["GET /admin/users"]},
+    {"button": "启用/禁用", "event": "toggleUserStatus", "apis": ["PUT /admin/users/changeStatus/{status}"]},
+    {"button": "重置密码", "event": "resetUserPassword", "apis": ["PUT /admin/users/{id}"]},
+    {"button": "删除", "event": "deleteUser", "apis": ["DELETE /admin/users/{id}"]}
+  ],
+  "ota": [
+    {"button": "刷新", "event": "loadOta", "apis": ["GET /otaMag"]},
+    {"button": "上传固件", "event": "uploadFirmware", "apis": ["POST /otaMag/upload"]},
+    {"button": "编辑", "event": "saveOta", "apis": ["PUT /otaMag/{id}"]},
+    {"button": "删除", "event": "deleteOta", "apis": ["DELETE /otaMag/{id}"]},
+    {"button": "下载", "event": "downloadOta", "apis": ["GET /otaMag/download/{id}"]}
+  ],
+  "dicts": [
+    {"button": "刷新", "event": "loadDicts", "apis": ["GET /admin/dict/type/page"]},
+    {"button": "加载字典数据", "event": "loadDictData", "apis": ["GET /admin/dict/data/type/{dictType}"]},
+    {"button": "新增/编辑", "event": "saveDictData", "apis": ["POST /admin/dict/data/save", "POST /admin/dict/data/update"]},
+    {"button": "删除", "event": "deleteDictData", "apis": ["POST /admin/dict/data/delete"]}
+  ],
+  "servers": [
+    {"button": "刷新", "event": "loadServers", "apis": ["GET /admin/server/server-list"]},
+    {"button": "下发指令", "event": "sendWsServerAction", "apis": ["POST /admin/server/emit-action"]}
+  ],
+  "simulator": [
+    {"button": "启动模拟", "event": "startSimulation", "apis": ["POST /api/asr/recognize"]},
+    {"button": "停止", "event": "stopSimulation", "apis": []}
+  ],
+  "apis": [
+    {"button": "发送请求", "event": "sendRequest", "apis": ["动态: API_CATALOG"]}
+  ],
+  "global": [
+    {"button": "退出登录", "event": "doLogout", "apis": ["(本地清除 token)"]},
+    {"button": "主题切换", "event": "setTheme", "apis": ["(本地 localStorage)"]},
+    {"button": "紧凑/宽松切换", "event": "compactMode toggle", "apis": []},
+    {"button": "登录", "event": "doLogin", "apis": ["POST /user/login", "GET /user/pub-config", "GET /user/captcha"]}
+  ]
+}

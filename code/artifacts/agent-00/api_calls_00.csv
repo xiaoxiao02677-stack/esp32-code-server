@@ -1,0 +1,4 @@
+﻿time,method,url,status,success,duration_ms,page,trigger
+2026-10-10T16:32:59.928859,GET,https://sandyun.top:8001/admincc/,200,True,,overview,page-load-or-click
+2026-10-10T16:33:00.668679,GET,https://sandyun.top:8001/admincc/assets/index-C_xU_LD6.js,200,True,,overview,page-load-or-click
+2026-10-10T16:33:00.668889,GET,https://sandyun.top:8001/admincc/assets/index-DTRRBKWN.css,200,True,,overview,page-load-or-click
