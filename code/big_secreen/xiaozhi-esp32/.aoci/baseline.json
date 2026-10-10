@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-10-05T08:50:29Z",
-  "updated_at": "2026-10-10T10:50:57Z",
+  "updated_at": "2026-10-10T10:54:45Z",
   "files": {
     ".clang-format": {
       "role": "index",
@@ -137,9 +137,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "ceb2e987394d9976d665c28e2b52ca25e586895815d533967db486304148d2d0",
-      "size": 177712,
-      "normalized_sha256": "ceb2e987394d9976d665c28e2b52ca25e586895815d533967db486304148d2d0"
+      "sha256": "e5b11d319949ceb4a80a6e7afe8f11d19fc76a244816799700b10ed533895876",
+      "size": 178397,
+      "normalized_sha256": "e5b11d319949ceb4a80a6e7afe8f11d19fc76a244816799700b10ed533895876"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -4942,19 +4942,19 @@
       "normalized_sha256": "3c0025c35169d8614e418a0be99a7d33cf6e07a760e6495431dd3ab833e5ffcf"
     },
     "main/boards/bigscreen-s3/BUILD.md": {
-      "role": "observe",
+      "role": "index",
       "sha256": "bb7c38e1f4d770f24841d1072420ba21e33aae61bf98a1b881f159f3190fda6a",
       "size": 2333,
       "normalized_sha256": "bb7c38e1f4d770f24841d1072420ba21e33aae61bf98a1b881f159f3190fda6a"
     },
     "main/boards/bigscreen-s3/PINOUT.md": {
-      "role": "observe",
+      "role": "index",
       "sha256": "3600eb9521f4ca11c344238258ac600dea8b466fe736845eec2082a190cbb6a0",
       "size": 2750,
       "normalized_sha256": "3600eb9521f4ca11c344238258ac600dea8b466fe736845eec2082a190cbb6a0"
     },
     "main/boards/bigscreen-s3/UI_SPEC.md": {
-      "role": "observe",
+      "role": "index",
       "sha256": "b91b35129c0be960e1dfbcd3ecf7824be3f4c267e51ccc7e46c78ca70f216d5f",
       "size": 8027,
       "normalized_sha256": "b91b35129c0be960e1dfbcd3ecf7824be3f4c267e51ccc7e46c78ca70f216d5f"
@@ -4990,7 +4990,7 @@
       "normalized_sha256": "6a40b07b2a135e081073501751b66448988147703200a1ce7228310bb08d2601"
     },
     "main/boards/bigscreen-s3/config.json": {
-      "role": "observe",
+      "role": "index",
       "sha256": "fb2189114d4d95e7a5a9d6daf430e2e8c6cb11ffa0b77383291cd88714726abe",
       "size": 670,
       "normalized_sha256": "fb2189114d4d95e7a5a9d6daf430e2e8c6cb11ffa0b77383291cd88714726abe"

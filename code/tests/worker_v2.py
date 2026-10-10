@@ -163,7 +163,8 @@ class WorkerV2:
 
     # ---------- 按钮收集与点击 ----------
     def collect_buttons(self, page):
-        return page.eval_on_selector_all(
+        """提取所有可交互元素；相同文本+class 的重复项（列表行按钮）只保留第一个"""
+        raw = page.eval_on_selector_all(
             "button, a[role=button], a.dock-item, a.router-link, input[type=button], input[type=submit]",
             """els => els.map((el, i) => {
                 const r = el.getBoundingClientRect();
@@ -180,6 +181,18 @@ class WorkerV2:
                 };
             })"""
         )
+        # 去重：同一 text + 同一 cls 的重复按钮只保留第一个（避免列表行按钮重复点击）
+        seen = set()
+        dedup = []
+        for b in raw:
+            key = (b.get("text") or "").strip() + "|" + (b.get("cls") or "").strip()
+            if not b.get("visible"):
+                continue
+            if key in seen:
+                continue
+            seen.add(key)
+            dedup.append(b)
+        return dedup
 
     def click_btn(self, page, btn):
         """真实点击：滚动到可视区、hover、点击；点击前重新定位避免索引漂移"""

@@ -25,6 +25,8 @@
 - 660 个二进制资产（.ogg/.jpg/.png/.eaf）已被人工从 index 翻为 observe（在基线直接持有，非依赖 config 规则；config.json 的 scope.rules 实际为空，规则未持久化但不影响现状）。
 - 全部 2808 个二进制资产在基线中均为 observe。
 - aoci.code.txt 条目格式：`文件名[标签]: F:... | R:... | A:... | S:...`；标签形如 `EA9L`（A层-模块-重要性-规模）；规模档由行数定（S/T 边界≈70 行：69→S/T，81 行实测须 **T**，故 ≥~70 优先 T；~221→M；~449→L）；S 字段有 FRAS token 预算（C4≤40/C7≤80/C9≤200）；模块字母须合法（`CT` 触发 `impact_candidate_tag_dictionary_violation`，`CH` 可用）。
+- **⚠️ FRAS 字段分隔符铁律（2026-10-10 踩坑，代价 3 次失败）**：F/R/A/S 四字段**必须用 ` | `（空格-竖线-空格）分隔**，绝不能用 `;` 或 `,`。误用 `;` 会让整行被解析成单一超长 `F`（>160 runes 触发 `fras_f_too_long`），且 `R/A/S` 判为空 → `update-entry` 报 `impact_candidate_fras_invalid`（含 `fras_r_empty`/`fras_a_empty`/`fras_s_empty`/`fras_structure_invalid`）。字段**内部**可用 `;` 细分小点。**`--preview --json` 是只读探测利器**：会返回结构化 `findings` 精确指出哪字段违规（含 `retry_scope`），先 preview 再正式写可避免盲试。
+- **config.h 规模档**：同目录同名首方头按行数定档（76 行 → `CH4T`，与 `bigscreen_display.h[CH4T]` 一致）；全仓库其余 163 个上游 `config.h` 多标 `CH4S`，但工具会对 76 行文件给"E规模档位错配"提醒（属正常，可顺手改 T）。
 
 ## 备份
 - baseline 编辑前必备份：`baseline.json.bak-<UTC时间戳>`。已知：20261007T192834Z（660翻转前）、20261009T003322Z（reconcile前）。
