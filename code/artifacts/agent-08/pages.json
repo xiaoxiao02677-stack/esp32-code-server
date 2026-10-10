@@ -1,0 +1,80 @@
+{
+ "worker": "08",
+ "pages": [
+  {
+   "page": "📦 OTA",
+   "slug": "ota",
+   "load_apis": 1,
+   "buttons": [
+    {
+     "page": "📦 OTA",
+     "button_text": "↻ 刷新",
+     "selector": "BUTTON>>2",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "API 正常 (1): GET otaMag?page=1&limit=100->200",
+     "api_calls": 1,
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 29,
+   "load_api_failures": [],
+   "tested_buttons": 1,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 1
+  },
+  {
+   "page": "📖 字典",
+   "slug": "dicts",
+   "load_apis": 2,
+   "buttons": [
+    {
+     "page": "📖 字典",
+     "button_text": "＋ 新增字典项",
+     "selector": "BUTTON>>2",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 669->687, 弹窗 3",
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 138,
+   "load_api_failures": [],
+   "tested_buttons": 1,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 1
+  },
+  {
+   "page": "🖥 服务器",
+   "slug": "servers",
+   "load_apis": 1,
+   "buttons": [
+    {
+     "page": "🖥 服务器",
+     "button_text": "♻️ 重启语音服务",
+     "selector": "BUTTON>>2",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 134->141, 弹窗 3",
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 31,
+   "load_api_failures": [],
+   "tested_buttons": 1,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 1
+  }
+ ],
+ "buttons_total": 198,
+ "pass": 3,
+ "fail": 57,
+ "no_response": 0,
+ "skipped": 138
+}
