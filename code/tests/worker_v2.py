@@ -207,9 +207,22 @@ class WorkerV2:
             if txt and len(txt) <= 20:
                 loc = page.get_by_role("button", name=txt, exact=False).first
                 loc.scroll_into_view_if_needed(timeout=5000)
+            else:
+                raise
         loc.hover(timeout=4000)
         page.wait_for_timeout(200)
-        loc.click(timeout=6000)
+        try:
+            loc.click(timeout=6000)
+        except Exception:
+            # 索引失效等导致点击失败时，用文本回退重试一次
+            txt = (btn.get("text") or "").strip()
+            if txt and len(txt) <= 20:
+                alt = page.get_by_role("button", name=txt, exact=False).first
+                alt.scroll_into_view_if_needed(timeout=5000)
+                alt.hover(timeout=4000)
+                alt.click(timeout=6000)
+            else:
+                raise
 
     def test_page(self, playwright, page, nav):
         self.log(f"\n===== 页面: {nav['text']} ({nav['slug']}) =====")
