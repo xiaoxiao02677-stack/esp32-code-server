@@ -8,62 +8,51 @@
    "buttons": [
     {
      "page": "🎙 音色",
-     "button_text": "theme-swatch is-active",
-     "selector": "BUTTON>>7",
+     "button_text": "⬇ 导出报表",
+     "selector": "BUTTON>>2",
      "type": "BUTTON",
      "status": "无反应",
      "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_7_noresp.png",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_2_noresp.png",
      "console_errors": 0
     },
     {
      "page": "🎙 音色",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🎙 音色",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🎙 音色",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "查看用户",
+     "selector": "BUTTON>>3",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (7): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->200; GET agent/template->200; GET memory/agents->200",
-     "api_calls": 7,
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->None",
+     "api_calls": 1,
      "console_errors": 0
     },
     {
      "page": "🎙 音色",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
+     "button_text": "智能体管理",
+     "selector": "BUTTON>>4",
      "type": "BUTTON",
      "status": "无反应",
      "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_11_noresp.png",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\voices_4_noresp.png",
+     "console_errors": 0
+    },
+    {
+     "page": "🎙 音色",
+     "button_text": "聊天记录",
+     "selector": "BUTTON>>6",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 184->191, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 36,
    "load_api_failures": [],
-   "tested_buttons": 5,
-   "no_response": 4,
+   "tested_buttons": 4,
+   "no_response": 2,
    "fail": 0,
-   "pass": 1
+   "pass": 2
   },
   {
    "page": "🧩 模板",
@@ -72,67 +61,26 @@
    "buttons": [
     {
      "page": "🧩 模板",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>7",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\templates_7_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧩 模板",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\templates_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧩 模板",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\templates_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧩 模板",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "取消",
+     "selector": "BUTTON>>41",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (7): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->200; GET agent/template->200; GET memory/agents->200",
-     "api_calls": 7,
-     "console_errors": 0
-    },
-    {
-     "page": "🧩 模板",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-04\\templates_11_noresp.png",
+     "detail": "UI 变化: dom 191->184, 弹窗 0",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 37,
    "load_api_failures": [],
-   "tested_buttons": 5,
-   "no_response": 4,
+   "tested_buttons": 1,
+   "no_response": 0,
    "fail": 0,
    "pass": 1
   }
  ],
- "buttons_total": 30,
- "pass": 2,
- "fail": 2,
- "no_response": 8,
- "skipped": 18
+ "buttons_total": 73,
+ "pass": 3,
+ "fail": 9,
+ "no_response": 2,
+ "skipped": 59
 }

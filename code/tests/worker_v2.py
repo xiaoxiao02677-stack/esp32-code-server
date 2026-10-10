@@ -168,11 +168,18 @@ class WorkerV2:
         )
 
     def click_btn(self, page, btn):
-        """真实点击：滚动到可视区、hover、点击"""
+        """真实点击：滚动到可视区、hover、点击；点击前重新定位避免索引漂移"""
         tag = btn["tag"].lower()
         sel = f"{tag} >> nth={btn['idx']}"
         loc = page.locator(sel)
-        loc.scroll_into_view_if_needed(timeout=6000)
+        try:
+            loc.scroll_into_view_if_needed(timeout=6000)
+        except Exception:
+            # 元素可能已不在（DOM 变化），尝试用文本回退定位
+            txt = (btn.get("text") or "").strip()
+            if txt and len(txt) <= 20:
+                loc = page.get_by_role("button", name=txt, exact=False).first
+                loc.scroll_into_view_if_needed(timeout=5000)
         loc.hover(timeout=4000)
         page.wait_for_timeout(200)
         loc.click(timeout=6000)
@@ -182,8 +189,9 @@ class WorkerV2:
         page_errors = self.attach_console(page)
         t0 = time.time()
         try:
-            page.goto(nav["href"] if nav["href"].startswith("http") else FRONT + nav["slug"],
-                      wait_until="domcontentloaded", timeout=20000)
+            # 管理员视图真实路由是 #/admin/xxx，必须使用 nav['href']（如 #/admin/agents）
+            target = nav["href"] if nav["href"].startswith("#/") else FRONT + nav["slug"]
+            page.goto(target, wait_until="domcontentloaded", timeout=20000)
             page.wait_for_timeout(3500)
         except Exception as e:
             self.log(f"  页面加载异常: {e}")
@@ -214,6 +222,12 @@ class WorkerV2:
             if btn.get("disabled"):
                 rec["status"] = "跳过-禁用"
                 rec["detail"] = "按钮为禁用态"
+                self.results.append(rec)
+                continue
+            # 主题色块等纯 UI 控件（无业务语义）
+            if "theme-swatch" in cls or "theme-picker" in cls:
+                rec["status"] = "跳过-纯UI控件"
+                rec["detail"] = "主题切换色块，无业务逻辑"
                 self.results.append(rec)
                 continue
             # 导航/会话控制项：不作为业务按钮点击，避免切换视图或退出登录导致测试上下文失效

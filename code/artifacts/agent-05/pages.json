@@ -8,77 +8,46 @@
    "buttons": [
     {
      "page": "📚 知识库",
-     "button_text": "theme-swatch is-active",
-     "selector": "BUTTON>>7",
+     "button_text": "⬇ 导出报表",
+     "selector": "BUTTON>>2",
      "type": "BUTTON",
      "status": "无反应",
      "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_7_noresp.png",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_2_noresp.png",
      "console_errors": 0
     },
     {
      "page": "📚 知识库",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "📚 知识库",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "📚 知识库",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "查看用户",
+     "selector": "BUTTON>>3",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (7): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->None; GET agent/template->200; GET memory/agents->200",
-     "api_calls": 7,
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "api_calls": 1,
      "console_errors": 0
     },
     {
      "page": "📚 知识库",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
+     "button_text": "智能体管理",
+     "selector": "BUTTON>>4",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_11_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "📚 知识库",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>12",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-05\\knowledge_12_noresp.png",
+     "status": "PASS",
+     "detail": "UI 变化: dom 184->191, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 41,
    "load_api_failures": [],
-   "tested_buttons": 6,
-   "no_response": 5,
+   "tested_buttons": 3,
+   "no_response": 1,
    "fail": 0,
-   "pass": 1
+   "pass": 2
   }
  ],
- "buttons_total": 15,
- "pass": 1,
- "fail": 0,
- "no_response": 5,
- "skipped": 9
+ "buttons_total": 41,
+ "pass": 2,
+ "fail": 6,
+ "no_response": 1,
+ "skipped": 32
 }

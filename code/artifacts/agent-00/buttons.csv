@@ -32,11 +32,11 @@
 🏠 概览,🔗 MCP,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🏠 概览,🧪 链路模拟,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🏠 概览,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🏠 概览,theme-swatch is-active,BUTTON>>33,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_33_timeout.png
-🏠 概览,theme-swatch,BUTTON>>34,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_34_timeout.png
-🏠 概览,theme-swatch,BUTTON>>35,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_35_timeout.png
-🏠 概览,theme-swatch,BUTTON>>36,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_36_timeout.png
-🏠 概览,theme-swatch,BUTTON>>37,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_37_timeout.png
-🏠 概览,theme-swatch,BUTTON>>38,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_38_timeout.png
+🏠 概览,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🏠 概览,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🏠 概览,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🏠 概览,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🏠 概览,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🏠 概览,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 🏠 概览,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🏠 概览,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

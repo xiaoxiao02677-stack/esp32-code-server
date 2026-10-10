@@ -1,16 +1,42 @@
 ﻿page,button_text,selector,type,status,detail,api_calls,screenshot
-🤖 智能体,→ 管理员视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🤖 智能体,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,« 收起,BUTTON>>2,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,🏠 首页,A>>3,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,📡 我的设备,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,🎙 音色,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,💎 积分,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,theme-swatch is-active,BUTTON>>7,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_7_noresp.png
-🤖 智能体,theme-swatch,BUTTON>>8,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_noresp.png
-🤖 智能体,theme-swatch,BUTTON>>9,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_9_noresp.png
-🤖 智能体,theme-swatch,BUTTON>>10,BUTTON,PASS,API 正常 (7): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->200; GET agent/template->200; GET memory/agents->200,7,
-🤖 智能体,theme-swatch,BUTTON>>11,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_11_noresp.png
-🤖 智能体,theme-swatch,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_12_timeout.png
-🤖 智能体,⚅,BUTTON>>13,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
-🤖 智能体,→,BUTTON>>14,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,⬇ 导出报表,BUTTON>>2,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_2_noresp.png
+🤖 智能体,查看用户,BUTTON>>3,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+🤖 智能体,智能体管理,BUTTON>>4,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
+🤖 智能体,设备,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_5_timeout.png
+🤖 智能体,聊天记录,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_6_timeout.png
+🤖 智能体,模板,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_7_timeout.png
+🤖 智能体,↻ 刷新,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_timeout.png
+🤖 智能体,首页,BUTTON>>9,BUTTON,跳过-禁用,按钮为禁用态,,
+🤖 智能体,‹,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
+🤖 智能体,1,BUTTON>>11,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_11_timeout.png
+🤖 智能体,›,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
+🤖 智能体,下一页,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+🤖 智能体,查看全部,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_14_timeout.png
+🤖 智能体,« 收起,BUTTON>>15,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🏠 概览,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🤖 智能体,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,💬 聊天,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🧠 记忆,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🎙 音色,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🧩 模板,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,📚 知识库,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🧩 模型,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,📡 设备,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,⚙️ 参数,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,👥 用户,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,📦 OTA,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,📖 字典,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🖥 服务器,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🔗 MCP,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🧪 链路模拟,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+🤖 智能体,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🤖 智能体,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

@@ -8,70 +8,29 @@
    "buttons": [
     {
      "page": "🔗 MCP",
-     "button_text": "theme-swatch is-active",
-     "selector": "BUTTON>>7",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\mcp_7_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🔗 MCP",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\mcp_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🔗 MCP",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\mcp_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🔗 MCP",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "查看用户",
+     "selector": "BUTTON>>3",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (6): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->None; GET agent/template->None; GET memory/agents->None",
-     "api_calls": 6,
-     "console_errors": 0
-    },
-    {
-     "page": "🔗 MCP",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
-     "type": "BUTTON",
-     "status": "PASS",
-     "detail": "API 正常 (1): GET agent/88b87cfb642e42268b239eb6b8cd1f02/sessions?pa->200",
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
      "api_calls": 1,
      "console_errors": 0
     },
     {
      "page": "🔗 MCP",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>12",
+     "button_text": "智能体管理",
+     "selector": "BUTTON>>4",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\mcp_12_noresp.png",
+     "status": "PASS",
+     "detail": "UI 变化: dom 184->191, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 41,
    "load_api_failures": [],
-   "tested_buttons": 6,
-   "no_response": 4,
+   "tested_buttons": 2,
+   "no_response": 0,
    "fail": 0,
    "pass": 2
   },
@@ -82,61 +41,21 @@
    "buttons": [
     {
      "page": "🧪 链路模拟",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>7",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\linksim_7_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧪 链路模拟",
-     "button_text": "theme-swatch is-active",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\linksim_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧪 链路模拟",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\linksim_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🧪 链路模拟",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "取消",
+     "selector": "BUTTON>>41",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (6): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->None; GET agent/template->None; GET memory/agents->None",
-     "api_calls": 6,
-     "console_errors": 0
-    },
-    {
-     "page": "🧪 链路模拟",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
-     "type": "BUTTON",
-     "status": "PASS",
-     "detail": "UI 变化: dom 170->203, 弹窗 0",
+     "detail": "UI 变化: dom 191->184, 弹窗 0",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 43,
    "load_api_failures": [],
-   "tested_buttons": 5,
-   "no_response": 3,
+   "tested_buttons": 1,
+   "no_response": 0,
    "fail": 0,
-   "pass": 2
+   "pass": 1
   },
   {
    "page": "🛠 API调试",
@@ -145,67 +64,46 @@
    "buttons": [
     {
      "page": "🛠 API调试",
-     "button_text": "theme-swatch is-active",
-     "selector": "BUTTON>>7",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\apis_7_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🛠 API调试",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>8",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\apis_8_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🛠 API调试",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>9",
-     "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\apis_9_noresp.png",
-     "console_errors": 0
-    },
-    {
-     "page": "🛠 API调试",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>10",
+     "button_text": "↻ 刷新",
+     "selector": "BUTTON>>2",
      "type": "BUTTON",
      "status": "PASS",
-     "detail": "API 正常 (7): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->200; GET agent/template->200; GET memory/agents->200",
-     "api_calls": 7,
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "api_calls": 1,
      "console_errors": 0
     },
     {
      "page": "🛠 API调试",
-     "button_text": "theme-swatch",
-     "selector": "BUTTON>>11",
+     "button_text": "搜索",
+     "selector": "BUTTON>>3",
      "type": "BUTTON",
-     "status": "无反应",
-     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
-     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-09\\apis_11_noresp.png",
+     "status": "PASS",
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "api_calls": 1,
+     "console_errors": 0
+    },
+    {
+     "page": "🛠 API调试",
+     "button_text": "封禁",
+     "selector": "BUTTON>>5",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 184->191, 弹窗 3",
      "console_errors": 0
     }
    ],
    "console_errors": [],
-   "total_buttons": 15,
+   "total_buttons": 41,
    "load_api_failures": [],
-   "tested_buttons": 5,
-   "no_response": 4,
+   "tested_buttons": 3,
+   "no_response": 0,
    "fail": 0,
-   "pass": 1
+   "pass": 3
   }
  ],
- "buttons_total": 45,
- "pass": 5,
- "fail": 2,
- "no_response": 11,
- "skipped": 27
+ "buttons_total": 125,
+ "pass": 6,
+ "fail": 15,
+ "no_response": 0,
+ "skipped": 104
 }
