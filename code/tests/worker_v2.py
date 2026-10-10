@@ -106,8 +106,14 @@ class WorkerV2:
         """注入登录态后打开应用，点击管理员视图"""
         raw = json.dumps(self.token)
         page.add_init_script(f"localStorage.setItem('cc_token', {json.dumps(raw)});")
-        page.goto(FRONT, wait_until="domcontentloaded", timeout=30000)
-        time.sleep(4)
+        for attempt in range(3):
+            try:
+                page.goto(FRONT, wait_until="domcontentloaded", timeout=30000)
+                break
+            except Exception as e:
+                self.log(f"打开首页尝试{attempt+1}失败: {str(e)[:80]}")
+                page.wait_for_timeout(2000)
+        page.wait_for_timeout(4000)
         # 若出现登录页，说明 token 失效
         if page.locator("input[placeholder*='密码']").count() > 0 or page.locator(".login-wrap").count() > 0:
             self.log("!! 出现登录页，token 未生效")
@@ -202,7 +208,7 @@ class WorkerV2:
                 target = "https://sandyun.top:8001/admincc/" + nav["href"]
             else:
                 target = FRONT + nav["slug"]
-            page.goto(target, wait_until="domcontentloaded", timeout=20000)
+            page.goto(target, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3500)
         except Exception as e:
             self.log(f"  页面加载异常: {e}")

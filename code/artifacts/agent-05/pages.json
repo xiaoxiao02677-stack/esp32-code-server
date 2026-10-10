@@ -1,0 +1,33 @@
+{
+ "worker": "05",
+ "pages": [
+  {
+   "page": "📚 知识库",
+   "slug": "knowledge",
+   "load_apis": 2,
+   "buttons": [
+    {
+     "page": "📚 知识库",
+     "button_text": "＋ 新建知识库",
+     "selector": "BUTTON>>2",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 147->164, 弹窗 3",
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 30,
+   "load_api_failures": [],
+   "tested_buttons": 1,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 1
+  }
+ ],
+ "buttons_total": 30,
+ "pass": 1,
+ "fail": 1,
+ "no_response": 0,
+ "skipped": 28
+}

@@ -1,0 +1,49 @@
+{
+ "worker": "09",
+ "pages": [
+  {
+   "page": "🔗 MCP",
+   "slug": "mcp",
+   "load_apis": 1,
+   "buttons": [],
+   "console_errors": [],
+   "total_buttons": 28,
+   "load_api_failures": [],
+   "tested_buttons": 0,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 0
+  },
+  {
+   "page": "🧪 链路模拟",
+   "slug": "linksim",
+   "load_apis": 1,
+   "buttons": [],
+   "console_errors": [],
+   "total_buttons": 30,
+   "load_api_failures": [],
+   "tested_buttons": 0,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 0
+  },
+  {
+   "page": "🛠 API调试",
+   "slug": "apis",
+   "load_apis": 0,
+   "buttons": [],
+   "console_errors": [],
+   "total_buttons": 28,
+   "load_api_failures": [],
+   "tested_buttons": 0,
+   "no_response": 0,
+   "fail": 0,
+   "pass": 0
+  }
+ ],
+ "buttons_total": 86,
+ "pass": 0,
+ "fail": 0,
+ "no_response": 0,
+ "skipped": 86
+}
