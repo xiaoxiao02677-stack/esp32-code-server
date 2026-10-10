@@ -1528,3 +1528,8 @@ spiffs_assets_gen.py[XO4S]: F:开发辅助脚本(spiffs_assets_gen.py) | R:- | A
 
 ===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/assets/===
 lang_config.h[CA5M]: F:自动生成的多语言/音效配置表(zh-CN，en-US回退)——字符串资源与OGG音效资产映射 | R:code:main/application.cc | A:- | S:namespace Lang::Strings 字符串表 + Lang::Sounds 经asm("_binary_N_ogg_start/end")绑定OGG资产；被Application/Alert播放提示音引用；新增音效须同步此表与assets
+
+===G:/demo/21_xiaozhi/code/xiaozhi-esp32/main/boards/bigscreen-s3/===
+bigscreen_display.cc[CH7L]: F:bigscreen-s3大屏(320x240横屏ILI9341)显示皮肤——GIF动画背景+时间/表情徽章/气泡/提示布局,覆写渲染层 | R:code:main/boards/bigscreen-s3/bigscreen_display.h,code:main/display/display.h,code:main/boards/common/board.h,code:main/application.h,code:main/assets/lang_config.h | A:SetupUI/BuildMainScreen/SetEmotion/SetChatMessage/SetStatus/UpdateStatusBar/ClearChatMessages/ShowNotification/SetTheme/SetPowerSaveMode/HandleKeyEvent/NextEasterEgg/Tick1s/OnSdCardMounted/RestartBackgroundGif | S:接管大屏布局/表情/气泡/状态;复用基类emoji管线;GIF背景Flash/SD≤4MB;须建隐藏network/mute/battery等占位防SetTheme空指针(2026-10-08教训);省电停GIF动画
+bigscreen-s3.cc[CH7M]: F:bigscreen-s3板级定义(ESP32-S3+ES8311+ILI9341 2.8寸SPI屏,320x240横屏)——初始化I2C/SPI/LCD/按键/心跳/SD,ES8311缺失降级NoAudioCodec | R:code:main/boards/bigscreen-s3/bigscreen_display.h,code:main/boards/wifi_board.h,code:main/audio/audio_codec.h,code:main/application.h | A:InitializeI2c/ProbeEs8311/InitializeSpi/InitializeButtons/InitializeSdCard/InitializeLcdDisplay/InitializeTickTimer/GetAudioCodec/GetDisplay/GetBacklight | S:板级初始化与单BOOT键三事件(短按聊/双击彩蛋/长按静音);ES8311探测失败降级I2S;SD后台挂载切大背景;长按防误触(30s阈值)
+bigscreen_display.h[CH4T]: F:bigscreen-s3大屏显示皮肤头文件——BigscreenDisplay类声明(继承SpiLcdDisplay) | R:code:main/display/lcd_display.h | A:- | S:大屏皮肤组件声明;覆写SetupUI等11接口;单BOOT键三事件与皮肤配色常量

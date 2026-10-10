@@ -1,9 +1,53 @@
 {
  "worker": "00",
- "pages": [],
- "buttons_total": 0,
- "pass": 0,
- "fail": 0,
- "no_response": 0,
- "skipped": 0
+ "pages": [
+  {
+   "page": "🏠 概览",
+   "slug": "admin",
+   "load_apis": 0,
+   "buttons": [
+    {
+     "page": "🏠 概览",
+     "button_text": "⬇ 导出报表",
+     "selector": "BUTTON>>2",
+     "type": "BUTTON",
+     "status": "无反应",
+     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-00\\admin_2_noresp.png",
+     "console_errors": 0
+    },
+    {
+     "page": "🏠 概览",
+     "button_text": "查看用户",
+     "selector": "BUTTON>>3",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "API 正常 (1): GET admin/users?page=1&limit=4->200",
+     "api_calls": 1,
+     "console_errors": 0
+    },
+    {
+     "page": "🏠 概览",
+     "button_text": "智能体管理",
+     "selector": "BUTTON>>4",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "UI 变化: dom 184->191, 弹窗 3",
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 41,
+   "load_api_failures": [],
+   "tested_buttons": 3,
+   "no_response": 1,
+   "fail": 0,
+   "pass": 2
+  }
+ ],
+ "buttons_total": 41,
+ "pass": 2,
+ "fail": 12,
+ "no_response": 1,
+ "skipped": 26
 }

@@ -1,0 +1,74 @@
+{
+ "worker": "07",
+ "pages": [
+  {
+   "page": "👥 用户",
+   "slug": "users",
+   "load_apis": 0,
+   "buttons": [
+    {
+     "page": "👥 用户",
+     "button_text": "theme-swatch is-active",
+     "selector": "BUTTON>>7",
+     "type": "BUTTON",
+     "status": "无反应",
+     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-07\\users_7_noresp.png",
+     "console_errors": 0
+    },
+    {
+     "page": "👥 用户",
+     "button_text": "theme-swatch",
+     "selector": "BUTTON>>8",
+     "type": "BUTTON",
+     "status": "无反应",
+     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-07\\users_8_noresp.png",
+     "console_errors": 0
+    },
+    {
+     "page": "👥 用户",
+     "button_text": "theme-swatch",
+     "selector": "BUTTON>>9",
+     "type": "BUTTON",
+     "status": "无反应",
+     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-07\\users_9_noresp.png",
+     "console_errors": 0
+    },
+    {
+     "page": "👥 用户",
+     "button_text": "theme-swatch",
+     "selector": "BUTTON>>10",
+     "type": "BUTTON",
+     "status": "PASS",
+     "detail": "API 正常 (6): GET admin/users?page=1&limit=4->None; GET admin/device/all?page=1&limit=20->200; GET agent/template->None; GET memory/agents->None",
+     "api_calls": 6,
+     "console_errors": 0
+    },
+    {
+     "page": "👥 用户",
+     "button_text": "theme-swatch",
+     "selector": "BUTTON>>11",
+     "type": "BUTTON",
+     "status": "无反应",
+     "detail": "5秒内无 API 请求、无 DOM 变化、无弹窗",
+     "screenshot": "G:/demo/21_xiaozhi/code/artifacts\\agent-07\\users_11_noresp.png",
+     "console_errors": 0
+    }
+   ],
+   "console_errors": [],
+   "total_buttons": 15,
+   "load_api_failures": [],
+   "tested_buttons": 5,
+   "no_response": 4,
+   "fail": 0,
+   "pass": 1
+  }
+ ],
+ "buttons_total": 15,
+ "pass": 1,
+ "fail": 1,
+ "no_response": 4,
+ "skipped": 9
+}

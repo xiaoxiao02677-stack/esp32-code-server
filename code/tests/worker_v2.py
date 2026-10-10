@@ -138,11 +138,13 @@ class WorkerV2:
             href = it["href"] or ""
             if not txt:
                 continue
-            # 提取 slug: #/xxx
-            m = re.search(r"#/([\w\-]+)", href)
+            # 提取 slug: #/admin/xxx -> xxx；#/admin -> admin
+            m = re.search(r"#/(?:admin/)?([\w\-]+)", href)
             slug = m.group(1) if m else txt
+            # 去 emoji 的纯净文本用于匹配
+            clean = re.sub(r"[\U0001F300-\U0001FAFF\U00002600-\U000027BF\s]+", "", txt)
             if txt not in seen:
-                seen[txt] = {"slug": slug, "href": href, "text": txt}
+                seen[txt] = {"slug": slug, "href": href, "text": txt, "clean": clean}
         return list(seen.values())
 
     # ---------- 按钮收集与点击 ----------
@@ -204,6 +206,7 @@ class WorkerV2:
 
         for btn in visible:
             text = btn["text"] or btn["cls"] or btn["href"]
+            cls = btn.get("cls") or ""
             rec = {"page": nav["text"], "button_text": text[:30], "selector": f"{btn['tag']}>>{btn['idx']}",
                    "type": btn["tag"], "status": "", "detail": ""}
 
@@ -211,6 +214,17 @@ class WorkerV2:
             if btn.get("disabled"):
                 rec["status"] = "跳过-禁用"
                 rec["detail"] = "按钮为禁用态"
+                self.results.append(rec)
+                continue
+            # 导航/会话控制项：不作为业务按钮点击，避免切换视图或退出登录导致测试上下文失效
+            if ("dock-item" in cls
+                    or "role-switch" in cls
+                    or "logout" in cls.lower()
+                    or "dock-toggle" in cls
+                    or "compact-btn" in cls
+                    or "dock-more" in cls):
+                rec["status"] = "跳过-导航控件"
+                rec["detail"] = "菜单/视图/会话控制，不作为业务按钮重复点击"
                 self.results.append(rec)
                 continue
             # 危险操作
@@ -327,7 +341,10 @@ class WorkerV2:
 
             # 选择待测页面
             if self.slugs and self.slugs != ["ALL"]:
-                targets = [n for n in navs if n["slug"] in self.slugs or n["text"] in self.slugs]
+                targets = [n for n in navs
+                           if n["slug"] in self.slugs
+                           or n["text"] in self.slugs
+                           or n.get("clean") in self.slugs]
             else:
                 targets = navs
             self.log(f"待测页面: {len(targets)}")

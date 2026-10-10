@@ -1,0 +1,31 @@
+﻿page,button_text,selector,type,status,detail,api_calls,screenshot
+🧩 模型,→ 管理员视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,« 收起,BUTTON>>2,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,🏠 首页,A>>3,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,📡 我的设备,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,🎙 音色,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,💎 积分,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,theme-swatch is-active,BUTTON>>7,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_7_noresp.png
+🧩 模型,theme-swatch,BUTTON>>8,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_8_noresp.png
+🧩 模型,theme-swatch,BUTTON>>9,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_9_noresp.png
+🧩 模型,theme-swatch,BUTTON>>10,BUTTON,PASS,API 正常 (6): GET admin/users?page=1&limit=4->200; GET admin/device/all?page=1&limit=20->None; GET agent/template->200; GET memory/agents->200,6,
+🧩 模型,theme-swatch,BUTTON>>11,BUTTON,PASS,API 正常 (1): GET agent/88b87cfb642e42268b239eb6b8cd1f02/sessions?pa->None,1,
+🧩 模型,theme-swatch,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_12_timeout.png
+🧩 模型,⚅,BUTTON>>13,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+🧩 模型,→,BUTTON>>14,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,→ 管理员视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,« 收起,BUTTON>>2,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,🏠 首页,A>>3,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,📡 我的设备,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,🎙 音色,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,💎 积分,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,theme-swatch is-active,BUTTON>>7,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_7_noresp.png
+📡 设备,theme-swatch,BUTTON>>8,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_8_noresp.png
+📡 设备,theme-swatch,BUTTON>>9,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_9_noresp.png
+📡 设备,theme-swatch,BUTTON>>10,BUTTON,PASS,API 正常 (6): GET admin/users?page=1&limit=4->None; GET admin/device/all?page=1&limit=20->None; GET agent/template->None; GET memory/agents->None,6,
+📡 设备,theme-swatch,BUTTON>>11,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_11_noresp.png
+📡 设备,theme-swatch,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_12_timeout.png
+📡 设备,⚅,BUTTON>>13,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+📡 设备,→,BUTTON>>14,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
