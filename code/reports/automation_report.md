@@ -4,19 +4,19 @@
 
 | 项目 | 值 |
 |------|-----|
-| 测试时间 | 2026-10-10 18:48:01 |
+| 测试时间 | 2026-10-10 19:22:34 |
 | 目标地址 | https://sandyun.top:8001/admincc/#/login |
 | 测试方式 | Playwright + 系统 Chrome 真实点击 + 登录 API 直调注入 localStorage |
 | 并行 Worker | 10（独立 BrowserContext） |
 | 登录账号 | demo（SM2 加密 + ddddocr 验证码识别） |
 | 覆盖页面 | 16 个管理员菜单页面 |
-| 按钮总数 | 824 |
-| 实际测试按钮 | 231 |
+| 按钮总数 | 476 |
+| 实际测试按钮 | 58 |
 | PASS | 16 |
-| FAIL | 214 |
+| FAIL | 41 |
 | 无反应 | 1 |
-| 跳过（禁用/危险/外部/导航/UI） | 593 |
-| 已测按钮通过率 | 6.9% |
+| 跳过（禁用/危险/外部/导航/UI） | 418 |
+| 已测按钮通过率 | 27.6% |
 | 前端 API 异常（4xx/5xx/失败） | 0 |
 
 ## 2. 源码分析结果
@@ -42,9 +42,9 @@
 | 指标 | 数值 |
 |------|------|
 | 页面覆盖（菜单入口） | 16 |
-| 按钮实测（非跳过） | 231 |
+| 按钮实测（非跳过） | 58 |
 | 按钮通过 | 16 |
-| 按钮失败 | 214 |
+| 按钮失败 | 41 |
 | 按钮无反应 | 1 |
 | 前端 API 4xx/5xx/失败 | 0 条 |
 
@@ -52,39 +52,39 @@
 
 | Worker | 负责页面 | 实际测试 slug | 按钮数 |
 |--------|----------|---------------|--------|
-| 00 | 概览(admin) | admin | 41 |
-| 01 | 智能体(agents) | agents | 43 |
-| 02 | 聊天(chat) | chat | 29 |
-| 03 | 记忆(memory) | memory | 34 |
-| 04 | 音色(voices)+模板(templates) | voices,templates | 217 |
-| 05 | 知识库(knowledge) | knowledge | 30 |
-| 06 | 模型(models)+设备(devices) | models,devices | 105 |
-| 07 | 参数(params)+用户(users) | users | 41 |
-| 08 | OTA(ota)+字典(dicts)+服务器(servers) | ota,dicts,servers | 198 |
-| 09 | MCP(mcp)+链路模拟(linksim)+API调试(apis) | mcp,linksim,apis | 86 |
+| 00 | 概览(admin) | admin | 37 |
+| 01 | 智能体(agents) | agents | 35 |
+| 02 | 聊天(chat) | chat | 25 |
+| 03 | 记忆(memory) | memory | 30 |
+| 04 | 音色(voices)+模板(templates) | voices,templates | 64 |
+| 05 | 知识库(knowledge) | knowledge | 26 |
+| 06 | 模型(models)+设备(devices) | models,devices | 71 |
+| 07 | 参数(params)+用户(users) | users | 34 |
+| 08 | OTA(ota)+字典(dicts)+服务器(servers) | ota,dicts,servers | 80 |
+| 09 | MCP(mcp)+链路模拟(linksim)+API调试(apis) | mcp,linksim,apis | 74 |
 
 ## 5. 按钮测试结果按页面
 
 | 页面 | 按钮数 | 通过 | 失败 | 无反应 | 跳过 |
 |------|--------|------|------|--------|------|
-| 🎙 音色 | 174 | 1 | 97 | 0 | 76 |
-| 🏠 概览 | 41 | 2 | 6 | 1 | 32 |
-| 👥 用户 | 41 | 3 | 2 | 0 | 36 |
-| 💬 聊天 | 29 | 1 | 0 | 0 | 28 |
-| 📖 字典 | 138 | 1 | 55 | 0 | 82 |
-| 📚 知识库 | 30 | 1 | 1 | 0 | 28 |
-| 📡 设备 | 41 | 1 | 6 | 0 | 34 |
-| 📦 OTA | 29 | 1 | 0 | 0 | 28 |
-| 🔗 MCP | 28 | 0 | 0 | 0 | 28 |
-| 🖥 服务器 | 31 | 1 | 2 | 0 | 28 |
-| 🛠 API调试 | 28 | 0 | 0 | 0 | 28 |
-| 🤖 智能体 | 43 | 1 | 8 | 0 | 34 |
-| 🧠 记忆 | 34 | 1 | 5 | 0 | 28 |
-| 🧩 模型 | 64 | 1 | 24 | 0 | 39 |
-| 🧩 模板 | 43 | 1 | 8 | 0 | 34 |
-| 🧪 链路模拟 | 30 | 0 | 0 | 0 | 30 |
+| 🎙 音色 | 29 | 1 | 3 | 0 | 25 |
+| 🏠 概览 | 37 | 2 | 6 | 1 | 28 |
+| 👥 用户 | 34 | 3 | 1 | 0 | 30 |
+| 💬 聊天 | 25 | 1 | 0 | 0 | 24 |
+| 📖 字典 | 28 | 1 | 2 | 0 | 25 |
+| 📚 知识库 | 26 | 1 | 1 | 0 | 24 |
+| 📡 设备 | 34 | 1 | 4 | 0 | 29 |
+| 📦 OTA | 25 | 1 | 0 | 0 | 24 |
+| 🔗 MCP | 24 | 0 | 0 | 0 | 24 |
+| 🖥 服务器 | 27 | 1 | 2 | 0 | 24 |
+| 🛠 API调试 | 24 | 0 | 0 | 0 | 24 |
+| 🤖 智能体 | 35 | 1 | 5 | 0 | 29 |
+| 🧠 记忆 | 30 | 1 | 5 | 0 | 24 |
+| 🧩 模型 | 37 | 1 | 7 | 0 | 29 |
+| 🧩 模板 | 35 | 1 | 5 | 0 | 29 |
+| 🧪 链路模拟 | 26 | 0 | 0 | 0 | 26 |
 
-## 6. 失败按钮明细（214）
+## 6. 失败按钮明细（41）
 
 1. **[W00] 🏠 概览 > 设备**
    - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_5_timeout.png
@@ -116,95 +116,95 @@
 10. **[W01] 🤖 智能体 > 编辑**
    - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_6_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-11. **[W01] 🤖 智能体 > 会话**
-   - 选择器: BUTTON>>8 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_timeout.png
-   - 问题: 点击超时（元素可能被遮挡或不可点击）
-12. **[W01] 🤖 智能体 > MCP**
-   - 选择器: BUTTON>>9 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_9_timeout.png
-   - 问题: 点击超时（元素可能被遮挡或不可点击）
-13. **[W01] 🤖 智能体 > 编辑**
-   - 选择器: BUTTON>>10 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_10_timeout.png
-   - 问题: 点击超时（元素可能被遮挡或不可点击）
-14. **[W01] 🤖 智能体 > 1**
+11. **[W01] 🤖 智能体 > 1**
    - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_14_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-15. **[W03] 🧠 记忆 > ⚡ 快速总结**
+12. **[W03] 🧠 记忆 > ⚡ 快速总结**
    - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-16. **[W03] 🧠 记忆 > ↻ 刷新**
+13. **[W03] 🧠 记忆 > ↻ 刷新**
    - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_4_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-17. **[W03] 🧠 记忆 > ☰ 列表**
+14. **[W03] 🧠 记忆 > ☰ 列表**
    - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_5_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-18. **[W03] 🧠 记忆 > 🕐 时间轴**
+15. **[W03] 🧠 记忆 > 🕐 时间轴**
    - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_6_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-19. **[W03] 🧠 记忆 > 🕸 实体图谱**
+16. **[W03] 🧠 记忆 > 🕸 实体图谱**
    - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_7_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-20. **[W04] 🎙 音色 > ↻ 刷新**
+17. **[W04] 🎙 音色 > ↻ 刷新**
    - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-21. **[W04] 🎙 音色 > ▶ 试听**
+18. **[W04] 🎙 音色 > ▶ 试听**
    - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_4_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-22. **[W04] 🎙 音色 > 编辑**
+19. **[W04] 🎙 音色 > 编辑**
    - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_5_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-23. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_7_timeout.png
+20. **[W04] 🧩 模板 > ↻ 刷新模板**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-24. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>8 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_8_timeout.png
+21. **[W04] 🧩 模板 > ⚡ 用模板创建**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_4_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-25. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>10 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_10_timeout.png
+22. **[W04] 🧩 模板 > 编辑**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_5_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-26. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>11 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_11_timeout.png
+23. **[W04] 🧩 模板 > 预览**
+   - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_6_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-27. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>13 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_13_timeout.png
+24. **[W04] 🧩 模板 > 1**
+   - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_14_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-28. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_14_timeout.png
+25. **[W05] 📚 知识库 > ↻ 刷新列表**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-05\knowledge_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-29. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>16 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_16_timeout.png
+26. **[W06] 🧩 模型 > ↻ 刷新**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-30. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>17 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_17_timeout.png
+27. **[W06] 🧩 模型 > ↻ 刷新**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_4_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-31. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>19 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_19_timeout.png
+28. **[W06] 🧩 模型 > 测试**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_5_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-32. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>20 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_20_timeout.png
+29. **[W06] 🧩 模型 > 停用**
+   - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_6_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-33. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>22 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_22_timeout.png
+30. **[W06] 🧩 模型 > 编辑**
+   - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_7_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-34. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>23 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_23_timeout.png
+31. **[W06] 🧩 模型 > 启用**
+   - 选择器: BUTTON>>18 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_18_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-35. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>25 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_25_timeout.png
+32. **[W06] 🧩 模型 > 1**
+   - 选择器: BUTTON>>35 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\models_35_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-36. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>26 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_26_timeout.png
+33. **[W06] 📡 设备 > ↻ 刷新**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-37. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>28 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_28_timeout.png
+34. **[W06] 📡 设备 > ✎ 改名**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_4_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-38. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>29 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_29_timeout.png
+35. **[W06] 📡 设备 > ⇄ 绑定**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_5_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-39. **[W04] 🎙 音色 > ▶ 试听**
-   - 选择器: BUTTON>>31 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_31_timeout.png
+36. **[W06] 📡 设备 > 1**
+   - 选择器: BUTTON>>12 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_12_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
-40. **[W04] 🎙 音色 > 编辑**
-   - 选择器: BUTTON>>32 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_32_timeout.png
+37. **[W07] 👥 用户 > 1**
+   - 选择器: BUTTON>>12 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-07\users_12_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+38. **[W08] 📖 字典 > ↻ 刷新**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_3_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+39. **[W08] 📖 字典 > 编辑**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_4_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+40. **[W08] 🖥 服务器 > ♻️ 重启管理服务**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-08\servers_3_timeout.png
    - 问题: 点击超时（元素可能被遮挡或不可点击）
 
 ## 7. 无反应按钮（1）
@@ -219,10 +219,10 @@
 
 | 原因 | 数量 |
 |------|------|
-| 跳过-危险 | 119 |
+| 跳过-危险 | 8 |
 | 跳过-导航控件 | 352 |
 | 跳过-禁用 | 26 |
-| 跳过-纯UI控件 | 96 |
+| 跳过-纯UI控件 | 32 |
 
 ## 10. 产物索引
 
@@ -242,4 +242,4 @@
 | 运行日志 | logs/worker_XX.log |
 
 ---
-*报告生成: 2026-10-10 18:48:01 | 执行: WorkBuddy AI（10 Worker 并行，第三轮修正后）*
+*报告生成: 2026-10-10 19:22:34 | 执行: WorkBuddy AI（10 Worker 并行，第三轮修正后）*
