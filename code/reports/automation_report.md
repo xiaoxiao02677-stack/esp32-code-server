@@ -1,320 +1,245 @@
-# 基于源码的管理后台全量自动化测试报告
+# 基于源码 + 真实前端交互的管理后台自动化测试报告
 
 ## 1. 执行概览
 
 | 项目 | 值 |
 |------|-----|
-| 测试时间 | 2026-10-10 02:05:02 |
-| 测试环境 | https://sandyun.top:8001 |
+| 测试时间 | 2026-10-10 18:48:01 |
 | 目标地址 | https://sandyun.top:8001/admincc/#/login |
-| 测试账号 | demo |
-| 测试用例总数 | 19 |
-| 通过数量 | 13 |
-| 失败数量 | 6 |
-| 通过率 | 68.4% |
-| 严重问题 | 6 |
-| 无响应问题 | 0 |
-| 效果不达预期 | 6 |
-
----
+| 测试方式 | Playwright + 系统 Chrome 真实点击 + 登录 API 直调注入 localStorage |
+| 并行 Worker | 10（独立 BrowserContext） |
+| 登录账号 | demo（SM2 加密 + ddddocr 验证码识别） |
+| 覆盖页面 | 16 个管理员菜单页面 |
+| 按钮总数 | 824 |
+| 实际测试按钮 | 231 |
+| PASS | 16 |
+| FAIL | 214 |
+| 无反应 | 1 |
+| 跳过（禁用/危险/外部/导航/UI） | 593 |
+| 已测按钮通过率 | 6.9% |
+| 前端 API 异常（4xx/5xx/失败） | 0 |
 
 ## 2. 源码分析结果
 
-### 2.1 项目技术栈
+### 2.1 技术栈
+- 前端：Vue 3 + Vite，部署 `/admincc/`，含「体验端」+「管理员视图」双模式（hash 路由 #/admin/xxx）
+- 后端：Java Spring Boot（manager-api，context-path /xiaozhi）+ Python aiohttp（xiaozhi-server）
+- 数据库：MySQL + Redis；加密 SM2(C1C3C2)；验证码 SpecCaptcha 5 位
 
-| 层级 | 技术 |
+### 2.2 登录方式（直调 API，不走 UI）
+- `GET /xiaozhi/user/pub-config` 获取 SM2 公钥
+- `GET /xiaozhi/user/captcha?uuid=xx` 获取验证码图，ddddocr 识别
+- `POST /xiaozhi/user/login`（SM2 加密 验证码+密码）→ 返回 {token, expire, clientHash}
+- 注入 `localStorage['cc_token']` → 打开应用即登录
+
+### 2.3 菜单（17 项管理员路由）
+概览(admin)、智能体(agents)、聊天(chat)、记忆(memory)、音色(voices)、模板(templates)、
+知识库(knowledge)、模型(models)、设备(devices)、参数(params)、用户(users)、OTA(ota)、
+字典(dicts)、服务器(servers)、MCP(mcp)、链路模拟(linksim)、API调试(apis)
+
+## 3. 覆盖率统计
+
+| 指标 | 数值 |
 |------|------|
-| 前端框架 | Vue 3 + Vite |
-| 后端框架 | Java Spring Boot |
-| 数据库 | MySQL |
-| 缓存 | Redis |
-| 加密方式 | SM2 (C1C3C2 模式) |
-| 验证码 | SpecCaptcha (5位字符) |
+| 页面覆盖（菜单入口） | 16 |
+| 按钮实测（非跳过） | 231 |
+| 按钮通过 | 16 |
+| 按钮失败 | 214 |
+| 按钮无反应 | 1 |
+| 前端 API 4xx/5xx/失败 | 0 条 |
 
-### 2.2 目录结构
+## 4. Worker 页面分配与执行
 
-```
-G:/demo/21_xiaozhi/
-├── cc-console/          # 前端控制台 (Vue 3)
-│   ├── src/
-│   │   ├── App.vue      # 主应用组件
-│   │   ├── main.js      # 入口文件
-│   │   ├── lib/
-│   │   │   └── apiCatalog.js  # API 目录定义
-│   │   └── styles/
-│   │       └── kawaii.css   # 样式文件
-│   └── package.json
-│
-└── 网页后台/
-    └── xiaozhi-esp32-server/
-        └── main/
-            └── manager-api/   # 后端 API (Spring Boot)
-                ├── src/main/java/xiaozhi/
-                │   ├── modules/
-                │   │   ├── agent/      # 智能体模块
-                │   │   ├── device/     # 设备模块
-                │   │   ├── model/      # 模型模块
-                │   │   ├── security/   # 安全模块
-                │   │   ├── sys/        # 系统管理模块
-                │   │   ├── knowledge/  # 知识库模块
-                │   │   ├── memory/     # 记忆模块
-                │   │   └── voiceclone/ # 音色复刻模块
-                │   └── common/
-                │       └── utils/
-                │           ├── SM2Utils.java      # SM2 加密工具
-                │           └── Sm2DecryptUtil.java # SM2 解密工具
-                └── src/main/resources/
-                    └── application.yml
-```
+| Worker | 负责页面 | 实际测试 slug | 按钮数 |
+|--------|----------|---------------|--------|
+| 00 | 概览(admin) | admin | 41 |
+| 01 | 智能体(agents) | agents | 43 |
+| 02 | 聊天(chat) | chat | 29 |
+| 03 | 记忆(memory) | memory | 34 |
+| 04 | 音色(voices)+模板(templates) | voices,templates | 217 |
+| 05 | 知识库(knowledge) | knowledge | 30 |
+| 06 | 模型(models)+设备(devices) | models,devices | 105 |
+| 07 | 参数(params)+用户(users) | users | 41 |
+| 08 | OTA(ota)+字典(dicts)+服务器(servers) | ota,dicts,servers | 198 |
+| 09 | MCP(mcp)+链路模拟(linksim)+API调试(apis) | mcp,linksim,apis | 86 |
 
-### 2.3 登录方式
+## 5. 按钮测试结果按页面
 
-- **加密方式**: SM2 公钥加密 (C1C3C2 模式)
-- **验证码**: 5 位字符图形验证码
-- **登录流程**:
-  1. 获取 SM2 公钥 (`/user/pub-config`)
-  2. 获取图形验证码 (`/user/captcha?uuid=xxx`)
-  3. 将 `验证码 + 密码` 拼接后用 SM2 公钥加密
-  4. 发送登录请求 (`/user/login`)
+| 页面 | 按钮数 | 通过 | 失败 | 无反应 | 跳过 |
+|------|--------|------|------|--------|------|
+| 🎙 音色 | 174 | 1 | 97 | 0 | 76 |
+| 🏠 概览 | 41 | 2 | 6 | 1 | 32 |
+| 👥 用户 | 41 | 3 | 2 | 0 | 36 |
+| 💬 聊天 | 29 | 1 | 0 | 0 | 28 |
+| 📖 字典 | 138 | 1 | 55 | 0 | 82 |
+| 📚 知识库 | 30 | 1 | 1 | 0 | 28 |
+| 📡 设备 | 41 | 1 | 6 | 0 | 34 |
+| 📦 OTA | 29 | 1 | 0 | 0 | 28 |
+| 🔗 MCP | 28 | 0 | 0 | 0 | 28 |
+| 🖥 服务器 | 31 | 1 | 2 | 0 | 28 |
+| 🛠 API调试 | 28 | 0 | 0 | 0 | 28 |
+| 🤖 智能体 | 43 | 1 | 8 | 0 | 34 |
+| 🧠 记忆 | 34 | 1 | 5 | 0 | 28 |
+| 🧩 模型 | 64 | 1 | 24 | 0 | 39 |
+| 🧩 模板 | 43 | 1 | 8 | 0 | 34 |
+| 🧪 链路模拟 | 30 | 0 | 0 | 0 | 30 |
 
-### 2.4 API 清单
+## 6. 失败按钮明细（214）
 
-基于 `apiCatalog.js` 和源码分析，共发现以下模块：
+1. **[W00] 🏠 概览 > 设备**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_5_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+2. **[W00] 🏠 概览 > 聊天记录**
+   - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_6_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+3. **[W00] 🏠 概览 > 模板**
+   - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_7_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+4. **[W00] 🏠 概览 > ↻ 刷新**
+   - 选择器: BUTTON>>8 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_8_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+5. **[W00] 🏠 概览 > 1**
+   - 选择器: BUTTON>>11 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_11_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+6. **[W00] 🏠 概览 > 查看全部**
+   - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_14_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+7. **[W01] 🤖 智能体 > ↻ 刷新**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_3_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+8. **[W01] 🤖 智能体 > 会话**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_4_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+9. **[W01] 🤖 智能体 > MCP**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_5_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+10. **[W01] 🤖 智能体 > 编辑**
+   - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_6_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+11. **[W01] 🤖 智能体 > 会话**
+   - 选择器: BUTTON>>8 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+12. **[W01] 🤖 智能体 > MCP**
+   - 选择器: BUTTON>>9 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_9_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+13. **[W01] 🤖 智能体 > 编辑**
+   - 选择器: BUTTON>>10 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_10_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+14. **[W01] 🤖 智能体 > 1**
+   - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_14_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+15. **[W03] 🧠 记忆 > ⚡ 快速总结**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_3_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+16. **[W03] 🧠 记忆 > ↻ 刷新**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_4_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+17. **[W03] 🧠 记忆 > ☰ 列表**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_5_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+18. **[W03] 🧠 记忆 > 🕐 时间轴**
+   - 选择器: BUTTON>>6 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_6_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+19. **[W03] 🧠 记忆 > 🕸 实体图谱**
+   - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_7_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+20. **[W04] 🎙 音色 > ↻ 刷新**
+   - 选择器: BUTTON>>3 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_3_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+21. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>4 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_4_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+22. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>5 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_5_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+23. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>7 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_7_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+24. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>8 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_8_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+25. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>10 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_10_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+26. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>11 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_11_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+27. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>13 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_13_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+28. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>14 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_14_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+29. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>16 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_16_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+30. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>17 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_17_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+31. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>19 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_19_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+32. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>20 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_20_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+33. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>22 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_22_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+34. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>23 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_23_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+35. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>25 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_25_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+36. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>26 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_26_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+37. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>28 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_28_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+38. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>29 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_29_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+39. **[W04] 🎙 音色 > ▶ 试听**
+   - 选择器: BUTTON>>31 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_31_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
+40. **[W04] 🎙 音色 > 编辑**
+   - 选择器: BUTTON>>32 | 截图: G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_32_timeout.png
+   - 问题: 点击超时（元素可能被遮挡或不可点击）
 
-| 模块 | API 数量 | 状态 |
-|------|----------|------|
-| 智能体 (agent) | 28 | 已测试 |
-| 用户 (user) | 10 | 已测试 |
-| 设备 (device) | 6 | 已测试 |
-| 设备云端配置 (deviceConfig) | 4 | 待测试 |
-| 模型 (model) | 18 | 已测试 |
-| 音色 (timbre) | 4 | 已测试 |
-| 记忆 (memory) | 9 | 已测试 |
-| 音色复刻 (voiceClone) | 6 | 待测试 |
-| 音色资源 (voiceResource) | 6 | 待测试 |
-| 知识库 (knowledgeBase) | 12 | 已测试 |
-| 系统管理 (admin) | 9 | 已测试 |
-| OTA 固件 (ota) | 7 | 已测试 |
-| 通讯录 (addressBook) | 3 | 已测试 |
-| 字典 (dict) | 10 | 已测试 |
-| 替换词 (correctWord) | 7 | 已测试 |
+## 7. 无反应按钮（1）
 
-**总计**: 约 139 个 API 接口
+1. **[W00] 🏠 概览 > ⬇ 导出报表** | 5秒内无 API 请求、无 DOM 变化、无弹窗
 
----
+## 8. 前端 API 异常（0）
 
-## 3. 测试策略
+无 API 异常。
 
-### 3.1 测试类型
+## 9. 跳过项统计
 
-- **接口测试**: 直接调用后端 API，绕过前端 UI
-- **认证测试**: SM2 加密登录 + 验证码识别
-- **权限测试**: 验证未授权访问拦截
-- **功能测试**: 验证各模块核心功能
-
-### 3.2 测试覆盖
-
-| 测试项 | 覆盖率 | 说明 |
-|--------|--------|------|
-| 接口覆盖率 | 68.4% | 19/28 核心接口已测试 |
-| 登录功能 | 100% | SM2 加密 + OCR 验证码 |
-| 权限控制 | 100% | 未授权访问返回 401 |
-| 菜单覆盖 | 100% | 所有模块已覆盖 |
-
----
-
-## 4. 测试结果详情
-
-### 4.1 通过用例 (13)
-
-| ID | 名称 | 模块 | 方法 | 路径 | 耗时 |
-|----|------|------|------|------|------|
-| U001 | 获取用户信息 | 用户 | GET | /user/info | 4.256s |
-| A001 | 获取智能体列表 | 智能体 | GET | /agent/list | 0.126s |
-| A002 | 获取智能体模板 | 智能体 | GET | /agent/template | 0.029s |
-| D001 | 获取绑定设备 | 设备 | GET | /device/bind/1 | 0.026s |
-| M002 | 获取供应器列表 | 模型 | GET | /models/llm/provideTypes | 0.037s |
-| K001 | 获取知识库列表 | 知识库 | GET | /datasets | 0.064s |
-| MEM001 | 获取记忆Agent列表 | 记忆 | GET | /memory/agents | 0.108s |
-| S001 | 获取用户列表 | 系统管理 | GET | /admin/users | 0.072s |
-| S002 | 获取系统参数 | 系统管理 | GET | /admin/params/page | 0.048s |
-| S003 | 获取字典类型列表 | 系统管理 | GET | /admin/dict/type/page | 0.076s |
-| O001 | 获取OTA列表 | OTA | GET | /otaMag | 0.056s |
-| C001 | 获取通讯录列表 | 通讯录 | GET | /device/address-book/test | 0.023s |
-| R001 | 获取替换词列表 | 替换词 | GET | /correct-word/file/list | 0.035s |
-
-### 4.2 失败用例 (6)
-
-| ID | 名称 | 模块 | 方法 | 路径 | 状态码 | 错误信息 |
-|----|------|------|------|------|--------|----------|
-| U002 | 修改密码 | 用户 | PUT | /user/change-password | 200 | 响应码不匹配: 期望 0, 实际 500 |
-| A003 | 获取智能体会话 | 智能体 | GET | /agent/1/sessions | 200 | 响应码不匹配: 期望 0, 实际 10169 |
-| D002 | 获取设备状态 | 设备 | POST | /device/bind/1 | 200 | 响应码不匹配: 期望 0, 实际 500 |
-| M001 | 获取模型列表 | 模型 | GET | /models/list | 200 | 响应码不匹配: 期望 0, 实际 500 |
-| T001 | 获取音色列表 | 音色 | GET | /ttsVoice | 200 | 响应码不匹配: 期望 0, 实际 500 |
-| MEM002 | 获取记忆条目列表 | 记忆 | GET | /memory/facts | 200 | 响应码不匹配: 期望 0, 实际 500 |
-
----
-
-## 5. 严重问题汇总
-
-### 5.1 阻断级问题 (0)
-
-无
-
-### 5.2 严重级问题 (6)
-
-#### 1. 修改密码
-
-- **用例 ID**: U002
-- **模块**: 用户
-- **接口**: PUT /user/change-password
-- **HTTP 状态码**: 200
-- **响应码**: 500
-- **错误信息**: 密码不能为空
-- **测试时间**: 2026-10-10 02:05:02
-
-#### 2. 获取智能体会话
-
-- **用例 ID**: A003
-- **模块**: 智能体
-- **接口**: GET /agent/1/sessions
-- **HTTP 状态码**: 200
-- **响应码**: 10169
-- **错误信息**: 智能体不存在
-- **测试时间**: 2026-10-10 02:05:02
-
-#### 3. 获取设备状态
-
-- **用例 ID**: D002
-- **模块**: 设备
-- **接口**: POST /device/bind/1
-- **HTTP 状态码**: 200
-- **响应码**: 500
-- **错误信息**: 服务器内部错误
-- **测试时间**: 2026-10-10 02:05:02
-
-#### 4. 获取模型列表
-
-- **用例 ID**: M001
-- **模块**: 模型
-- **接口**: GET /models/list
-- **HTTP 状态码**: 200
-- **响应码**: 500
-- **错误信息**: 服务器内部错误
-- **测试时间**: 2026-10-10 02:05:02
-
-#### 5. 获取音色列表
-
-- **用例 ID**: T001
-- **模块**: 音色
-- **接口**: GET /ttsVoice
-- **HTTP 状态码**: 200
-- **响应码**: 500
-- **错误信息**: 服务器内部错误
-- **测试时间**: 2026-10-10 02:05:02
-
-#### 6. 获取记忆条目列表
-
-- **用例 ID**: MEM002
-- **模块**: 记忆
-- **接口**: GET /memory/facts
-- **HTTP 状态码**: 200
-- **响应码**: 500
-- **错误信息**: 服务器内部错误
-- **测试时间**: 2026-10-10 02:05:02
-
----
-
-## 6. 无响应问题汇总
-
-共 0 个
-
-无
-
----
-
-## 7. 效果不达预期汇总
-
-共 6 个
-
-- **U002**: 修改密码 - 响应码不匹配: 期望 0, 实际 500
-- **A003**: 获取智能体会话 - 响应码不匹配: 期望 0, 实际 10169
-- **D002**: 获取设备状态 - 响应码不匹配: 期望 0, 实际 500
-- **M001**: 获取模型列表 - 响应码不匹配: 期望 0, 实际 500
-- **T001**: 获取音色列表 - 响应码不匹配: 期望 0, 实际 500
-- **MEM002**: 获取记忆条目列表 - 响应码不匹配: 期望 0, 实际 500
-
----
-
-## 8. 跳过项与原因
-
-| 模块 | 跳过原因 |
-|------|----------|
-| 设备云端配置 | 需要特定设备 ID，测试数据不足 |
-| 音色复刻 | 需要上传音频文件，测试环境受限 |
-| 音色资源 | 需要特定资源 ID，测试数据不足 |
-| 创建/更新/删除操作 | 避免影响生产数据，仅测试读取接口 |
-
----
-
-## 9. 复现步骤与证据索引
-
-### 9.1 登录流程复现
-
-```bash
-# 1. 获取公钥
-curl -k "https://sandyun.top:8001/xiaozhi/user/pub-config"
-
-# 2. 获取验证码
-curl -k "https://sandyun.top:8001/xiaozhi/user/captcha?uuid=test-uuid"
-
-# 3. SM2 加密 (C1C3C2 模式)
-# 使用 Python gmssl 库:
-# from gmssl import sm2
-# crypt = sm2.CryptSM2(public_key=pub_key, mode=True)
-# encrypted = '04' + crypt.encrypt(captcha + password).hex()
-
-# 4. 登录
-curl -k -X POST "https://sandyun.top:8001/xiaozhi/user/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"demo","password":"ENCRYPTED_PASSWORD","captchaId":"test-uuid"}'
-```
-
-### 9.2 证据文件索引
-
-| 文件 | 说明 |
+| 原因 | 数量 |
 |------|------|
-| reports/automation_report.md | 本报告 |
-| reports/test_results.json | 详细测试结果 (JSON) |
-| reports/test_cases.csv | 测试用例清单 |
-| reports/issues.csv | 问题清单 |
-| reports/no_response.csv | 无响应问题 |
-| reports/unexpected.csv | 效果不达预期 |
-| tests/captcha.png | 验证码图片示例 |
-| tests/token.txt | 测试 Token (已过期) |
+| 跳过-危险 | 119 |
+| 跳过-导航控件 | 352 |
+| 跳过-禁用 | 26 |
+| 跳过-纯UI控件 | 96 |
+
+## 10. 产物索引
+
+| 产物 | 路径 |
+|------|------|
+| 总报告 | reports/automation_report.md |
+| 菜单树 | reports/menu_tree.json |
+| 路由清单 | reports/routes.csv |
+| API 清单 | reports/apis.csv |
+| 按钮-API 映射 | reports/button_api_mapping.json |
+| 全量按钮记录 | reports/buttons.csv |
+| 问题清单 | reports/issues.csv |
+| 无反应清单 | reports/no_response_buttons.csv |
+| 不达预期清单 | reports/unexpected_buttons.csv |
+| 前端 API 异常 | reports/frontend_api_errors.csv |
+| Worker 明细 | artifacts/agent-XX/（buttons.csv / pages.json / api_network.json / 截图） |
+| 运行日志 | logs/worker_XX.log |
 
 ---
-
-## 10. 建议与后续行动
-
-### 10.1 需要修复的问题
-
-1. **U002 修改密码**: 返回 500 错误，需检查密码强度校验逻辑
-2. **A003 获取智能体会话**: 返回 10169 错误，需检查智能体 ID 有效性
-3. **D002 获取设备状态**: 返回 500 错误，需检查设备绑定状态
-4. **M001 获取模型列表**: 返回 500 错误，需检查模型配置
-5. **T001 获取音色列表**: 返回 500 错误，需检查音色配置
-6. **MEM002 获取记忆条目**: 返回 500 错误，需检查记忆数据
-
-### 10.2 建议
-
-1. 完善错误处理，返回更友好的错误信息
-2. 添加接口文档 (Swagger/Knife4j)
-3. 增加接口测试覆盖率至 100%
-4. 添加自动化回归测试流程
-
----
-
-*报告生成时间: 2026-10-10 02:05:02*
-*测试执行者: WorkBuddy AI Agent*
+*报告生成: 2026-10-10 18:48:01 | 执行: WorkBuddy AI（10 Worker 并行，第三轮修正后）*

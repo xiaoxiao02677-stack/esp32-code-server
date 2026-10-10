@@ -1,0 +1,825 @@
+﻿worker,page,button_text,selector,type,status,detail,api_calls,screenshot
+00,🏠 概览,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,⬇ 导出报表,BUTTON>>2,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_2_noresp.png
+00,🏠 概览,查看用户,BUTTON>>3,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+00,🏠 概览,智能体管理,BUTTON>>4,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
+00,🏠 概览,设备,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_5_timeout.png
+00,🏠 概览,聊天记录,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_6_timeout.png
+00,🏠 概览,模板,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_7_timeout.png
+00,🏠 概览,↻ 刷新,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_8_timeout.png
+00,🏠 概览,首页,BUTTON>>9,BUTTON,跳过-禁用,按钮为禁用态,,
+00,🏠 概览,‹,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
+00,🏠 概览,1,BUTTON>>11,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_11_timeout.png
+00,🏠 概览,›,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
+00,🏠 概览,下一页,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+00,🏠 概览,查看全部,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_14_timeout.png
+00,🏠 概览,« 收起,BUTTON>>15,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🏠 概览,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🤖 智能体,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,💬 聊天,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🧠 记忆,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🎙 音色,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🧩 模板,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,📚 知识库,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🧩 模型,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,📡 设备,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,⚙️ 参数,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,👥 用户,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,📦 OTA,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,📖 字典,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🖥 服务器,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🔗 MCP,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🧪 链路模拟,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+00,🏠 概览,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+00,🏠 概览,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,＋ 新增智能体,BUTTON>>2,BUTTON,PASS,API 正常 (6): GET models/names?modelType=LLM->200; GET models/names?modelType=TTS->200; GET models/names?modelType=Memory->200; GET models/names?modelType=ASR->200,6,
+01,🤖 智能体,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_3_timeout.png
+01,🤖 智能体,会话,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_4_timeout.png
+01,🤖 智能体,MCP,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_5_timeout.png
+01,🤖 智能体,编辑,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_6_timeout.png
+01,🤖 智能体,删除,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+01,🤖 智能体,会话,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_timeout.png
+01,🤖 智能体,MCP,BUTTON>>9,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_9_timeout.png
+01,🤖 智能体,编辑,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_10_timeout.png
+01,🤖 智能体,删除,BUTTON>>11,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+01,🤖 智能体,首页,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
+01,🤖 智能体,‹,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+01,🤖 智能体,1,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_14_timeout.png
+01,🤖 智能体,›,BUTTON>>15,BUTTON,跳过-禁用,按钮为禁用态,,
+01,🤖 智能体,下一页,BUTTON>>16,BUTTON,跳过-禁用,按钮为禁用态,,
+01,🤖 智能体,« 收起,BUTTON>>17,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🏠 概览,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🤖 智能体,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,💬 聊天,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🧠 记忆,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🎙 音色,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🧩 模板,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,📚 知识库,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🧩 模型,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,📡 设备,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,⚙️ 参数,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,👥 用户,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,📦 OTA,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,📖 字典,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🖥 服务器,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🔗 MCP,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🧪 链路模拟,A>>33,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,🛠 API调试,A>>34,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,theme-swatch is-active,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,theme-swatch,BUTTON>>39,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,theme-swatch,BUTTON>>40,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+01,🤖 智能体,⚅,BUTTON>>41,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+01,🤖 智能体,⇄,BUTTON>>42,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,↻ 刷新,BUTTON>>2,BUTTON,PASS,API 正常 (1): GET agent/list->200,1,
+02,💬 聊天,« 收起,BUTTON>>3,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🏠 概览,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🤖 智能体,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,💬 聊天,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🧠 记忆,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🎙 音色,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🧩 模板,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,📚 知识库,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🧩 模型,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,📡 设备,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,⚙️ 参数,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,👥 用户,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,📦 OTA,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,📖 字典,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🖥 服务器,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🔗 MCP,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🧪 链路模拟,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,🛠 API调试,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,theme-swatch is-active,BUTTON>>21,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,theme-swatch,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+02,💬 聊天,⚅,BUTTON>>27,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+02,💬 聊天,⇄,BUTTON>>28,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,＋ 新增记忆,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 152->161, 弹窗 3",,
+03,🧠 记忆,⚡ 快速总结,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_3_timeout.png
+03,🧠 记忆,↻ 刷新,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_4_timeout.png
+03,🧠 记忆,☰ 列表,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_5_timeout.png
+03,🧠 记忆,🕐 时间轴,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_6_timeout.png
+03,🧠 记忆,🕸 实体图谱,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-03\memory_7_timeout.png
+03,🧠 记忆,« 收起,BUTTON>>8,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🏠 概览,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🤖 智能体,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,💬 聊天,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🧠 记忆,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🎙 音色,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🧩 模板,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,📚 知识库,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🧩 模型,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,📡 设备,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,⚙️ 参数,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,👥 用户,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,📦 OTA,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,📖 字典,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🖥 服务器,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🔗 MCP,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🧪 链路模拟,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,🛠 API调试,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,theme-swatch is-active,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,theme-swatch,BUTTON>>27,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,theme-swatch,BUTTON>>28,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,theme-swatch,BUTTON>>29,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,theme-swatch,BUTTON>>30,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,theme-swatch,BUTTON>>31,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+03,🧠 记忆,⚅,BUTTON>>32,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+03,🧠 记忆,⇄,BUTTON>>33,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,＋ 新增音色,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 618->646, 弹窗 3",,
+04,🎙 音色,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_3_timeout.png
+04,🎙 音色,▶ 试听,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_4_timeout.png
+04,🎙 音色,编辑,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_5_timeout.png
+04,🎙 音色,删除,BUTTON>>6,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_7_timeout.png
+04,🎙 音色,编辑,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_8_timeout.png
+04,🎙 音色,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_10_timeout.png
+04,🎙 音色,编辑,BUTTON>>11,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_11_timeout.png
+04,🎙 音色,删除,BUTTON>>12,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>13,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_13_timeout.png
+04,🎙 音色,编辑,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_14_timeout.png
+04,🎙 音色,删除,BUTTON>>15,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>16,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_16_timeout.png
+04,🎙 音色,编辑,BUTTON>>17,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_17_timeout.png
+04,🎙 音色,删除,BUTTON>>18,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>19,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_19_timeout.png
+04,🎙 音色,编辑,BUTTON>>20,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_20_timeout.png
+04,🎙 音色,删除,BUTTON>>21,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>22,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_22_timeout.png
+04,🎙 音色,编辑,BUTTON>>23,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_23_timeout.png
+04,🎙 音色,删除,BUTTON>>24,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>25,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_25_timeout.png
+04,🎙 音色,编辑,BUTTON>>26,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_26_timeout.png
+04,🎙 音色,删除,BUTTON>>27,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>28,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_28_timeout.png
+04,🎙 音色,编辑,BUTTON>>29,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_29_timeout.png
+04,🎙 音色,删除,BUTTON>>30,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>31,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_31_timeout.png
+04,🎙 音色,编辑,BUTTON>>32,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_32_timeout.png
+04,🎙 音色,删除,BUTTON>>33,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>34,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_34_timeout.png
+04,🎙 音色,编辑,BUTTON>>35,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_35_timeout.png
+04,🎙 音色,删除,BUTTON>>36,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>37,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_37_timeout.png
+04,🎙 音色,编辑,BUTTON>>38,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_38_timeout.png
+04,🎙 音色,删除,BUTTON>>39,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>40,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_40_timeout.png
+04,🎙 音色,编辑,BUTTON>>41,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_41_timeout.png
+04,🎙 音色,删除,BUTTON>>42,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>43,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_43_timeout.png
+04,🎙 音色,编辑,BUTTON>>44,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_44_timeout.png
+04,🎙 音色,删除,BUTTON>>45,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>46,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_46_timeout.png
+04,🎙 音色,编辑,BUTTON>>47,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_47_timeout.png
+04,🎙 音色,删除,BUTTON>>48,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>49,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_49_timeout.png
+04,🎙 音色,编辑,BUTTON>>50,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_50_timeout.png
+04,🎙 音色,删除,BUTTON>>51,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>52,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_52_timeout.png
+04,🎙 音色,编辑,BUTTON>>53,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_53_timeout.png
+04,🎙 音色,删除,BUTTON>>54,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>55,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_55_timeout.png
+04,🎙 音色,编辑,BUTTON>>56,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_56_timeout.png
+04,🎙 音色,删除,BUTTON>>57,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>58,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_58_timeout.png
+04,🎙 音色,编辑,BUTTON>>59,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_59_timeout.png
+04,🎙 音色,删除,BUTTON>>60,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>61,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_61_timeout.png
+04,🎙 音色,编辑,BUTTON>>62,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_62_timeout.png
+04,🎙 音色,删除,BUTTON>>63,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>64,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_64_timeout.png
+04,🎙 音色,编辑,BUTTON>>65,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_65_timeout.png
+04,🎙 音色,删除,BUTTON>>66,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>67,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_67_timeout.png
+04,🎙 音色,编辑,BUTTON>>68,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_68_timeout.png
+04,🎙 音色,删除,BUTTON>>69,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>70,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_70_timeout.png
+04,🎙 音色,编辑,BUTTON>>71,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_71_timeout.png
+04,🎙 音色,删除,BUTTON>>72,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>73,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_73_timeout.png
+04,🎙 音色,编辑,BUTTON>>74,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_74_timeout.png
+04,🎙 音色,删除,BUTTON>>75,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>76,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_76_timeout.png
+04,🎙 音色,编辑,BUTTON>>77,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_77_timeout.png
+04,🎙 音色,删除,BUTTON>>78,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>79,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_79_timeout.png
+04,🎙 音色,编辑,BUTTON>>80,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_80_timeout.png
+04,🎙 音色,删除,BUTTON>>81,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>82,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_82_timeout.png
+04,🎙 音色,编辑,BUTTON>>83,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_83_timeout.png
+04,🎙 音色,删除,BUTTON>>84,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>85,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_85_timeout.png
+04,🎙 音色,编辑,BUTTON>>86,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_86_timeout.png
+04,🎙 音色,删除,BUTTON>>87,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>88,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_88_timeout.png
+04,🎙 音色,编辑,BUTTON>>89,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_89_timeout.png
+04,🎙 音色,删除,BUTTON>>90,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>91,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_91_timeout.png
+04,🎙 音色,编辑,BUTTON>>92,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_92_timeout.png
+04,🎙 音色,删除,BUTTON>>93,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>94,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_94_timeout.png
+04,🎙 音色,编辑,BUTTON>>95,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_95_timeout.png
+04,🎙 音色,删除,BUTTON>>96,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>97,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_97_timeout.png
+04,🎙 音色,编辑,BUTTON>>98,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_98_timeout.png
+04,🎙 音色,删除,BUTTON>>99,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>100,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_100_timeout.png
+04,🎙 音色,编辑,BUTTON>>101,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_101_timeout.png
+04,🎙 音色,删除,BUTTON>>102,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>103,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_103_timeout.png
+04,🎙 音色,编辑,BUTTON>>104,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_104_timeout.png
+04,🎙 音色,删除,BUTTON>>105,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>106,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_106_timeout.png
+04,🎙 音色,编辑,BUTTON>>107,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_107_timeout.png
+04,🎙 音色,删除,BUTTON>>108,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>109,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_109_timeout.png
+04,🎙 音色,编辑,BUTTON>>110,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_110_timeout.png
+04,🎙 音色,删除,BUTTON>>111,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>112,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_112_timeout.png
+04,🎙 音色,编辑,BUTTON>>113,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_113_timeout.png
+04,🎙 音色,删除,BUTTON>>114,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>115,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_115_timeout.png
+04,🎙 音色,编辑,BUTTON>>116,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_116_timeout.png
+04,🎙 音色,删除,BUTTON>>117,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>118,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_118_timeout.png
+04,🎙 音色,编辑,BUTTON>>119,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_119_timeout.png
+04,🎙 音色,删除,BUTTON>>120,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>121,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_121_timeout.png
+04,🎙 音色,编辑,BUTTON>>122,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_122_timeout.png
+04,🎙 音色,删除,BUTTON>>123,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>124,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_124_timeout.png
+04,🎙 音色,编辑,BUTTON>>125,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_125_timeout.png
+04,🎙 音色,删除,BUTTON>>126,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>127,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_127_timeout.png
+04,🎙 音色,编辑,BUTTON>>128,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_128_timeout.png
+04,🎙 音色,删除,BUTTON>>129,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>130,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_130_timeout.png
+04,🎙 音色,编辑,BUTTON>>131,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_131_timeout.png
+04,🎙 音色,删除,BUTTON>>132,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>133,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_133_timeout.png
+04,🎙 音色,编辑,BUTTON>>134,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_134_timeout.png
+04,🎙 音色,删除,BUTTON>>135,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>136,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_136_timeout.png
+04,🎙 音色,编辑,BUTTON>>137,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_137_timeout.png
+04,🎙 音色,删除,BUTTON>>138,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>139,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_139_timeout.png
+04,🎙 音色,编辑,BUTTON>>140,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_140_timeout.png
+04,🎙 音色,删除,BUTTON>>141,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>142,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_142_timeout.png
+04,🎙 音色,编辑,BUTTON>>143,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_143_timeout.png
+04,🎙 音色,删除,BUTTON>>144,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,▶ 试听,BUTTON>>145,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_145_timeout.png
+04,🎙 音色,编辑,BUTTON>>146,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\voices_146_timeout.png
+04,🎙 音色,删除,BUTTON>>147,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🎙 音色,« 收起,BUTTON>>148,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🏠 概览,A>>149,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🤖 智能体,A>>150,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,💬 聊天,A>>151,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🧠 记忆,A>>152,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🎙 音色,A>>153,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🧩 模板,A>>154,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,📚 知识库,A>>155,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🧩 模型,A>>156,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,📡 设备,A>>157,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,⚙️ 参数,A>>158,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,👥 用户,A>>159,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,📦 OTA,A>>160,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,📖 字典,A>>161,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🖥 服务器,A>>162,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🔗 MCP,A>>163,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🧪 链路模拟,A>>164,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,🛠 API调试,A>>165,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,theme-swatch is-active,BUTTON>>166,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,theme-swatch,BUTTON>>167,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,theme-swatch,BUTTON>>168,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,theme-swatch,BUTTON>>169,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,theme-swatch,BUTTON>>170,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,theme-swatch,BUTTON>>171,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🎙 音色,⚅,BUTTON>>172,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🎙 音色,⇄,BUTTON>>173,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,＋ 新建模板,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 193->210, 弹窗 3",,
+04,🧩 模板,↻ 刷新模板,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_3_timeout.png
+04,🧩 模板,⚡ 用模板创建,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_4_timeout.png
+04,🧩 模板,编辑,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_5_timeout.png
+04,🧩 模板,预览,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_6_timeout.png
+04,🧩 模板,删除,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🧩 模板,⚡ 用模板创建,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_8_timeout.png
+04,🧩 模板,编辑,BUTTON>>9,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_9_timeout.png
+04,🧩 模板,预览,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_10_timeout.png
+04,🧩 模板,删除,BUTTON>>11,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+04,🧩 模板,首页,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
+04,🧩 模板,‹,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+04,🧩 模板,1,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-04\templates_14_timeout.png
+04,🧩 模板,›,BUTTON>>15,BUTTON,跳过-禁用,按钮为禁用态,,
+04,🧩 模板,下一页,BUTTON>>16,BUTTON,跳过-禁用,按钮为禁用态,,
+04,🧩 模板,« 收起,BUTTON>>17,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🏠 概览,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🤖 智能体,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,💬 聊天,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🧠 记忆,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🎙 音色,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🧩 模板,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,📚 知识库,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🧩 模型,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,📡 设备,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,⚙️ 参数,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,👥 用户,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,📦 OTA,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,📖 字典,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🖥 服务器,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🔗 MCP,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🧪 链路模拟,A>>33,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,🛠 API调试,A>>34,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,theme-swatch is-active,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,theme-swatch,BUTTON>>39,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,theme-swatch,BUTTON>>40,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+04,🧩 模板,⚅,BUTTON>>41,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+04,🧩 模板,⇄,BUTTON>>42,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,＋ 新建知识库,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 147->164, 弹窗 3",,
+05,📚 知识库,↻ 刷新列表,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-05\knowledge_3_timeout.png
+05,📚 知识库,« 收起,BUTTON>>4,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🏠 概览,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🤖 智能体,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,💬 聊天,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🧠 记忆,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🎙 音色,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🧩 模板,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,📚 知识库,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🧩 模型,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,📡 设备,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,⚙️ 参数,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,👥 用户,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,📦 OTA,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,📖 字典,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🖥 服务器,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🔗 MCP,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🧪 链路模拟,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,🛠 API调试,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,theme-swatch is-active,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,theme-swatch,BUTTON>>27,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+05,📚 知识库,⚅,BUTTON>>28,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+05,📚 知识库,⇄,BUTTON>>29,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,＋ 新增TTS模型,BUTTON>>2,BUTTON,PASS,API 正常 (1): GET models/TTS/provideTypes->200,1,
+06,🧩 模型,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_3_timeout.png
+06,🧩 模型,↻ 刷新,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_4_timeout.png
+06,🧩 模型,测试,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_5_timeout.png
+06,🧩 模型,停用,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_6_timeout.png
+06,🧩 模型,编辑,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_7_timeout.png
+06,🧩 模型,删除,BUTTON>>8,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>9,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_9_timeout.png
+06,🧩 模型,停用,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_10_timeout.png
+06,🧩 模型,编辑,BUTTON>>11,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_11_timeout.png
+06,🧩 模型,删除,BUTTON>>12,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>13,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_13_timeout.png
+06,🧩 模型,停用,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_14_timeout.png
+06,🧩 模型,编辑,BUTTON>>15,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_15_timeout.png
+06,🧩 模型,删除,BUTTON>>16,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>17,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_17_timeout.png
+06,🧩 模型,启用,BUTTON>>18,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_18_timeout.png
+06,🧩 模型,编辑,BUTTON>>19,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_19_timeout.png
+06,🧩 模型,删除,BUTTON>>20,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>21,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_21_timeout.png
+06,🧩 模型,启用,BUTTON>>22,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_22_timeout.png
+06,🧩 模型,编辑,BUTTON>>23,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_23_timeout.png
+06,🧩 模型,删除,BUTTON>>24,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>25,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_25_timeout.png
+06,🧩 模型,启用,BUTTON>>26,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_26_timeout.png
+06,🧩 模型,编辑,BUTTON>>27,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_27_timeout.png
+06,🧩 模型,删除,BUTTON>>28,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,测试,BUTTON>>29,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_29_timeout.png
+06,🧩 模型,启用,BUTTON>>30,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_30_timeout.png
+06,🧩 模型,编辑,BUTTON>>31,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_31_timeout.png
+06,🧩 模型,删除,BUTTON>>32,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,🧩 模型,首页,BUTTON>>33,BUTTON,跳过-禁用,按钮为禁用态,,
+06,🧩 模型,‹,BUTTON>>34,BUTTON,跳过-禁用,按钮为禁用态,,
+06,🧩 模型,1,BUTTON>>35,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\models_35_timeout.png
+06,🧩 模型,›,BUTTON>>36,BUTTON,跳过-禁用,按钮为禁用态,,
+06,🧩 模型,下一页,BUTTON>>37,BUTTON,跳过-禁用,按钮为禁用态,,
+06,🧩 模型,« 收起,BUTTON>>38,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🏠 概览,A>>39,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🤖 智能体,A>>40,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,💬 聊天,A>>41,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🧠 记忆,A>>42,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🎙 音色,A>>43,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🧩 模板,A>>44,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,📚 知识库,A>>45,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🧩 模型,A>>46,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,📡 设备,A>>47,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,⚙️ 参数,A>>48,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,👥 用户,A>>49,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,📦 OTA,A>>50,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,📖 字典,A>>51,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🖥 服务器,A>>52,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🔗 MCP,A>>53,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🧪 链路模拟,A>>54,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,🛠 API调试,A>>55,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,theme-swatch is-active,BUTTON>>56,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,theme-swatch,BUTTON>>57,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,theme-swatch,BUTTON>>58,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,theme-swatch,BUTTON>>59,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,theme-swatch,BUTTON>>60,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,theme-swatch,BUTTON>>61,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,🧩 模型,⚅,BUTTON>>62,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,🧩 模型,⇄,BUTTON>>63,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,＋ 手动添加,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 173->185, 弹窗 3",,
+06,📡 设备,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_3_timeout.png
+06,📡 设备,✎ 改名,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_4_timeout.png
+06,📡 设备,⇄ 绑定,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_5_timeout.png
+06,📡 设备,⤫ 解绑,BUTTON>>6,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,📡 设备,✎ 改名,BUTTON>>7,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_7_timeout.png
+06,📡 设备,⇄ 绑定,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_8_timeout.png
+06,📡 设备,⤫ 解绑,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+06,📡 设备,首页,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
+06,📡 设备,‹,BUTTON>>11,BUTTON,跳过-禁用,按钮为禁用态,,
+06,📡 设备,1,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-06\devices_12_timeout.png
+06,📡 设备,›,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+06,📡 设备,下一页,BUTTON>>14,BUTTON,跳过-禁用,按钮为禁用态,,
+06,📡 设备,« 收起,BUTTON>>15,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🏠 概览,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🤖 智能体,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,💬 聊天,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🧠 记忆,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🎙 音色,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🧩 模板,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,📚 知识库,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🧩 模型,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,📡 设备,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,⚙️ 参数,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,👥 用户,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,📦 OTA,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,📖 字典,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🖥 服务器,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🔗 MCP,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🧪 链路模拟,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+06,📡 设备,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+06,📡 设备,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,↻ 刷新,BUTTON>>2,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+07,👥 用户,搜索,BUTTON>>3,BUTTON,PASS,API 正常 (1): GET admin/users?page=1&limit=4->200,1,
+07,👥 用户,重置密码,BUTTON>>4,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+07,👥 用户,封禁,BUTTON>>5,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
+07,👥 用户,删除,BUTTON>>6,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+07,👥 用户,重置密码,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+07,👥 用户,封禁,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_8_timeout.png
+07,👥 用户,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+07,👥 用户,首页,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
+07,👥 用户,‹,BUTTON>>11,BUTTON,跳过-禁用,按钮为禁用态,,
+07,👥 用户,1,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_12_timeout.png
+07,👥 用户,›,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
+07,👥 用户,下一页,BUTTON>>14,BUTTON,跳过-禁用,按钮为禁用态,,
+07,👥 用户,« 收起,BUTTON>>15,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🏠 概览,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🤖 智能体,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,💬 聊天,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🧠 记忆,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🎙 音色,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🧩 模板,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,📚 知识库,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🧩 模型,A>>23,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,📡 设备,A>>24,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,⚙️ 参数,A>>25,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,👥 用户,A>>26,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,📦 OTA,A>>27,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,📖 字典,A>>28,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🖥 服务器,A>>29,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🔗 MCP,A>>30,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🧪 链路模拟,A>>31,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+07,👥 用户,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+07,👥 用户,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,↻ 刷新,BUTTON>>2,BUTTON,PASS,API 正常 (1): GET otaMag?page=1&limit=100->200,1,
+08,📦 OTA,« 收起,BUTTON>>3,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🏠 概览,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🤖 智能体,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,💬 聊天,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🧠 记忆,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🎙 音色,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🧩 模板,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,📚 知识库,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🧩 模型,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,📡 设备,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,⚙️ 参数,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,👥 用户,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,📦 OTA,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,📖 字典,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🖥 服务器,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🔗 MCP,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🧪 链路模拟,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,🛠 API调试,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,theme-swatch is-active,BUTTON>>21,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,theme-swatch,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📦 OTA,⚅,BUTTON>>27,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📦 OTA,⇄,BUTTON>>28,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,＋ 新增字典项,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 669->687, 弹窗 3",,
+08,📖 字典,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_3_timeout.png
+08,📖 字典,编辑,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_4_timeout.png
+08,📖 字典,删除,BUTTON>>5,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_6_timeout.png
+08,📖 字典,删除,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_8_timeout.png
+08,📖 字典,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_10_timeout.png
+08,📖 字典,删除,BUTTON>>11,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_12_timeout.png
+08,📖 字典,删除,BUTTON>>13,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_14_timeout.png
+08,📖 字典,删除,BUTTON>>15,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>16,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_16_timeout.png
+08,📖 字典,删除,BUTTON>>17,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>18,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_18_timeout.png
+08,📖 字典,删除,BUTTON>>19,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>20,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_20_timeout.png
+08,📖 字典,删除,BUTTON>>21,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>22,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_22_timeout.png
+08,📖 字典,删除,BUTTON>>23,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>24,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_24_timeout.png
+08,📖 字典,删除,BUTTON>>25,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>26,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_26_timeout.png
+08,📖 字典,删除,BUTTON>>27,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>28,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_28_timeout.png
+08,📖 字典,删除,BUTTON>>29,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>30,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_30_timeout.png
+08,📖 字典,删除,BUTTON>>31,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>32,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_32_timeout.png
+08,📖 字典,删除,BUTTON>>33,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>34,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_34_timeout.png
+08,📖 字典,删除,BUTTON>>35,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>36,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_36_timeout.png
+08,📖 字典,删除,BUTTON>>37,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>38,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_38_timeout.png
+08,📖 字典,删除,BUTTON>>39,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>40,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_40_timeout.png
+08,📖 字典,删除,BUTTON>>41,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>42,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_42_timeout.png
+08,📖 字典,删除,BUTTON>>43,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>44,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_44_timeout.png
+08,📖 字典,删除,BUTTON>>45,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>46,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_46_timeout.png
+08,📖 字典,删除,BUTTON>>47,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>48,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_48_timeout.png
+08,📖 字典,删除,BUTTON>>49,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>50,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_50_timeout.png
+08,📖 字典,删除,BUTTON>>51,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>52,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_52_timeout.png
+08,📖 字典,删除,BUTTON>>53,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>54,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_54_timeout.png
+08,📖 字典,删除,BUTTON>>55,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>56,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_56_timeout.png
+08,📖 字典,删除,BUTTON>>57,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>58,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_58_timeout.png
+08,📖 字典,删除,BUTTON>>59,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>60,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_60_timeout.png
+08,📖 字典,删除,BUTTON>>61,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>62,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_62_timeout.png
+08,📖 字典,删除,BUTTON>>63,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>64,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_64_timeout.png
+08,📖 字典,删除,BUTTON>>65,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>66,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_66_timeout.png
+08,📖 字典,删除,BUTTON>>67,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>68,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_68_timeout.png
+08,📖 字典,删除,BUTTON>>69,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>70,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_70_timeout.png
+08,📖 字典,删除,BUTTON>>71,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>72,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_72_timeout.png
+08,📖 字典,删除,BUTTON>>73,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>74,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_74_timeout.png
+08,📖 字典,删除,BUTTON>>75,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>76,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_76_timeout.png
+08,📖 字典,删除,BUTTON>>77,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>78,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_78_timeout.png
+08,📖 字典,删除,BUTTON>>79,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>80,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_80_timeout.png
+08,📖 字典,删除,BUTTON>>81,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>82,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_82_timeout.png
+08,📖 字典,删除,BUTTON>>83,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>84,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_84_timeout.png
+08,📖 字典,删除,BUTTON>>85,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>86,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_86_timeout.png
+08,📖 字典,删除,BUTTON>>87,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>88,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_88_timeout.png
+08,📖 字典,删除,BUTTON>>89,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>90,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_90_timeout.png
+08,📖 字典,删除,BUTTON>>91,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>92,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_92_timeout.png
+08,📖 字典,删除,BUTTON>>93,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>94,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_94_timeout.png
+08,📖 字典,删除,BUTTON>>95,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>96,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_96_timeout.png
+08,📖 字典,删除,BUTTON>>97,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>98,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_98_timeout.png
+08,📖 字典,删除,BUTTON>>99,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>100,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_100_timeout.png
+08,📖 字典,删除,BUTTON>>101,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>102,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_102_timeout.png
+08,📖 字典,删除,BUTTON>>103,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>104,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_104_timeout.png
+08,📖 字典,删除,BUTTON>>105,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>106,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_106_timeout.png
+08,📖 字典,删除,BUTTON>>107,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>108,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_108_timeout.png
+08,📖 字典,删除,BUTTON>>109,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,编辑,BUTTON>>110,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_110_timeout.png
+08,📖 字典,删除,BUTTON>>111,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
+08,📖 字典,« 收起,BUTTON>>112,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🏠 概览,A>>113,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🤖 智能体,A>>114,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,💬 聊天,A>>115,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🧠 记忆,A>>116,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🎙 音色,A>>117,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🧩 模板,A>>118,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,📚 知识库,A>>119,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🧩 模型,A>>120,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,📡 设备,A>>121,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,⚙️ 参数,A>>122,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,👥 用户,A>>123,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,📦 OTA,A>>124,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,📖 字典,A>>125,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🖥 服务器,A>>126,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🔗 MCP,A>>127,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🧪 链路模拟,A>>128,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,🛠 API调试,A>>129,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,theme-swatch is-active,BUTTON>>130,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,theme-swatch,BUTTON>>131,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,theme-swatch,BUTTON>>132,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,theme-swatch,BUTTON>>133,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,theme-swatch,BUTTON>>134,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,theme-swatch,BUTTON>>135,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,📖 字典,⚅,BUTTON>>136,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,📖 字典,⇄,BUTTON>>137,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,♻️ 重启语音服务,BUTTON>>2,BUTTON,PASS,"UI 变化: dom 134->141, 弹窗 3",,
+08,🖥 服务器,♻️ 重启管理服务,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\servers_3_timeout.png
+08,🖥 服务器,↻ 刷新,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\servers_4_timeout.png
+08,🖥 服务器,« 收起,BUTTON>>5,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🏠 概览,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🤖 智能体,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,💬 聊天,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🧠 记忆,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🎙 音色,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🧩 模板,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,📚 知识库,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🧩 模型,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,📡 设备,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,⚙️ 参数,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,👥 用户,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,📦 OTA,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,📖 字典,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🖥 服务器,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🔗 MCP,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🧪 链路模拟,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,🛠 API调试,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,theme-swatch is-active,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,theme-swatch,BUTTON>>27,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,theme-swatch,BUTTON>>28,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+08,🖥 服务器,⚅,BUTTON>>29,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+08,🖥 服务器,⇄,BUTTON>>30,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,« 收起,BUTTON>>2,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🏠 概览,A>>3,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🤖 智能体,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,💬 聊天,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🧠 记忆,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🎙 音色,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🧩 模板,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,📚 知识库,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🧩 模型,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,📡 设备,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,⚙️ 参数,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,👥 用户,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,📦 OTA,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,📖 字典,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🖥 服务器,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🔗 MCP,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🧪 链路模拟,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,🛠 API调试,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,theme-swatch is-active,BUTTON>>20,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,theme-swatch,BUTTON>>21,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,theme-swatch,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🔗 MCP,⚅,BUTTON>>26,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🔗 MCP,⇄,BUTTON>>27,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🎙 录音（服务端真实 ASR）,BUTTON>>2,BUTTON,跳过-禁用,按钮为禁用态,,
+09,🧪 链路模拟,▶ 运行全链路,BUTTON>>3,BUTTON,跳过-禁用,按钮为禁用态,,
+09,🧪 链路模拟,« 收起,BUTTON>>4,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🏠 概览,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🤖 智能体,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,💬 聊天,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🧠 记忆,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🎙 音色,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🧩 模板,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,📚 知识库,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🧩 模型,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,📡 设备,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,⚙️ 参数,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,👥 用户,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,📦 OTA,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,📖 字典,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🖥 服务器,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🔗 MCP,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🧪 链路模拟,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,🛠 API调试,A>>21,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,theme-swatch is-active,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,theme-swatch,BUTTON>>27,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🧪 链路模拟,⚅,BUTTON>>28,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🧪 链路模拟,⇄,BUTTON>>29,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,退出登录,BUTTON>>1,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,« 收起,BUTTON>>2,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🏠 概览,A>>3,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🤖 智能体,A>>4,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,💬 聊天,A>>5,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🧠 记忆,A>>6,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🎙 音色,A>>7,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🧩 模板,A>>8,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,📚 知识库,A>>9,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🧩 模型,A>>10,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,📡 设备,A>>11,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,⚙️ 参数,A>>12,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,👥 用户,A>>13,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,📦 OTA,A>>14,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,📖 字典,A>>15,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🖥 服务器,A>>16,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🔗 MCP,A>>17,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🧪 链路模拟,A>>18,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,🛠 API调试,A>>19,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,theme-swatch is-active,BUTTON>>20,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,theme-swatch,BUTTON>>21,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,theme-swatch,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
+09,🛠 API调试,⚅,BUTTON>>26,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
+09,🛠 API调试,⇄,BUTTON>>27,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

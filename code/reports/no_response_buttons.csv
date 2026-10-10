@@ -1,0 +1,2 @@
+﻿worker,page,button_text,selector,type,status,detail,screenshot
+00,🏠 概览,⬇ 导出报表,BUTTON>>2,BUTTON,无反应,5秒内无 API 请求、无 DOM 变化、无弹窗,G:/demo/21_xiaozhi/code/artifacts\agent-00\admin_2_noresp.png
