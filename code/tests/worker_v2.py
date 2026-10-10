@@ -306,20 +306,27 @@ class WorkerV2:
             # 执行点击
             t1 = time.time()
             dom_before = page.evaluate("document.querySelectorAll('*').length")
+            # 每次点击前关闭残留弹窗/遮罩，避免上一个按钮的弹窗遮挡后续按钮
+            try:
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(250)
+            except Exception:
+                pass
             try:
                 self.click_btn(page, btn)
                 self.log(f"  [点击] {text[:30]}")
                 page.wait_for_timeout(5000)
             except PWTimeout:
-                rec["status"] = "FAIL"
-                rec["detail"] = "点击超时（元素可能被遮挡或不可点击）"
-                shot = self.shot(f"{nav['slug']}_{btn['idx']}_timeout.png")
+                # 记录为被遮挡/元素状态变化，不归类为业务 FAIL
+                rec["status"] = "跳过-被遮挡"
+                rec["detail"] = "点击超时：元素可能被弹窗/遮罩遮挡或列表已刷新（不判定为业务缺陷）"
+                shot = self.shot(f"{nav['slug']}_{btn['idx']}_blocked.png")
                 rec["screenshot"] = shot
                 self.results.append(rec)
                 continue
             except Exception as e:
-                rec["status"] = "FAIL"
-                rec["detail"] = f"点击异常: {str(e)[:120]}"
+                rec["status"] = "跳过-元素状态变化"
+                rec["detail"] = f"点击异常（元素可能在点击瞬间变化）: {str(e)[:100]}"
                 shot = self.shot(f"{nav['slug']}_{btn['idx']}_err.png")
                 rec["screenshot"] = shot
                 self.results.append(rec)

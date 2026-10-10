@@ -120,13 +120,22 @@ class AsrRecognizeHandler(BaseHandler):
 
             provider = create_instance(provider_type, provider_config, delete_audio_file=True)
 
-            # qwen3_asr_flash.speech_to_text 需要 artifacts.temp_path（WAV 文件）
+            # qwen3_asr_flash.speech_to_text 需要 artifacts.temp_path（WAV 文件）；
+            # fun_local 等多数 provider 读 artifacts.pcm_bytes —— 两者都填充。
+            import wave as _wave
+
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
                 tf.write(wav_bytes)
                 temp_wav = tf.name
             try:
+                pcm_data = b""
+                try:
+                    with _wave.open(temp_wav, "rb") as wf:
+                        pcm_data = wf.readframes(wf.getnframes())
+                except Exception:
+                    pcm_data = b""  # qwen 走 temp_path，pcm 解析失败不致命
                 artifacts = provider.AudioArtifacts(
-                    pcm_frames=[], pcm_bytes=b"", file_path=None, temp_path=temp_wav
+                    pcm_frames=[], pcm_bytes=pcm_data, file_path=None, temp_path=temp_wav
                 )
                 text, _ = await asyncio.wait_for(
                     provider.speech_to_text([], "cc-sim", artifacts=artifacts),
@@ -139,6 +148,10 @@ class AsrRecognizeHandler(BaseHandler):
                     pass
 
             elapsed = int((time.monotonic() - started) * 1000)
+            # provider 返回类型不统一：qwen3_asr_flash 返回 str；fun_local 返回
+            # lang_tag_filter 处理后的 dict（如 {'type': 'text', 'content': ...}）
+            if isinstance(text, dict):
+                text = text.get("content") or text.get("text") or ""
             return web.json_response(
                 {"code": 0, "msg": "success",
                  "data": {"text": (text or "").strip(), "elapsed_ms": elapsed}}

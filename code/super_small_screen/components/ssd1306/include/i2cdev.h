@@ -6,6 +6,7 @@
 
 #include "esp_err.h"
 #include <stdint.h>
+#include <stddef.h>
 
 #define I2C_MASTER_SCL_IO  41        /* SCL on GPIO41 */
 #define I2C_MASTER_SDA_IO  40        /* SDA on GPIO40 */
@@ -16,6 +17,6 @@ esp_err_t i2cdev_init(void);
 
 /* Write `len` bytes from `data` to the 7-bit address `addr`.
  * First byte of `data` is typically the register/command byte. */
-esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, uint8_t len);
+esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, size_t len);
 
 #endif /* I2CDEV_H */

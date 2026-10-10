@@ -1,0 +1,5 @@
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero
+"-specs=G:/demo/21_xiaozhi/code/super_small_screen/build/specs/picolibc.specs"

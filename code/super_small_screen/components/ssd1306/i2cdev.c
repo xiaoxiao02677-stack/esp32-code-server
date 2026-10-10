@@ -27,7 +27,7 @@ esp_err_t i2cdev_init(void)
     return ESP_OK;
 }
 
-esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, uint8_t len)
+esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, size_t len)
 {
     if (bus_handle == NULL) {
         return ESP_ERR_INVALID_STATE;

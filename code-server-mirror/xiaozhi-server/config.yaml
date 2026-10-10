@@ -12,6 +12,9 @@ server:
   port: 8000
   # http服务的端口，用于简单OTA接口(单服务部署)，以及视觉分析接口
   http_port: 8003
+  # 服务间鉴权密钥（manager-api 调 /api/* 端点用；须与 DB sys_params 的
+  # server.secret 保持一致，缺失会导致 asrRecognize/ttsPreview 等恒 401）
+  auth_key: 2d7b6bde-4de9-49f1-9072-476cec13292e
   # 这个websocket配置是指ota接口向设备发送的websocket地址
   # 如果按默认的写法，ota接口会自动生成websocket地址，并输出在启动日志里，这个地址你可以直接用浏览器访问ota接口确认一下
   # 当你使用docker部署或使用公网部署(使用ssl、域名)时，不一定准确
