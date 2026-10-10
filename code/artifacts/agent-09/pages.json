@@ -7,7 +7,7 @@
    "load_apis": 1,
    "buttons": [],
    "console_errors": [],
-   "total_buttons": 28,
+   "total_buttons": 24,
    "load_api_failures": [],
    "tested_buttons": 0,
    "no_response": 0,
@@ -20,7 +20,7 @@
    "load_apis": 1,
    "buttons": [],
    "console_errors": [],
-   "total_buttons": 30,
+   "total_buttons": 26,
    "load_api_failures": [],
    "tested_buttons": 0,
    "no_response": 0,
@@ -33,7 +33,7 @@
    "load_apis": 0,
    "buttons": [],
    "console_errors": [],
-   "total_buttons": 28,
+   "total_buttons": 24,
    "load_api_failures": [],
    "tested_buttons": 0,
    "no_response": 0,
@@ -41,9 +41,9 @@
    "pass": 0
   }
  ],
- "buttons_total": 86,
+ "buttons_total": 74,
  "pass": 0,
  "fail": 0,
  "no_response": 0,
- "skipped": 86
+ "skipped": 74
 }

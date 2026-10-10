@@ -140,7 +140,9 @@ class SimpleHttpServer:
             port = int(server_config.get("http_port", 8003))
 
             if port:
-                app = web.Application()
+                # client_max_size：与 manager-api asrRecognize 的 2MB 音频上限对齐
+                # （aiohttp 默认 1MB，超过直接 413 Request Entity Too Large）
+                app = web.Application(client_max_size=8 * 1024 * 1024)
 
                 # 安全前置：/api/memory/** 仅允许本机回环访问（manager-api 与 xiaozhi-server
                 # 同机部署，经 127.0.0.1 互调）。8003 同时承载 OTA/vision 面向公网，若不拦截，

@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import Optional, Tuple, List
 import requests
 from config.logger import setup_logging
@@ -87,7 +88,10 @@ class ASRProvider(ASRProviderBase):
                 "Content-Type": "application/json",
                 "X-DashScope-SSE": "disable",
             }
-            resp = requests.post(ASR_URL, json=payload, headers=headers, timeout=self.timeout)
+            # 在线程池中执行同步 HTTP 请求，避免阻塞事件循环（模拟器端点与设备主链路共用）
+            resp = await asyncio.to_thread(
+                requests.post, ASR_URL, json=payload, headers=headers, timeout=self.timeout
+            )
             if resp.status_code != 200:
                 logger.bind(tag=TAG).error(
                     "千问ASR HTTP {}: {}", resp.status_code, resp.text[:200]

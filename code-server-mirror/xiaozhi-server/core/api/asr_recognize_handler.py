@@ -65,7 +65,17 @@ class AsrRecognizeHandler(BaseHandler):
         # 读取模型原始配置（与 tts_preview 同源：直读 DB，经 manage-api 传入不可行——
         # 这里由本服务自查 DB？不——与 ttsPreview 模式保持一致：Java 侧已把 rawConfig
         # 放进请求头 X-Asr-Config（服务间内网，非公开），避免本端点直连 DB 的耦合。
+        # Java 侧 AsrRecognizeController：rawConfig 含非 ASCII 时走 X-Asr-Config-B64
+        # （base64(UTF-8)），纯 ASCII 时走 X-Asr-Config —— 两头都兼容。
         raw_cfg = request.headers.get("X-Asr-Config") or ""
+        if not raw_cfg:
+            raw_b64 = request.headers.get("X-Asr-Config-B64") or ""
+            if raw_b64:
+                import base64 as _b64
+                try:
+                    raw_cfg = _b64.b64decode(raw_b64).decode("utf-8")
+                except Exception:
+                    return _json_error(400, "ASR 配置 base64 解码失败")
         if not raw_cfg:
             return _json_error(400, "缺少 ASR 配置（X-Asr-Config）")
 
@@ -135,8 +145,10 @@ class AsrRecognizeHandler(BaseHandler):
             )
         except asyncio.TimeoutError:
             return _json_error(504, "识别超时，请重试")
-        except LookupError:
-            return _json_error(404, f"不支持的ASR类型: {provider_type}")
+        except (LookupError, ValueError) as e:
+            # create_instance 对未知 type 抛 ValueError（文件不存在时），
+            # 基类工厂也可能抛 LookupError —— 统一映射为 404 语义
+            return _json_error(404, f"不支持的ASR类型: {provider_type}（{str(e)[:100]}）")
         except FileNotFoundError:
             return _json_error(500, "服务器未安装 ffmpeg，无法解码浏览器音频")
         except Exception as e:

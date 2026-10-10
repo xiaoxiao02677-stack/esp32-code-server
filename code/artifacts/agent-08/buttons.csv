@@ -22,10 +22,6 @@
 📦 OTA,🛠 API调试,A>>20,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📦 OTA,theme-swatch is-active,BUTTON>>21,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 📦 OTA,theme-swatch,BUTTON>>22,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📦 OTA,theme-swatch,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📦 OTA,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📦 OTA,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📦 OTA,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 📦 OTA,⚅,BUTTON>>27,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📦 OTA,⇄,BUTTON>>28,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📖 字典,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
@@ -34,112 +30,6 @@
 📖 字典,↻ 刷新,BUTTON>>3,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_3_timeout.png
 📖 字典,编辑,BUTTON>>4,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_4_timeout.png
 📖 字典,删除,BUTTON>>5,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_6_timeout.png
-📖 字典,删除,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_8_timeout.png
-📖 字典,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_10_timeout.png
-📖 字典,删除,BUTTON>>11,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_12_timeout.png
-📖 字典,删除,BUTTON>>13,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_14_timeout.png
-📖 字典,删除,BUTTON>>15,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>16,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_16_timeout.png
-📖 字典,删除,BUTTON>>17,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>18,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_18_timeout.png
-📖 字典,删除,BUTTON>>19,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>20,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_20_timeout.png
-📖 字典,删除,BUTTON>>21,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>22,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_22_timeout.png
-📖 字典,删除,BUTTON>>23,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>24,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_24_timeout.png
-📖 字典,删除,BUTTON>>25,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>26,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_26_timeout.png
-📖 字典,删除,BUTTON>>27,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>28,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_28_timeout.png
-📖 字典,删除,BUTTON>>29,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>30,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_30_timeout.png
-📖 字典,删除,BUTTON>>31,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>32,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_32_timeout.png
-📖 字典,删除,BUTTON>>33,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>34,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_34_timeout.png
-📖 字典,删除,BUTTON>>35,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>36,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_36_timeout.png
-📖 字典,删除,BUTTON>>37,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>38,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_38_timeout.png
-📖 字典,删除,BUTTON>>39,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>40,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_40_timeout.png
-📖 字典,删除,BUTTON>>41,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>42,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_42_timeout.png
-📖 字典,删除,BUTTON>>43,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>44,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_44_timeout.png
-📖 字典,删除,BUTTON>>45,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>46,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_46_timeout.png
-📖 字典,删除,BUTTON>>47,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>48,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_48_timeout.png
-📖 字典,删除,BUTTON>>49,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>50,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_50_timeout.png
-📖 字典,删除,BUTTON>>51,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>52,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_52_timeout.png
-📖 字典,删除,BUTTON>>53,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>54,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_54_timeout.png
-📖 字典,删除,BUTTON>>55,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>56,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_56_timeout.png
-📖 字典,删除,BUTTON>>57,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>58,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_58_timeout.png
-📖 字典,删除,BUTTON>>59,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>60,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_60_timeout.png
-📖 字典,删除,BUTTON>>61,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>62,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_62_timeout.png
-📖 字典,删除,BUTTON>>63,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>64,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_64_timeout.png
-📖 字典,删除,BUTTON>>65,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>66,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_66_timeout.png
-📖 字典,删除,BUTTON>>67,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>68,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_68_timeout.png
-📖 字典,删除,BUTTON>>69,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>70,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_70_timeout.png
-📖 字典,删除,BUTTON>>71,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>72,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_72_timeout.png
-📖 字典,删除,BUTTON>>73,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>74,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_74_timeout.png
-📖 字典,删除,BUTTON>>75,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>76,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_76_timeout.png
-📖 字典,删除,BUTTON>>77,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>78,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_78_timeout.png
-📖 字典,删除,BUTTON>>79,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>80,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_80_timeout.png
-📖 字典,删除,BUTTON>>81,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>82,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_82_timeout.png
-📖 字典,删除,BUTTON>>83,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>84,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_84_timeout.png
-📖 字典,删除,BUTTON>>85,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>86,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_86_timeout.png
-📖 字典,删除,BUTTON>>87,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>88,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_88_timeout.png
-📖 字典,删除,BUTTON>>89,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>90,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_90_timeout.png
-📖 字典,删除,BUTTON>>91,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>92,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_92_timeout.png
-📖 字典,删除,BUTTON>>93,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>94,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_94_timeout.png
-📖 字典,删除,BUTTON>>95,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>96,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_96_timeout.png
-📖 字典,删除,BUTTON>>97,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>98,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_98_timeout.png
-📖 字典,删除,BUTTON>>99,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>100,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_100_timeout.png
-📖 字典,删除,BUTTON>>101,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>102,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_102_timeout.png
-📖 字典,删除,BUTTON>>103,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>104,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_104_timeout.png
-📖 字典,删除,BUTTON>>105,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>106,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_106_timeout.png
-📖 字典,删除,BUTTON>>107,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>108,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_108_timeout.png
-📖 字典,删除,BUTTON>>109,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-📖 字典,编辑,BUTTON>>110,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-08\dicts_110_timeout.png
-📖 字典,删除,BUTTON>>111,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
 📖 字典,« 收起,BUTTON>>112,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📖 字典,🏠 概览,A>>113,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📖 字典,🤖 智能体,A>>114,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
@@ -160,10 +50,6 @@
 📖 字典,🛠 API调试,A>>129,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📖 字典,theme-swatch is-active,BUTTON>>130,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 📖 字典,theme-swatch,BUTTON>>131,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📖 字典,theme-swatch,BUTTON>>132,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📖 字典,theme-swatch,BUTTON>>133,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📖 字典,theme-swatch,BUTTON>>134,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-📖 字典,theme-swatch,BUTTON>>135,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 📖 字典,⚅,BUTTON>>136,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 📖 字典,⇄,BUTTON>>137,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🖥 服务器,→ 顾客视图,BUTTON>>0,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
@@ -191,9 +77,5 @@
 🖥 服务器,🛠 API调试,A>>22,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🖥 服务器,theme-swatch is-active,BUTTON>>23,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 🖥 服务器,theme-swatch,BUTTON>>24,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🖥 服务器,theme-swatch,BUTTON>>25,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🖥 服务器,theme-swatch,BUTTON>>26,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🖥 服务器,theme-swatch,BUTTON>>27,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🖥 服务器,theme-swatch,BUTTON>>28,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 🖥 服务器,⚅,BUTTON>>29,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🖥 服务器,⇄,BUTTON>>30,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

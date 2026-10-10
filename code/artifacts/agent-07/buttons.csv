@@ -6,9 +6,6 @@
 👥 用户,重置密码,BUTTON>>4,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
 👥 用户,封禁,BUTTON>>5,BUTTON,PASS,"UI 变化: dom 184->191, 弹窗 3",,
 👥 用户,删除,BUTTON>>6,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-👥 用户,重置密码,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-👥 用户,封禁,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_8_timeout.png
-👥 用户,删除,BUTTON>>9,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
 👥 用户,首页,BUTTON>>10,BUTTON,跳过-禁用,按钮为禁用态,,
 👥 用户,‹,BUTTON>>11,BUTTON,跳过-禁用,按钮为禁用态,,
 👥 用户,1,BUTTON>>12,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-07\users_12_timeout.png
@@ -34,9 +31,5 @@
 👥 用户,🛠 API调试,A>>32,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 👥 用户,theme-swatch is-active,BUTTON>>33,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 👥 用户,theme-swatch,BUTTON>>34,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-👥 用户,theme-swatch,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-👥 用户,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-👥 用户,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-👥 用户,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 👥 用户,⚅,BUTTON>>39,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 👥 用户,⇄,BUTTON>>40,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,

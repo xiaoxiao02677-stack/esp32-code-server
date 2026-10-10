@@ -18,7 +18,7 @@
     }
    ],
    "console_errors": [],
-   "total_buttons": 29,
+   "total_buttons": 25,
    "load_api_failures": [],
    "tested_buttons": 1,
    "no_response": 0,
@@ -26,9 +26,9 @@
    "pass": 1
   }
  ],
- "buttons_total": 29,
+ "buttons_total": 25,
  "pass": 1,
  "fail": 0,
  "no_response": 0,
- "skipped": 28
+ "skipped": 24
 }

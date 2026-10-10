@@ -7,10 +7,6 @@
 🤖 智能体,MCP,BUTTON>>5,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_5_timeout.png
 🤖 智能体,编辑,BUTTON>>6,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_6_timeout.png
 🤖 智能体,删除,BUTTON>>7,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
-🤖 智能体,会话,BUTTON>>8,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_8_timeout.png
-🤖 智能体,MCP,BUTTON>>9,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_9_timeout.png
-🤖 智能体,编辑,BUTTON>>10,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_10_timeout.png
-🤖 智能体,删除,BUTTON>>11,BUTTON,跳过-危险,危险操作（删除/解绑等），测试环境保护跳过,,
 🤖 智能体,首页,BUTTON>>12,BUTTON,跳过-禁用,按钮为禁用态,,
 🤖 智能体,‹,BUTTON>>13,BUTTON,跳过-禁用,按钮为禁用态,,
 🤖 智能体,1,BUTTON>>14,BUTTON,FAIL,点击超时（元素可能被遮挡或不可点击）,,G:/demo/21_xiaozhi/code/artifacts\agent-01\agents_14_timeout.png
@@ -36,9 +32,5 @@
 🤖 智能体,🛠 API调试,A>>34,A,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🤖 智能体,theme-swatch is-active,BUTTON>>35,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 🤖 智能体,theme-swatch,BUTTON>>36,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🤖 智能体,theme-swatch,BUTTON>>37,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🤖 智能体,theme-swatch,BUTTON>>38,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🤖 智能体,theme-swatch,BUTTON>>39,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
-🤖 智能体,theme-swatch,BUTTON>>40,BUTTON,跳过-纯UI控件,主题切换色块，无业务逻辑,,
 🤖 智能体,⚅,BUTTON>>41,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
 🤖 智能体,⇄,BUTTON>>42,BUTTON,跳过-导航控件,菜单/视图/会话控制，不作为业务按钮重复点击,,
