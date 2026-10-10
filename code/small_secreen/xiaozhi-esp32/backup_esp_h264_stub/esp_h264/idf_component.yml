@@ -1,0 +1,8 @@
+# 本地空壳组件：钉住 esp_h264 依赖，阻断组件管理器解析云端 esp_h264 manifest
+# （云端 manifest 的规则引用 ESP_VIDEO_USE_CUSTOMIZED_ESP_H264_VERSION，esp32s3
+#  构建无此 Kconfig → IDF 6.1 组件管理器 FATAL "used in if clauses, but not
+#  found in any Kconfig file"。本板无摄像头用不到 H264，空实现即可安全顶替。）
+dependencies:
+  idf: '>=5.0'
+description: Local stub for esp_h264 (unused on this board; blocks registry manifest parsing)
+version: 0.0.0
