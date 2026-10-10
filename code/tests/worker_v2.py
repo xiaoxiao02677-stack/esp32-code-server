@@ -113,15 +113,23 @@ class WorkerV2:
             self.log("!! 出现登录页，token 未生效")
             self.shot("login_fail.png")
             return False
-        # 切到管理员视图
-        if page.get_by_text("管理员视图").count() > 0:
-            try:
-                page.get_by_text("管理员视图").first.click(timeout=5000)
-                page.wait_for_timeout(2000)
-                self.log("已切换管理员视图")
-            except Exception as e:
-                self.log(f"切换管理员视图失败: {e}")
-        return True
+        # 切到管理员视图（带重试，避免并发资源紧张导致点击超时）
+        for attempt in range(3):
+            if page.get_by_text("管理员视图").count() > 0:
+                try:
+                    page.get_by_text("管理员视图").first.click(timeout=8000)
+                    page.wait_for_timeout(2500)
+                    self.log("已切换管理员视图")
+                    return True
+                except Exception as e:
+                    self.log(f"切换管理员视图尝试{attempt+1}失败: {str(e)[:80]}")
+                    page.wait_for_timeout(1500)
+            else:
+                # 可能已在管理员视图
+                if page.locator("a.dock-item").count() > 0:
+                    return True
+                page.wait_for_timeout(1000)
+        return False
 
     def collect_nav_pages(self, page):
         """收集管理员视图左侧 dock 菜单项"""
