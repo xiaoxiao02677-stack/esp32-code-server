@@ -11,7 +11,8 @@
                 "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
                 "CONFIG_YH_SERVER_PORT=12399",
                 "CONFIG_OTA_URL=\"http://sandyun.top:8002/xiaozhi/ota/\"",
-                "CONFIG_SR_MN_CN_NONE=y"
+                "CONFIG_SR_MN_CN_NONE=y",
+                "CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS=y"
             ]
         }
     ]
