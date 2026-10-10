@@ -1,0 +1,6 @@
+"-specs=G:/demo/21_xiaozhi/code/super_small_screen/build/bootloader/specs/picolibc.specs"
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero
+-fno-rtti

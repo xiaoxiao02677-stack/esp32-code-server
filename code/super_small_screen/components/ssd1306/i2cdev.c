@@ -5,26 +5,57 @@
 static const char *TAG = "i2cdev";
 static i2c_master_bus_handle_t bus_handle = NULL;
 
-esp_err_t i2cdev_init(void)
+static esp_err_t bus_create(int sda_io, int scl_io, i2c_master_bus_handle_t *out)
 {
-    if (bus_handle != NULL) {
-        return ESP_OK;
-    }
-
     i2c_master_bus_config_t bus_config = {
         .i2c_port = I2C_NUM_0,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_io_num = sda_io,
+        .scl_io_num = scl_io,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    esp_err_t err = i2c_new_master_bus(&bus_config, &bus_handle);
+    return i2c_new_master_bus(&bus_config, out);
+}
+
+esp_err_t i2cdev_init(void)
+{
+    return i2cdev_init_with(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO);
+}
+
+esp_err_t i2cdev_init_with(int sda_io, int scl_io)
+{
+    if (bus_handle != NULL) {
+        return ESP_OK;
+    }
+    esp_err_t err = bus_create(sda_io, scl_io, &bus_handle);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "i2c_new_master_bus failed: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "i2c bus on SDA=%d SCL=%d failed: %s",
+                 sda_io, scl_io, esp_err_to_name(err));
+    }
+    return err;
+}
+
+esp_err_t i2cdev_deinit(void)
+{
+    if (bus_handle == NULL) {
+        return ESP_OK;
+    }
+    esp_err_t err = i2c_del_master_bus(bus_handle);
+    bus_handle = NULL;
+    return err;
+}
+
+esp_err_t i2cdev_probe(int sda_io, int scl_io, uint8_t addr)
+{
+    i2c_master_bus_handle_t bus = NULL;
+    esp_err_t err = bus_create(sda_io, scl_io, &bus);
+    if (err != ESP_OK) {
         return err;
     }
-    return ESP_OK;
+    err = i2c_master_probe(bus, addr, 50);
+    i2c_del_master_bus(bus);
+    return err;
 }
 
 esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, size_t len)

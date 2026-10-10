@@ -15,6 +15,16 @@
 /* Install the I2C master bus on the pins above. Safe to call once at boot. */
 esp_err_t i2cdev_init(void);
 
+/* Install the I2C master bus on arbitrary pins (used for auto-detection). */
+esp_err_t i2cdev_init_with(int sda_io, int scl_io);
+
+/* Remove the bus. Safe to call repeatedly. */
+esp_err_t i2cdev_deinit(void);
+
+/* Temporarily create a bus on the given pins and probe a 7-bit address.
+ * Returns ESP_OK if the device ACKs. Bus is removed afterwards. */
+esp_err_t i2cdev_probe(int sda_io, int scl_io, uint8_t addr);
+
 /* Write `len` bytes from `data` to the 7-bit address `addr`.
  * First byte of `data` is typically the register/command byte. */
 esp_err_t i2cdev_write(uint8_t addr, const uint8_t *data, size_t len);
