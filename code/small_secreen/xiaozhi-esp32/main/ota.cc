@@ -249,6 +249,48 @@ NetworkResult<> Ota::CheckVersion() {
     return {};
 }
 
+std::expected<std::string, std::string> Ota::CheckConfigVersion() {
+    auto http = SetupHttp();
+    std::string url = GetCheckVersionUrl() + "/config/version?device_id=" +
+                      SystemInfo::GetMacAddress();
+    auto opened = http->Open("GET", url);
+    if (!opened) {
+        return std::unexpected(opened.error().ToString());
+    }
+    auto status_code = http->GetStatusCode();
+    if (!status_code) {
+        http->Close();
+        return std::unexpected(status_code.error().ToString());
+    }
+    std::string response_body = http->ReadAll();
+    http->Close();
+    if (status_code != 200) {
+        return std::unexpected("HTTP " + std::to_string(*status_code));
+    }
+    cJSON* root = cJSON_Parse(response_body.c_str());
+    if (!root) {
+        return std::unexpected("Failed to parse config version response");
+    }
+    cJSON* version = cJSON_GetObjectItem(root, "version");
+    cJSON* download_url = cJSON_GetObjectItem(root, "download_url");
+    if (!cJSON_IsString(version)) {
+        cJSON_Delete(root);
+        return std::unexpected("Missing version in response");
+    }
+    config_version_ = version->valuestring;
+    if (cJSON_IsString(download_url)) {
+        config_download_url_ = download_url->valuestring;
+    }
+    // 读取本地 NVS 版本
+    Settings settings("config_version", false);
+    local_config_version_ = settings.GetString("version", "");
+    cJSON_Delete(root);
+
+    ESP_LOGI(TAG, "Config version check: server=%s local=%s",
+             config_version_.c_str(), local_config_version_.c_str());
+    return config_version_;
+}
+
 void Ota::MarkCurrentVersionValid() {
     auto partition = esp_ota_get_running_partition();
     if (strcmp(partition->label, "factory") == 0) {

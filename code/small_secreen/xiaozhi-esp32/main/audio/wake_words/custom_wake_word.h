@@ -43,6 +43,15 @@ public:
     // 当前命令表快照（text 列表）
     std::vector<std::string> GetCommandTexts() const;
 
+    // 清空云端下发的唤醒词：恢复 index.json/Kconfig 默认命令表，并删除
+    // NVS("wakeword") 中的 pinyins/displays 缓存（重启后仍为默认词）。
+    // 返回是否成功恢复（默认表为空或引擎未初始化时返回 false）。
+    bool ClearWakeWordCommands();
+
+    // 服务器动态调整唤醒词参数（阈值 1-100，时长 500-5000ms）
+    void SetThreshold(float threshold);
+    void SetDuration(int duration);
+
 private:
     struct Command {
         std::string command;
@@ -60,6 +69,9 @@ private:
     int duration_ = 3000;
     float threshold_ = 0.2;
     std::deque<Command> commands_;
+    // 默认命令表快照（index.json 或 Kconfig CONFIG_CUSTOM_WAKE_WORD 解析结果），
+    // Initialize 时在 NVS 覆盖前暂存，供 ClearWakeWordCommands() 恢复默认唤醒词
+    std::deque<Command> default_commands_;
  
     std::function<void(const std::string& wake_word)> wake_word_detected_callback_;
     AudioCodec* codec_ = nullptr;

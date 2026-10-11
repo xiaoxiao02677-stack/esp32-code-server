@@ -30,11 +30,34 @@ from core.providers.tts.dto.dto import (
 TAG = __name__
 logger = setup_logging()
 
+# 火山引擎等 TTS 上游的鉴权/授权类错误：重试必然失败，直接快速失败
+_TTS_FATAL_ERROR_MARKERS = (
+    "45000030",
+    "45000051",
+    "resource id is mismatched with speaker",
+    "requested resource not granted",
+    "http 403",
+    "status code 403",
+    "invalid authentication",
+    "unauthorized",
+)
+
+def _is_fatal_tts_error(error_text: str) -> bool:
+    lowered = (error_text or "").lower()
+    return any(marker in lowered for marker in _TTS_FATAL_ERROR_MARKERS)
+
+
+# 主TTS重试耗尽后，备用provider合成的固定提示文案（不用原始长文本，避免重复合成失败）
+FALLBACK_TTS_TEXT = "抱歉，语音服务暂时出了点问题，请稍后再试。"
+
 
 class TTSProviderBase(ABC):
     def __init__(self, config, delete_audio_file):
         self.interface_type = InterfaceType.NON_STREAM
         self.conn = None
+        # 备用TTS provider（由 modules_initialize.initialize_tts 挂载，默认EdgeTTS免费）；
+        # 主TTS重试耗尽后用它合成固定提示音，避免设备完全无声
+        self.fallback_provider = None
         self.delete_audio_file = delete_audio_file
         self.audio_file_type = "wav"
         self.output_file = config.get("output_dir", "tmp/")
@@ -126,6 +149,34 @@ class TTSProviderBase(ABC):
     def handle_audio_file(self, file_audio: bytes, text):
         self.before_stop_play_files.append((file_audio, text))
 
+    def _synthesize_fallback_audio(self, original_text):
+        """主TTS重试耗尽后，用备用provider合成固定提示文案。
+
+        直接调用备用provider的text_to_speak（不经过其to_tts_stream，无递归风险），
+        合成的是短提示音而非原始长文本，避免重复合成失败。
+
+        Returns:
+            bytes: 提示音音频数据（格式见备用provider的audio_file_type）；失败返回None
+        """
+        if self.fallback_provider is None:
+            return None
+        try:
+            audio_bytes = asyncio.run(
+                self.fallback_provider.text_to_speak(FALLBACK_TTS_TEXT, None)
+            )
+            if audio_bytes:
+                logger.bind(tag=TAG).error(
+                    f"已降级到备用TTS({type(self.fallback_provider).__name__})合成提示音，"
+                    f"主TTS失败文本: {original_text}"
+                )
+                return audio_bytes
+            logger.bind(tag=TAG).error(
+                f"备用TTS未返回音频数据，主TTS失败文本: {original_text}"
+            )
+        except Exception as e:
+            logger.bind(tag=TAG).error(f"备用TTS合成提示音失败: {e}")
+        return None
+
     def to_tts_stream(self, text, opus_handler: Callable[[bytes], None] = None) -> None:
         # 保留原始文本用于显示/上报
         original_text = text
@@ -157,6 +208,13 @@ class TTSProviderBase(ABC):
                     logger.bind(tag=TAG).warning(
                         f"语音生成失败{5 - max_repeat_time + 1}次: {original_text}，错误: {e}"
                     )
+                    # 鉴权/授权类错误重试必然失败，快速失败，避免白白多等几轮
+                    if _is_fatal_tts_error(str(e)):
+                        logger.bind(tag=TAG).error(
+                            f"TTS返回鉴权/授权类错误，停止重试: {e}"
+                        )
+                        max_repeat_time = 0
+                        break
                     max_repeat_time -= 1
             if max_repeat_time > 0:
                 logger.bind(tag=TAG).info(
@@ -166,6 +224,20 @@ class TTSProviderBase(ABC):
                 logger.bind(tag=TAG).error(
                     f"语音生成失败: {original_text}，请检查网络或服务是否正常"
                 )
+                # 字幕保底：TTS全失败时仍发一条带文本的FIRST，设备至少能显示字幕
+                # （与delete_audio_file=False路径行为一致；LAST由tts文本线程正常入队）
+                self.tts_audio_queue.put((SentenceType.FIRST, None, original_text, getattr(self, 'current_sentence_id', None)))
+                # 备用TTS降级：合成固定提示音让设备出声（不重试原始文本，失败即无声）
+                fallback_audio = self._synthesize_fallback_audio(original_text)
+                if fallback_audio:
+                    audio_bytes_to_data_stream(
+                        fallback_audio,
+                        file_type=self.fallback_provider.audio_file_type,
+                        is_opus=True,
+                        callback=opus_handler,
+                        sample_rate=self.conn.sample_rate,
+                        opus_encoder=self.opus_encoder,
+                    )
             return None
         else:
             tmp_file = self.generate_filename()
@@ -224,6 +296,13 @@ class TTSProviderBase(ABC):
                     logger.bind(tag=TAG).warning(
                         f"语音生成失败{5 - max_repeat_time + 1}次: {original_text}，错误: {e}"
                     )
+                    # 鉴权/授权类错误重试必然失败，快速失败，避免白白多等几轮
+                    if _is_fatal_tts_error(str(e)):
+                        logger.bind(tag=TAG).error(
+                            f"TTS返回鉴权/授权类错误，停止重试: {e}"
+                        )
+                        max_repeat_time = 0
+                        break
                     max_repeat_time -= 1
             if max_repeat_time > 0:
                 logger.bind(tag=TAG).info(
@@ -233,6 +312,18 @@ class TTSProviderBase(ABC):
                 logger.bind(tag=TAG).error(
                     f"语音生成失败: {original_text}，请检查网络或服务是否正常"
                 )
+                # 备用TTS降级：合成固定提示音返回给调用方播放
+                fallback_audio = self._synthesize_fallback_audio(original_text)
+                if fallback_audio:
+                    audio_datas = []
+                    audio_bytes_to_data_stream(
+                        fallback_audio,
+                        file_type=self.fallback_provider.audio_file_type,
+                        is_opus=True,
+                        callback=lambda data: audio_datas.append(data),
+                        sample_rate=self.conn.sample_rate,
+                    )
+                    return audio_datas
             return None
         else:
             tmp_file = self.generate_filename()

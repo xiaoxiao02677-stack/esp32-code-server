@@ -21,6 +21,8 @@
         "SWITCH_TO_WIFI_NETWORK": "Switching to Wi-Fi...",
         "SWITCH_TO_4G_NETWORK": "Switching to 4G...",
         "STANDBY": "Standby",
+        "CONFIG_SYNCING": "Syncing config...",
+        "WAKE_WORD_READY": "Wake word ready",
         "CONNECT_TO": "Connect to ",
         "CONNECTING": "Connecting...",
         "CONNECTION_SUCCESSFUL": "Connection Successful",

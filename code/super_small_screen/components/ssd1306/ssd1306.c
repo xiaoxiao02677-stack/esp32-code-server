@@ -87,6 +87,18 @@ void ssd1306_draw_string(uint8_t x, uint8_t page, const char *str)
     }
 }
 
+void ssd1306_draw_pixel(uint8_t x, uint8_t y, uint8_t on)
+{
+    if (x >= OLED_WIDTH || y >= OLED_HEIGHT) {
+        return;
+    }
+    if (on) {
+        fb[y / 8][x] |= (uint8_t)(1u << (y % 8));
+    } else {
+        fb[y / 8][x] &= (uint8_t)~(1u << (y % 8));
+    }
+}
+
 esp_err_t ssd1306_refresh(void)
 {
     /* Set column window to the visible 72 columns (28..99) */

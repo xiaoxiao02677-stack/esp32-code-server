@@ -50,6 +50,7 @@ class Dialogue:
     def get_llm_dialogue(self) -> List[Dict[str, str]]:
         # 直接调用get_llm_dialogue_with_memory，传入None作为memory_str
         # 这样确保说话人功能在所有调用路径下都生效
+        # 短期记忆同理：真实调用方（connection.chat）负责传入，此处保持无记忆形态
         return self.get_llm_dialogue_with_memory(None, None)
 
     def update_system_message(self, new_content: str):
@@ -93,7 +94,7 @@ class Dialogue:
 
     def get_llm_dialogue_with_memory(
             self, memory_str: str = None, voiceprint_config: dict = None,
-            current_speaker: str = None,
+            current_speaker: str = None, short_term_memory: str = None,
     ) -> List[Dict[str, str]]:
         # 构建对话
         dialogue = []
@@ -118,6 +119,16 @@ class Dialogue:
                     f"<memory>\n{memory_str}\n</memory>",
                     full_prompt,
                     flags=re.DOTALL,
+                )
+
+            # 短期记忆：最近 N 条真实对话记录（跨会话，特殊标记块注明）
+            # short_term_memory 为空（无记录/开关关闭）时整个块不注入
+            if short_term_memory:
+                full_prompt += (
+                    "\n<short_term_memory>\n"
+                    "以下是用户与你的最近对话记录（短期记忆，供参考）：\n"
+                    f"{short_term_memory}\n"
+                    "</short_term_memory>"
                 )
 
             # 追加说话人信息

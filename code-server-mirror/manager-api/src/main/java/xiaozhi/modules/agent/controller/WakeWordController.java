@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.constant.Constant;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.user.UserDetail;
@@ -27,6 +28,9 @@ import xiaozhi.common.utils.Result;
 import xiaozhi.modules.agent.entity.AgentEntity;
 import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentWakeWordService;
+import xiaozhi.modules.device.entity.DeviceEntity;
+import xiaozhi.modules.device.service.DeviceConfigService;
+import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.security.user.SecurityUser;
 import xiaozhi.modules.sys.service.SysParamsService;
 
@@ -35,6 +39,7 @@ import xiaozhi.modules.sys.service.SysParamsService;
  *
  * @author xiaozhi
  */
+@Slf4j
 @Tag(name = "唤醒词管理")
 @RequiredArgsConstructor
 @RestController
@@ -43,6 +48,11 @@ public class WakeWordController {
 
     private static final int MAX_WAKE_WORDS = 10;
     private static final int MAX_WAKE_WORD_LENGTH = 30;
+    /**
+     * 设备级硬件唤醒词数量上限（MultiNet 引擎契约，与 DeviceConfigServiceImpl/ConfigServiceImpl 同源）；
+     * 超出部分不入 ai_device_config，避免整包被 sanitizeWakeWord 丢弃导致同步失效
+     */
+    private static final int MAX_DEVICE_WAKE_WORDS = 5;
     private static final String DEFAULT_HTTP_PORT = "8003";
     private static final String PARAM_HTTP_PORT = "server.http_port";
 
@@ -50,6 +60,8 @@ public class WakeWordController {
     private final AgentWakeWordService agentWakeWordService;
     private final SysParamsService sysParamsService;
     private final RestTemplate restTemplate;
+    private final DeviceService deviceService;
+    private final DeviceConfigService deviceConfigService;
 
     /**
      * 获取指定智能体的唤醒词列表
@@ -109,10 +121,41 @@ public class WakeWordController {
         String wakeWordsStr = wakeWords.stream().collect(Collectors.joining(";"));
         agentService.updateAgentWakeWords(agentId, wakeWordsStr, user.getId());
 
+        // 同步设备级硬件唤醒词到 ai_device_config（设备重连时下发的唯一持久源），
+        // 须在推送之前完成，保证推送失败/离线设备重连后也能拿到新词
+        syncWakeWordsToDeviceConfig(agentId, wakeWords);
+
         // 推送唤醒词给在线设备
         pushWakeWordsToDevices(agentId, wakeWords);
 
         return new Result<Void>().ok(null);
+    }
+
+    /**
+     * 将唤醒词同步写入该智能体下所有设备的云端配置（ai_device_config.wake_word）
+     *
+     * <p>语义：wake_words 列表 → 设备表 wake_word 键，统一存 List&lt;String&gt;
+     * （ConfigServiceImpl 下发时 String/List 均支持）。超过设备侧 5 词上限时截断前 5 个，
+     * 避免被 DeviceConfigServiceImpl.sanitizeWakeWord 整体丢弃导致设备重连拿到旧词。
+     * 单台设备同步失败只记日志，不阻断其它设备及后续推送。
+     */
+    private void syncWakeWordsToDeviceConfig(String agentId, List<String> wakeWords) {
+        List<DeviceEntity> devices = deviceService.getDevicesByAgentId(agentId);
+        if (devices == null || devices.isEmpty()) {
+            return;
+        }
+        List<String> deviceWakeWords = wakeWords.size() > MAX_DEVICE_WAKE_WORDS
+                ? wakeWords.subList(0, MAX_DEVICE_WAKE_WORDS)
+                : wakeWords;
+        Map<String, Object> config = Map.of("wake_word", deviceWakeWords);
+        for (DeviceEntity device : devices) {
+            try {
+                deviceConfigService.upsertByMac(device.getMacAddress(), config);
+            } catch (Exception e) {
+                log.error("[WakeWord] 同步设备配置失败 agentId={} deviceId={}: {}",
+                        agentId, device.getId(), e.getMessage());
+            }
+        }
     }
 
     /**

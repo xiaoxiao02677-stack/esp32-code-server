@@ -849,8 +849,8 @@
           <div class="panel-box">
             <div class="panel-label">输入（说话 或 直接打字）</div>
             <div class="sim-input-row">
-              <button class="kawaii-pill" :class="{ 'is-recording': simListening }" :disabled="!simAgentId" @click="toggleSimListen">
-                {{ simListening ? '● 结束录音并发送识别' : '🎙 录音（服务端真实 ASR）' }}
+              <button class="kawaii-pill" :class="{ 'is-recording': simListening }" :disabled="!simAgentId || simBusy || simListenBusy" @click="toggleSimListen">
+                {{ simListenBusy ? '⏳ 正在启动录音…' : (simListening ? '● 结束录音并发送识别' : '🎙 录音（服务端真实 ASR）') }}
               </button>
             </div>
             <div class="add-fact-row" style="margin-top:10px;">
@@ -1129,6 +1129,8 @@ export default {
       simLogs: [],
       simBusy: false,
       simListening: false,
+      simListenBusy: false,
+      simListenToken: null,
       simRecorder: null,
       simAsrModelId: '',
     };
@@ -1206,6 +1208,12 @@ export default {
       return this.modelsByType[this.activeModelType] || [];
     },
   },
+  watch: {
+    // 切换智能体后清空缓存的 ASR 模型 ID，避免上一个智能体的模型串到新智能体（跨智能体残留）
+    simAgentId() {
+      this.simAsrModelId = '';
+    },
+  },
   mounted() {
     setTimeout(() => { this.booting = false; }, 300);
     // 主题恢复（登录页也生效）
@@ -1232,7 +1240,23 @@ export default {
         headers['Content-Type'] = opts.contentType;
         opts.body = opts.rawBody;
       }
-      const resp = await fetch(API_BASE + path, { method: opts.method || 'GET', headers, body: opts.body });
+      // 请求超时：默认 120s（LLM/TTS/ASR 推理可能较慢），避免无超时挂死
+      const timeoutMs = opts.timeoutMs || 120000;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      let resp;
+      try {
+        resp = await fetch(API_BASE + path, {
+          method: opts.method || 'GET', headers, body: opts.body, signal: controller.signal,
+        });
+      } catch (e) {
+        if (e && e.name === 'AbortError') {
+          throw new Error(`请求超时（${Math.round(timeoutMs / 1000)}s）：网络异常或服务未响应`);
+        }
+        throw new Error('网络异常或服务未响应');
+      } finally {
+        clearTimeout(timer);
+      }
       // ===== 统一认证/错误拦截（FR-07/FR-08：401/403/500 不在各页面各自处理）=====
       if (resp.status === 401) {
         this.token = '';
@@ -2054,9 +2078,22 @@ export default {
         this.stopSimRecorder();
         return;
       }
+      // 立即置位：拉详情/权限弹窗等异步等待期间再次点击会走上面的 stopSimRecorder 分支，避免开双录音
+      this.simListening = true;
+      this.simListenBusy = true;
+      // 启动令牌：等待期间若被取消或被新一轮启动接管，本次流程作废（防取消后立刻重启时新旧流程并发出双录音）
+      const token = {};
+      this.simListenToken = token;
+      const cancelled = () => this.simListenToken !== token;
+      const startFailed = (msg) => {
+        if (cancelled()) return; // 已被新一轮启动接管，不再触碰/覆盖新状态
+        this.simListening = false;
+        this.simListenBusy = false;
+        if (msg) alert(msg);
+      };
       // 真实 ASR：MediaRecorder 录音 → 服务端识别（与设备同一 ASR 引擎）
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-        alert('当前浏览器不支持录音（需要 HTTPS 页面 + MediaRecorder）');
+        startFailed('当前浏览器不支持录音（需要 HTTPS 页面 + MediaRecorder）');
         return;
       }
       const agent = this.agents.find((a) => a.id === this.simAgentId) || null;
@@ -2071,20 +2108,34 @@ export default {
           }
         } catch (e) { /* 详情失败时下面统一提示 */ }
       }
+      // 启动等待期间用户已点击取消（stopSimRecorder 已重置标志）：放弃本次启动
+      if (cancelled()) return;
       if (!asrModelId) {
-        alert('该智能体未配置 ASR 模型，请先在「智能体」页编辑选择语音识别引擎');
+        startFailed('该智能体未配置 ASR 模型，请先在「智能体」页编辑选择语音识别引擎');
         return;
       }
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (e) {
-        alert('无法访问麦克风：' + (e.message || e.name || '请检查浏览器权限（页面需 https）'));
+        startFailed('无法访问麦克风：' + (e.message || e.name || '请检查浏览器权限（页面需 https）'));
         return;
       }
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
-      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      // 权限弹窗期间用户已取消：释放刚拿到的麦克风并放弃启动
+      if (cancelled()) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      let recorder;
+      try {
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      } catch (e) {
+        startFailed('初始化录音器失败：' + (e.message || e.name || '未知错误'));
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       const chunks = [];
       recorder.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
       recorder.onstop = async () => {
@@ -2116,22 +2167,28 @@ export default {
               this.simLog(`ASR（服务端 ${res.data.elapsed_ms}ms）: ${text}`);
             }
           } else {
-            throw new Error((res && res.msg) || ('错误码 ' + (res && res.code)));
+            throw new Error((res && (res.msg || ('错误码 ' + res.code))) || '网络异常或服务未响应');
           }
         } catch (e) {
           this.simStage.asr = 'error';
-          this.simError.asr = '识别失败：' + (e.message || '网络异常');
-          this.simLog(`ASR 失败: ${e.message || '网络异常'}`);
+          this.simError.asr = '识别失败：' + ((e && e.message) || '网络异常或服务未响应');
+          this.simLog(`ASR 失败: ${(e && e.message) || '网络异常或服务未响应'}`);
         }
       };
       recorder.start();
       this.simRecorder = recorder;
-      this.simListening = true;
+      this.simListenBusy = false;
+      if (cancelled()) { // 极小窗口：start 与令牌校验之间被取消，立即停掉
+        this.stopSimRecorder();
+        return;
+      }
       this.simStage.asr = 'loading';
       this.simError.asr = '';
       this.simLog('录音中…（真实上传服务端 ASR，再点一次结束）');
     },
     stopSimRecorder() {
+      this.simListenBusy = false;
+      this.simListenToken = null; // 使等待中的旧启动流程作废
       if (this.simRecorder && this.simRecorder.state !== 'inactive') {
         try { this.simRecorder.stop(); } catch (e) { /* noop */ }
       }
@@ -2148,16 +2205,15 @@ export default {
       this.simLlmReply = '';
       if (this.simAudioUrl) { URL.revokeObjectURL(this.simAudioUrl); this.simAudioUrl = ''; }
       // /agent/list 不返回 llmModelId 等字段（只有显示名），必须拉详情拿真实模型 ID
-      const detailRes = await this.api(`/agent/${this.simAgentId}`);
-      const agent = (detailRes && detailRes.code === 0 && detailRes.data) || null;
-      if (!agent || !agent.llmModelId) {
-        this.simStage.llm = 'error';
-        this.simError.llm = '该智能体未配置 LLM 模型，请先在「智能体」页编辑选择大脑';
-        this.simLog('LLM 失败: 智能体缺少 llmModelId');
-        this.simBusy = false;
-        return;
-      }
       try {
+        const detailRes = await this.api(`/agent/${this.simAgentId}`);
+        const agent = (detailRes && detailRes.code === 0 && detailRes.data) || null;
+        if (!agent || !agent.llmModelId) {
+          this.simStage.llm = 'error';
+          this.simError.llm = '该智能体未配置 LLM 模型，请先在「智能体」页编辑选择大脑';
+          this.simLog('LLM 失败: 智能体缺少 llmModelId');
+          return;
+        }
         // ① ASR（文本直接作为识别结果）
         this.simStage.asr = 'loading';
         await new Promise((r) => setTimeout(r, 60));

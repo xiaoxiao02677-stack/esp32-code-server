@@ -9,6 +9,9 @@ from core.api.asr_recognize_handler import AsrRecognizeHandler
 from core.api.llm_preview_handler import LlmPreviewHandler
 from core.api.model_test_handler import ModelTestHandler
 from core.api.wake_word_handler import WakeWordHandler
+from core.api.push_handler import PushHandler
+from core.api.timeline_handler import TimelineHandler
+from core.api.entity_handler import EntityHandler
 
 TAG = __name__
 
@@ -100,6 +103,9 @@ class SimpleHttpServer:
         self.llm_preview_handler = LlmPreviewHandler(config)
         self.model_test_handler = ModelTestHandler(config)
         self.wake_word_handler = None
+        self.push_handler = None
+        self.timeline_handler = TimelineHandler(config)
+        self.entity_handler = EntityHandler(config)
         # Expose the instances to the module-scope middlewares (auth check).
         global _MEMORY_HANDLER, _TTS_PREVIEW_HANDLER, _LLM_PREVIEW_HANDLER, _MODEL_TEST_HANDLER
         _MEMORY_HANDLER = self.memory_handler
@@ -113,6 +119,11 @@ class SimpleHttpServer:
         global _WAKE_WORD_HANDLER
         _WAKE_WORD_HANDLER = self.wake_word_handler
         self.logger.bind(tag=TAG).info("WakeWordHandler 已绑定")
+
+    def set_push_scheduler(self, push_scheduler):
+        """绑定 PushScheduler 实例，用于 HTTP API 端点。"""
+        self.push_handler = PushHandler(self.config, push_scheduler)
+        self.logger.bind(tag=TAG).info("PushHandler 已绑定")
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -224,6 +235,62 @@ class SimpleHttpServer:
                     ]
                 )
 
+                # 记忆时间查询 API（manager-api 经 server.secret 鉴权代理转发）
+                app.add_routes(
+                    [
+                        web.get(
+                            "/api/memory/{agent_id}/timeline",
+                            self.timeline_handler.handle_list_timeline,
+                        ),
+                        web.options(
+                            "/api/memory/{agent_id}/timeline",
+                            self.timeline_handler.handle_options,
+                        ),
+                        web.get(
+                            "/api/memory/{agent_id}/timeline/by-date/{date}",
+                            self.timeline_handler.handle_list_by_date,
+                        ),
+                        web.options(
+                            "/api/memory/{agent_id}/timeline/by-date/{date}",
+                            self.timeline_handler.handle_options,
+                        ),
+                        web.post(
+                            "/api/memory/{agent_id}/facts/{fact_id}/times",
+                            self.timeline_handler.handle_add_times,
+                        ),
+                        web.delete(
+                            "/api/memory/{agent_id}/facts/{fact_id}/times",
+                            self.timeline_handler.handle_remove_times,
+                        ),
+                        web.get(
+                            "/api/memory/{agent_id}/timeline/chart",
+                            self.timeline_handler.handle_chart,
+                        ),
+                        web.options(
+                            "/api/memory/{agent_id}/timeline/chart",
+                            self.timeline_handler.handle_options,
+                        ),
+                    ]
+                )
+
+                # 实体图谱 API（manager-api 经 Bearer auth 代理转发）
+                app.add_routes(
+                    [
+                        web.post(
+                            "/api/memory/{agent_id}/entities/extract",
+                            self.entity_handler.handle_extract_entities,
+                        ),
+                        web.get(
+                            "/api/memory/{agent_id}/entities",
+                            self.entity_handler.handle_list_entities,
+                        ),
+                        web.get(
+                            "/api/memory/{agent_id}/entities/graph",
+                            self.entity_handler.handle_get_entity_graph,
+                        ),
+                    ]
+                )
+
                 # 运行服务
                 runner = web.AppRunner(app)
 
@@ -290,6 +357,25 @@ class SimpleHttpServer:
                             web.get(
                                 "/api/wake-word/devices",
                                 self.wake_word_handler.handle_list_devices,
+                            ),
+                        ]
+                    )
+
+                # 随机推送调度 API（manager-api 经 server.secret 鉴权代理转发）
+                if self.push_handler is not None:
+                    app.add_routes(
+                        [
+                            web.post(
+                                "/api/push/schedule",
+                                self.push_handler.handle_schedule,
+                            ),
+                            web.get(
+                                "/api/push/tasks",
+                                self.push_handler.handle_list_tasks,
+                            ),
+                            web.get(
+                                "/api/push/tasks/{push_id}",
+                                self.push_handler.handle_get_task,
                             ),
                         ]
                     )

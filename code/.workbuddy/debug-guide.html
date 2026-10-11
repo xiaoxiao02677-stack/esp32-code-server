@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浏览器调试指南 - xiaozhi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+        h1 { color: #0ff; margin-bottom: 20px; }
+        h2 { color: #f0f; margin: 20px 0 10px; }
+        .section { background: #16213e; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        a { display: inline-block; margin: 4px; padding: 8px 16px; background: #0f3460; color: #0ff; text-decoration: none; border-radius: 4px; }
+        a:hover { background: #0ff; color: #1a1a2e; }
+        #log { background: #000; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+        .btn { padding: 10px 20px; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 4px; }
+        .btn:hover { background: #ff6b6b; }
+        .status { padding: 8px; border-radius: 4px; margin: 4px 0; }
+        .ok { background: #2d6a4f; }
+        .err { background: #9d0208; }
+        .warn { background: #f9c74f; color: #000; }
+    </style>
+</head>
+<body>
+    <h1>🛠️ xiaozhi 浏览器调试指南</h1>
+    <p>本地文件直接打开即可使用，无需服务器</p>
+
+    <div class="section">
+        <h2>🔗 测试导航链接</h2>
+        <p>点击以下链接跳转到对应页面，检查是否正常加载：</p>
+        <a href="/admin/entity-graph">/admin/entity-graph</a>
+        <a href="/admin/timeline-chart">/admin/timeline-chart</a>
+        <a href="/admin/sessions">/admin/sessions</a>
+        <a href="/admin/entities">/admin/entities</a>
+        <a href="/admin/mqtt-log">/admin/mqtt-log</a>
+        <a href="/admin/config">/admin/config</a>
+    </div>
+
+    <div class="section">
+        <h2>🌐 API 状态测试</h2>
+        <button class="btn" onclick="testAPIs()">运行所有测试</button>
+        <button class="btn" onclick="clearLog()">清空日志</button>
+        <div id="api-results"></div>
+    </div>
+
+    <div class="section">
+        <h2>📋 控制台错误日志</h2>
+        <button class="btn" onclick="copyLogs()">一键复制</button>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const logs = [];
+        const origError = console.error;
+        const origWarn = console.warn;
+        console.error = (...args) => { logs.push('[ERR] ' + args.join(' ')); updateLog(); origError(...args); };
+        console.warn = (...args) => { logs.push('[WRN] ' + args.join(' ')); updateLog(); origWarn(...args); };
+        window.addEventListener('error', e => { logs.push('[EXC] ' + e.message); updateLog(); });
+        window.addEventListener('unhandledrejection', e => { logs.push('[PROM] ' + e.reason); updateLog(); });
+
+        function updateLog() {
+            document.getElementById('log').textContent = logs.join('\n');
+        }
+
+        async function testAPIs() {
+            const results = document.getElementById('api-results');
+            const endpoints = [
+                '/api/v1/sessions',
+                '/api/v1/entities',
+                '/api/v1/mqtt/logs',
+                '/api/v1/config',
+                '/api/v1/status'
+            ];
+            results.innerHTML = '';
+            for (const ep of endpoints) {
+                try {
+                    const t0 = Date.now();
+                    const res = await fetch(ep, { method: 'HEAD' });
+                    const ms = Date.now() - t0;
+                    const cls = res.ok ? 'ok' : 'err';
+                    results.innerHTML += `<div class="status ${cls}">${res.status} ${ep} (${ms}ms)</div>`;
+                } catch (e) {
+                    results.innerHTML += `<div class="status err">✗ ${ep} - ${e.message}</div>`;
+                }
+            }
+        }
+
+        function clearLog() { logs.length = 0; updateLog(); }
+        function copyLogs() {
+            navigator.clipboard.writeText(logs.join('\n')).then(() => alert('已复制到剪贴板'));
+        }
+    </script>
+</body>
+</html>

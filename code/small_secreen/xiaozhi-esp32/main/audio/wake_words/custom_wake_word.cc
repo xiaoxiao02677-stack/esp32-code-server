@@ -123,6 +123,11 @@ bool CustomWakeWord::Initialize(AudioCodec* codec, srmodel_list_t* models_list) 
     multinet_->set_det_threshold(multinet_model_data_, threshold_);
     input_buffer_.reserve(multinet_->get_samp_chunksize(multinet_model_data_));
 
+    // 暂存默认命令表快照：此时 commands_ 尚未被 NVS 缓存覆盖，
+    // 是 index.json 或 Kconfig CONFIG_CUSTOM_WAKE_WORD 的本地默认表，
+    // 供 ClearWakeWordCommands() 清空云端唤醒词后恢复默认
+    default_commands_ = commands_;
+
     // 服务器下发唤醒词的 NVS 恢复：优先用上次云端下发的命令表（脱机也可唤醒），
     // 没有缓存时才用本地默认命令（index.json 或 Kconfig CONFIG_CUSTOM_WAKE_WORD）。
     // NVS 格式：pinyin1|pinyin2|... 与 display1|display2|...（'|' 不会出现在拼音里）
@@ -131,37 +136,72 @@ bool CustomWakeWord::Initialize(AudioCodec* codec, srmodel_list_t* models_list) 
         std::string saved_pinyins = settings.GetString("pinyins");
         std::string saved_displays = settings.GetString("displays");
         if (!saved_pinyins.empty()) {
-            std::vector<std::string> pinyins;
-            std::vector<std::string> displays;
-            std::stringstream ps(saved_pinyins), ds(saved_displays);
-            std::string token;
-            while (std::getline(ps, token, '|')) {
-                if (!token.empty()) pinyins.push_back(token);
-            }
-            while (std::getline(ds, token, '|')) {
-                displays.push_back(token);
-            }
-            if (!pinyins.empty()) {
-                if (displays.size() < pinyins.size()) {
-                    displays.resize(pinyins.size());
+            // 格式自愈：旧固件曾把带声调拼音（如 "ni3 hao3 xiao3 he2"，字母后跟
+            // 数字 1-5）写入 NVS；MN7 命令表只认 esp-sr 不带调格式（lazy_pinyin），
+            // 带调旧词恢复了也永远无法命中。检测到即视为过时缓存：跳过恢复、
+            // 删除 NVS 键（同 ClearWakeWordCommands 的删除模式），回落本地默认表；
+            // 服务器下次下发唤醒词时会以正确格式重新写入。
+            bool legacy_toned = false;
+            for (size_t i = 1; i < saved_pinyins.size(); ++i) {
+                char prev = saved_pinyins[i - 1];
+                char digit = saved_pinyins[i];
+                if (prev >= 'a' && prev <= 'z' && digit >= '1' && digit <= '5') {
+                    legacy_toned = true;
+                    break;
                 }
-                commands_.clear();
-                for (size_t i = 0; i < pinyins.size(); ++i) {
-                    const std::string& display =
-                        displays[i].empty() ? pinyins[i] : displays[i];
-                    commands_.push_back({pinyins[i], display, "wake"});
+            }
+            if (legacy_toned) {
+                ESP_LOGW(TAG,
+                         "Discarded legacy toned pinyin in NVS ('%.24s...'), "
+                         "falling back to default wake words",
+                         saved_pinyins.c_str());
+                settings.EraseKey("pinyins");
+                settings.EraseKey("displays");
+            } else {
+                std::vector<std::string> pinyins;
+                std::vector<std::string> displays;
+                std::stringstream ps(saved_pinyins), ds(saved_displays);
+                std::string token;
+                while (std::getline(ps, token, '|')) {
+                    if (!token.empty()) pinyins.push_back(token);
                 }
-                ESP_LOGI(TAG, "Restored %zu server wake-word command(s) from NVS",
-                         commands_.size());
+                while (std::getline(ds, token, '|')) {
+                    displays.push_back(token);
+                }
+                if (!pinyins.empty()) {
+                    if (displays.size() < pinyins.size()) {
+                        displays.resize(pinyins.size());
+                    }
+                    commands_.clear();
+                    for (size_t i = 0; i < pinyins.size(); ++i) {
+                        const std::string& display =
+                            displays[i].empty() ? pinyins[i] : displays[i];
+                        commands_.push_back({pinyins[i], display, "wake"});
+                    }
+                    ESP_LOGI(TAG, "Restored %zu server wake-word command(s) from NVS",
+                             commands_.size());
+                }
             }
         }
     }
 
     esp_mn_commands_clear();
     for (int i = 0; i < commands_.size(); i++) {
-        esp_mn_commands_add(i + 1, commands_[i].command.c_str());
+        esp_err_t err = esp_mn_commands_add(i + 1, commands_[i].command.c_str());
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Add command %d failed (err=0x%x): '%s'",
+                     i + 1, err, commands_[i].command.c_str());
+        }
     }
-    esp_mn_commands_update();
+    esp_mn_error_t *mn_err = esp_mn_commands_update();
+    if (mn_err != NULL) {
+        // MN7 无法解析的命令（如带声调拼音）会集中在此暴露：带调词被模型
+        // 静默拒绝、待机喊不醒，此处打 ERROR 便于定位
+        for (int i = 0; i < mn_err->num; ++i) {
+            ESP_LOGE(TAG, "Command rejected by multinet (invalid pinyin?): '%s'",
+                     mn_err->phrases[i]->string);
+        }
+    }
     
     multinet_->print_active_speech_commands(multinet_model_data_);
 #if CONFIG_SEND_WAKE_WORD_DATA
@@ -222,9 +262,21 @@ bool CustomWakeWord::UpdateCommands(const std::vector<std::string>& pinyin_texts
         // MultiNet 命令表重建（esp_mn_commands_* 全局接口，需先 clear 再逐条 add + update）
         esp_mn_commands_clear();
         for (size_t i = 0; i < commands_.size(); ++i) {
-            esp_mn_commands_add(static_cast<int>(i) + 1, commands_[i].command.c_str());
+            esp_err_t err = esp_mn_commands_add(static_cast<int>(i) + 1, commands_[i].command.c_str());
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "Add command %zu failed (err=0x%x): '%s'",
+                         i + 1, err, commands_[i].command.c_str());
+            }
         }
-        esp_mn_commands_update();
+        esp_mn_error_t *mn_err = esp_mn_commands_update();
+        if (mn_err != NULL) {
+            // MN7 无法解析的命令（如带声调拼音）会集中在此暴露：带调词被模型
+            // 静默拒绝、待机喊不醒，此处打 ERROR 便于定位
+            for (int i = 0; i < mn_err->num; ++i) {
+                ESP_LOGE(TAG, "Command rejected by multinet (invalid pinyin?): '%s'",
+                         mn_err->phrases[i]->string);
+            }
+        }
         // 持久化到 NVS：重启后脱机也能用云端下发的唤醒词
         {
             std::string pinyins, displays;
@@ -242,6 +294,99 @@ bool CustomWakeWord::UpdateCommands(const std::vector<std::string>& pinyin_texts
     ESP_LOGI(TAG, "Wake word commands updated from server: %zu entr%s",
              commands_.size(), commands_.size() == 1 ? "y" : "ies");
     return true;
+}
+
+bool CustomWakeWord::ClearWakeWordCommands() {
+    if (multinet_model_data_ == nullptr) {
+        ESP_LOGW(TAG, "ClearWakeWordCommands ignored: multinet not initialized");
+        return false;
+    }
+    if (default_commands_.empty()) {
+        // 默认表缺失（assets 未解析且 Kconfig 未配置）时无从恢复，拒绝清空
+        ESP_LOGW(TAG, "ClearWakeWordCommands ignored: no default commands to restore");
+        return false;
+    }
+
+    {
+        // 与 Feed()/UpdateCommands() 互斥：命令表替换与检测循环不会交错执行
+        std::lock_guard<std::mutex> lock(input_buffer_mutex_);
+        // 已是默认表则仅清理 NVS 缓存（避免无谓的模型重建）
+        bool already_default = default_commands_.size() == commands_.size();
+        if (already_default) {
+            for (size_t i = 0; i < default_commands_.size(); ++i) {
+                if (default_commands_[i].command != commands_[i].command) {
+                    already_default = false;
+                    break;
+                }
+            }
+        }
+        if (!already_default) {
+            // 恢复默认命令表并重建 MultiNet 命令表（同 UpdateCommands 模式）
+            commands_ = default_commands_;
+            esp_mn_commands_clear();
+            for (size_t i = 0; i < commands_.size(); ++i) {
+                esp_err_t err = esp_mn_commands_add(static_cast<int>(i) + 1, commands_[i].command.c_str());
+                if (err != ESP_OK) {
+                    ESP_LOGE(TAG, "Add command %zu failed (err=0x%x): '%s'",
+                             i + 1, err, commands_[i].command.c_str());
+                }
+            }
+            esp_mn_error_t *mn_err = esp_mn_commands_update();
+            if (mn_err != NULL) {
+                // MN7 无法解析的命令（如带声调拼音）会集中在此暴露：带调词被模型
+                // 静默拒绝、待机喊不醒，此处打 ERROR 便于定位
+                for (int i = 0; i < mn_err->num; ++i) {
+                    ESP_LOGE(TAG, "Command rejected by multinet (invalid pinyin?): '%s'",
+                             mn_err->phrases[i]->string);
+                }
+            }
+        }
+        // 删除 NVS 缓存：重启后不再用云端下发的唤醒词覆盖默认表
+        Settings settings("wakeword", true);
+        settings.EraseKey("pinyins");
+        settings.EraseKey("displays");
+    }
+    multinet_->print_active_speech_commands(multinet_model_data_);
+    ESP_LOGI(TAG, "Wake word commands cleared, restored %zu default command(s)",
+             commands_.size());
+    return true;
+}
+
+void CustomWakeWord::SetThreshold(float threshold) {
+    if (threshold < 0.01f || threshold > 1.0f) {
+        ESP_LOGW(TAG, "Invalid threshold value: %.2f (range 0.01-1.0)", threshold);
+        return;
+    }
+    threshold_ = threshold;
+    if (multinet_model_data_) {
+        multinet_->set_det_threshold(multinet_model_data_, threshold_);
+        ESP_LOGI(TAG, "Wake word threshold updated: %.2f", threshold);
+    } else {
+        ESP_LOGI(TAG, "Wake word threshold cached: %.2f (will apply on init)", threshold);
+    }
+}
+
+void CustomWakeWord::SetDuration(int duration) {
+    if (duration < 500 || duration > 5000) {
+        ESP_LOGW(TAG, "Invalid duration value: %d (range 500-5000)", duration);
+        return;
+    }
+    if (multinet_model_data_) {
+        multinet_->destroy(multinet_model_data_);
+        multinet_model_data_ = nullptr;
+    }
+    duration_ = duration;
+    if (multinet_model_data_ == nullptr && multinet_ != nullptr) {
+        multinet_model_data_ = multinet_->create(mn_name_, duration_);
+        if (multinet_model_data_) {
+            multinet_->set_det_threshold(multinet_model_data_, threshold_);
+            ESP_LOGI(TAG, "Wake word duration updated: %dms, model rebuilt", duration);
+        } else {
+            ESP_LOGE(TAG, "Failed to rebuild multinet model with duration %d", duration);
+        }
+    } else {
+        ESP_LOGI(TAG, "Wake word duration cached: %dms (will apply on init)", duration);
+    }
 }
 
 std::vector<std::string> CustomWakeWord::GetCommandTexts() const {

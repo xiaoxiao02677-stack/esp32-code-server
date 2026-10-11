@@ -300,7 +300,8 @@ export default {
       return this.agent ? String(this.agent.engine || '') : '';
     },
     isHolographic() {
-      return this.engine === 'mem_holographic';
+      // mem_hybrid 长期层与 holographic 同库，引擎参数面板同样适用
+      return this.engine === 'mem_holographic' || this.engine === 'mem_hybrid';
     },
     engineChipText() {
       if (this.isHolographic) return this.$t('memoryManagement.engineHolographic');

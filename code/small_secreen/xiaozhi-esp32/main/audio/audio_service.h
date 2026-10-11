@@ -157,7 +157,14 @@ public:
     // WakeNet 引擎安全忽略返回 false）。引擎未就绪时缓存，就绪后自动应用。
     bool UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
                                 const std::vector<std::string>& display_texts);
+    // 清空云端下发的唤醒词并恢复默认（空唤醒词语义）：转发给音频引擎，
+    // 引擎未就绪时挂起"清空"意图，待引擎初始化后自动应用并覆盖 NVS 旧缓存。
+    bool ClearWakeWordCommands();
     bool SupportsDynamicWakeWords() const;
+
+    // 服务器动态调整唤醒词参数
+    void SetWakeWordThreshold(float threshold);
+    void SetWakeWordDuration(int duration);
 
 private:
     AudioCodec* codec_ = nullptr;
@@ -167,6 +174,8 @@ private:
     // 引擎就绪前缓存的动态唤醒词（device_config 早于引擎初始化到达时）
     std::unique_ptr<std::vector<std::string>> pending_wake_word_pinyins_;
     std::unique_ptr<std::vector<std::string>> pending_wake_word_displays_;
+    // 引擎就绪前收到的"清空唤醒词"请求：引擎初始化后应用（同时清理 NVS 残留缓存）
+    bool pending_wake_word_clear_ = false;
     void* opus_encoder_ = nullptr;
     void* opus_decoder_ = nullptr;
     std::mutex decoder_mutex_;

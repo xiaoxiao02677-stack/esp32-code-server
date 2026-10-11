@@ -34,6 +34,13 @@ public:
     const std::string& GetActivationCode() const { return activation_code_; }
     std::string GetCheckVersionUrl();
 
+    // 配置版本检查（与固件版本分离）
+    std::expected<std::string, std::string> CheckConfigVersion();
+    // 获取配置下载 URL
+    const std::string& GetConfigDownloadUrl() const { return config_download_url_; }
+    // 当前本地配置版本
+    const std::string& GetLocalConfigVersion() const { return local_config_version_; }
+
 private:
     std::string activation_message_;
     std::string activation_code_;
@@ -50,6 +57,10 @@ private:
     std::string activation_challenge_;
     std::string serial_number_;
     int activation_timeout_ms_ = 30000;
+
+    std::string config_version_;
+    std::string config_download_url_;
+    std::string local_config_version_;
 
     std::function<void(int progress, size_t speed)> upgrade_callback_;
     std::expected<std::vector<int>, std::string> ParseVersion(const std::string& version);

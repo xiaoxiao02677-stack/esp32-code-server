@@ -23,6 +23,9 @@ void ssd1306_clear(void);
  * x in pixels [0..71], y in pages [0..4] (one page = 8 pixel rows). */
 void ssd1306_draw_string(uint8_t x, uint8_t page, const char *str);
 
+/* Set a single pixel. x in pixels [0..71], y in pixel rows [0..39]. */
+void ssd1306_draw_pixel(uint8_t x, uint8_t y, uint8_t on);
+
 /* Push the framebuffer to the display over I2C. */
 esp_err_t ssd1306_refresh(void);
 

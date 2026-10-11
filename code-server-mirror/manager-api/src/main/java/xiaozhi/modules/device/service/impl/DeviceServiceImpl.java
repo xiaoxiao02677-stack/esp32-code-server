@@ -290,6 +290,16 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     }
 
     @Override
+    public List<DeviceEntity> getDevicesByAgentId(String agentId) {
+        if (StringUtils.isBlank(agentId)) {
+            return Collections.emptyList();
+        }
+        QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("agent_id", agentId);
+        return baseDao.selectList(wrapper);
+    }
+
+    @Override
     public List<UserShowDeviceListVO> getUserDeviceList(Long userId, String agentId) {
         List<DeviceEntity> devices = getUserDevices(userId, agentId);
         return devices.stream().map(this::toUserShowDeviceListVO).toList();

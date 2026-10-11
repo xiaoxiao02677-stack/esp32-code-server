@@ -26,6 +26,10 @@ import AdminApiDebug from './views/admin/ApiDebug.vue'
 import AdminMcp from './views/admin/Mcp.vue'
 import AdminLinkSimulator from './views/admin/LinkSimulator.vue'
 import AdminWakeWord from './views/admin/WakeWord.vue'
+import AdminEntityGraph from './views/admin/EntityGraph.vue'
+import AdminTimelineChart from './views/admin/TimelineChart.vue'
+import AdminPushScheduler from './views/admin/PushScheduler.vue'
+import AdminWeChatOpenClaw from './views/admin/WeChatOpenClaw.vue'
 import Login from './views/Login.vue'
 
 const router = createRouter({
@@ -54,7 +58,11 @@ const router = createRouter({
     { path: '/admin/apis', component: AdminApiDebug },
     { path: '/admin/mcp', component: AdminMcp },
     { path: '/admin/linksim', component: AdminLinkSimulator },
-    { path: '/admin/wake-word', component: AdminWakeWord }
+    { path: '/admin/wake-word', component: AdminWakeWord },
+    { path: '/admin/entity-graph', component: AdminEntityGraph },
+    { path: '/admin/timeline-chart', component: AdminTimelineChart },
+    { path: '/admin/push-scheduler', component: AdminPushScheduler },
+    { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw }
   ]
 })
 

@@ -30,6 +30,14 @@ NotifyPlayer::~NotifyPlayer() { Stop(); }
 bool NotifyPlayer::Start(std::string audio_url, std::vector<NotifySubtitle> subtitles,
                          uint32_t playback_id, SubtitleCallback subtitle_callback,
                          FinishedCallback finished_callback) {
+    return Start(std::move(audio_url), std::move(subtitles), playback_id,
+                 NotifyPriority::kNotifyPriorityNormal, std::move(subtitle_callback), std::move(finished_callback));
+}
+
+bool NotifyPlayer::Start(std::string audio_url, std::vector<NotifySubtitle> subtitles,
+                         uint32_t playback_id, NotifyPriority priority,
+                         SubtitleCallback subtitle_callback,
+                         FinishedCallback finished_callback) {
     if (playback_id == 0 || !IsSupportedUrl(audio_url)) {
         return false;
     }
@@ -41,8 +49,29 @@ bool NotifyPlayer::Start(std::string audio_url, std::vector<NotifySubtitle> subt
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (active_ || worker_running_) {
+        // 紧急推送：立即打断当前播放
+        if (priority == NotifyPriority::kNotifyPriorityUrgent && active_) {
+            cancelled_ = true;
+            active_ = false;
+        }
+        // 低优先级：设备忙时丢弃
+        else if (priority == NotifyPriority::kNotifyPriorityLow && active_) {
+            ESP_LOGW(TAG, "Dropping low-priority notify: device busy");
             return false;
+        }
+        // 其他：入队等待
+        else if (active_ || worker_running_) {
+            if (queue_.size() >= kMaxQueueSize) {
+                // 队列已满，丢弃最低优先级
+                auto min_it = std::min_element(queue_.begin(), queue_.end(),
+                    [](const NotifyTask& a, const NotifyTask& b) { return a.priority < b.priority; });
+                queue_.erase(min_it);
+                ESP_LOGW(TAG, "Notify queue full, dropped lowest priority task");
+            }
+            queue_.push_back({std::move(audio_url), std::move(subtitles), playback_id, priority});
+            ESP_LOGI(TAG, "Notify enqueued (priority=%d, queue_size=%zu)",
+                     static_cast<int>(priority), queue_.size());
+            return true;
         }
         audio_url_ = std::move(audio_url);
         subtitles_ = std::move(subtitles);
@@ -53,6 +82,7 @@ bool NotifyPlayer::Start(std::string audio_url, std::vector<NotifySubtitle> subt
         last_playback_position_ms_ = 0;
         underrun_count_ = 0;
         next_subtitle_index_ = 0;
+        priority_ = priority;
         active_ = true;
         worker_running_ = true;
         cancelled_ = false;
@@ -280,6 +310,18 @@ void NotifyPlayer::WorkerTask() {
                     callback = CompleteLocked(completed_playback_id);
                     report_success = true;
                 }
+            }
+        }
+        // 播放完成后，检查队列并启动下一个
+        if (!active_ && !queue_.empty()) {
+            auto it = std::max_element(queue_.begin(), queue_.end(),
+                [](const NotifyTask& a, const NotifyTask& b) { return a.priority < b.priority; });
+            if (it != queue_.end()) {
+                auto task = *it;
+                queue_.erase(it);
+                // 递归启动下一个
+                Start(std::move(task.audio_url), std::move(task.subtitles),
+                      task.playback_id, task.priority, subtitle_callback_, finished_callback_);
             }
         }
     }

@@ -148,6 +148,46 @@ def initialize_modules(
     return modules
 
 
+def _create_tts_fallback_provider(config, main_tts_type):
+    """为主TTS创建备用TTS provider（默认EdgeTTS免费）。
+
+    优先读主TTS配置里的 fallback_type/fallback 配置；未配置时默认挂 EdgeTTS。
+    主TTS本身就是edge时不挂（自挂无意义）；创建失败返回None不影响主流程。
+
+    Returns:
+        备用TTS实例；不可用返回None
+    """
+    tts_config = config["TTS"][config["selected_module"]["TTS"]]
+    fallback_type = tts_config.get("fallback_type")
+    fallback_conf = tts_config.get("fallback") or {}
+    if not fallback_type:
+        if main_tts_type == "edge":
+            return None
+        fallback_type = "edge"
+    elif fallback_type == main_tts_type:
+        return None
+    if not isinstance(fallback_conf, dict):
+        fallback_conf = {}
+    # EdgeTTS 兜底默认配置：未显式配置 voice 时补默认音色。
+    # 否则 edge provider 读到 voice=None，edge_tts.Communicate 会抛
+    # "voice must be str"（此前线上 403 降级失败的直接原因）。
+    if fallback_type == "edge" and not fallback_conf.get("voice") and not fallback_conf.get("private_voice"):
+        fallback_conf = dict(fallback_conf)
+        fallback_conf["voice"] = "zh-CN-XiaoxiaoNeural"
+        fallback_conf.setdefault("format", "mp3")
+    try:
+        fallback_provider = tts.create_instance(fallback_type, fallback_conf, True)
+        logger.bind(tag=TAG).info(
+            f"已为主TTS({main_tts_type})挂载备用TTS: {fallback_type}"
+        )
+        return fallback_provider
+    except Exception as e:
+        logger.bind(tag=TAG).warning(
+            f"备用TTS({fallback_type})创建失败，主TTS失败时将无提示音降级: {e}"
+        )
+        return None
+
+
 def initialize_tts(config):
     select_tts_module = config["selected_module"]["TTS"]
     tts_config = config["TTS"][select_tts_module].copy()
@@ -162,6 +202,9 @@ def initialize_tts(config):
         tts_config,
         str(config.get("delete_audio", True)).lower() in ("true", "1", "yes"),
     )
+    # 主TTS失败重试耗尽后，降级到备用TTS（默认EdgeTTS）合成固定提示音
+    if new_tts is not None:
+        new_tts.fallback_provider = _create_tts_fallback_provider(config, tts_type)
     return new_tts
 
 

@@ -97,6 +97,17 @@ CREATE INDEX IF NOT EXISTS idx_facts_agent    ON facts(agent_id);
 CREATE INDEX IF NOT EXISTS idx_entities_name  ON entities(name);
 """
 
+_CREATE_MEMORY_TIMES = """
+CREATE TABLE IF NOT EXISTS memory_times (
+    memory_id      INTEGER NOT NULL,
+    time_reference TEXT    NOT NULL,
+    actual_date    TIMESTAMP,
+    PRIMARY KEY (memory_id, time_reference),
+    FOREIGN KEY (memory_id) REFERENCES facts(fact_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_memory_times_ref ON memory_times(time_reference);
+CREATE INDEX IF NOT EXISTS idx_memory_times_date ON memory_times(actual_date);
+"""
 _HELPFUL_DELTA, _UNHELPFUL_DELTA = 0.05, -0.10
 
 # Entity extraction patterns, applied in order: capitalized multi-word phrases ("John Doe"), double-quoted terms,
@@ -183,6 +194,12 @@ class MemoryStore:
             if column not in columns:
                 self._conn.execute(f"ALTER TABLE facts ADD COLUMN {column} {ddl}")
         self._conn.executescript(_SCHEMA_INDEXES)
+        # Create memory_times table if absent
+        has_memory_times = any(row[1] for row in self._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_times'"
+        ).fetchall())
+        if not has_memory_times:
+            self._conn.executescript(_CREATE_MEMORY_TIMES)
         self._conn.commit()
 
     def _one(self, sql: str, params=()):
@@ -319,6 +336,170 @@ class MemoryStore:
             if status:
                 return int(self._conn.execute("SELECT COUNT(*) FROM facts WHERE status = ?", (status,)).fetchone()[0])
             return int(self._conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0])
+
+    # ---- Time-reference operations ----------------------------------------------------------------
+
+    def add_time_references(self, fact_id: int, refs: list[tuple[str, str | None]]) -> None:
+        """Insert time references for a fact. No-op if fact_id does not exist."""
+        with self._lock:
+            existing = self._one("SELECT fact_id FROM facts WHERE fact_id = ?", (fact_id,))
+            if existing is None:
+                return
+            self._write(
+                "INSERT OR IGNORE INTO memory_times (memory_id, time_reference, actual_date) VALUES (?, ?, ?)",
+                [(fact_id, ref, date) for ref, date in refs],
+            )
+
+    def remove_time_references(self, fact_id: int) -> int:
+        """Delete all time references for a fact. Returns count deleted."""
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM memory_times WHERE memory_id = ?", (fact_id,))
+            self._conn.commit()
+            return cur.rowcount
+
+    def get_time_references(self, fact_id: int) -> list[dict]:
+        """Return time references for a fact as list of dicts."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT time_reference, actual_date FROM memory_times WHERE memory_id = ? ORDER BY rowid",
+                (fact_id,),
+            ).fetchall()
+            return [{"time_reference": r["time_reference"], "actual_date": r["actual_date"]} for r in rows]
+
+    def get_timeline(self, from_time: str | None = None, to_time: str | None = None,
+                     limit: int = 50, offset: int = 0) -> dict:
+        """Return facts ordered by created_at with their time references (for timeline view)."""
+        with self._lock:
+            conditions, params = [], []
+            if from_time:
+                conditions.append("f.created_at >= ?")
+                params.append(from_time)
+            if to_time:
+                conditions.append("f.created_at <= ?")
+                params.append(to_time)
+            where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+            count_sql = f"SELECT COUNT(*) FROM facts f {where}"
+            total = int(self._conn.execute(count_sql, params).fetchone()[0])
+            page = max(1, int(offset // limit if limit else 1))
+            limit = min(100, max(1, int(limit)))
+            offset = max(0, int(offset))
+            sql = (f"SELECT {', '.join('f.' + col for col in _FACT_PUBLIC_COLUMNS.split(', '))} "
+                   f"FROM facts f {where} ORDER BY f.created_at DESC LIMIT ? OFFSET ?")
+            rows = self._conn.execute(sql, [*params, limit, offset]).fetchall()
+            items = []
+            for row in rows:
+                d = self._fact_dict(row)
+                d["time_references"] = [
+                    {"time_reference": r["time_reference"], "actual_date": r["actual_date"]}
+                    for r in self._conn.execute(
+                        "SELECT time_reference, actual_date FROM memory_times WHERE memory_id = ?",
+                        (d["fact_id"],),
+                    ).fetchall()
+                ]
+                items.append(d)
+            return {"total": total, "items": items, "limit": limit, "offset": offset}
+
+    def get_chart_data(self, period: str = "daily", from_date: str | None = None,
+                       to_date: str | None = None) -> dict:
+        """Return chart data for memory statistics.
+
+        Args:
+            period: 'daily', 'weekly', or 'monthly'
+            from_date: start date in YYYY-MM-DD format (optional, defaults to 30 days ago)
+            to_date: end date in YYYY-MM-DD format (optional, defaults to today)
+
+        Returns:
+            {"labels": [...], "counts": [...], "period": str, "from_date": str, "to_date": str}
+        """
+        from datetime import datetime, timedelta
+
+        with self._lock:
+            now = datetime.now()
+            if to_date:
+                end_dt = datetime.fromisoformat(to_date)
+            else:
+                end_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if from_date:
+                start_dt = datetime.fromisoformat(from_date)
+            elif period == "monthly":
+                start_dt = (end_dt - timedelta(days=365)).replace(day=1)
+            elif period == "weekly":
+                start_dt = (end_dt - timedelta(weeks=12)).replace(weekday=end_dt.weekday())
+            else:  # daily
+                start_dt = (end_dt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+            # Build date range labels
+            if period == "daily":
+                deltas = [(end_dt - timedelta(days=i)).date() for i in range(30, -1, -1)]
+                date_format = "%Y-%m-%d"
+            elif period == "weekly":
+                deltas = []
+                current = start_dt.date()
+                while current <= end_dt.date():
+                    deltas.append(current)
+                    current += timedelta(weeks=1)
+                date_format = "%Y-W%W"
+            else:  # monthly
+                deltas = []
+                current = start_dt.replace(day=1)
+                while current <= end_dt:
+                    deltas.append(current.date())
+                    if current.month == 12:
+                        current = current.replace(year=current.year + 1, month=1)
+                    else:
+                        current = current.replace(month=current.month + 1)
+                date_format = "%Y-%m"
+
+            # Query counts per period
+            if period == "daily":
+                sql = """
+                    SELECT DATE(created_at) as date_str, COUNT(*) as cnt
+                    FROM facts
+                    WHERE created_at >= ? AND created_at <= ?
+                    GROUP BY DATE(created_at)
+                    ORDER BY date_str
+                """
+                params = [start_dt.isoformat(), end_dt.isoformat()]
+            elif period == "weekly":
+                sql = """
+                    SELECT strftime('%Y-W%W', created_at) as date_str, COUNT(*) as cnt
+                    FROM facts
+                    WHERE created_at >= ? AND created_at <= ?
+                    GROUP BY strftime('%Y-W%W', created_at)
+                    ORDER BY date_str
+                """
+                params = [start_dt.isoformat(), end_dt.isoformat()]
+            else:  # monthly
+                sql = """
+                    SELECT strftime('%Y-%m', created_at) as date_str, COUNT(*) as cnt
+                    FROM facts
+                    WHERE created_at >= ? AND created_at <= ?
+                    GROUP BY strftime('%Y-%m', created_at)
+                    ORDER BY date_str
+                """
+                params = [start_dt.isoformat(), end_dt.isoformat()]
+
+            rows = self._conn.execute(sql, params).fetchall()
+            count_map = {row["date_str"]: row["cnt"] for row in rows}
+
+            # Build labels and counts arrays
+            if period == "daily":
+                labels = [d.strftime(date_format) for d in deltas]
+            elif period == "weekly":
+                labels = [d.strftime(date_format) for d in deltas]
+            else:
+                labels = [d.strftime(date_format) for d in deltas]
+
+            counts = [count_map.get(d.strftime(date_format), 0) for d in deltas]
+
+            return {
+                "labels": labels,
+                "counts": counts,
+                "period": period,
+                "from_date": start_dt.strftime("%Y-%m-%d"),
+                "to_date": end_dt.strftime("%Y-%m-%d"),
+                "total": sum(counts),
+            }
 
     def _fact_dict(self, row: sqlite3.Row) -> dict:
         fact = dict(row)

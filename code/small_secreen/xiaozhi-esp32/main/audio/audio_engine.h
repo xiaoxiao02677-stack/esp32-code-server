@@ -46,6 +46,14 @@ public:
     }
     // 当前引擎是否支持动态唤醒命令（MultiNet）
     virtual bool SupportsDynamicWakeWords() const { return false; }
+
+    // 清空云端下发的唤醒词并恢复默认命令表（MultiNet 引擎支持；
+    // 其他引擎默认返回 false 安全忽略）。同时删除 NVS 中的云端缓存。
+    virtual bool ClearWakeWordCommands() { return false; }
+
+    // 服务器动态调整唤醒词参数（阈值 0.01-1.0，时长 500-5000ms）
+    virtual void SetThreshold(float threshold) { (void)threshold; }
+    virtual void SetDuration(int duration) { (void)duration; }
 };
 
 #endif

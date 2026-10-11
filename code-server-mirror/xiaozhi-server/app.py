@@ -76,6 +76,12 @@ async def main():
     ota_server = SimpleHttpServer(config)
     # 绑定唤醒词服务（必须在使用路由前完成）
     ota_server.set_wake_word_service(ws_server.wake_word_service)
+    # 初始化推送调度器并绑定 wake_word_service，启动后台处理器
+    from core.services.push_scheduler import PushScheduler
+    push_scheduler = PushScheduler()
+    push_scheduler.set_wake_word_service(ws_server.wake_word_service)
+    await push_scheduler.start()
+    ota_server.set_push_scheduler(push_scheduler)
     ota_task = asyncio.create_task(ota_server.start())
 
     # 启动心跳监听服务（12399，TCP/UDP；失败不影响主服务）
@@ -136,6 +142,10 @@ async def main():
     finally:
         # 停止全局GC管理器
         await gc_manager.stop()
+
+        # 停止推送调度器
+        if push_scheduler:
+            await push_scheduler.stop()
 
         # 取消所有任务（关键修复点）
         stdin_task.cancel()

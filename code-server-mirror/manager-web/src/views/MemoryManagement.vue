@@ -430,7 +430,8 @@ export default {
       return this.currentAgent ? String(this.currentAgent.engine || '') : '';
     },
     isHolographic() {
-      return this.engine === 'mem_holographic';
+      // mem_hybrid 长期层与 holographic 同库同锁，条目管理能力一致
+      return this.engine === 'mem_holographic' || this.engine === 'mem_hybrid';
     },
     isMem0() {
       return this.engine === 'mem0ai' || this.engine === 'mem0';

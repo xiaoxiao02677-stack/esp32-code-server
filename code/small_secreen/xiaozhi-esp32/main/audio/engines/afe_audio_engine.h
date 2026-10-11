@@ -49,6 +49,8 @@ public:
     // 动态唤醒词（MultiNet）：仅当 custom_wake_word_（MultiNet 检测器）存在时支持
     bool UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
                                 const std::vector<std::string>& display_texts) override;
+    // 清空云端唤醒词并恢复默认命令表（MultiNet）
+    bool ClearWakeWordCommands() override;
     bool SupportsDynamicWakeWords() const override { return custom_wake_word_ != nullptr; }
 
 private:

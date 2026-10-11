@@ -71,9 +71,13 @@ class ManageApiClient:
                     raise Exception("ManageApiClient已关闭，不再创建新的HTTP客户端")
 
                 if loop_id not in cls._async_clients:
-                    # 服务端可能主动关闭连接，httpx 连接池无法正确检测和清理
+                    # 适度 keep-alive：复用连接避免每次冷启动 TCP+TLS（配置拉取从冷 2.7s 降到 ~50ms）；
+                    # 保留小连接数与短保活，降低"服务端主动关闭后连接失效"的影响面，
+                    # 连接失效时 httpx 会自动重建（httpx>=0.23 对 stale keepalive 连接有重试）。
                     limits = httpx.Limits(
-                        max_keepalive_connections=0,  # 禁用 keep-alive，每次都新建连接
+                        max_keepalive_connections=4,
+                        max_connections=8,
+                        keepalive_expiry=30.0,
                     )
                     cls._async_clients[loop_id] = httpx.AsyncClient(
                         base_url=cls.config.get("url"),

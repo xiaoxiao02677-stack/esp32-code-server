@@ -29,6 +29,7 @@ import xiaozhi.modules.model.service.ModelConfigService;
 /**
  * 记忆条目管理服务实现：引擎分派（design §5.2）
  * - mem_holographic：代理 xiaozhi-server 内部管理 API（与设备对话读写同一把锁）
+ * - mem_hybrid：长期层复用 Holographic 同一 SQLite 事实库（Python 端 mem_hybrid.get_store 同库同锁），条目管理同款代理
  * - mem0ai：平台账号记忆，无信任分/状态体系（P0 降级为"未配置提示"）
  * - mem_local_short：压缩档案式记忆，不支持条目管理，返回友好提示
  * - nomem / mem_report_only：空列表
@@ -40,6 +41,8 @@ public class MemoryFactServiceImpl implements MemoryFactService {
 
     /** 引擎类型：Holographic 本地记忆（内部 API 代理） */
     private static final String ENGINE_MEM_HOLOGRAPHIC = "mem_holographic";
+    /** 引擎类型：混合记忆（长期层与 Holographic 同库，条目管理能力一致） */
+    private static final String ENGINE_MEM_HYBRID = "mem_hybrid";
     /** 引擎类型：Mem0AI 平台记忆 */
     private static final String ENGINE_MEM0AI = "mem0ai";
     /** 引擎类型：本地短记忆（压缩档案） */
@@ -78,9 +81,9 @@ public class MemoryFactServiceImpl implements MemoryFactService {
         if (result.isEmpty()) {
             return result;
         }
-        // holographic 引擎的条目统计来自内部服务，一次性获取；服务异常时保持 0 并降级记录日志
-        boolean hasHolographic = result.stream().anyMatch(vo -> ENGINE_MEM_HOLOGRAPHIC.equals(vo.getEngine()));
-        if (!hasHolographic) {
+        // holographic 系引擎（含 mem_hybrid）的条目统计来自内部服务，一次性获取；服务异常时保持 0 并降级记录日志
+        boolean hasFactStore = result.stream().anyMatch(vo -> isFactStoreEngine(vo.getEngine()));
+        if (!hasFactStore) {
             return result;
         }
         List<Map<String, Object>> internalAgents = null;
@@ -94,7 +97,7 @@ public class MemoryFactServiceImpl implements MemoryFactService {
             return result;
         }
         for (MemoryAgentVO vo : result) {
-            if (!ENGINE_MEM_HOLOGRAPHIC.equals(vo.getEngine())) {
+            if (!isFactStoreEngine(vo.getEngine())) {
                 continue;
             }
             for (Map<String, Object> item : internalAgents) {
@@ -118,7 +121,7 @@ public class MemoryFactServiceImpl implements MemoryFactService {
         checkAgentPermission(agentId, userId);
 
         String engine = resolveEngineType(agentId, userId);
-        if (!ENGINE_MEM_HOLOGRAPHIC.equals(engine)) {
+        if (!isFactStoreEngine(engine)) {
             if (ENGINE_MEM_LOCAL_SHORT.equals(engine)) {
                 throw new RenException("该引擎为压缩档案式记忆，暂不支持条目管理，可切换至 Holographic 引擎");
             }
@@ -384,11 +387,18 @@ public class MemoryFactServiceImpl implements MemoryFactService {
     }
 
     /**
+     * 判断引擎是否具备 Holographic 事实库条目管理能力（mem_hybrid 长期层同库同锁）
+     */
+    private boolean isFactStoreEngine(String engine) {
+        return ENGINE_MEM_HOLOGRAPHIC.equals(engine) || ENGINE_MEM_HYBRID.equals(engine);
+    }
+
+    /**
      * 确认 Agent 绑定 holographic 引擎，否则抛友好提示
      */
     private void requireHolographic(String agentId, Long userId) {
         String engine = resolveEngineType(agentId, userId);
-        if (ENGINE_MEM_HOLOGRAPHIC.equals(engine)) {
+        if (isFactStoreEngine(engine)) {
             return;
         }
         if (ENGINE_MEM_LOCAL_SHORT.equals(engine)) {

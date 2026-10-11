@@ -31,6 +31,14 @@ public interface DeviceService extends BaseService<DeviceEntity> {
     List<DeviceEntity> getUserDevices(Long userId, String agentId);
 
     /**
+     * 获取指定智能体绑定的全部设备（不过滤用户）
+     *
+     * @param agentId 智能体id
+     * @return 设备列表
+     */
+    List<DeviceEntity> getDevicesByAgentId(String agentId);
+
+    /**
      * 获取用户指定智能体的设备列表（带时区处理），
      */
     List<UserShowDeviceListVO> getUserDeviceList(Long userId, String agentId);

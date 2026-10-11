@@ -41,8 +41,9 @@ const booting = ref(true)
 const compact = ref(localStorage.getItem('cc_compact') === '1')
 
 const toastsRef = ref(null)
-function toast(msg, type = 'success') {
-  toastsRef.value?.toast(msg, type)
+function toast(msg, type = 'success', ms) {
+  // ms 可选：长文案（如生效条件说明）传入更长展示时长，默认 2600ms
+  toastsRef.value?.toast(msg, type, ms)
 }
 provide('toast', toast)
 

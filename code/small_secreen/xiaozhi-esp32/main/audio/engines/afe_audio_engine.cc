@@ -637,3 +637,11 @@ bool AfeAudioEngine::UpdateWakeWordCommands(const std::vector<std::string>& piny
     }
     return custom_wake_word_->UpdateCommands(pinyin_texts, display_texts);
 }
+
+bool AfeAudioEngine::ClearWakeWordCommands() {
+    if (wake_detector_ != WakeDetector::kMultiNet || custom_wake_word_ == nullptr) {
+        ESP_LOGW(TAG, "ClearWakeWordCommands ignored: MultiNet detector not active");
+        return false;
+    }
+    return custom_wake_word_->ClearWakeWordCommands();
+}

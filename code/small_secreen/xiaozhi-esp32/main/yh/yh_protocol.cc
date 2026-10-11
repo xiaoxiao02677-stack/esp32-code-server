@@ -4,6 +4,7 @@
 #include <application.h>
 #include <board.h>
 #include <cjson_utils.h>
+#include "notify/notify_player.h"
 #include <system_info.h>
 
 #include <esp_app_desc.h>
@@ -44,9 +45,9 @@ constexpr const char* kErrInvalidParameters = "INVALID_PARAMETERS";
 constexpr const char* kErrDuplicateCommand = "DUPLICATE_COMMAND";
 constexpr const char* kErrMalformedMessage = "MALFORMED_MESSAGE";
 
-// 当前白名单：SET_LED 是唯一真实能力
+// 当前白名单：SET_LED + SEND_NOTIFY
 bool IsKnownOperation(const char* op) {
-    return strcmp(op, "SET_LED") == 0;
+    return strcmp(op, "SET_LED") == 0 || strcmp(op, "SEND_NOTIFY") == 0;
 }
 
 std::string MakeSessionId() {
@@ -206,10 +207,11 @@ void YhProtocol::Connect() {
     cJSON_AddStringToObject(adv.get(), "device_id", device_id_.c_str());
     auto* ops = cJSON_AddArrayToObject(adv.get(), "operations");
     cJSON_AddItemToArray(ops, cJSON_CreateString("SET_LED"));
+    cJSON_AddItemToArray(ops, cJSON_CreateString("SEND_NOTIFY"));
     if (!SendJson(adv.get())) {
         return;
     }
-    ESP_LOGI(TAG, ">>> ADVERTISEMENT sent [SET_LED]");
+    ESP_LOGI(TAG, ">>> ADVERTISEMENT sent [SET_LED, SEND_NOTIFY]");
 
     // HEARTBEAT 定时器（30s）
     if (heartbeat_timer_ == nullptr) {
@@ -410,6 +412,27 @@ void YhProtocol::HandleCommand(cJSON* root) {
         ESP_LOGI(TAG, "<<< COMMAND SET_LED [%s]", cmd_id->valuestring);
         ExecuteSetLed(on);
         ESP_LOGI(TAG, "    -> LED %s (GPIO48 WS2812)", on ? "ON ***" : "OFF");
+        SendCommandAck(root, true, kErrNone);
+    } else if (strcmp(op->valuestring, "SEND_NOTIFY") == 0) {
+        // params 必须存在且为 object，含 string "audio_url"，可选 string "text"
+        if (!cJSON_IsObject(params) || cJSON_GetObjectItem(params, "audio_url") == nullptr) {
+            ESP_LOGE(TAG, "[ERR] INVALID_PARAMETERS: SEND_NOTIFY requires {\"audio_url\": <string>}");
+            SendCommandAck(root, false, kErrInvalidParameters);
+            return;
+        }
+        const char* audio_url = cJSON_GetObjectItem(params, "audio_url")->valuestring;
+        const cJSON* text_item = cJSON_GetObjectItem(params, "text");
+        std::string text = cJSON_IsString(text_item) ? text_item->valuestring : "";
+        ESP_LOGI(TAG, "<<< COMMAND SEND_NOTIFY [%s] url=%s", cmd_id->valuestring, audio_url);
+        Application::GetInstance().Schedule([audio_url, text]() {
+            std::vector<NotifySubtitle> subtitles;
+            if (!text.empty()) {
+                NotifySubtitle sub;
+                sub.text = text;
+                subtitles.push_back(sub);
+            }
+            Application::GetInstance().NotifyAudio(audio_url, subtitles);
+        });
         SendCommandAck(root, true, kErrNone);
     }
 }

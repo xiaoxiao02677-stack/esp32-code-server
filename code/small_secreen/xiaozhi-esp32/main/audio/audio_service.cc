@@ -926,7 +926,9 @@ bool AudioService::IsAfeWakeWord() {
 bool AudioService::UpdateWakeWordCommands(const std::vector<std::string>& pinyin_texts,
                                           const std::vector<std::string>& display_texts) {
     if (!audio_engine_initialized_) {
-        // 引擎未就绪：缓存待引擎初始化后自动应用（见 InitializeAudioEngine 尾部）
+        // 引擎未就绪：缓存待引擎初始化后自动应用（见 InitializeAudioEngine 尾部）；
+        // 新的"更新"请求覆盖此前挂起的"清空"请求
+        pending_wake_word_clear_ = false;
         pending_wake_word_pinyins_ = std::make_unique<std::vector<std::string>>(pinyin_texts);
         pending_wake_word_displays_ = std::make_unique<std::vector<std::string>>(display_texts);
         ESP_LOGI(TAG, "Wake-word commands cached (%zu) until audio engine initializes",
@@ -938,6 +940,31 @@ bool AudioService::UpdateWakeWordCommands(const std::vector<std::string>& pinyin
 
 bool AudioService::SupportsDynamicWakeWords() const {
     return audio_engine_initialized_ && audio_engine_->SupportsDynamicWakeWords();
+}
+
+bool AudioService::ClearWakeWordCommands() {
+    if (!audio_engine_initialized_) {
+        // 引擎未就绪：记下"清空"意图，引擎初始化后再统一应用
+        // （引擎初始化时会从 NVS 恢复上次云端词，必须以该标志覆盖）
+        pending_wake_word_clear_ = true;
+        pending_wake_word_pinyins_.reset();
+        pending_wake_word_displays_.reset();
+        ESP_LOGI(TAG, "Wake-word clear request cached until audio engine initializes");
+        return true;
+    }
+    return audio_engine_->ClearWakeWordCommands();
+}
+
+void AudioService::SetWakeWordThreshold(float threshold) {
+    if (audio_engine_) {
+        audio_engine_->SetThreshold(threshold);
+    }
+}
+
+void AudioService::SetWakeWordDuration(int duration) {
+    if (audio_engine_) {
+        audio_engine_->SetDuration(duration);
+    }
 }
 
 bool AudioService::InitializeAudioEngine() {
@@ -953,8 +980,14 @@ bool AudioService::InitializeAudioEngine() {
     }
     audio_engine_initialized_ = true;
     audio_engine_->EnableDeviceAec(device_aec_enabled_);
-    // 引擎就绪后应用缓存的动态唤醒词（device_config 可能先于引擎初始化到达）
-    if (pending_wake_word_pinyins_ && !pending_wake_word_pinyins_->empty()) {
+    // 引擎就绪后应用缓存的动态唤醒词（device_config 可能先于引擎初始化到达）；
+    // "清空"与"更新"不会同时生效，后到的请求覆盖先到的
+    if (pending_wake_word_clear_) {
+        if (audio_engine_->ClearWakeWordCommands()) {
+            ESP_LOGI(TAG, "Applied pending wake-word clear after engine init");
+        }
+        pending_wake_word_clear_ = false;
+    } else if (pending_wake_word_pinyins_ && !pending_wake_word_pinyins_->empty()) {
         if (audio_engine_->UpdateWakeWordCommands(*pending_wake_word_pinyins_,
                                                   *pending_wake_word_displays_)) {
             ESP_LOGI(TAG, "Applied pending wake-word commands (%zu) after engine init",

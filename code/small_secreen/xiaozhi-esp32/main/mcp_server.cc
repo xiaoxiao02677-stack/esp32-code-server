@@ -17,6 +17,7 @@
 #include "display.h"
 #include "lvgl_image.h"
 #include "lvgl_theme.h"
+#include "notify/notify_player.h"
 #include "settings.h"
 
 #define TAG "MCP"
@@ -115,6 +116,34 @@ void McpServer::AddCommonTools() {
                 });
     }
 #endif
+
+    // Notify tool: allow the server/agent to trigger a voice notification
+    AddTool("self.notify.send",
+            "Send a voice notification to the device. "
+            "The device will play the audio URL and display the subtitle text if provided. "
+            "This only works when the device is idle (not speaking or listening).",
+            PropertyList({
+                Property("audio_url", kPropertyTypeString,
+                         "The URL of the audio file to play (http/https, ogg/mp3 format)"),
+                Property("text", kPropertyTypeString,
+                         "Optional subtitle text to display during playback")
+            }),
+            [this](const PropertyList& properties) -> ToolResult {
+                auto& app = Application::GetInstance();
+                if (app.GetDeviceState() != kDeviceStateIdle) {
+                    return std::unexpected(
+                        "Device is not idle (state=" +
+                        std::to_string((int)app.GetDeviceState()) +
+                        "), cannot send notification");
+                }
+                auto audio_url = properties["audio_url"].value<std::string>();
+                std::string text;
+                if (properties["text"].has_default_value()) {
+                    text = properties["text"].value<std::string>();
+                }
+                app.ScheduleNotify(audio_url, text);
+                return true;
+            });
 
     // Restore the original tools list to the end of the tools list
     tools_.insert(tools_.end(), std::make_move_iterator(original_tools.begin()),

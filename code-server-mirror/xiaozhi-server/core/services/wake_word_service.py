@@ -24,9 +24,19 @@ class WakeWordService:
             self._connections[device_id] = conn
             pending = self._offline_queue.pop(device_id, [])
         if pending:
+            # 对齐推送策略：未绑定设备、MQTT 网关设备不下发
+            if getattr(conn, "need_bind", False) or getattr(conn, "conn_from_mqtt_gateway", False):
+                logger.info(f"设备 {device_id} 未绑定或来自MQTT网关，丢弃 {len(pending)} 条离线唤醒词")
+                return
             logger.info(f"设备 {device_id} 上线，尝试下发 {len(pending)} 条离线唤醒词")
+            failed = []
             for msg in pending:
-                await self._push_to_conn(device_id, conn, msg)
+                if not await self._push_to_conn(device_id, conn, msg):
+                    failed.append(msg)
+            if failed:
+                # 发送失败的重新入队，等待下次上线或重试
+                async with self._lock:
+                    self._offline_queue.setdefault(device_id, []).extend(failed)
 
     async def unregister_connection(self, device_id: str) -> None:
         async with self._lock:
@@ -39,10 +49,20 @@ class WakeWordService:
         logger.debug(f"设备 {device_id} 绑定到 agent {agent_id}")
 
     async def push_wake_words(self, agent_id: Optional[str], device_id: Optional[str], wake_words: List[str], tts_rate: int = 0) -> dict:
-        if not wake_words:
-            return {"sent": 0, "offline": 0, "failed": 0}
-        msg = {"type": "wake_word", "wake_words": wake_words, "tts_rate": tts_rate}
-        result = {"sent": 0, "offline": 0, "failed": 0}
+        """推送唤醒词到目标设备（在线直推 / 离线缓存）。
+
+        设备端消息固件 application.cc 只认 device_config 等 10 种 type，
+        wake_word 消息会被静默丢弃；因此对在线设备改发：
+        {"type":"device_config","payload":{"wake_word":[词1,词2,...]}}
+        → board.cc ApplyDeviceConfig → MultiNet UpdateWakeWordCommands 热更新。
+        空数组配合固件 ClearWakeWordCommands 语义可清空唤醒词。
+        """
+        wake_words = [str(w) for w in wake_words if w]
+        msg = {
+            "type": "device_config",
+            "payload": {"wake_word": wake_words},
+        }
+        result = {"sent": 0, "offline": 0, "failed": 0, "skipped": 0}
         target_ids: set = set()
         if agent_id and agent_id in self._agent_devices:
             target_ids |= self._agent_devices[agent_id]
@@ -53,25 +73,33 @@ class WakeWordService:
             return result
         async with self._lock:
             snapshot = dict(self._connections)
-            offline_snapshot = dict(self._offline_queue)
+        offline_updates: Dict[str, List[dict]] = {}
         for did in target_ids:
             conn = snapshot.get(did)
             if conn is not None:
+                # 对齐 connection.py 云端配置下发策略：未绑定设备、MQTT 网关设备不下发
+                if getattr(conn, "need_bind", False) or getattr(conn, "conn_from_mqtt_gateway", False):
+                    logger.info(f"设备 {did} 未绑定或来自MQTT网关，跳过唤醒词推送")
+                    result["skipped"] += 1
+                    continue
                 ok = await self._push_to_conn(did, conn, msg)
                 if ok:
+                    # 同步服务端匹配词表（helloHandle/文本匹配用），推送热更新后无需重连
+                    try:
+                        conn.config["wakeup_words"] = list(wake_words)
+                    except Exception:
+                        pass
                     result["sent"] += 1
                 else:
                     result["failed"] += 1
             else:
-                offline_snapshot.setdefault(did, []).append(msg)
+                # 配置语义：离线队列每设备只保留最新一条，避免历史堆积
+                offline_updates[did] = [msg]
                 result["offline"] += 1
-        if result["offline"] > 0:
+        if offline_updates:
             async with self._lock:
-                for did, msgs in offline_snapshot.items():
-                    existing = self._offline_queue.get(did, [])
-                    existing.extend(msgs)
-                    self._offline_queue[did] = existing
-                logger.info(f"唤醒词已缓存至 {len(offline_snapshot)} 个离线设备")
+                self._offline_queue.update(offline_updates)
+            logger.info(f"唤醒词已缓存至 {len(offline_updates)} 个离线设备")
         return result
 
     def get_online_devices(self) -> List[str]:

@@ -28,10 +28,13 @@ class WakeWordHandler(BaseHandler):
     def _verify_auth(self, request: web.Request) -> bool:
         auth = request.headers.get("Authorization", "")
         token = auth[7:] if auth.startswith("Bearer ") else auth
-        if not token or token == self._auth_key:
-            return True
-        logger.bind(tag=TAG).warning("鉴权失败")
-        return False
+        # 安全修复：空 token 一律拒绝（原先 not token 放行=匿名可调推送接口）；
+        # 仅与 auth_key 常量时间比较，且 auth_key 未配置时全部拒绝
+        if not self._auth_key or not token:
+            logger.warning("[%s] 鉴权失败（token为空或服务端未配置auth_key）", TAG)
+            return False
+        import hmac as _hmac
+        return _hmac.compare_digest(token, self._auth_key)
 
     async def handle_push(self, request: web.Request) -> web.Response:
         try:
@@ -42,8 +45,10 @@ class WakeWordHandler(BaseHandler):
             device_id = body.get("device_id")
             wake_words = body.get("wake_words", [])
             tts_rate = int(body.get("tts_rate", 0))
-            if not wake_words or not isinstance(wake_words, list):
-                return _json_response(400, "wake_words 不能为空", status=400)
+            # 允许空列表（清空设备唤醒词，配合固件 ClearWakeWordCommands 语义），
+            # 仅要求类型为 list
+            if not isinstance(wake_words, list):
+                return _json_response(400, "wake_words 必须为列表", status=400)
             if not agent_id and not device_id:
                 return _json_response(400, "agent_id 和 device_id 至少需要指定一个", status=400)
             if self.wake_word_service is None:
@@ -53,7 +58,7 @@ class WakeWordHandler(BaseHandler):
         except json.JSONDecodeError:
             return _json_response(400, "请求体 JSON 解析失败", status=400)
         except Exception as e:
-            logger.bind(tag=TAG).error(f"推送唤醒词异常: {e}", exc_info=True)
+            logger.error("[%s] 推送唤醒词异常: %s", TAG, e, exc_info=True)
             return _json_response(500, f"内部错误: {str(e)}", status=500)
 
     async def handle_list_devices(self, request: web.Request) -> web.Response:
@@ -69,5 +74,5 @@ class WakeWordHandler(BaseHandler):
                 online = [d for d in online if d in agent_devices]
             return _json_response(0, "success", data={"devices": online})
         except Exception as e:
-            logger.bind(tag=TAG).error(f"查询设备列表异常: {e}", exc_info=True)
+            logger.error("[%s] 查询设备列表异常: %s", TAG, e, exc_info=True)
             return _json_response(500, f"内部错误: {str(e)}", status=500)

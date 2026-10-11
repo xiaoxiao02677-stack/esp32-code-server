@@ -50,6 +50,31 @@ Application::Application() : notify_player_(audio_service_) {
                                                 .name = "clock_timer",
                                                 .skip_unhandled_events = true};
     esp_timer_create(&clock_timer_args, &clock_timer_handle_);
+
+    // 超时保护：若设备未收到 device_config，30秒后强制显示待机文案
+    esp_timer_create_args_t config_synced_timer_args = {
+        .callback =
+            [](void* arg) {
+                Application* app = (Application*)arg;
+                app->Schedule([app]() {
+                    if (app->GetDeviceState() == kDeviceStateIdle &&
+                        app->cloud_config_synced_) {
+                        auto display = Board::GetInstance().GetDisplay();
+                        display->SetStatus(Lang::Strings::STANDBY);
+                    }
+                    // 超时处理：无论是否收到device_config，都结束"配置同步中"状态
+                    if (app->GetDeviceState() == kDeviceStateIdle &&
+                        !app->last_error_message_.empty()) {
+                        auto display = Board::GetInstance().GetDisplay();
+                        display->SetStatus(Lang::Strings::STANDBY);
+                    }
+                });
+            },
+        .arg = this,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "config_synced",
+        .skip_unhandled_events = true};
+    esp_timer_create(&config_synced_timer_args, &config_synced_timer_handle_);
 }
 
 Application::~Application() {
@@ -57,6 +82,14 @@ Application::~Application() {
     if (clock_timer_handle_ != nullptr) {
         esp_timer_stop(clock_timer_handle_);
         esp_timer_delete(clock_timer_handle_);
+    }
+    if (config_synced_timer_handle_ != nullptr) {
+        esp_timer_stop(config_synced_timer_handle_);
+        esp_timer_delete(config_synced_timer_handle_);
+    }
+    if (notify_timer_handle_ != nullptr) {
+        esp_timer_stop(notify_timer_handle_);
+        esp_timer_delete(notify_timer_handle_);
     }
     vEventGroupDelete(event_group_);
 }
@@ -283,6 +316,16 @@ void Application::Run() {
             if (GetDeviceState() == kDeviceStateListening) {
                 auto led = Board::GetInstance().GetLed();
                 led->OnStateChanged();
+            } else if (GetDeviceState() == kDeviceStateSpeaking) {
+                // 人声打断：用户说话时中断当前 TTS 播报
+                AbortSpeaking(kAbortReasonNone);  // 协议层暂无独立枚举，此处用 None 表示语音打断
+                // 清空发送队列，防止残留数据被发送到服务器
+                while (audio_service_.PopPacketFromSendQueue())
+                    ;
+                SetDeviceState(kDeviceStateListening);
+                protocol_->SendStartListening(GetDefaultListeningMode());
+                audio_service_.ResetDecoder();
+                audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
             }
         }
 
@@ -343,8 +386,8 @@ void Application::HandleNetworkDisconnectedEvent() {
     if (state == kDeviceStateNotifying) {
         StopNotification();
     }
-    if (state == kDeviceStateConnecting || state == kDeviceStateListening ||
-        state == kDeviceStateSpeaking) {
+    // 关闭音频通道（protocol_ 可能为 nullptr，在激活阶段之前触发网络断开事件时）
+    if (protocol_) {
         ESP_LOGI(TAG, "Closing audio channel due to network disconnection");
         protocol_->CloseAudioChannel();
     }
@@ -389,6 +432,20 @@ void Application::HandleActivationDoneEvent() {
 void Application::ActivationTask() {
     // Create OTA object for activation process
     ota_ = std::make_unique<Ota>();
+
+    // 检查配置版本（不阻塞启动，失败也继续）
+    auto config_ver = ota_->CheckConfigVersion();
+    if (config_ver) {
+        std::string server_ver = *config_ver;
+        if (!server_ver.empty() && server_ver != ota_->GetLocalConfigVersion()) {
+            ESP_LOGI(TAG, "Config version mismatch: server=%s local=%s, will update",
+                     server_ver.c_str(), ota_->GetLocalConfigVersion().c_str());
+            // 配置版本不同，设置标记供后续使用
+            // 实际下载可在协议连接成功后进行
+        }
+    } else {
+        ESP_LOGW(TAG, "Config version check failed: %s", config_ver.error().c_str());
+    }
 
     // Check for new assets version
     CheckAssetsVersion();
@@ -624,6 +681,17 @@ void Application::InitializeProtocol() {
                 return;
             }
 
+            // 解析推送优先级
+            auto push_type = cJSON_GetObjectItem(root, "push_type");
+            NotifyPriority priority = NotifyPriority::kNotifyPriorityNormal;
+            if (cJSON_IsString(push_type)) {
+                if (strcmp(push_type->valuestring, "urgent") == 0) {
+                    priority = NotifyPriority::kNotifyPriorityUrgent;
+                } else if (strcmp(push_type->valuestring, "random") == 0) {
+                    priority = NotifyPriority::kNotifyPriorityLow;
+                }
+            }
+
             std::vector<NotifySubtitle> subtitles;
             auto subtitles_json = cJSON_GetObjectItem(root, "subtitles");
             if (subtitles_json != nullptr && !cJSON_IsArray(subtitles_json)) {
@@ -647,8 +715,8 @@ void Application::InitializeProtocol() {
             }
 
             Schedule([this, url = std::string(audio_url->valuestring),
-                      subtitles = std::move(subtitles)]() mutable {
-                StartNotification(std::move(url), std::move(subtitles));
+                      subtitles = std::move(subtitles), priority]() mutable {
+                StartNotification(std::move(url), std::move(subtitles), priority);
             });
         } else if (strcmp(type->valuestring, "tts") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
@@ -739,13 +807,29 @@ void Application::InitializeProtocol() {
                 CJsonStringUniquePtr payload_json(cJSON_PrintUnformatted(payload));
                 if (payload_json != nullptr) {
                     ESP_LOGI(TAG, "Received device_config: %s", payload_json.get());
-                    Schedule([payload_str = std::string(payload_json.get())]() {
+                    Schedule([this, payload_str = std::string(payload_json.get())]() {
                         CJsonUniquePtr payload(cJSON_Parse(payload_str.c_str()));
                         if (payload == nullptr) {
                             ESP_LOGE(TAG, "Failed to parse device_config payload");
                             return;
                         }
                         Board::GetInstance().ApplyDeviceConfig(payload.get());
+                        // 首次云端配置处理完毕（含唤醒词）：仅在日志输出，屏幕直接显示待机
+                        // 语音引擎未就绪时词会被缓存并随后生效（见 AudioService）
+                        if (!cloud_config_synced_) {
+                            cloud_config_synced_ = true;
+                            pending_config_synced_ = false;
+                            ESP_LOGI(TAG, "云端配置同步完成（唤醒词已生效/已缓存待引擎就绪）");
+                            if (GetDeviceState() == kDeviceStateIdle) {
+                                // 仅在日志输出，不在屏幕显示"唤醒词就绪"
+                                auto display = Board::GetInstance().GetDisplay();
+                                display->SetStatus(Lang::Strings::STANDBY);
+                            } else {
+                                // 设备不在Idle状态，缓存标志，等转入Idle后再触发
+                                pending_config_synced_ = true;
+                                ESP_LOGI(TAG, "云端配置已收到但设备未处于Idle状态，等待状态转换");
+                            }
+                        }
                     });
                 } else {
                     ESP_LOGE(TAG, "Failed to serialize device_config payload");
@@ -851,6 +935,7 @@ void Application::DismissAlert() {
     last_error_message_.clear();
     if (GetDeviceState() == kDeviceStateIdle) {
         auto display = Board::GetInstance().GetDisplay();
+        ESP_LOGI(TAG, "device_config%s", cloud_config_synced_ ? "synced" : "not yet received");
         display->SetStatus(Lang::Strings::STANDBY);
         display->SetEmotion("neutral");
         display->SetChatMessage("system", "");
@@ -1153,10 +1238,44 @@ void Application::HandleStateChangedEvent() {
             // queues STATE_CHANGED after Alert(), and the idle handler would
             // otherwise wipe the status, emotion, and chat message.
             if (last_error_message_.empty()) {
-                display->SetStatus(Lang::Strings::STANDBY);
+                // 云端 device_config 尚未到达：仅在日志中记录，不在屏幕上显示"配置同步中"
+                ESP_LOGI(TAG, "device_config%s", cloud_config_synced_ ? "synced" : "not yet received");
                 display->ClearChatMessages();  // Clear messages first
+                display->SetStatus(Lang::Strings::STANDBY);
                 display->SetEmotion(
                     "neutral");  // Then set emotion (wechat mode checks child count)
+
+                // 若device_config已到达但设备不在Idle时未处理，现在补发UI更新
+                if (pending_config_synced_ && cloud_config_synced_) {
+                    pending_config_synced_ = false;
+                    // 仅在日志输出，不在屏幕显示"唤醒词就绪"
+                    ESP_LOGI(TAG, "云端配置同步完成（补发UI更新）");
+                    display->SetStatus(Lang::Strings::STANDBY);
+                } else if (!cloud_config_synced_ && config_synced_timer_handle_ == nullptr) {
+                    // 超时保护：30秒内未收到device_config则强制显示待机
+                    esp_timer_create_args_t timeout_args = {
+                        .callback =
+                            [](void* arg) {
+                                Application* app = (Application*)arg;
+                                app->Schedule([app]() {
+                                    if (app->GetDeviceState() == kDeviceStateIdle &&
+                                        !app->cloud_config_synced_) {
+                                        auto display = Board::GetInstance().GetDisplay();
+                                        display->SetStatus(Lang::Strings::STANDBY);
+                                        ESP_LOGW(TAG, "device_config超时30秒，强制显示待机");
+                                    }
+                                });
+                            },
+                        .arg = this,
+                        .dispatch_method = ESP_TIMER_TASK,
+                        .name = "config_timeout",
+                        .skip_unhandled_events = true};
+                    esp_timer_handle_t timeout_handle = nullptr;
+                    esp_timer_create(&timeout_args, &timeout_handle);
+                    if (timeout_handle != nullptr) {
+                        esp_timer_start_once(timeout_handle, 30 * 1000000ULL);
+                    }
+                }
             }
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
@@ -1240,7 +1359,7 @@ void Application::ConfigureWakeWordForListening() {
 #endif
 }
 
-void Application::StartNotification(std::string audio_url, std::vector<NotifySubtitle> subtitles) {
+void Application::StartNotification(std::string audio_url, std::vector<NotifySubtitle> subtitles, NotifyPriority priority) {
     if (GetDeviceState() != kDeviceStateIdle || notify_player_.IsBusy()) {
         ESP_LOGW(TAG, "Ignoring notify message while device is busy");
         return;
@@ -1320,6 +1439,47 @@ void Application::AbortSpeaking(AbortReason reason) {
     if (protocol_) {
         protocol_->SendAbortSpeaking(reason);
     }
+}
+
+void Application::NotifyTimerCallback(void* arg) {
+    Application* app = static_cast<Application*>(arg);
+    app->Schedule([app]() {
+        if (!app->pending_notify_active_) {
+            return;
+        }
+        std::string url = app->pending_notify_url_;
+        std::string text = app->pending_notify_text_;
+        app->pending_notify_active_ = false;
+        if (app->GetDeviceState() == kDeviceStateIdle) {
+            std::vector<NotifySubtitle> subtitles;
+            if (!text.empty()) {
+                NotifySubtitle sub;
+                sub.text = text;
+                subtitles.push_back(sub);
+            }
+            app->StartNotification(url, std::move(subtitles));
+        } else {
+            ESP_LOGW(TAG, "ScheduleNotify: device not idle (state=%d), dropping notification",
+                     (int)app->GetDeviceState());
+        }
+    });
+}
+
+void Application::ScheduleNotify(const std::string& audio_url, const std::string& text) {
+    pending_notify_url_ = audio_url;
+    pending_notify_text_ = text;
+    pending_notify_active_ = true;
+    if (notify_timer_handle_ == nullptr) {
+        esp_timer_create_args_t timer_args = {
+            .callback = NotifyTimerCallback,
+            .arg = this,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "notify_timer",
+            .skip_unhandled_events = true};
+        esp_timer_create(&timer_args, &notify_timer_handle_);
+    }
+    esp_timer_start_once(notify_timer_handle_, 500 * 1000ULL);  // 500ms 后触发
+    ESP_LOGI(TAG, "ScheduleNotify: url=%s text=%s", audio_url.c_str(), text.c_str());
 }
 
 void Application::SetListeningMode(ListeningMode mode) {
@@ -1518,4 +1678,8 @@ void Application::ResetProtocol() {
         // Reset protocol
         protocol_.reset();
     });
+}
+
+void Application::SetConfigUpdatedCallback(std::function<void(bool success)> callback) {
+    config_updated_callback_ = std::move(callback);
 }

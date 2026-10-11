@@ -10,6 +10,10 @@ files = base["files"]
 exclude_dirs = set(cfg.get("exclude_dirs") or []) | {".git", ".aoci", ".workbuddy"}
 exclude_files = cfg.get("exclude_files") or []
 
+# Windows 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9）：os.path.relpath 会把路径解析到 \\.\ 设备命名空间而崩溃，直接跳过。
+RESERVED = {n.upper() for n in ["CON","PRN","AUX","NUL"] +
+            [f"COM{i}" for i in range(1,10)] + [f"LPT{i}" for i in range(1,10)]}
+
 def raw_sha(p):
     h = hashlib.sha256()
     with open(p, "rb") as f:
@@ -29,6 +33,8 @@ for root, dirs, fnames in os.walk(REPO):
     dirs[:] = [d for d in dirs if d not in exclude_dirs]
     for fn in fnames:
         if any(fnmatch.fnmatch(fn, pat) for pat in exclude_files):
+            continue
+        if fn.upper() in RESERVED:
             continue
         full = os.path.join(root, fn)
         rel = os.path.relpath(full, REPO).replace(os.sep, "/")

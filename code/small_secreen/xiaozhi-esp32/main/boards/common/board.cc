@@ -17,30 +17,71 @@
 #define TAG "Board"
 
 // 汉字→拼音映射表（服务器下发中文唤醒词 → MultiNet 拼音命令）。
+// 拼音须为 esp-sr 官方 multinet_pinyin.py 的不带调格式（lazy_pinyin 输出，
+// 如 "打开空调"→"da kai kong tiao"）；带声调数字（"ni3 hao3"）MN7 无法匹配。
 // 覆盖常见唤醒词用字；未收录的字会打 WARN 并跳过该词（该词不参与匹配，
 // 其余词不受影响）。服务器也可直接下发拼音（跳过转换）。
+// 匹配按表序逐条进行：多字词条必须排在单字前缀之前（先长后短），
+// 否则"哈喽"会先命中单字"哈"，剩余"喽"未收录导致整词被丢弃。
 static const struct { const char* han; const char* pinyin; } kWakeWordPinyinMap[] = {
-    {"你", "ni3"}, {"好", "hao3"}, {"小", "xiao3"}, {"智", "zhi4"}, {"嗨", "hai1"},
-    {"嘿", "hei1"}, {"乐", "le4"}, {"鑫", "xin1"}, {"爱", "ai4"}, {"同", "tong2"},
-    {"学", "xue2"}, {"猫", "mao1"}, {"咪", "mi1"}, {"狗", "gou3"}, {"宝", "bao3"},
-    {"贝", "bei4"}, {"阿", "a1"}, {"福", "fu2"}, {"安", "an1"}, {"妮", "ni2"},
-    {"克", "ke4"}, {"丽", "li4"}, {"亚", "ya4"}, {"米", "mi3"}, {"娅", "ya4"},
-    {"醒", "xing3"}, {"开", "kai1"}, {"始", "shi3"}, {"停", "ting2"}, {"休", "xiu1"},
-    {"等", "deng3"}, {"待", "dai4"}, {"在", "zai4"}, {"吗", "ma5"}, {"吧", "ba5"},
-    {"啊", "a5"}, {"呀", "ya5"}, {"哦", "o5"}, {"哈", "ha1"}, {"啦", "la5"},
-    {"屿", "yu3"}, {"禾", "he2"}, {"工", "gong1"}, {"坊", "fang1"}, {"小禾", "xiao3 he2"},
-    {"琳", "lin2"}, {"玲", "ling2"}, {"明", "ming2"}, {"敏", "min3"}, {"君", "jun1"},
-    {"帅", "shuai4"}, {"哥", "ge1"}, {"姐", "jie3"}, {"美", "mei3"}, {"女", "nv3"},
-    {"神", "shen2"}, {"仙", "xian1"}, {"侠", "xia2"}, {"客", "ke4"}, {"主", "zhu3"},
-    {"人", "ren2"}, {"老", "lao3"}, {"板", "ban3"}, {"爸", "ba4"}, {"妈", "ma1"},
-    {"爷", "ye2"}, {"奶", "nai3"}, {"叔", "shu1"}, {"姨", "yi2"}, {"哥", "ge1"},
-    {"弟", "di4"}, {"妹", "mei4"}, {"朋", "peng2"}, {"友", "you3"}, {"同", "tong2"},
-    {"事", "shi4"}, {"喂", "wei4"}, {"哈喽", "ha1 lou2"}, {"hello", "hello"},
+    // 多字词条置顶：确保逐条匹配时先于单字前缀命中（先长后短，越长的越靠前）
+    {"早上好", "zao shang hao"}, {"小禾", "xiao he"}, {"哈喽", "ha lou"},
+    {"hello", "hello"},
+    {"我们", "wo men"}, {"什么", "shen me"}, {"谢谢", "xie xie"},
+    {"再见", "zai jian"}, {"你好", "ni hao"}, {"小爱", "xiao ai"},
+    {"晚安", "wan an"}, {"早安", "zao an"}, {"早上", "zao shang"},
+    {"音乐", "yin yue"}, {"播放", "bo fang"}, {"回答", "hui da"},
+    {"天气", "tian qi"}, {"起床", "qi chuang"}, {"睡觉", "shui jiao"},
+    {"开始", "kai shi"}, {"停止", "ting zhi"}, {"等待", "deng dai"},
+    // 问候/称呼
+    {"你", "ni"}, {"早", "zao"}, {"上", "shang"}, {"好", "hao"}, {"的", "de"}, {"我", "wo"},
+    {"是", "shi"}, {"在", "zai"}, {"有", "you"}, {"不", "bu"}, {"了", "le"},
+    {"他", "ta"}, {"她", "ta"}, {"它", "ta"}, {"们", "men"}, {"这", "zhe"},
+    {"那", "na"}, {"里", "li"}, {"哪", "na"}, {"儿", "er"}, {"时", "shi"},
+    {"间", "jian"}, {"会", "hui"}, {"到", "dao"}, {"说", "shuo"}, {"要", "yao"},
+    {"去", "qu"}, {"来", "lai"}, {"看", "kan"}, {"想", "xiang"}, {"没", "mei"},
+    {"做", "zuo"}, {"能", "neng"}, {"可", "ke"}, {"以", "yi"}, {"就", "jiu"},
+    {"也", "ye"}, {"都", "dou"}, {"很", "hen"}, {"太", "tai"}, {"真", "zhen"},
+    {"行", "xing"}, {"听", "ting"}, {"问", "wen"}, {"答", "da"}, {"叫", "jiao"},
+    {"名", "ming"}, {"字", "zi"}, {"宝", "bao"}, {"贝", "bei"}, {"亲", "qin"},
+    {"爱", "ai"}, {"哥", "ge"}, {"姐", "jie"}, {"弟", "di"}, {"妹", "mei"},
+    {"爸", "ba"}, {"妈", "ma"}, {"爷", "ye"}, {"奶", "nai"}, {"叔", "shu"},
+    {"阿", "a"}, {"姨", "yi"}, {"老", "lao"}, {"师", "shi"}, {"大", "da"},
+    {"小", "xiao"}, {"多", "duo"}, {"少", "shao"}, {"请", "qing"}, {"谢", "xie"},
+    {"再", "zai"}, {"见", "jian"}, {"回", "hui"},
+    // 语气词
+    {"吧", "ba"}, {"呢", "ne"}, {"嘛", "ma"}, {"吗", "ma"}, {"啊", "a"},
+    {"呀", "ya"}, {"哦", "o"}, {"嗯", "en"}, {"喂", "wei"}, {"嗨", "hai"},
+    {"嘿", "hei"}, {"哈", "ha"}, {"啦", "la"},
+    // 天气/环境
+    {"天", "tian"}, {"气", "qi"}, {"晴", "qing"}, {"雨", "yu"}, {"雪", "xue"},
+    {"风", "feng"}, {"冷", "leng"}, {"热", "re"}, {"开", "kai"}, {"关", "guan"},
+    {"灯", "deng"}, {"打", "da"}, {"音", "yin"}, {"乐", "le"}, {"歌", "ge"},
+    {"曲", "qu"}, {"播", "bo"}, {"放", "fang"}, {"停", "ting"}, {"暂", "zhan"},
+    // 数字
+    {"一", "yi"}, {"二", "er"}, {"三", "san"}, {"四", "si"}, {"五", "wu"},
+    {"六", "liu"}, {"七", "qi"}, {"八", "ba"}, {"九", "jiu"}, {"十", "shi"},
+    {"百", "bai"}, {"千", "qian"}, {"万", "wan"}, {"点", "dian"}, {"半", "ban"},
+    {"分", "fen"}, {"秒", "miao"},
+    // 时间
+    {"今", "jin"}, {"明", "ming"}, {"昨", "zuo"}, {"晚", "wan"}, {"醒", "xing"},
+    {"起", "qi"}, {"床", "chuang"}, {"睡", "shui"}, {"觉", "jiao"},
+    // 其他既有/常见名
+    {"智", "zhi"}, {"鑫", "xin"}, {"同", "tong"}, {"学", "xue"}, {"猫", "mao"},
+    {"咪", "mi"}, {"狗", "gou"}, {"福", "fu"}, {"安", "an"}, {"妮", "ni"},
+    {"克", "ke"}, {"丽", "li"}, {"亚", "ya"}, {"米", "mi"}, {"娅", "ya"},
+    {"始", "shi"}, {"休", "xiu"}, {"等", "deng"}, {"待", "dai"}, {"禾", "he"},
+    {"工", "gong"}, {"坊", "fang"}, {"琳", "lin"}, {"玲", "ling"}, {"敏", "min"},
+    {"君", "jun"}, {"帅", "shuai"}, {"美", "mei"}, {"女", "nv"}, {"神", "shen"},
+    {"仙", "xian"}, {"侠", "xia"}, {"客", "ke"}, {"主", "zhu"}, {"人", "ren"},
+    {"板", "ban"}, {"朋", "peng"}, {"友", "you"}, {"事", "shi"}, {"屿", "yu"},
+    {"灵", "ling"},
 };
 
 // 汉字短语 → 拼音串（逐字查表，空格分隔；含未收录字符返回 false）
 static bool HanziToPinyin(const std::string& hanzi, std::string& pinyin_out) {
-    // 已经是纯 ASCII（服务器直接下发拼音，如 "ni3 hao3"）则原样使用
+    // 已经是纯 ASCII（服务器直接下发拼音，如 "ni hao"）则原样使用
+    // 注意：若含声调数字（"ni3 hao3"）会被 NVS 自愈逻辑判为过时格式丢弃
     bool all_ascii = true;
     for (unsigned char c : hanzi) {
         if (c > 127) { all_ascii = false; break; }
@@ -183,7 +224,10 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
     if (cJSON_IsString(wake_word) || cJSON_IsArray(wake_word)) {
         std::vector<std::string> hanzi_words;
         if (cJSON_IsString(wake_word)) {
-            hanzi_words.push_back(wake_word->valuestring);
+            // 空字符串视为"清空"：不加入列表，走 hanzi_words.empty() 的清空分支
+            if (wake_word->valuestring[0] != '\0') {
+                hanzi_words.push_back(wake_word->valuestring);
+            }
         } else {
             cJSON* item = nullptr;
             cJSON_ArrayForEach(item, wake_word) {
@@ -198,6 +242,9 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
             // 不预查 SupportsDynamicWakeWords：引擎未初始化时 AudioService 内部会
             // 缓存（InitializeAudioEngine 成功后自动应用）；仅引擎就绪但不是
             // MultiNet（如纯 WakeNet 构建）时才真正丢弃。
+            // UpdateWakeWordCommands 返回 false 有两种含义，用 SupportsDynamicWakeWords
+            // 区分（仅影响日志，不影响行为）：引擎支持但命令表相同为幂等跳过，属正常；
+            // 其余才是引擎真不支持。
             std::vector<std::string> pinyins;
             std::vector<std::string> displays;
             for (const auto& w : hanzi_words) {
@@ -205,22 +252,72 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
                 if (HanziToPinyin(w, py)) {
                     pinyins.push_back(py);
                     displays.push_back(w);
+                } else {
+                    // 明示丢弃的词，避免误判为"未变化，跳过更新"
+                    ESP_LOGW(TAG, "唤醒词 '%s' 含未收录字，无法转拼音，已丢弃该词", w.c_str());
                 }
             }
             if (!pinyins.empty()) {
                 if (audio.UpdateWakeWordCommands(pinyins, displays)) {
                     changed = true;
-                    ESP_LOGI(TAG, "应用云端唤醒词: %zu 个（首个: %s）",
-                             pinyins.size(), hanzi_words[0].c_str());
+                    // 用户在串口一眼可见：唤醒词从此刻起喊了就能醒
+                    // displays[0] 与实际生效的首条拼音命令一一对应
+                    ESP_LOGI(TAG, "云端唤醒词已生效: %d 个 [%s]（开机即用，已存本地）",
+                             static_cast<int>(pinyins.size()), displays[0].c_str());
+                } else if (audio.SupportsDynamicWakeWords()) {
+                    // MultiNet 命令表与当前完全一致，无需重建（幂等，正常现象）。
+                    // 注意：不能笼统打"引擎不支持"——命令表相同时引擎也会返回 false
+                    ESP_LOGI(TAG, "云端唤醒词未变化，跳过更新（%zu 个）", pinyins.size());
                 } else {
                     ESP_LOGW(TAG, "当前音频引擎不支持动态唤醒词（需 MultiNet 模型），已忽略");
                 }
             } else {
                 ESP_LOGW(TAG, "云端唤醒词全部无法转换为拼音，忽略");
             }
+        } else {
+            // 空字符串/空数组语义：清空云端下发的唤醒词，恢复本地默认词
+            // （index.json 或 Kconfig 中的"你好小禾"），并删除 NVS 缓存
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            if (audio.ClearWakeWordCommands()) {
+                changed = true;
+                ESP_LOGI(TAG, "已清空云端唤醒词，恢复默认");
+            } else {
+                // 引擎不支持/未就绪且无缓存：本机本就用默认词，视为已满足
+                ESP_LOGI(TAG, "无需清空云端唤醒词（当前已是默认或引擎不支持）");
+            }
         }
     }
     // Extension point: future cloud-managed keys (e.g. theme) get a new case here.
+
+    // 唤醒词阈值动态调整（服务器下发）
+    auto threshold = cJSON_GetObjectItem(payload, "wake_word_threshold");
+    if (cJSON_IsNumber(threshold)) {
+        int t = threshold->valueint;
+        if (t >= 1 && t <= 100) {
+            Settings settings("wake_word_config", true);
+            settings.SetInt("threshold", t);
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            audio.SetWakeWordThreshold(t / 100.0f);
+            changed = true;
+            ESP_LOGI(TAG, "云端唤醒词阈值已更新: %d%%", t);
+        }
+    }
+    // 唤醒词时长动态调整（服务器下发）
+    auto duration = cJSON_GetObjectItem(payload, "wake_word_duration");
+    if (cJSON_IsNumber(duration)) {
+        int d = duration->valueint;
+        if (d >= 500 && d <= 5000) {
+            Settings settings("wake_word_config", true);
+            settings.SetInt("duration", d);
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            audio.SetWakeWordDuration(d);
+            changed = true;
+            ESP_LOGI(TAG, "云端唤醒词时长已更新: %dms", d);
+        }
+    }
 
     if (changed) {
         ESP_LOGI(TAG, "应用云端配置 volume=%s brightness=%s",

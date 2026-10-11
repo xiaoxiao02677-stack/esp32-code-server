@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+## 依赖声明与 main/idf_component.yml 保持一致（esp_websocket_client ^1.8.0 + cjson ^1.7.19）
+## 首次构建需联网：组件管理器自动下载到 managed_components/
+dependencies:
+  espressif/esp_websocket_client: "^1.8.0"
+  espressif/cjson: "^1.7.19"
+  idf:
+    version: ">=5.3"

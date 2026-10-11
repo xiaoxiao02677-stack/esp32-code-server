@@ -20,6 +20,11 @@
           <span class="engine-name">{{ a.name || '未命名' }}</span>
           <span class="badge" :class="engineBadgeClass(a.memModelId)">{{ engineZh(a.memModelId) }}</span>
         </div>
+        <div class="short-term-box" title="短期记忆=把最近N条对话注入提示词；0=关闭；默认10；对应后端 short_term_turns 配置，设备重连后生效">
+          <span class="st-label">短期记忆</span>
+          <input class="st-input" type="number" min="0" max="100" :value="a.shortTermTurns == null ? '' : a.shortTermTurns" placeholder="10" @change="saveShortTermTurns(a, $event)">
+          <span class="st-unit">条</span>
+        </div>
         <select class="engine-select" :value="a.memModelId || ''" @change="switchEngine(a, $event.target.value)">
           <option value="" disabled>选择引擎…</option>
           <option v-for="e in ENGINE_CHOICES" :key="e.id" :value="e.id">{{ e.label }}</option>
@@ -27,7 +32,7 @@
       </div>
       <div v-if="!agents.length" class="field-hint">暂无智能体，请先到「智能体」页创建。</div>
       <p class="field-hint" style="margin-top:8px">
-        短期总结=对话摘要轻量省token · 仅上报=只存聊天记录不做记忆 · Holographic=本地正则事实库零LLM成本 · 混合=短期总结+长期事实+LLM沉淀（推荐）
+        短期总结=对话摘要轻量省token · 仅上报=只存聊天记录不做记忆 · Holographic=本地正则事实库零LLM成本 · 混合=短期总结+长期事实+LLM沉淀（推荐） · 短期记忆=最近N条对话注入提示词（默认10，0=关闭）
       </p>
     </div>
 
@@ -82,23 +87,41 @@
             </div>
           </div>
         </div>
-        <div v-if="!facts.length" class="empty-state"><div class="empty-icon">🕐</div><strong>暂无记忆数据</strong></div>
+        <div v-if="factsLoadError" class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <strong>记忆加载失败</strong>
+          <p>{{ factsLoadError }}</p>
+          <button class="btn btn-ghost" @click="loadFacts">↻ 重新加载</button>
+        </div>
+        <div v-else-if="!facts.length" class="empty-state"><div class="empty-icon">🕐</div><strong>暂无记忆数据</strong></div>
       </div>
 
       <!-- 实体图谱视图（Canvas 手绘免 ECharts：实体聚合 → 环形布局 → 记忆小点连线） -->
       <div v-else-if="memViewMode === 'graph'" class="mem-graph-wrap">
-        <canvas ref="memGraphCanvas" class="mem-graph-canvas" width="900" height="560"></canvas>
-        <div class="mem-graph-legend">
+        <canvas v-show="!factsLoadError && facts.length" ref="memGraphCanvas" class="mem-graph-canvas" width="900" height="560"></canvas>
+        <div class="mem-graph-legend" v-if="!factsLoadError">
           <span class="legend-item"><i class="dot dot--entity"></i>实体</span>
           <span class="legend-item"><i class="dot dot--fact"></i>记忆</span>
           <span class="legend-item"><i class="dot dot--hot"></i>高频实体</span>
         </div>
-        <div v-if="!facts.length" class="empty-state"><div class="empty-icon">🕸</div><strong>暂无记忆数据</strong></div>
+        <div v-if="factsLoadError" class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <strong>记忆加载失败</strong>
+          <p>{{ factsLoadError }}</p>
+          <button class="btn btn-ghost" @click="loadFacts">↻ 重新加载</button>
+        </div>
+        <div v-else-if="!facts.length" class="empty-state"><div class="empty-icon">🕸</div><strong>暂无记忆数据</strong></div>
       </div>
 
       <!-- 列表视图 fact-card（信任度进度条 + 召回次数徽标） -->
       <template v-else>
-        <div v-if="facts.length" class="fact-list">
+        <div v-if="factsLoadError" class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <strong>记忆加载失败</strong>
+          <p>{{ factsLoadError }}</p>
+          <button class="btn btn-ghost" @click="loadFacts">↻ 重新加载</button>
+        </div>
+        <div v-else-if="facts.length" class="fact-list">
           <div v-for="f in facts" :key="f.fact_id" class="fact-card">
             <div class="fact-top">
               <span class="fact-cat" :class="'fact-cat--' + (f.category || 'general')">{{ catZh(f.category) }}</span>
@@ -123,7 +146,17 @@
         </div>
         <div v-else class="empty-state">
           <div class="empty-icon">🧠</div>
-          <strong>还没有记忆，多聊聊天，它会自动记住你的喜好</strong>
+          <template v-if="hasFilter && selectedAgentCount > 0">
+            <strong>当前筛选条件下没有匹配的记忆</strong>
+            <p>该智能体共有 {{ selectedAgentCount }} 条记忆，试试清除分类/状态筛选</p>
+          </template>
+          <template v-else-if="selectedAgentCount > 0">
+            <strong>记忆列表暂时没有取到数据</strong>
+            <p>服务端显示该智能体有 {{ selectedAgentCount }} 条记忆，可能数据尚未同步，点击「刷新」重试</p>
+          </template>
+          <template v-else>
+            <strong>还没有记忆，多聊聊天，它会自动记住你的喜好</strong>
+          </template>
         </div>
       </template>
     </DataTable>
@@ -165,7 +198,7 @@
 </template>
 
 <script setup>
-import { computed, inject, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
@@ -179,6 +212,10 @@ const loading = ref(false)
 const filterCategory = ref('')
 const filterStatus = ref('')
 const summarizing = ref(false)
+// 记忆列表加载失败状态：''=正常；非空=错误文案（空列表 ≠ 加载失败，用户可据此区分"没数据"与"接口挂了"）
+const factsLoadError = ref('')
+// GET 类接口失败后 30s 自动重试一次（写操作如总结不自动重试，避免重复写入）
+const retryTimers = { load: null, facts: null }
 const creator = reactive({ show: false, content: '' })
 const factEditor = reactive({ show: false, factId: '', content: '', category: 'general' })
 
@@ -194,6 +231,18 @@ const ENGINE_CHOICES = [
   { id: 'Memory_mem_report_only', label: '仅上报聊天记录（不做记忆）', zh: '仅上报', badge: 'badge-gray' }
 ]
 const engineSavingId = ref('')
+
+// HTTP 状态码 → 准确的用户可读文案（替代服务端"记忆不存在"这类误导性 msg）
+function apiErrText(e, fallback) {
+  const code = Number(e?.code)
+  const raw = (e?.msg || '').trim()
+  const tail = raw ? `（${raw}）` : ''
+  if (code === 404) return `接口未部署或路径已变更 (HTTP 404)，请确认后端版本${tail}`
+  if (code === 500) return `服务端内部错误 (HTTP 500)，可能服务未完全部署，请稍后重试${tail}`
+  if (code === 502 || code === 503 || code === 504) return `网关/服务暂不可用 (HTTP ${code})，请稍后重试${tail}`
+  if (code === -1) return `网络异常，请检查连接${tail}`
+  return raw || fallback
+}
 
 function engineZh(id) {
   const hit = ENGINE_CHOICES.find(e => e.id === id)
@@ -228,7 +277,17 @@ async function switchEngine(a, newEngineId) {
 }
 
 const VIEW_ZH = { list: '卡片', timeline: '时间轴', graph: '实体图谱' }
-const factsHint = computed(() => `${facts.value.length} 条 · ${VIEW_ZH[memViewMode.value] || ''}视图`)
+const factsHint = computed(() => factsLoadError.value
+  ? `加载失败 · ${VIEW_ZH[memViewMode.value] || ''}视图`
+  : `${facts.value.length} 条 · ${VIEW_ZH[memViewMode.value] || ''}视图`)
+
+// 当前选中智能体的记忆总数（来自 /memory/agents 的 fact_count），用于空态时区分"确实没数据"与"筛选无匹配/未同步"
+const selectedAgentCount = computed(() => {
+  const hit = memoryAgents.value.find(m => String(m.agent_id) === String(currentAgentId.value))
+  return hit ? Number(hit.fact_count || 0) : 0
+})
+// 是否设置了筛选条件（分类/状态）
+const hasFilter = computed(() => !!(filterCategory.value || filterStatus.value))
 
 // A1：时间轴分组（cc-console App.vue:1190-1204）——分组日期倒序、组内时间倒序
 const memTimelineGroups = computed(() => {
@@ -252,6 +311,18 @@ function catZh(c) {
   return map[c] || c
 }
 
+// 失败后 30s 自动重试一次（成功或手动刷新后清除；仍失败则停在错误态等用户操作）
+function scheduleRetry(kind, fn) {
+  if (retryTimers[kind]) clearTimeout(retryTimers[kind])
+  retryTimers[kind] = setTimeout(() => {
+    retryTimers[kind] = null
+    fn()
+  }, 30000)
+}
+function clearRetry(kind) {
+  if (retryTimers[kind]) { clearTimeout(retryTimers[kind]); retryTimers[kind] = null }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -266,25 +337,51 @@ async function load() {
     agents.value = (ares.data || []).map(a => ({
       id: a.id,
       name: a.agentName || a.name || '未命名',
-      memModelId: a.memModelId || ''
+      memModelId: a.memModelId || '',
+      shortTermTurns: a.shortTermTurns ?? null
     }))
     if (currentAgentId.value) await loadFacts()
-  } catch (e) { toast(e.msg || '加载失败', 'error') }
+    clearRetry('load')
+  } catch (e) {
+    toast(apiErrText(e, '加载失败'), 'error')
+    scheduleRetry('load', load)
+  }
   finally { loading.value = false }
 }
 
 async function loadFacts() {
-  if (!currentAgentId.value) { facts.value = []; return }
+  if (!currentAgentId.value) { facts.value = []; factsLoadError.value = ''; return }
   // 契约：?agent_id=&page=&size=&category=&status=（注意是 size 不是 limit）
   const qs = { agent_id: currentAgentId.value, page: 1, size: 50 }
   if (filterCategory.value) qs.category = filterCategory.value
   if (filterStatus.value) qs.status = filterStatus.value
+  const wasError = !!factsLoadError.value
   try {
     const res = await adminApi.memoryFacts(qs)
     facts.value = res.data?.list || []
-  } catch (e) { toast(e.msg || '记忆加载失败', 'error'); facts.value = [] }
+    factsLoadError.value = ''
+    clearRetry('facts')
+  } catch (e) {
+    // 失败 ≠ 空数据：保留页面错误态，避免把"接口挂了"显示成"没有记忆"
+    factsLoadError.value = apiErrText(e, '记忆加载失败')
+    if (!wasError) toast(factsLoadError.value, 'error')
+    scheduleRetry('facts', loadFacts)
+  }
   // 图谱视图下数据刷新后重绘
   if (memViewMode.value === 'graph') nextTick(drawMemGraph)
+}
+
+// 记忆增删改后，就地刷新左侧智能体 chip 上的 fact_count（不等整页刷新）
+function refreshFactCount() {
+  if (!currentAgentId.value || !memoryAgents.value.length) return
+  const hit = memoryAgents.value.find(m => String(m.agent_id) === String(currentAgentId.value))
+  if (!hit) return
+  adminApi.memoryAgents()
+    .then(r => {
+      const fresh = (r.data || []).find(m => String(m.agent_id) === String(currentAgentId.value))
+      if (fresh) hit.fact_count = Number(fresh.fact_count ?? hit.fact_count)
+    })
+    .catch(() => { /* chip 计数保持原值，等下次整页刷新 */ })
 }
 
 function selectMemAgent(id) {
@@ -407,8 +504,8 @@ async function createFact() {
   try {
     await adminApi.createFact(currentAgentId.value, creator.content)
     toast('已添加'); creator.show = false; creator.content = ''
-    loadFacts()
-  } catch (e) { toast(e.msg || '添加失败', 'error') }
+    loadFacts(); refreshFactCount()
+  } catch (e) { toast(apiErrText(e, '添加失败'), 'error') }
 }
 
 function openFactEdit(f) {
@@ -455,23 +552,68 @@ function summarizeMemory() {
           : (d && typeof d === 'object' ? String(d.summary || d.content || '') : '')).slice(0, 40) || '完成'
         toast('总结已写入记忆：' + brief)
         await loadFacts()
-      } catch (e) { toast(e.msg || '总结失败', 'error') }
+      } catch (e) {
+        // 写操作不自动重试（防重复写入）；404=接口未部署，500=服务未就绪，原文案"记忆不存在"会误导用户
+        const code = Number(e?.code)
+        if (code === 404) toast('快速总结功能未部署（接口 404）：后端缺少该模块或版本过旧，请联系管理员或更新服务' + ((e?.msg) ? `（${e.msg}）` : ''), 'error')
+        else if (code === 500) toast('快速总结服务暂不可用（HTTP 500）：可能服务未完全部署或数据链异常，请稍后重试' + ((e?.msg) ? `（${e.msg}）` : ''), 'error')
+        else toast(apiErrText(e, '总结失败'), 'error')
+      }
       finally { summarizing.value = false }
     }
   })
+}
+
+// ===== 短期记忆条数（预留后端 shortTermTurns / short_term_turns 配置；默认10，0=关闭） =====
+// 后端字段未上线前：详情接口没有该值 → 输入框留空 placeholder=10，保存为 null（后端用默认值），不破坏旧接口
+async function saveShortTermTurns(a, ev) {
+  const raw = String(ev.target.value).trim()
+  let val = raw === '' ? null : Number(raw)
+  if (val !== null && (!Number.isInteger(val) || val < 0 || val > 100)) {
+    toast('短期记忆条数需为 0–100 的整数（0=关闭，默认10）', 'error')
+    ev.target.value = a.shortTermTurns == null ? '' : String(a.shortTermTurns)
+    return
+  }
+  if (val === a.shortTermTurns || (val === null && a.shortTermTurns == null)) return
+  try {
+    const dres = await adminApi.agentDetail(a.id)
+    const d = dres.data || {}
+    await adminApi.updateAgent(a.id, {
+      agentName: d.agentName || a.name,
+      llmModelId: d.llmModelId,
+      ttsModelId: d.ttsModelId,
+      ttsVoiceId: d.ttsVoiceId,
+      memModelId: d.memModelId || a.memModelId,
+      intentModelId: d.intentModelId,
+      asrModelId: d.asrModelId,
+      chatHistoryConf: d.chatHistoryConf ?? 2,
+      systemPrompt: d.systemPrompt,
+      ttsRate: d.ttsRate ?? 0,
+      shortTermTurns: val
+    })
+    a.shortTermTurns = val
+    toast(val === null
+      ? '短期记忆已恢复默认（10条）'
+      : (val === 0 ? '短期记忆已关闭（0条）' : `短期记忆已设为最近 ${val} 条对话注入提示词`) + '，设备重连后生效')
+  } catch (e) {
+    // 老后端不识别 shortTermTurns 字段时通常忽略未知字段仍保存成功；仅网络/鉴权错误回滚 UI
+    toast(apiErrText(e, '保存失败（后端可能尚未支持短期记忆配置）'), 'error')
+    ev.target.value = a.shortTermTurns == null ? '' : String(a.shortTermTurns)
+  }
 }
 
 function remove(f) {
   askConfirm({
     title: '删除记忆', message: '确定删除这条记忆吗？不可恢复', danger: true,
     onOk: async () => {
-      try { await adminApi.deleteFact(f.fact_id, currentAgentId.value); toast('已删除'); loadFacts() }
-      catch (e) { toast(e.msg || '删除失败', 'error') }
+      try { await adminApi.deleteFact(f.fact_id, currentAgentId.value); toast('已删除'); loadFacts(); refreshFactCount() }
+      catch (e) { toast(apiErrText(e, '删除失败'), 'error') }
     }
   })
 }
 
 onMounted(load)
+onUnmounted(() => { clearRetry('load'); clearRetry('facts') })
 </script>
 
 <style scoped>
@@ -489,12 +631,19 @@ onMounted(load)
 .bind-label { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
 
 /* ===== 引擎面板：每智能体一行 ===== */
-.engine-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.engine-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
 .engine-row:last-of-type { border-bottom: none; }
 .engine-agent { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .engine-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .engine-select { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: var(--surface, #fff); color: var(--text); min-width: 240px; }
 .engine-select:focus { border-color: var(--primary); }
+
+/* ===== 短期记忆条数（对应后端 short_term_turns，默认10，0=关闭） ===== */
+.short-term-box { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-sub); }
+.st-label { font-weight: 600; white-space: nowrap; }
+.st-input { width: 64px; border: 1.5px solid var(--border); border-radius: 10px; padding: 6px 10px; font-size: 13px; outline: none; background: var(--surface, #fff); color: var(--text); text-align: center; font-family: var(--font); }
+.st-input:focus { border-color: var(--primary); }
+.st-unit { color: var(--text-sub); }
 
 /* ===== 工具条 + 三视图切换（移植 cc-console mem-toolbar / mem-view-switch） ===== */
 .mem-toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }

@@ -6,6 +6,7 @@
 
 #include <esp_log.h>
 #include <arpa/inet.h>
+#include <esp_timer.h>
 #include <cJSON.h>
 #include <chrono>
 #include <cstring>
@@ -93,6 +94,7 @@ bool WebsocketProtocol::IsAudioChannelOpened() const {
 void WebsocketProtocol::CloseAudioChannel(bool send_goodbye) {
     (void)send_goodbye;  // Websocket doesn't need to send goodbye message
     ESP_LOGI(TAG, "Closing audio channel");
+    CloseUdpChannel();
     websocket_.reset();
 }
 
@@ -100,6 +102,7 @@ bool WebsocketProtocol::OpenAudioChannel() {
     const auto open_channel_start_time = std::chrono::steady_clock::now();
     Settings settings("websocket", false);
     std::string url = settings.GetString("url");
+    server_url_ = url;
     std::string token = settings.GetString("token");
     int version = settings.GetInt("version");
     if (version != 0) {
@@ -233,6 +236,9 @@ bool WebsocketProtocol::OpenAudioChannel() {
         on_audio_channel_opened_();
     }
 
+    // 启动 UDP 心跳（防止 NAT 超时）
+    OpenUdpChannel();
+
     const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                 std::chrono::steady_clock::now() - open_channel_start_time)
                                 .count();
@@ -324,4 +330,84 @@ void WebsocketProtocol::ReportBinaryFrameRecovered() {
         binary_frame_error_state_ = false;
         binary_frame_drop_count_ = 0;
     }
+}
+
+bool WebsocketProtocol::OpenUdpChannel() {
+    if (udp_connected_) return true;
+    if (server_url_.empty()) {
+        ESP_LOGW(TAG, "No server URL configured, skipping UDP channel");
+        return false;
+    }
+
+    // Extract host from URL (ws://host:port/path -> host)
+    std::string host = server_url_;
+    // Remove ws:// or wss:// prefix
+    auto scheme_pos = host.find("://");
+    if (scheme_pos != std::string::npos) {
+        host.erase(scheme_pos, 3 + 1);  // remove "ws://" or "wss://"
+    }
+    // Find port (host:port)
+    auto colon_pos = host.find(':');
+    if (colon_pos != std::string::npos) {
+        host.erase(colon_pos);
+    }
+    // Remove path
+    auto slash_pos = host.find('/');
+    if (slash_pos != std::string::npos) {
+        host.erase(slash_pos);
+    }
+
+    auto network = Board::GetInstance().GetNetwork();
+    udp_ = network->CreateUdp(1);
+    if (!udp_) {
+        ESP_LOGE(TAG, "Failed to create UDP");
+        return false;
+    }
+    udp_->OnMessage([](const std::string& data) {
+        // UDP heartbeat response: can be extended for config sync
+        ESP_LOGD(TAG, "UDP heartbeat response received (%zu bytes)", data.size());
+    });
+    // Connect to server UDP port (default 8002)
+    if (auto result = udp_->Connect(host, 8002); !result) {
+        ESP_LOGE(TAG, "Failed to connect UDP to %s:8002: %s", host.c_str(),
+                 result.error().ToString().c_str());
+        udp_ = nullptr;
+        return false;
+    }
+    udp_connected_ = true;
+
+    // Start UDP heartbeat timer (15s interval, staggered from TCP heartbeat)
+    esp_timer_create_args_t args = {
+        .callback = [](void* arg) {
+            static_cast<WebsocketProtocol*>(arg)->SendUdpHeartbeat();
+        },
+        .arg = this,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "ws_udp_heartbeat",
+        .skip_unhandled_events = true
+    };
+    esp_timer_create(&args, &udp_heartbeat_timer_);
+    esp_timer_start_periodic(udp_heartbeat_timer_, 15 * 1000 * 1000ULL);
+    ESP_LOGI(TAG, "UDP heartbeat channel opened to %s:8002", host.c_str());
+    return true;
+}
+
+void WebsocketProtocol::CloseUdpChannel() {
+    if (udp_heartbeat_timer_) {
+        esp_timer_stop(udp_heartbeat_timer_);
+        esp_timer_delete(udp_heartbeat_timer_);
+        udp_heartbeat_timer_ = nullptr;
+    }
+    if (udp_) {
+        udp_->Disconnect();
+        udp_ = nullptr;
+    }
+    udp_connected_ = false;
+}
+
+void WebsocketProtocol::SendUdpHeartbeat() {
+    if (!udp_connected_ || !udp_) return;
+    // 发送简单心跳包 {"type":"udp_heartbeat"}
+    std::string heartbeat = "{\"type\":\"udp_heartbeat\"}";
+    udp_->Send(heartbeat);
 }

@@ -74,7 +74,12 @@ const adminNav = [
   { label: '服务器', path: '/admin/servers', icon: '🖥' },
   { label: 'MCP', path: '/admin/mcp', icon: '🔗' },
   { label: '链路模拟', path: '/admin/linksim', icon: '🧪' },
-  { label: 'API调试', path: '/admin/apis', icon: '🛠' }
+  { label: 'API调试', path: '/admin/apis', icon: '🛠' },
+  { label: '实体图谱', path: '/admin/entity-graph', icon: '🕸' },
+  { label: '时间线', path: '/admin/timeline-chart', icon: '📊' },
+  { label: '推送调度', path: '/admin/push-scheduler', icon: '📤' },
+  { label: '微信绑定', path: '/admin/wechat-openclaw', icon: '💬' },
+  { label: '唤醒词', path: '/admin/wake-word', icon: '🔊' }
 ]
 const customerNav = [
   { label: '首页', path: '/customer', icon: '🏠' },

@@ -79,6 +79,45 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     private final AgentTagService agentTagService;
     private final CorrectWordFileService correctWordFileService;
     private final AgentSnapshotService agentSnapshotService;
+    private final xiaozhi.modules.device.service.DeviceConfigService deviceConfigService;
+
+    /**
+     * 将智能体唤醒词同步写入该智能体下所有设备的云端配置（ai_device_config.wake_word）。
+     * 所有修改 wakeWords 的入口（编辑页 updateAgentById、专用接口 updateAgentWakeWords）
+     * 都必须调用本方法，保证设备重连时拿到的硬件唤醒词与智能体配置一致。
+     * 语义与 WakeWordController.syncWakeWordsToDeviceConfig 一致：超过设备侧 5 词上限截断前 5；
+     * 单台失败仅记日志不阻断。
+     */
+    private void syncWakeWordsToDeviceConfig(String agentId, String wakeWordsStr) {
+        if (StringUtils.isBlank(wakeWordsStr)) {
+            return;
+        }
+        try {
+            List<xiaozhi.modules.device.entity.DeviceEntity> devices = deviceService.getDevicesByAgentId(agentId);
+            if (devices == null || devices.isEmpty()) {
+                return;
+            }
+            List<String> words = new ArrayList<>(java.util.Arrays.asList(wakeWordsStr.split(";")));
+            words.removeIf(String::isBlank);
+            if (words.isEmpty()) {
+                return;
+            }
+            // 设备侧 wake_word 上限 5 词（DeviceConfigServiceImpl 白名单），超出截断
+            if (words.size() > 5) {
+                words = words.subList(0, 5);
+            }
+            Map<String, Object> config = Map.of("wake_word", words);
+            for (xiaozhi.modules.device.entity.DeviceEntity device : devices) {
+                try {
+                    deviceConfigService.upsertByMac(device.getMacAddress(), config);
+                } catch (Exception e) {
+                    System.err.println("[AgentService] 唤醒词同步设备失败 mac=" + device.getMacAddress() + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AgentService] 唤醒词设备表同步异常 agentId=" + agentId + ": " + e.getMessage());
+        }
+    }
 
     @Override
     public PageData<AgentEntity> adminAgentList(Map<String, Object> params) {
@@ -449,6 +488,8 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
         if (dto.getWakeWords() != null) {
             existingEntity.setWakeWords(dto.getWakeWords());
+            // 编辑页保存路径同样触发设备表联动（与专用唤醒词接口行为一致）
+            syncWakeWordsToDeviceConfig(agentId, dto.getWakeWords());
         }
         if (dto.getChatHistoryConf() != null) {
             existingEntity.setChatHistoryConf(dto.getChatHistoryConf());
@@ -804,6 +845,8 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         existingEntity.setUpdater(userId);
         existingEntity.setUpdatedAt(new Date());
         baseDao.updateById(existingEntity);
+        // 专用唤醒词接口路径也走 Service 层联动（与编辑页行为一致）
+        syncWakeWordsToDeviceConfig(agentId, wakeWords);
         System.out.println("[AgentService] 更新唤醒词 agentId=" + agentId + ", wakeWords=" + wakeWords);
     }
 

@@ -43111,6 +43111,73 @@
                 "type": "menu"
             },
             {
+                "children": [
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Limits how deeply nested arrays/objects can be before cJSON\nrejects to parse them. This is to prevent stack overflows.\nLower values use less stack, higher values allow deeper nesting.",
+                        "id": "CJSON_NESTING_LIMIT",
+                        "name": "CJSON_NESTING_LIMIT",
+                        "range": null,
+                        "title": "Maximum nesting depth for JSON parsing",
+                        "type": "int"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Limits the depth for circular reference detection during\nprinting/comparison operations. This prevents infinite loops\nand stack overflows when processing JSON structures with\ncircular references. Lower values use less stack.",
+                        "id": "CJSON_CIRCULAR_LIMIT",
+                        "name": "CJSON_CIRCULAR_LIMIT",
+                        "range": null,
+                        "title": "Maximum depth for circular reference detection",
+                        "type": "int"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-cjson-G:-demo-21_xiaozhi-code-super_small_screen-managed_components-espressif__cjson-Kconfig-1",
+                "title": "cJSON",
+                "type": "menu"
+            },
+            {
+                "children": [
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enable this option will reallocated buffer when send or receive data and free them when end of use.\nThis can save about 2 KB memory when no websocket data send and receive.",
+                        "id": "ESP_WS_CLIENT_ENABLE_DYNAMIC_BUFFER",
+                        "name": "ESP_WS_CLIENT_ENABLE_DYNAMIC_BUFFER",
+                        "range": null,
+                        "title": "Enable websocket client dynamic buffer for send and receive data",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "depends_on": "ESP_WS_CLIENT_SEPARATE_TX_LOCK",
+                                "help": "Timeout for acquiring the TX lock when using separate TX lock.",
+                                "id": "ESP_WS_CLIENT_TX_LOCK_TIMEOUT_MS",
+                                "name": "ESP_WS_CLIENT_TX_LOCK_TIMEOUT_MS",
+                                "range": null,
+                                "title": "TX lock timeout in milliseconds",
+                                "type": "int"
+                            }
+                        ],
+                        "depends_on": null,
+                        "help": "Enable this option will use separate lock for send and receive data.\nThis can avoid the lock contention when send and receive data at the same time.",
+                        "id": "ESP_WS_CLIENT_SEPARATE_TX_LOCK",
+                        "name": "ESP_WS_CLIENT_SEPARATE_TX_LOCK",
+                        "range": null,
+                        "title": "Enable separate tx lock for send and receive data",
+                        "type": "bool"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-esp-websocket-client-G:-demo-21_xiaozhi-code-super_small_screen-managed_components-espressif__esp_websocket_client-Kconfig-1",
+                "title": "ESP WebSocket client",
+                "type": "menu"
+            },
+            {
                 "children": [],
                 "depends_on": "\"${IDF_BUILD_V2}\"",
                 "id": "component-config-configuration-for-components-not-included-in-the-build-D:-INSTALL-esp-v6.1-esp-idf-Kconfig-828",

@@ -12,9 +12,23 @@
 
 #include "audio_service.h"
 
+// 通知优先级：用于服务器推送的优先级控制
+enum class NotifyPriority : uint8_t {
+    kNotifyPriorityLow = 0,     // 随机推送，设备忙时丢弃
+    kNotifyPriorityNormal = 1,  // 普通通知，排队等待
+    kNotifyPriorityUrgent = 2,  // 紧急通知，立即打断
+};
+
 struct NotifySubtitle {
     uint32_t start_ms = 0;
     std::string text;
+};
+
+struct NotifyTask {
+    std::string audio_url;
+    std::vector<NotifySubtitle> subtitles;
+    uint32_t playback_id;
+    NotifyPriority priority;
 };
 
 class NotifyPlayer {
@@ -27,6 +41,9 @@ public:
 
     bool Start(std::string audio_url, std::vector<NotifySubtitle> subtitles, uint32_t playback_id,
                SubtitleCallback subtitle_callback, FinishedCallback finished_callback);
+    bool Start(std::string audio_url, std::vector<NotifySubtitle> subtitles, uint32_t playback_id,
+               NotifyPriority priority, SubtitleCallback subtitle_callback,
+               FinishedCallback finished_callback);
     void Stop();
     void OnPlaybackProgress(uint32_t playback_id, uint32_t media_position_ms);
     void OnPlaybackDrained();
@@ -53,6 +70,9 @@ private:
     bool stream_started_ = false;
     bool playback_drained_ = false;
     bool completion_reported_ = false;
+    NotifyPriority priority_ = NotifyPriority::kNotifyPriorityNormal;
+    static constexpr size_t kMaxQueueSize = 5;
+    std::vector<NotifyTask> queue_;
 
     static void WorkerEntry(void* arg);
     void WorkerTask();

@@ -179,6 +179,10 @@ export const adminApi = {
   factReview: (factId, agentId, action) => api.post(`/memory/facts/${factId}/review`, { agent_id: agentId, action }),
   memoryEngineConfig: (providerCode, engine) => api.put(`/models/Memory/${providerCode}/${engine}`),
 
+  // ===== 记忆：实体图谱 =====
+  memoryEntities: (agentId) => api.get(`/memory/entities/${agentId}`),
+  memoryEntityGraph: (agentId) => api.get(`/memory/entities/${agentId}/graph`),
+
   // ===== 模型 =====
   modelList: (type) => api.get('/models/list', type ? { modelType: type, page: 1, limit: 100 } : undefined),
   modelNames: (type) => api.get('/models/names', { modelType: type }),
@@ -269,5 +273,12 @@ export const adminApi = {
 
   // ===== 唤醒词管理 =====
   getAgentWakeWords: (agentId) => api.get(`/agent/wake-word/${agentId}`),
-  setAgentWakeWords: (agentId, wakeWords) => api.post(`/agent/wake-word/${agentId}`, { wakeWords })
+  setAgentWakeWords: (agentId, wakeWords) => api.post(`/agent/wake-word/${agentId}`, { wakeWords }),
+  wakeWordDevices: () => api.get('/api/wake-word/devices'),
+  wakeWordPush: (agentId, config) => api.post('/api/wake-word/push', { agentId, ...config }),
+  // ===== 记忆扩展API =====
+  memoryTimelineChart: (agentId, days) => api.get(`/memory/timeline/${agentId}/chart?days=${days || 30}`),
+  pushTasks: () => api.get('/api/push/tasks'),
+  pushSchedule: (data) => api.post('/api/push/schedule', data),
+  pushGetTask: (pushId) => api.get(`/api/push/tasks/${pushId}`),
 }

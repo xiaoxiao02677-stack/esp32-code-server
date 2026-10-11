@@ -111,6 +111,11 @@ class ConnectionHandler:
         self.welcome_msg = None
         self.max_output_size = 0
         self.chat_history_conf = 0
+        # 短期记忆（最近 N 条真实对话注入 LLM），默认关闭，_initialize_memory 按配置开启
+        self.short_term_turns = 0
+        self.short_term_db_dir = "data/memory/"
+        self._short_term_persisted = 0  # 本会话已落盘的真实消息数（增量游标）
+        self._short_term_lines = []  # 历史预取的最近对话行
         # 云端设备配置（design §1.2 链路①：Java getAgentModels 下发的 device_config）
         self.device_config = None
         self.audio_format = "opus"
@@ -224,20 +229,21 @@ class ConnectionHandler:
             )
 
             self.device_id = self.headers.get("device-id", None)
-            # 唤醒词服务注册
-            if hasattr(self.server, "wake_word_service"):
-                self.wake_word_service = self.server.wake_word_service
-                if self.wake_word_service:
-                    await self.wake_word_service.register_connection(self.device_id, self)
-
-            # 认证通过,继续处理
+            # 认证通过,继续处理（先绑定 websocket 并判定 MQTT 网关来源，
+            # 唤醒词服务注册时的离线队列 flush 依赖 conn.websocket 与
+            # conn_from_mqtt_gateway 跳过策略，否则 pending 消息会因
+            # websocket 为 None 发送失败而丢失）
             self.websocket = ws
-
             # 检查是否来自MQTT连接
             request_path = ws.request.path
             self.conn_from_mqtt_gateway = request_path.endswith("?from=mqtt_gateway")
             if self.conn_from_mqtt_gateway:
                 self.logger.bind(tag=TAG).info("连接来自:MQTT网关")
+            # 唤醒词服务注册
+            if hasattr(self.server, "wake_word_service"):
+                self.wake_word_service = self.server.wake_word_service
+                if self.wake_word_service:
+                    await self.wake_word_service.register_connection(self.device_id, self)
 
             # 初始化活动时间戳
             self.first_activity_time = time.time() * 1000
@@ -288,6 +294,13 @@ class ConnectionHandler:
     async def _save_and_close(self, ws):
         """保存记忆并关闭连接"""
         try:
+            # 兜底：短期记忆增量落盘（正常轮已在 chat() 尾部落过，这里覆盖
+            # 打断/异常退出场景；增量游标保证幂等，不会重复写入）
+            try:
+                self._persist_short_term_history()
+            except Exception as e:
+                self.logger.bind(tag=TAG).warning(f"短期记忆兜底落盘失败: {e}")
+
             # 守护线程1：独立生成标题（不依赖记忆模型）
             # 仅在服务端开启 chat_history 上报时才触发标题生成，
             # 否则服务端无法按 session_id 反查到对应的 agent/chat_history，
@@ -1097,6 +1110,36 @@ class ConnectionHandler:
                 self.memory.set_llm(self.llm)
                 self.logger.bind(tag=TAG).info("mem_hybrid 使用主LLM做记忆总结")
 
+        # 短期记忆（最近 N 条真实对话注入）：仅 mem_hybrid 默认开启，
+        # 其他引擎需显式配置 short_term_turns > 0；0 = 关闭
+        try:
+            memory_conf = memory_config[self.config["selected_module"]["Memory"]] or {}
+            if not isinstance(memory_conf, dict):
+                memory_conf = {}
+            if "short_term_turns" in memory_conf:
+                short_term_turns = int(memory_conf.get("short_term_turns") or 0)
+            else:
+                short_term_turns = 10 if memory_type == "mem_hybrid" else 0
+            self.short_term_db_dir = memory_conf.get("db_dir", "data/memory/")
+            if short_term_turns > 0 and self.agent_id:
+                from core.utils import short_term_history as sth
+
+                self.short_term_turns = short_term_turns
+                self._short_term_persisted = 0  # 本会话已落盘的真实消息数（增量游标）
+                # 预取历史记录（不足 N 条时全量；空则不注入）
+                self._short_term_lines = sth.get_recent_lines(
+                    self.agent_id, limit=short_term_turns, db_dir=self.short_term_db_dir
+                )
+                self.logger.bind(tag=TAG).info(
+                    f"短期记忆已启用: 最近 {short_term_turns} 条, "
+                    f"历史预取 {len(self._short_term_lines)} 条 (agent={self.agent_id})"
+                )
+            else:
+                self.short_term_turns = 0
+        except Exception as e:
+            self.short_term_turns = 0
+            self.logger.bind(tag=TAG).warning(f"短期记忆初始化失败（已关闭）: {e}")
+
     def _initialize_intent(self):
         if self.intent is None:
             return
@@ -1198,6 +1241,34 @@ class ConnectionHandler:
             who = "用户" if m.role == "user" else "助手"
             lines.append(f"{who}：{m.content}")
         return "\n".join(lines) if lines else "（暂无聊天记录）"
+
+    def _persist_short_term_history(self):
+        """把本会话自上次落盘以来新增的真实对话写入短期记忆库（增量、容错）。"""
+        if getattr(self, "short_term_turns", 0) <= 0:
+            return
+        try:
+            from core.utils import short_term_history as sth
+
+            persisted = getattr(self, "_short_term_persisted", 0)
+            all_real = [
+                m for m in self.dialogue.dialogue if sth.is_real_chat_message(m)
+            ]
+            new_msgs = all_real[persisted:]
+            if new_msgs:
+                sth.persist_session_turns(
+                    getattr(self, "agent_id", None) or self.device_id,
+                    new_msgs,
+                    db_dir=getattr(self, "short_term_db_dir", None),
+                )
+                self._short_term_persisted = len(all_real)
+                # 同步更新预取窗口，供下一轮合并注入使用
+                self._short_term_lines = sth.get_recent_lines(
+                    getattr(self, "agent_id", None) or self.device_id,
+                    limit=self.short_term_turns,
+                    db_dir=getattr(self, "short_term_db_dir", None),
+                )
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(f"短期记忆落盘失败（不影响对话）: {e}")
 
     def _generate_voice_instruction(self, user_prompt):
         """调用 LLM 生成一句语气指令；优先用 instruction_llm_id 指定的模型。"""
@@ -1343,12 +1414,42 @@ class ConnectionHandler:
                 self.system_introduced_speakers.add(cs)
                 speaker_for_system = cs
 
+            # 短期记忆：历史预取 + 本会话真实消息，合并截尾到 N 条后注入
+            # （本会话上下文去重：跳过预取行中已包含的会话首条，防止新会话与
+            #   历史窗口边界处的记录重复出现）
+            short_term_memory = None
+            if getattr(self, "short_term_turns", 0) > 0 and query:
+                from core.utils import short_term_history as sth
+
+                session_real = [
+                    m for m in self.dialogue.dialogue
+                    if not getattr(m, "is_temporary", False)
+                    and getattr(m, "role", None) in ("user", "assistant")
+                    and not getattr(m, "tool_calls", None)
+                    and getattr(m, "content", None)
+                ]
+                session_lines = [
+                    sth.format_line(m.role, m.content) for m in session_real
+                ]
+                pre = list(getattr(self, "_short_term_lines", []))
+                if pre and session_real:
+                    first_line = sth.format_line(
+                        session_real[0].role, session_real[0].content
+                    )
+                    if first_line in pre:
+                        pre = pre[: pre.index(first_line)]
+                merged = pre + session_lines
+                merged = [line for line in merged if line][-self.short_term_turns:]
+                if merged:
+                    short_term_memory = "\n".join(merged)
+
             if self.intent_type in ("function_call", "nointent") and functions is not None:
                 # 使用支持functions的streaming接口
                 llm_responses = self.llm.response_with_functions(
                     self.session_id,
                     self.dialogue.get_llm_dialogue_with_memory(
-                        memory_str, self.config.get("voiceprint", {}), speaker_for_system
+                        memory_str, self.config.get("voiceprint", {}),
+                        speaker_for_system, short_term_memory,
                     ),
                     functions=functions,
                 )
@@ -1356,7 +1457,8 @@ class ConnectionHandler:
                 llm_responses = self.llm.response(
                     self.session_id,
                     self.dialogue.get_llm_dialogue_with_memory(
-                        memory_str, self.config.get("voiceprint", {}), speaker_for_system
+                        memory_str, self.config.get("voiceprint", {}),
+                        speaker_for_system, short_term_memory,
                     ),
                 )
         except Exception as e:
@@ -1517,6 +1619,7 @@ class ConnectionHandler:
 
                     if not real_tool_calls:
                         if depth == 0:
+                            self._persist_short_term_history()
                             self.tts.tts_text_queue.put(
                                 TTSMessageDTO(
                                     sentence_id=current_sentence_id,
@@ -1595,6 +1698,7 @@ class ConnectionHandler:
             self.dialogue.put(Message(role="assistant", content=text_buff))
 
         if depth == 0:
+            self._persist_short_term_history()
             self.tts.tts_text_queue.put(
                 TTSMessageDTO(
                     sentence_id=current_sentence_id,
