@@ -76,6 +76,9 @@ async def get_config_from_api_async(config):
             "http_port": config["server"].get("http_port", ""),
             "vision_explain": config["server"].get("vision_explain", ""),
             "auth_key": config["server"].get("auth_key", ""),
+            # 测试环境端口映射（8100-8200）：心跳端口需本地透传，
+            # 否则 heartbeat.py 永远回落到默认 12399
+            "heartbeat_port": config["server"].get("heartbeat_port", 12399),
         }
     config_data["server"]["auth"] = {"enabled": auth_enabled}
     # 如果服务器没有prompt_template，则从本地配置读取

@@ -1,17 +1,14 @@
 # ============================================================
 # 测试环境 nginx 站点（sandyun.top 测试 VM 专用）
 # ------------------------------------------------------------
-# 与生产差异：
-#   - 生产 8001 由 stream 层 ssl_preread 分流到 9002/9444（PROXY protocol）；
-#     测试环境无 stream 层，直接在本 server 上同时监听：
-#       8001 明文  -> 设备 ws://sandyun.top:8001/xiaozhi/v1/ + 页面
-#       9444 TLS   -> 浏览器 https（自签名证书，仅测试用）
-#   - Web 静态资源：/var/www/console-v2/{app,admin}（由 ~/yh/web/console-v2 拷贝）
-#   - /var/www/xiaozhi-manager 为 server 级 root 兜底目录
+# 端口规划（2026-10-13）：测试环境对外端口范围 8100-8200（生产 8000-8100）
+#   8101 明文 -> 设备 ws://sandyun.top:8101/xiaozhi/v1/ + 页面（原 8001）
+#   8144 TLS  -> 浏览器 https（自签名证书，仅测试用）（原 9444）
+# 内部端口不变：Python 8000(WS)/8003(HTTP)、Java 8002
 # ============================================================
 server {
-    listen 8001;
-    listen 9444 ssl;
+    listen 8101;
+    listen 8144 ssl;
 
     ssl_certificate /etc/nginx/ssl/sandyun.top.crt;
     ssl_certificate_key /etc/nginx/ssl/sandyun.top.key;
@@ -20,4 +17,12 @@ server {
     server_name _;
 
     include /etc/nginx/snippets/xiaozhi-common.conf;
+
+    # 视觉分析接口（原 8003 直连，现经 8101 对外）
+    location /mcp/ {
+        proxy_pass http://127.0.0.1:8003;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
 }
