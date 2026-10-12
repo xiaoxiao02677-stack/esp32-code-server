@@ -1,0 +1,23 @@
+[Unit]
+Description=XiaoZhi ESP32 Server (xiaozhi-server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/xiaozhi-server/main/xiaozhi-server
+ExecStart=/root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python app.py
+# 2026-10-09 WS 断连修复：原为 Restart=on-failure。
+# app.py 收到 SIGTERM/SIGINT 后会走 wait_for_exit() 正常返回、以退出码 0 结束，
+# on-failure 对退出码 0 不生效 —— 实测 2026-10-08 20:06 退出后服务停摆 6.5 小时，
+# 期间设备全部连不上（nginx 502/499）。改为 always，任何退出都自动拉起。
+Restart=always
+RestartSec=5
+# 并发上限曾受制于文件描述符：soft nofile 仅 1024，实测每连接约 1.05 个 fd，
+# 理论硬顶约 950 条。放开到 65535，WS 并发不再受 fd 限制。
+LimitNOFILE=65535
+StandardOutput=append:/root/xiaozhi-server/main/xiaozhi-server/data/app.log
+StandardError=append:/root/xiaozhi-server/main/xiaozhi-server/data/app.log
+
+[Install]
+WantedBy=multi-user.target

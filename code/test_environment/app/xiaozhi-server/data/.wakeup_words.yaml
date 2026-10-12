@@ -1,0 +1,35 @@
+034a41fbcbed1da3f6d8cd3a04d5a040:
+  file_path: config/assets/wakeup_words/034a41fbcbed1da3f6d8cd3a04d5a040.wav
+  text: 请问您需要什么帮助？
+  time: 1791653332.8519006
+  voice: zh_female_sophie_uranus_bigtts
+3fba090fbd99a7a68ed630946c696582:
+  file_path: config/assets/wakeup_words/3fba090fbd99a7a68ed630946c696582.wav
+  text: 来啦来啦，请告诉我吧。
+  time: 1791819217.9701166
+  voice: S_ZiVB5xwg2
+5bc21988998753db0ac7895a7f6bf16d:
+  file_path: config/assets/wakeup_words/5bc21988998753db0ac7895a7f6bf16d.wav
+  text: 请您说出指令吧。
+  time: 1791246727.973738
+  voice: zh-CN-XiaoyiNeural
+696f723a686d133a0bfda86ef302d6bd:
+  file_path: config/assets/wakeup_words/696f723a686d133a0bfda86ef302d6bd.wav
+  text: 我认真听着呢，请讲。
+  time: 1791741992.6397815
+  voice: zh_female_xiaohe_uranus_bigtts
+7b75d91d2856e9e74fe7cfbb857dcf2f:
+  file_path: config/assets/wakeup_words/7b75d91d2856e9e74fe7cfbb857dcf2f.wav
+  text: 请您说出指令吧。
+  time: 1791284354.2947028
+  voice: Cherry
+935e0503026556736679a4da045235fe:
+  file_path: config/assets/wakeup_words/935e0503026556736679a4da045235fe.wav
+  text: 请您讲话，我准备好了。
+  time: 1791702137.510985
+  voice: S_HfQF5xwg2
+ed76d459636c2481aec828516c1b4f54:
+  file_path: config/assets/wakeup_words/ed76d459636c2481aec828516c1b4f54.wav
+  text: 您请说，我正听着。
+  time: 1791290947.5780833
+  voice: zh-CN-XiaoxiaoNeural

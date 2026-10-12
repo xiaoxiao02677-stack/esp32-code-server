@@ -1,0 +1,18 @@
+[Unit]
+Description=XiaoZhi ESP32 Server - TEST (xiaozhi-server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/yh/app/xiaozhi-server
+ExecStart=/root/yh/app/xiaozhi-server/.venv/bin/python app.py
+# 与生产一致：app.py 正常退出码为 0，必须用 always 才能保证任何退出都自动拉起
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+StandardOutput=append:/root/yh/app/xiaozhi-server/data/app.log
+StandardError=append:/root/yh/app/xiaozhi-server/data/app.log
+
+[Install]
+WantedBy=multi-user.target

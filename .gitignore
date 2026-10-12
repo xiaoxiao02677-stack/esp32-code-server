@@ -57,3 +57,7 @@ Thumbs.db
 
 # ===== 私钥/证书（避免泄露 & 绕过 GitHub push 保护拦截）=====
 aoci-code/third_party/openGauss-connector-go-pq/certs/*.key
+
+# 测试环境部署包：超大二进制不入库（gitee 单文件 100MB 限制）
+code/test_environment/app/xiaozhi-server/models/
+code/test_environment/db/xiaozhi_esp32_server.sql.gz

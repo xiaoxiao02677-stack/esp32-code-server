@@ -1,0 +1,44 @@
+# ============================================================
+# 8001 端口的下游 server（PROXY protocol 版）
+# ------------------------------------------------------------
+# 作用：让设备 WebSocket 日志里出现真实公网 IP，而不是一律 127.0.0.1。
+#
+# 链路：
+#   设备/浏览器 -> nginx stream:8001 (ssl_preread 按是否 TLS 分流)
+#        -> [PROXY protocol 头里携带客户端真实 IP]
+#        -> 本 server 127.0.0.1:9002(明文) / 9444(TLS)，listen 带 proxy_protocol
+#        -> realip 模块把 $remote_addr 还原成真实 IP
+#        -> proxy_set_header X-Real-IP $remote_addr
+#        -> Python 8000，core/connection.py:212 已读取 x-real-ip（无需改代码）
+#
+# 为什么用独立端口 9002/9444，而不直接给 9001/9443 加 proxy_protocol：
+#   9001/9443 原本是公网直连端口，实测有 censys / infrawat.ch / Go-http-client
+#   等扫描流量；在这些端口上开 proxy_protocol 会让所有不发 PROXY 头的直连
+#   握手失败。独立端口 + 只绑 127.0.0.1：对旧端口零影响、不新增暴露面、
+#   且出问题只要把 stream 的 map 改回 9001/9443 即可秒级回滚。
+#
+# !! 重要 !! 本块必须与 xiaozhi-manager 提供完全相同的站点内容。
+#   8001 的 HTTPS 同时承载管理后台网页（/ 、/admincc/、/cc/、/assets/）。
+#   2026-10-09 首次部署时这里只写了 WS 反代 location，
+#   导致 https://sandyun.top:8001/ 掉回 nginx 欢迎页、/admincc/ 404。
+#   现已把公共 location 抽到 snippets/xiaozhi-common.conf，
+#   两个 server 都 include 同一份，从根本上消除「改一处漏一处」。
+# ============================================================
+server {
+    # 明文：ws:// 设备（stream 判定为非 TLS 时转发到这里）
+    listen 127.0.0.1:9002 proxy_protocol;
+    # TLS ：wss:// 设备 + 浏览器 https://sandyun.top:8001
+    listen 127.0.0.1:9444 ssl proxy_protocol;
+
+    ssl_certificate /etc/nginx/ssl/sandyun.top.crt;
+    ssl_certificate_key /etc/nginx/ssl/sandyun.top.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    server_name _;
+
+    # 只信任来自本机 stream 层转发的 PROXY 头，避免外部伪造
+    set_real_ip_from 127.0.0.1;
+    real_ip_header proxy_protocol;
+
+    include /etc/nginx/snippets/xiaozhi-common.conf;
+}

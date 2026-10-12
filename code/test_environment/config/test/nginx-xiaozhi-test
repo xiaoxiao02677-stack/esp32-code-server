@@ -1,0 +1,23 @@
+# ============================================================
+# 测试环境 nginx 站点（sandyun.top 测试 VM 专用）
+# ------------------------------------------------------------
+# 与生产差异：
+#   - 生产 8001 由 stream 层 ssl_preread 分流到 9002/9444（PROXY protocol）；
+#     测试环境无 stream 层，直接在本 server 上同时监听：
+#       8001 明文  -> 设备 ws://sandyun.top:8001/xiaozhi/v1/ + 页面
+#       9444 TLS   -> 浏览器 https（自签名证书，仅测试用）
+#   - Web 静态资源：/var/www/console-v2/{app,admin}（由 ~/yh/web/console-v2 拷贝）
+#   - /var/www/xiaozhi-manager 为 server 级 root 兜底目录
+# ============================================================
+server {
+    listen 8001;
+    listen 9444 ssl;
+
+    ssl_certificate /etc/nginx/ssl/sandyun.top.crt;
+    ssl_certificate_key /etc/nginx/ssl/sandyun.top.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    server_name _;
+
+    include /etc/nginx/snippets/xiaozhi-common.conf;
+}

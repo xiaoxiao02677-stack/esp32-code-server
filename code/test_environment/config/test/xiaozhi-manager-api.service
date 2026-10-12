@@ -1,0 +1,18 @@
+[Unit]
+Description=XiaoZhi Manager API (Spring Boot) - TEST
+After=network-online.target mysql.service redis-server.service
+Wants=network-online.target
+Requires=mysql.service redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/yh/deploy/opt-xiaozhi
+# jar 由 JDK21 编译（class file 65.0），必须用 Java 21 运行
+ExecStart=/usr/lib/jvm/java-21-openjdk-amd64/bin/java -jar /root/yh/deploy/opt-xiaozhi/xiaozhi-esp32-api.jar --spring.profiles.active=dev
+Restart=on-failure
+RestartSec=8
+StandardOutput=append:/root/yh/deploy/opt-xiaozhi/manager-api.log
+StandardError=append:/root/yh/deploy/opt-xiaozhi/manager-api.log
+
+[Install]
+WantedBy=multi-user.target
