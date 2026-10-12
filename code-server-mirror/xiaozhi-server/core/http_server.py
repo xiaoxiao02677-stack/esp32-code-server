@@ -12,6 +12,7 @@ from core.api.wake_word_handler import WakeWordHandler
 from core.api.push_handler import PushHandler
 from core.api.timeline_handler import TimelineHandler
 from core.api.entity_handler import EntityHandler
+from core.api.wechat_claw_handler import WeChatClawHandler
 
 TAG = __name__
 
@@ -106,6 +107,7 @@ class SimpleHttpServer:
         self.push_handler = None
         self.timeline_handler = TimelineHandler(config)
         self.entity_handler = EntityHandler(config)
+        self.wechat_claw_handler = None
         # Expose the instances to the module-scope middlewares (auth check).
         global _MEMORY_HANDLER, _TTS_PREVIEW_HANDLER, _LLM_PREVIEW_HANDLER, _MODEL_TEST_HANDLER
         _MEMORY_HANDLER = self.memory_handler
@@ -124,6 +126,11 @@ class SimpleHttpServer:
         """绑定 PushScheduler 实例，用于 HTTP API 端点。"""
         self.push_handler = PushHandler(self.config, push_scheduler)
         self.logger.bind(tag=TAG).info("PushHandler 已绑定")
+
+    def set_wechat_claw_service(self, claw_service):
+        """绑定 WeChatClawService 实例，用于 HTTP API 端点。"""
+        self.wechat_claw_handler = WeChatClawHandler(self.config, claw_service)
+        self.logger.bind(tag=TAG).info("WeChatClawHandler 已绑定")
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -376,6 +383,56 @@ class SimpleHttpServer:
                             web.get(
                                 "/api/push/tasks/{push_id}",
                                 self.push_handler.handle_get_task,
+                            ),
+                        ]
+                    )
+
+                # 微信 ClawBot API（manager-api 经 server.secret 鉴权代理转发）
+                if self.wechat_claw_handler is not None:
+                    app.add_routes(
+                        [
+                            # 用户绑定管理
+                            web.get(
+                                "/api/wechat/claw/users",
+                                self.wechat_claw_handler.handle_list_users,
+                            ),
+                            web.post(
+                                "/api/wechat/claw/bind",
+                                self.wechat_claw_handler.handle_bind,
+                            ),
+                            web.delete(
+                                "/api/wechat/claw/unbind/{openid}",
+                                self.wechat_claw_handler.handle_unbind,
+                            ),
+                            # 对话管理
+                            web.get(
+                                "/api/wechat/claw/conversations/{openid}",
+                                self.wechat_claw_handler.handle_get_conversations,
+                            ),
+                            web.delete(
+                                "/api/wechat/claw/conversations/{openid}",
+                                self.wechat_claw_handler.handle_clear_conversation,
+                            ),
+                            web.post(
+                                "/api/wechat/claw/messages/{openid}",
+                                self.wechat_claw_handler.handle_send_message,
+                            ),
+                            # 定时任务管理
+                            web.get(
+                                "/api/wechat/claw/schedules/{openid}",
+                                self.wechat_claw_handler.handle_list_schedules,
+                            ),
+                            web.post(
+                                "/api/wechat/claw/schedules/{openid}",
+                                self.wechat_claw_handler.handle_create_schedule,
+                            ),
+                            web.delete(
+                                "/api/wechat/claw/schedules/{openid}/{id}",
+                                self.wechat_claw_handler.handle_delete_schedule,
+                            ),
+                            web.put(
+                                "/api/wechat/claw/schedules/{openid}/{id}/toggle",
+                                self.wechat_claw_handler.handle_toggle_schedule,
                             ),
                         ]
                     )

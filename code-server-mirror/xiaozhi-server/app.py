@@ -82,6 +82,12 @@ async def main():
     push_scheduler.set_wake_word_service(ws_server.wake_word_service)
     await push_scheduler.start()
     ota_server.set_push_scheduler(push_scheduler)
+
+    # 初始化微信ClawBot服务
+    from core.services.wechat_claw_service import WeChatClawService
+    claw_service = WeChatClawService(config)
+    await claw_service.start()
+    ota_server.set_wechat_claw_service(claw_service)
     ota_task = asyncio.create_task(ota_server.start())
 
     # 启动心跳监听服务（12399，TCP/UDP；失败不影响主服务）
@@ -146,6 +152,10 @@ async def main():
         # 停止推送调度器
         if push_scheduler:
             await push_scheduler.stop()
+
+        # 停止微信ClawBot服务
+        if claw_service:
+            await claw_service.stop()
 
         # 取消所有任务（关键修复点）
         stdin_task.cancel()
