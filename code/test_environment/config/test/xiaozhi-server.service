@@ -1,4 +1,11 @@
 [Unit]
+# 端口规划（2026-10-13）：测试环境对外端口 8100-8200（生产 8000-8100）
+#   8101 nginx -> Python WS:8000 / HTTP:8003 / Java:8002
+#   8102 nginx health check
+#   8104 nginx stream -> MySQL:3306
+#   8105 nginx stream -> Redis:6379
+#   8144 nginx TLS -> 同 8101
+#   8199 TCP/UDP -> Python 心跳
 Description=XiaoZhi ESP32 Server - TEST (xiaozhi-server)
 After=network-online.target
 Wants=network-online.target
