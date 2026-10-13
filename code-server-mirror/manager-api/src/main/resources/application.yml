@@ -43,6 +43,11 @@ renren:
     enabled: true
     exclude-urls:
 
+security:
+  user-module:
+    # 用户管理模块：自定义模型 API 密钥 AES-256-GCM 加密密钥（部署时外置 yml 覆盖）
+    api-key-secret: xzh-user-module-aes-key-2026-CHANGE-ME
+
 #mybatis
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

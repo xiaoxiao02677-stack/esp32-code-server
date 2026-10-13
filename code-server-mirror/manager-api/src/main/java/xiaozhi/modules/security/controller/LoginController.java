@@ -40,7 +40,9 @@ import xiaozhi.modules.sys.dto.RetrievePasswordDTO;
 import xiaozhi.modules.sys.dto.SysUserDTO;
 import xiaozhi.modules.sys.service.SysDictDataService;
 import xiaozhi.modules.sys.service.SysParamsService;
+import xiaozhi.modules.sys.service.SysRoleService;
 import xiaozhi.modules.sys.service.SysUserService;
+import xiaozhi.modules.sys.service.AuditService;
 import xiaozhi.modules.sys.vo.SysDictDataItem;
 
 /**
@@ -57,6 +59,8 @@ public class LoginController {
     private final CaptchaService captchaService;
     private final SysParamsService sysParamsService;
     private final SysDictDataService sysDictDataService;
+    private final SysRoleService sysRoleService;
+    private final AuditService auditService;
 
     @GetMapping("/captcha")
     @Operation(summary = "验证码")
@@ -107,6 +111,19 @@ public class LoginController {
         if (!PasswordUtils.matches(login.getPassword(), userDTO.getPassword())) {
             throw new RenException(ErrorCode.ACCOUNT_PASSWORD_ERROR);
         }
+        // 锁定/软删用户禁止登录（status=0 由 Shiro 层拦截，此处提前拦截 locked/deleted）
+        if (userDTO.getLocked() != null && userDTO.getLocked() == 1) {
+            throw new RenException(ErrorCode.ACCOUNT_LOCK);
+        }
+        if (userDTO.getDeleted() != null && userDTO.getDeleted() == 1) {
+            throw new RenException(ErrorCode.ACCOUNT_PASSWORD_ERROR);
+        }
+
+        // 登录成功：更新最后登录时间 + 审计
+        sysUserService.updateLastLogin(userDTO.getId());
+        auditService.log("user", "login", "sys_user", String.valueOf(userDTO.getId()),
+                Map.of("username", login.getUsername()), true, null);
+
         return sysUserTokenService.createToken(userDTO.getId());
     }
 
@@ -158,6 +175,15 @@ public class LoginController {
     @Operation(summary = "用户信息获取")
     public Result<UserDetail> info() {
         UserDetail user = SecurityUser.getUser();
+        // 补充实时角色列表（Realm 鉴权路径之外的信息输出）
+        if (user != null && user.getId() != null) {
+            try {
+                List<String> roleCodes = sysRoleService.getRoleCodesByUserId(user.getId());
+                user.setRoles(roleCodes == null ? List.of() : roleCodes);
+            } catch (Exception e) {
+                user.setRoles(List.of());
+            }
+        }
         Result<UserDetail> result = new Result<>();
         result.setData(user);
         return result;
@@ -170,6 +196,9 @@ public class LoginController {
         ValidatorUtils.validateEntity(passwordDTO);
         Long userId = SecurityUser.getUserId();
         sysUserTokenService.changePassword(userId, passwordDTO);
+        // 改密成功：清强制改密标记 + 审计
+        sysUserService.clearMustChangePwd(userId);
+        auditService.log("user", "changePassword", "sys_user", String.valueOf(userId), null, true, null);
         return new Result<>();
     }
 

@@ -84,4 +84,13 @@ public class SysUserDTO implements Serializable {
     @Schema(description = "部门名称")
     private String deptName;
 
+    @Schema(description = "软删除（0否 1是）")
+    private Integer deleted;
+
+    @Schema(description = "锁定（0否 1是）")
+    private Integer locked;
+
+    @Schema(description = "强制改密（0否 1是）")
+    private Integer mustChangePwd;
+
 }

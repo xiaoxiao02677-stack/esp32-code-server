@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.utils.MessageUtils;
 import xiaozhi.common.utils.Result;
+import xiaozhi.modules.sys.service.AuditService;
 
 /**
  * 异常处理器
@@ -25,6 +26,8 @@ import xiaozhi.common.utils.Result;
 @AllArgsConstructor
 @RestControllerAdvice
 public class RenExceptionHandler {
+
+    private final AuditService auditService;
 
     /**
      * 处理自定义异常
@@ -47,6 +50,14 @@ public class RenExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public Result<Void> handleUnauthorizedException(UnauthorizedException ex) {
+        // 越权审计：module=security, operation=forbidden, success=false
+        try {
+            auditService.log("security", "forbidden", "permission", null,
+                    ex.getMessage(), false, String.valueOf(ex.getMessage()));
+        } catch (Exception ignore) {
+            // 审计失败不影响 403 返回
+        }
+
         Result<Void> result = new Result<>();
         result.error(ErrorCode.FORBIDDEN);
 

@@ -1,6 +1,7 @@
 package xiaozhi.modules.security.oauth2;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.shiro.authc.AuthenticationException;
@@ -23,11 +24,14 @@ import jakarta.annotation.Resource;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.user.UserDetail;
 import xiaozhi.common.utils.ConvertUtils;
+import xiaozhi.common.utils.JsonUtils;
 import xiaozhi.common.utils.MessageUtils;
 import xiaozhi.modules.security.entity.SysUserTokenEntity;
 import xiaozhi.modules.security.service.ShiroService;
+import xiaozhi.modules.sys.entity.SysRoleEntity;
 import xiaozhi.modules.sys.entity.SysUserEntity;
 import xiaozhi.modules.sys.enums.SuperAdminEnum;
+import xiaozhi.modules.sys.service.SysRoleService;
 
 /**
  * 认证
@@ -40,6 +44,10 @@ public class Oauth2Realm extends AuthorizingRealm {
     @Resource
     private ShiroService shiroService;
 
+    @Lazy
+    @Resource
+    private SysRoleService sysRoleService;
+
     private static final Logger logger = LoggerFactory.getLogger(Oauth2Realm.class);
 
     @Override
@@ -49,6 +57,8 @@ public class Oauth2Realm extends AuthorizingRealm {
 
     /**
      * 授权(验证权限时调用)
+     *
+     * 每次鉴权实时查库，无权限缓存：角色/权限变更即时生效。
      */
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
@@ -58,10 +68,31 @@ public class Oauth2Realm extends AuthorizingRealm {
         Set<String> permsSet = new HashSet<>();
 
         if (user.getSuperAdmin() == SuperAdminEnum.YES.value()) {
+            // 超级管理员：全部权限 + 兼容旧注解
+            permsSet.add("*");
             permsSet.add("sys:role:superAdmin");
             permsSet.add("sys:role:normal");
         } else {
+            // 普通用户：固定基础权限 + 角色 permissions（sys_user_role JOIN sys_role status=1）
             permsSet.add("sys:role:normal");
+            try {
+                List<SysRoleEntity> roles = sysRoleService.getEnabledRolesByUserId(user.getId());
+                if (roles != null) {
+                    for (SysRoleEntity role : roles) {
+                        if (role.getPermissions() == null || role.getPermissions().isBlank()
+                                || "null".equals(role.getPermissions())) {
+                            continue;
+                        }
+                        List<String> perms = JsonUtils.parseArray(role.getPermissions(), String.class);
+                        if (perms != null) {
+                            permsSet.addAll(perms);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // 权限子系统故障不能阻塞鉴权：静默降级为仅 normal
+                logger.warn("加载用户角色权限失败，降级为仅基础权限 userId={} err={}", user.getId(), e.getMessage());
+            }
         }
 
         SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();

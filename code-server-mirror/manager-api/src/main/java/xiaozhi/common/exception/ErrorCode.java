@@ -279,4 +279,27 @@ public interface ErrorCode {
     int PARAM_CODE_EXISTS = 10205; // 参数编码已存在
     int PARAM_NOT_EXIST = 10206; // 参数不存在
     int PARAM_BUILTIN_DELETE_FORBIDDEN = 10207; // 内置参数不可删除
+
+    // 用户管理模块相关错误码
+    int USERNAME_EXISTS = 10220; // 用户名已存在
+    int USER_NOT_FOUND = 10221; // 用户不存在
+    int USER_DELETED = 10222; // 用户已删除
+    int CANNOT_DISABLE_SELF = 10223; // 不能停用自己
+    int CANNOT_DELETE_LAST_ADMIN = 10224; // 不能操作最后一个启用的超级管理员
+    int IMPORT_PARTIAL = 10225; // 导入部分失败
+    int ROLE_CODE_EXISTS = 10226; // 角色编码已存在
+    int ROLE_BUILTIN = 10227; // 内置角色不可删除/不可停用
+    int ROLE_NOT_FOUND = 10228; // 角色不存在
+    int MUST_CHANGE_PWD = 10229; // 需要先修改密码
+    int DISPLAY_CONFIG_SCOPE = 10230; // 无效的作用域参数
+    int DEFAULT_MODEL_INVALID = 10231; // 默认模型不存在或未启用
+    int DEFAULT_VOICE_INVALID = 10232; // 默认音色不存在
+    int CUSTOM_MODEL_NOT_FOUND = 10233; // 自定义模型不存在
+    int CUSTOM_MODEL_DUPLICATE = 10234; // 同类型同名模型已存在
+    int CUSTOM_VOICE_NOT_FOUND = 10235; // 自定义音色不存在
+    int CUSTOM_VOICE_DUPLICATE = 10236; // 同名自定义音色已存在
+    int CUSTOM_AUDIT_INVALID = 10237; // 无效的审核状态
+    int QUOTA_EXCEEDED = 10238; // 调用配额已用尽
+    int CRYPTO_ERROR = 10239; // 密钥加解密失败
+    int AUDIT_QUERY_INVALID = 10240; // 审计查询参数无效
 }

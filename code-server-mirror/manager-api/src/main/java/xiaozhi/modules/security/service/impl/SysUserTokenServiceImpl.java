@@ -18,6 +18,7 @@ import xiaozhi.modules.security.oauth2.TokenGenerator;
 import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.sys.dto.PasswordDTO;
 import xiaozhi.modules.sys.dto.SysUserDTO;
+import xiaozhi.modules.sys.entity.SysUserEntity;
 import xiaozhi.modules.sys.service.SysUserService;
 
 @AllArgsConstructor
@@ -78,6 +79,18 @@ public class SysUserTokenServiceImpl extends BaseServiceImpl<SysUserTokenDao, Sy
         tokenDTO.setToken(token);
         tokenDTO.setExpire(EXPIRE);
         tokenDTO.setClientHash(clientHash);
+        // 用户模块：登录响应附带身份信息（前端路由守卫/强制改密判断用）
+        try {
+            SysUserEntity user = sysUserService.selectById(userId);
+            if (user != null) {
+                tokenDTO.setUsername(user.getUsername());
+                tokenDTO.setSuperAdmin(user.getSuperAdmin());
+                tokenDTO.setMustChangePwd(user.getMustChangePwd() != null && user.getMustChangePwd() == 1);
+            }
+            tokenDTO.setRoles(sysUserService.getUserRoleCodes(userId));
+        } catch (Exception e) {
+            // 身份信息附加失败不影响登录主流程
+        }
         return new Result<TokenDTO>().ok(tokenDTO);
     }
 

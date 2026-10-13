@@ -856,3 +856,29 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610100930.sql
+  - changeSet:
+      id: 202610140100
+      author: user-module
+      # 用户管理模块：7 张新表 + 4 个内置角色种子（幂等）。
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610140100.sql
+  - changeSet:
+      id: 202610140200
+      author: user-module
+      # 用户管理模块：sys_user 扩 6 列（软删除/锁定/登录/改密）。
+      # MySQL 无 ADD COLUMN IF NOT EXISTS，列已存在时（手工 ALTER 加过）
+      # onFail=MARK_RAN 跳过，写法参考 202610100930。
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        onFailMessage: sys_user 已存在 deleted 列（手工建过），跳过
+        not:
+          columnExists:
+            tableName: sys_user
+            columnName: deleted
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610140200.sql
