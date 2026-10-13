@@ -102,7 +102,7 @@ public class LlmPreviewController {
                     .header("Authorization", "Bearer " + secret.trim())
                     .header("Content-Type", "application/json")
                     .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                    .POST(HttpRequest.BodyPublishers.ofString(rawConfig, StandardCharsets.UTF_8))
+                    .GET()
                     .build();
             response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (Exception e) {

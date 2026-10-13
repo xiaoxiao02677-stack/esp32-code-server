@@ -838,26 +838,6 @@ databaseChangeLog:
             encoding: utf8
             path: classpath:db/changelog/202610071800.sql
   - changeSet:
-      id: 202610090130
-      author: team-lead
-      # 幂等保护：现网 ai_tts_voice 的 dynamic_instruction / instruction_llm_id
-      # 两列是 2026-10-09 之前手工 ALTER 加的，Liquibase 里没有对应记录，
-      # 而 MySQL 没有 ADD COLUMN IF NOT EXISTS —— 若无条件执行会报
-      # "Duplicate column name 'dynamic_instruction'" 并让 Spring Boot 启动失败。
-      # 列已存在时标记 MARK_RAN 跳过；全新库则正常建列。
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        onFailMessage: ai_tts_voice 已存在 dynamic_instruction 列（手工建过），跳过
-        not:
-          columnExists:
-            tableName: ai_tts_voice
-            columnName: dynamic_instruction
-      changes:
-        - sqlFile:
-            encoding: utf8
-            path: classpath:db/changelog/202610090130.sql
-  - changeSet:
       id: 202610100930
       author: team-lead
       # 唤醒词自定义：ai_agent.wake_words。
@@ -876,17 +856,3 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610100930.sql
-  - changeSet:
-      id: 202610101030
-      author: team-lead
-      changes:
-        - sqlFile:
-            encoding: utf8
-            path: classpath:db/changelog/202610101030.sql
-  - changeSet:
-      id: 202610101100
-      author: backend-java
-      changes:
-        - sqlFile:
-            encoding: utf8
-            path: classpath:db/changelog/202610101100.sql

@@ -6,7 +6,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -168,16 +167,6 @@ public class SysParamsController {
         AssertUtils.isArrayEmpty(ids, "id");
 
         sysParamsService.delete(ids);
-        configService.getConfig(false);
-        return new Result<Void>();
-    }
-
-    @DeleteMapping("{id}")
-    @Operation(summary = "删除（单个，内置参数不允许删除）")
-    @LogOperation("删除")
-    @RequiresPermissions("sys:role:superAdmin")
-    public Result<Void> deleteById(@PathVariable("id") Long id) {
-        sysParamsService.deleteById(id);
         configService.getConfig(false);
         return new Result<Void>();
     }

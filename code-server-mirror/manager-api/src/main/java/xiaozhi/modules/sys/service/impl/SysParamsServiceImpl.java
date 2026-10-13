@@ -35,12 +35,6 @@ import xiaozhi.modules.sys.service.SysParamsService;
 @AllArgsConstructor
 @Service
 public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParamsEntity> implements SysParamsService {
-    /**
-     * 内置参数id上限：id小于该值的均为系统初始化内置参数（100~5xx段），
-     * 不允许删除；页面新增的参数使用雪花ID，均远大于该值
-     */
-    private static final long BUILTIN_PARAM_MAX_ID = 1000L;
-
     private final SysParamsRedis sysParamsRedis;
     private final AgentPluginMappingService agentPluginMappingService;
 
@@ -84,16 +78,7 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
     public void save(SysParamsDTO dto) {
         validateParamValue(dto);
 
-        // 校验参数编码是否重复
-        Long count = baseDao.selectCount(
-                new QueryWrapper<SysParamsEntity>().eq("param_code", dto.getParamCode()));
-        if (count != null && count > 0) {
-            throw new RenException(ErrorCode.PARAM_CODE_EXISTS);
-        }
-
         SysParamsEntity entity = ConvertUtils.sourceToTarget(dto, SysParamsEntity.class);
-        entity.setId(null);
-        entity.setParamType(1);
         insert(entity);
 
         sysParamsRedis.set(entity.getParamCode(), entity.getParamValue());
@@ -176,22 +161,6 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
 
         // 删除
         deleteBatchIds(Arrays.asList(ids));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteById(Long id) {
-        SysParamsEntity entity = baseDao.selectById(id);
-        if (entity == null) {
-            throw new RenException(ErrorCode.PARAM_NOT_EXIST);
-        }
-        // 内置参数保护：小id段为系统内置参数，禁止删除
-        if (id < BUILTIN_PARAM_MAX_ID) {
-            throw new RenException(ErrorCode.PARAM_BUILTIN_DELETE_FORBIDDEN);
-        }
-
-        deleteBatchIds(Arrays.asList(id));
-        sysParamsRedis.delete(new String[] { entity.getParamCode() });
     }
 
     @Override

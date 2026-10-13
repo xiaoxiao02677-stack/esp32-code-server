@@ -62,7 +62,7 @@ public class MemoryFactController {
     @Operation(summary = "分页查询记忆条目")
     @RequiresPermissions("sys:role:normal")
     public Result<PageData<MemoryFactDTO>> getFactPage(
-            @Parameter(name = "agent_id", description = "智能体ID（兼容 agentId）", required = true) @RequestParam(value = "agent_id", required = false) String agentIdParam,
+            @Parameter(name = "agent_id", description = "智能体ID", required = true) @RequestParam("agent_id") String agentId,
             @Parameter(name = "keyword", description = "关键词（FTS全文检索）") @RequestParam(value = "keyword", required = false) String keyword,
             @Parameter(name = "category", description = "类型：preference/profile/habit/event/general") @RequestParam(value = "category", required = false) String category,
             @Parameter(name = "status", description = "状态：active/rejected") @RequestParam(value = "status", required = false) String status,
@@ -71,33 +71,12 @@ public class MemoryFactController {
             @Parameter(name = "start", description = "创建时间起") @RequestParam(value = "start", required = false) String start,
             @Parameter(name = "end", description = "创建时间止") @RequestParam(value = "end", required = false) String end,
             @Parameter(name = "page", description = "页码，从1开始") @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
-            @Parameter(name = "size", description = "每页条数，默认20，上限100（兼容 limit）") @RequestParam(value = "size", required = false) Integer size,
+            @Parameter(name = "size", description = "每页条数，默认20，上限100") @RequestParam(value = "size", required = false, defaultValue = "20") Integer size,
             @Parameter(name = "sort_by", description = "排序字段：created创建时间/trust信任分") @RequestParam(value = "sort_by", required = false, defaultValue = "created") String sortBy,
-            @Parameter(name = "order", description = "排序方式：asc/desc") @RequestParam(value = "order", required = false, defaultValue = "desc") String order,
-            jakarta.servlet.http.HttpServletRequest request) {
-        // 参数别名兼容：老面板传 agentId（驼峰）/limit，未传 agent_id/size 时回落取别名值，
-        // 避免 MissingServletRequestParameterException 被全局处理器包装成 500"服务器内部异常"
-        String agentId = firstNonBlank(agentIdParam, request.getParameter("agentId"));
-        if (size == null) {
-            String limit = request.getParameter("limit");
-            if (limit != null && !limit.isEmpty()) {
-                try {
-                    size = Integer.valueOf(limit);
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
+            @Parameter(name = "order", description = "排序方式：asc/desc") @RequestParam(value = "order", required = false, defaultValue = "desc") String order) {
         PageData<MemoryFactDTO> pageData = memoryFactService.getFactPage(agentId, keyword, category, status,
                 trustMin, trustMax, start, end, page, size, sortBy, order, SecurityUser.getUserId());
         return new Result<PageData<MemoryFactDTO>>().ok(pageData);
-    }
-
-    /** 取第一个非空白值（参数别名回落用） */
-    private static String firstNonBlank(String primary, String fallback) {
-        if (primary != null && !primary.trim().isEmpty()) {
-            return primary;
-        }
-        return fallback != null && !fallback.trim().isEmpty() ? fallback : primary;
     }
 
     @GetMapping("/facts/{fact_id}")
@@ -105,9 +84,7 @@ public class MemoryFactController {
     @RequiresPermissions("sys:role:normal")
     public Result<MemoryFactDTO> getFact(
             @Parameter(name = "fact_id", description = "记忆条目ID", required = true) @PathVariable("fact_id") Long factId,
-            @Parameter(name = "agent_id", description = "智能体ID（兼容 agentId）", required = true) @RequestParam(value = "agent_id", required = false) String agentIdParam,
-            jakarta.servlet.http.HttpServletRequest request) {
-        String agentId = firstNonBlank(agentIdParam, request.getParameter("agentId"));
+            @Parameter(name = "agent_id", description = "智能体ID", required = true) @RequestParam("agent_id") String agentId) {
         MemoryFactDTO fact = memoryFactService.getFact(agentId, factId, SecurityUser.getUserId());
         return new Result<MemoryFactDTO>().ok(fact);
     }
@@ -135,9 +112,7 @@ public class MemoryFactController {
     @RequiresPermissions("sys:role:normal")
     public Result<Void> deleteFact(
             @Parameter(name = "fact_id", description = "记忆条目ID", required = true) @PathVariable("fact_id") Long factId,
-            @Parameter(name = "agent_id", description = "智能体ID（兼容 agentId）", required = true) @RequestParam(value = "agent_id", required = false) String agentIdParam,
-            jakarta.servlet.http.HttpServletRequest request) {
-        String agentId = firstNonBlank(agentIdParam, request.getParameter("agentId"));
+            @Parameter(name = "agent_id", description = "智能体ID", required = true) @RequestParam("agent_id") String agentId) {
         memoryFactService.deleteFact(agentId, factId, SecurityUser.getUserId());
         return new Result<>();
     }
