@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ESP32 固件烧录 - 测试环境</title>
+<style>
+:root{
+  --primary:#1B6CFF;--primary-hover:#0F5AE0;--primary-soft:#EAF2FF;
+  --bg:#F5F7FA;--surface:#FFFFFF;--text:#1A2233;--text-sub:#8A94A6;
+  --border:#E8ECF2;--success:#2FBF71;--danger:#F0534D;--warning:#F5A623;
+  --radius-lg:24px;--radius-md:16px;--radius-pill:999px;
+  --shadow-card:0 2px 12px rgba(27,44,80,.05);
+  --font:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.55;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:24px}
+h1{font-size:22px;font-weight:800;margin:0 0 6px;color:var(--text)}
+.sub{color:var(--text-sub);font-size:13px;margin:0 0 22px}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-card)}
+.card h2{font-size:12px;margin:0 0 14px;color:var(--text-sub);font-weight:700;text-transform:uppercase;letter-spacing:1.5px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);padding:9px 16px;transition:.15s}
+button:hover:not(:disabled){background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+button.primary:hover:not(:disabled){background:var(--primary-hover);border-color:var(--primary-hover)}
+select,input[type=text]{font:inherit;background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:9px 12px}
+select:focus,input[type=text]:focus{outline:none;border-color:var(--primary)}
+.status{font-size:13px;color:var(--text-sub);margin-left:auto}
+.status.on{color:var(--success)}
+.status.err{color:var(--danger)}
+.filelist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.fileitem{display:flex;align-items:center;gap:10px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:8px 12px}
+.fileitem .name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fileitem .size{font-size:12px;color:var(--text-sub);white-space:nowrap}
+.fileitem input{width:110px;font-family:ui-monospace,Consolas,monospace;font-size:13px;text-align:center;padding:6px 8px}
+.fileitem .del{background:none;border:none;color:var(--text-sub);font-size:18px;padding:0 4px;line-height:1}
+.fileitem .del:hover{color:var(--danger);background:none}
+.hint{font-size:12px;color:var(--text-sub);margin:10px 0 0}
+.hint code{background:var(--primary-soft);color:var(--primary);padding:1px 6px;border-radius:4px;font-size:11px}
+.progress{height:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-pill);overflow:hidden;margin:16px 0 8px}
+#progressBar{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--success));transition:width .15s;border-radius:var(--radius-pill)}
+.log{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;height:240px;overflow-y:auto;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.7}
+.log-line{white-space:pre-wrap;word-break:break-all}
+.log-line.ok{color:var(--success)}
+.log-line.err{color:var(--danger)}
+.log-line.warn{color:var(--warning)}
+.log-line.info{color:var(--text-sub)}
+.warnbox{background:#FFF8E1;border:1.5px solid #FFE082;color:#F57C00;padding:12px 16px;border-radius:var(--radius-md);font-size:13px;margin-bottom:16px}
+label.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-sub);cursor:pointer}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--primary);cursor:pointer}
+.nav-bar{display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:16px;border-bottom:1.5px solid var(--border)}
+.nav-bar a{color:var(--primary);text-decoration:none;font-size:13px;font-weight:600}
+.nav-bar a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav-bar">
+    <a href="/">← 返回首页</a>
+    <span style="color:var(--text-sub);font-size:13px">|</span>
+    <a href="/admin/">管理后台</a>
+  </div>
+  <h1>⚡ ESP32 固件烧录</h1>
+  <p class="sub">基于 Chrome Web Serial API，直接在浏览器里给 ESP32 烧录固件，无需安装任何软件。</p>
+
+  <div id="supportWarn" class="warnbox" style="display:none"></div>
+
+  <div class="card">
+    <h2>1 · 连接设备</h2>
+    <div class="row">
+      <button id="btnConnect" class="primary">连接串口</button>
+      <select id="baudSel" title="烧录波特率">
+        <option value="115200">115200（最稳）</option>
+        <option value="230400">230400</option>
+        <option value="460800" selected>460800（推荐）</option>
+        <option value="921600">921600（最快）</option>
+      </select>
+      <span id="connStatus" class="status">未连接</span>
+    </div>
+    <p class="hint">提示：若一直同步失败，请按住板子上的 <b>BOOT</b> 键，点击「连接串口」后松开。</p>
+  </div>
+
+  <div class="card">
+    <h2>2 · 选择固件</h2>
+    <div id="fileList" class="filelist"></div>
+    <button id="btnAddFile">+ 添加 .bin 文件</button>
+    <input type="file" id="fileInput" accept=".bin" multiple hidden />
+    <p class="hint">
+      常见烧录地址：<code>bootloader.bin → 0x1000</code> ·
+      <code>partition-table.bin → 0x8000</code> ·
+      <code>应用程序 → 0x10000</code> ·
+      <code>合并固件(merged) → 0x0</code>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>3 · 烧录</h2>
+    <div class="row">
+      <button id="btnFlash" class="primary" disabled>开始烧录</button>
+      <label class="chk"><input type="checkbox" id="eraseAll" /> 先全片擦除</label>
+      <label class="chk"><input type="checkbox" id="verifyMd5" /> 校验 MD5</label>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div id="progressText" class="hint">等待开始…</div>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <div id="log" class="log"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function log(msg, level = 'info') {
+  const box = $('#log');
+  const el = document.createElement('div');
+  el.className = 'log-line ' + level;
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  el.textContent = `[${t}] ${msg}`;
+  box.appendChild(el);
+  while (box.childElementCount > 400) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+function fmtSize(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(2) + ' MB';
+}
+const CMD = {
+  FLASH_BEGIN: 0x02, FLASH_DATA: 0x03, FLASH_END: 0x04,
+  SYNC: 0x08, CHANGE_BAUD: 0x0f, ERASE_FLASH: 0xd0,
+};
+const BLOCK_SIZE = 1024, ROM_BAUD = 115200;
+function slipEncode(data) {
+  const out = new Uint8Array(data.length * 2 + 2);
+  let i = 0; out[i++] = 0xc0;
+  for (let j = 0; j < data.length; j++) {
+    const b = data[j];
+    if (b === 0xc0) { out[i++] = 0xdb; out[i++] = 0xdc; }
+    else if (b === 0xdb) { out[i++] = 0xdb; out[i++] = 0xdd; }
+    else out[i++] = b;
+  }
+  out[i++] = 0xc0; return out.subarray(0, i);
+}
+class SlipDecoder {
+  constructor() { this.reset(); }
+  reset() { this.buf = []; this.inFrame = false; this.escaped = false; }
+  push(bytes) {
+    const frames = [];
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if (b === 0xc0) {
+        if (this.inFrame && this.buf.length > 0) frames.push(Uint8Array.from(this.buf));
+        this.buf = []; this.inFrame = true; this.escaped = false;
+      } else if (this.inFrame) {
+        if (this.escaped) {
+          this.escaped = false;
+          if (b === 0xdc) this.buf.push(0xc0);
+          else if (b === 0xdd) this.buf.push(0xdb);
+          else this.buf.push(b);
+        } else if (b === 0xdb) { this.escaped = true; }
+        else this.buf.push(b);
+      }
+    }
+    return frames;
+  }
+}
+function calcChecksum(data) {
+  let c = 0xef;
+  for (let i = 0; i < data.length; i++) c ^= data[i];
+  return c >>> 0;
+}
+class ESP32Flasher {
+  constructor(port) {
+    this.port = port; this.decoder = new SlipDecoder();
+    this.waiter = null; this.reader = null; this.loop = null;
+    this.baudRate = ROM_BAUD;
+  }
+  async startReadLoop() {
+    if (this.reader) return;
+    this.reader = this.port.readable.getReader();
+    this.loop = (async () => {
+      try {
+        for (;;) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          if (!value || !value.length) continue;
+          const frames = this.decoder.push(value);
+          for (const f of frames) {
+            if (this.waiter && this.waiter(f)) this.waiter = null;
+          }
+        }
+      } catch (e) {}
+    })();
+  }
+  async stopReadLoop() {
+    if (!this.reader) return;
+    try { await this.reader.cancel(); } catch (e) {}
+    try { this.reader.releaseLock(); } catch (e) {}
+    this.reader = null;
+  }
+  async writeRaw(bytes) {
+    const writer = this.port.writable.getWriter();
+    try { await writer.write(bytes); } finally { writer.releaseLock(); }
+  }
+  _waitResponse(op, timeout) {
+    return new Promise((resolve, reject) => {
+      const handler = (frame) => {
+        if (frame.length < 8 || frame[0] !== 0x01 || frame[1] !== op) return false;
+        clearTimeout(timer); resolve(frame); return true;
+      };
+      const timer = setTimeout(() => {
+        if (this.waiter === handler) this.waiter = null;
+        reject(new Error(`命令 0x${op.toString(16).padStart(2,'0')} 响应超时`));
+      }, timeout);
+      this.waiter = handler;
+    });
+  }
+  async command(op, data = new Uint8Array(0), chk = null, timeout = 3000) {
+    if (chk === null) chk = calcChecksum(data);
+    const pkt = new Uint8Array(8 + data.length);
+    const dv = new DataView(pkt.buffer);
+    pkt[0] = 0x00; pkt[1] = op;
+    dv.setUint16(2, data.length, true);
+    dv.setUint32(4, chk >>> 0, true);
+    pkt.set(data, 8);
+    const waitPromise = this._waitResponse(op, timeout);
+    try {
+      await this.writeRaw(slipEncode(pkt));
+      const frame = await waitPromise;
+      const fdv = new DataView(frame.buffer, frame.byteOffset, frame.byteLength);
+      return { value: fdv.getUint32(4, true), size: fdv.getUint16(2, true), data: frame.slice(8, 8 + fdv.getUint16(2, true)) };
+    } catch (e) { this.waiter = null; waitPromise.catch(() => {}); throw e; }
+  }
+  async enterBootloader() {
+    const s = async (opt) => { try { await this.port.setSignals(opt); } catch (e) {} };
+    await s({ dataTerminalReady: false });
+    await s({ requestToSend: true }); await sleep(120);
+    await s({ dataTerminalReady: true }); await s({ requestToSend: false }); await sleep(120);
+    await s({ dataTerminalReady: false }); await sleep(60);
+  }
+  async hardReset() {
+    const s = async (opt) => { try { await this.port.setSignals(opt); } catch (e) {} };
+    await s({ dataTerminalReady: false });
+    await s({ requestToSend: true }); await sleep(120);
+    await s({ requestToSend: false }); await sleep(80);
+  }
+  async sync(attempts = 8) {
+    const syncData = new Uint8Array(36);
+    syncData.set([0x07, 0x07, 0x12, 0x20]); syncData.fill(0x55, 4);
+    for (let i = 0; i < attempts; i++) {
+      try { this.decoder.reset(); await this.command(CMD.SYNC, syncData, 0, 800); return true; } catch (e) {}
+    }
+    return false;
+  }
+  async changeBaud(newBaud) {
+    if (newBaud === this.baudRate) return;
+    const d = new Uint8Array(8); const dv = new DataView(d.buffer);
+    dv.setUint32(0, newBaud, true); dv.setUint32(4, this.baudRate, true);
+    await this.command(CMD.CHANGE_BAUD, d, null, 3000); await sleep(80);
+    await this.stopReadLoop();
+    try { await this.port.close(); } catch (e) {}
+    await sleep(60); await this.port.open({ baudRate: newBaud });
+    this.baudRate = newBaud; this.decoder = new SlipDecoder();
+    await this.startReadLoop();
+    const ok = await this.sync(6);
+    if (!ok) throw new Error('切换波特率后同步失败');
+  }
+  async eraseFlash() { await this.command(CMD.ERASE_FLASH, new Uint8Array(0), 0, 60000); }
+  async flashWrite(address, data, onProgress) {
+    const total = data.length, blocks = Math.ceil(total / BLOCK_SIZE);
+    const begin = new Uint8Array(16); const bdv = new DataView(begin.buffer);
+    bdv.setUint32(0, total, true); bdv.setUint32(4, blocks, true);
+    bdv.setUint32(8, BLOCK_SIZE, true); bdv.setUint32(12, address, true);
+    await this.command(CMD.FLASH_BEGIN, begin, null, 90000);
+    for (let seq = 0; seq < blocks; seq++) {
+      const start = seq * BLOCK_SIZE;
+      const chunk = data.subarray(start, Math.min(start + BLOCK_SIZE, total));
+      const pkt = new Uint8Array(16 + chunk.length); const pdv = new DataView(pkt.buffer);
+      pdv.setUint32(0, chunk.length, true); pdv.setUint32(4, seq, true);
+      pdv.setUint32(8, 0, true); pdv.setUint32(12, 0, true);
+      pkt.set(chunk, 16);
+      await this.command(CMD.FLASH_DATA, pkt, calcChecksum(chunk), 15000);
+      if (onProgress) onProgress(Math.min(start + BLOCK_SIZE, total), total);
+    }
+  }
+  async flashEnd(reboot = true) {
+    const d = new Uint8Array(4);
+    new DataView(d.buffer).setUint32(0, reboot ? 0 : 1, true);
+    try { await this.command(CMD.FLASH_END, d, null, 4000); } catch (e) {}
+  }
+}
+let port = null, esp = null, files = [], busy = false;
+(function checkSupport() {
+  const warn = $('#supportWarn'), problems = [];
+  if (!('serial' in navigator)) problems.push('当前浏览器不支持 Web Serial API，请使用 <b>Chrome 89+ / Edge 89+</b>。');
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') problems.push('Web Serial 需要安全上下文，请通过 <b>https://</b> 访问。');
+  if (problems.length) { warn.innerHTML = '⚠️ ' + problems.join('<br>⚠️ '); warn.style.display = 'block'; $('#btnConnect').disabled = true; }
+})();
+function guessAddress(name) {
+  const n = name.toLowerCase();
+  if (n.includes('bootloader')) return 0x1000;
+  if (n.includes('partition')) return 0x8000;
+  if (n.includes('boot_app0')) return 0xe000;
+  if (n.includes('merged') || n.includes('full')) return 0x0;
+  if (n.includes('app') || n.includes('firmware') || n.includes('sketch')) return 0x10000;
+  return 0x0;
+}
+function parseAddress(str) {
+  str = String(str).trim();
+  if (/^0x[0-9a-f]+$/i.test(str)) return parseInt(str.slice(2), 16);
+  if (/^[0-9]+$/.test(str)) return parseInt(str, 10);
+  return NaN;
+}
+function renderFiles() {
+  const box = $('#fileList'); box.innerHTML = '';
+  files.forEach((f, idx) => {
+    const row = document.createElement('div'); row.className = 'fileitem';
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = f.name; name.title = f.name;
+    const size = document.createElement('div'); size.className = 'size'; size.textContent = fmtSize(f.data.length);
+    const input = document.createElement('input'); input.type = 'text'; input.value = '0x' + f.address.toString(16).toUpperCase();
+    input.addEventListener('change', () => {
+      const v = parseAddress(input.value);
+      if (isNaN(v)) { alert('地址格式不正确，请输入如 0x10000'); input.value = '0x' + files[idx].address.toString(16).toUpperCase(); return; }
+      files[idx].address = v; input.value = '0x' + v.toString(16).toUpperCase();
+    });
+    const del = document.createElement('button'); del.className = 'del'; del.textContent = '×'; del.title = '移除';
+    del.addEventListener('click', () => { files.splice(idx, 1); renderFiles(); });
+    row.append(name, size, input, del); box.appendChild(row);
+  });
+  $('#btnFlash').disabled = busy || !esp || files.length === 0;
+}
+$('#btnAddFile').addEventListener('click', () => $('#fileInput').click());
+$('#fileInput').addEventListener('change', async (e) => {
+  for (const f of Array.from(e.target.files || [])) {
+    try { const buf = new Uint8Array(await f.arrayBuffer()); files.push({ name: f.name, data: buf, address: guessAddress(f.name) }); log(`已添加 ${f.name}（${fmtSize(buf.length)}）→ 0x${guessAddress(f.name).toString(16).toUpperCase()}`, 'info'); }
+    catch (err) { log(`读取 ${f.name} 失败: ${err.message}`, 'err'); }
+  }
+  e.target.value = ''; renderFiles();
+});
+$('#btnConnect').addEventListener('click', async () => {
+  if (busy) return;
+  if (port) {
+    busy = true;
+    try { if (esp) await esp.stopReadLoop(); try { await port.close(); } catch (e) {} log('已断开串口', 'info'); }
+    finally { port = null; esp = null; busy = false; setStatus('未连接', ''); $('#btnConnect').textContent = '连接串口'; $('#btnFlash').disabled = true; }
+    return;
+  }
+  busy = true; $('#btnConnect').disabled = true;
+  const targetBaud = parseInt($('#baudSel').value, 10);
+  try {
+    log('正在请求串口权限…');
+    port = await navigator.serial.requestPort();
+    log(`打开串口 @ ${ROM_BAUD} baud`);
+    await port.open({ baudRate: ROM_BAUD, bufferSize: 4096 });
+    esp = new ESP32Flasher(port); esp.baudRate = ROM_BAUD;
+    await esp.startReadLoop();
+    let synced = false;
+    for (let attempt = 1; attempt <= 3 && !synced; attempt++) {
+      log(`复位进入下载模式…（第 ${attempt} 次）`);
+      await esp.enterBootloader(); await sleep(80);
+      synced = await esp.sync(8);
+      if (!synced) log('同步失败，重试中…', 'warn');
+    }
+    if (!synced) throw new Error('无法与芯片同步。请检查 USB 线、串口选择、BOOT 键。');
+    log('✅ 已进入 ESP32 ROM Bootloader', 'ok');
+    if (targetBaud > ROM_BAUD) {
+      try { log(`尝试切换到 ${targetBaud} baud…`); await esp.changeBaud(targetBaud); log(`✅ 波特率已切换至 ${targetBaud}`, 'ok'); }
+      catch (err) { log(`切换波特率失败，回退到 ${ROM_BAUD}`, 'warn'); try { await esp.stopReadLoop(); try { await port.close(); } catch (e) {} await port.open({ baudRate: ROM_BAUD }); esp.baudRate = ROM_BAUD; esp.decoder = new SlipDecoder(); await esp.startReadLoop(); await esp.enterBootloader(); if (!(await esp.sync(8))) throw new Error('回退后同步失败'); } catch (e2) { throw new Error('回退失败：' + e2.message); } }
+    }
+    setStatus(`已连接 · ${esp.baudRate} baud`, 'on'); $('#btnConnect').textContent = '断开连接';
+  } catch (err) {
+    log('❌ 连接失败：' + err.message, 'err');
+    try { if (esp) await esp.stopReadLoop(); } catch (e) {}
+    try { if (port) await port.close(); } catch (e) {}
+    port = null; esp = null; setStatus('未连接', 'err'); $('#btnConnect').textContent = '连接串口';
+  } finally { busy = false; $('#btnConnect').disabled = false; renderFiles(); }
+});
+function setStatus(text, cls) { const el = $('#connStatus'); el.textContent = text; el.className = 'status' + (cls ? ' ' + cls : ''); }
+$('#btnFlash').addEventListener('click', async () => {
+  if (busy || !esp || files.length === 0) return;
+  busy = true; $('#btnFlash').disabled = true; $('#btnConnect').disabled = true; $('#btnAddFile').disabled = true;
+  const totalBytes = files.reduce((s, f) => s + f.data.length, 0); let doneBytes = 0;
+  const setProgress = (pct, text) => { $('#progressBar').style.width = Math.max(0, Math.min(100, pct)) + '%'; $('#progressText').textContent = text; };
+  try {
+    setProgress(0, '准备中…');
+    if ($('#eraseAll').checked) { log('正在全片擦除 Flash…', 'warn'); setProgress(0, '擦除 Flash 中…'); const t0 = performance.now(); await esp.eraseFlash(); log(`✅ 全片擦除完成（${((performance.now() - t0) / 1000).toFixed(1)}s）`, 'ok'); }
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i], addrHex = '0x' + f.address.toString(16).toUpperCase();
+      log(`📦 [${i + 1}/${files.length}] 写入 ${f.name} → ${addrHex}`);
+      const t0 = performance.now();
+      await esp.flashWrite(f.address, f.data, (written, total) => { setProgress(((doneBytes + written) / totalBytes) * 100, `烧录 ${f.name} … ${Math.round((written / total) * 100)}%`); });
+      doneBytes += f.data.length; const secs = (performance.now() - t0) / 1000; log(`✅ ${f.name} 完成（${secs.toFixed(1)}s）`, 'ok');
+    }
+    setProgress(100, '正在重启…'); log('发送 FLASH_END，芯片即将重启…');
+    await esp.flashEnd(true); await sleep(300); await esp.hardReset();
+    log('🎉 烧录成功！ESP32 已重启运行。', 'ok'); setProgress(100, '✅ 烧录完成');
+  } catch (err) { log('❌ 烧录失败：' + err.message, 'err'); setProgress(0, '❌ 烧录失败'); }
+  finally { busy = false; $('#btnConnect').disabled = false; $('#btnAddFile').disabled = false; renderFiles(); }
+});
+if ('serial' in navigator) navigator.serial.addEventListener('disconnect', () => { if (port) { log('⚠️ 设备已拔出', 'warn'); port = null; esp = null; setStatus('未连接', 'err'); $('#btnConnect').textContent = '连接串口'; renderFiles(); } });
+log('就绪。请用 Chrome / Edge 打开，点击「连接串口」开始。');
+renderFiles();
+</script>
+</body>
+</html>
