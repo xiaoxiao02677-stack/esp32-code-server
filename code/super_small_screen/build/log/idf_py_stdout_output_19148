@@ -1,0 +1,248 @@
+Command: D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe D:\INSTALL\esp\v6.1\esp-idf\tools/idf_monitor.py -p COM12 -b 115200 --toolchain-prefix xtensa-esp32s3-elf- --target esp32s3 --revision 0 G:\demo\21_xiaozhi\code\super_small_screen\build\super_small_screen.elf G:\demo\21_xiaozhi\code\super_small_screen\build\bootloader\bootloader.elf --force-color -m 'D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe' 'D:\INSTALL\esp\v6.1\esp-idf\tools\idf.py' '-p' 'COM12'
+[0;32mI (107) esp_image: segment 1: paddr=0002b350 vaddr=3fc96600 sizeESP-ROM:esp32s3-20210327[0m
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x28 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4037ccec
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x14f0
+load:0x403c8700,len:0xde4
+load:0x403cb700,len:0x2f58
+entry 0x403c8904
+[0;32mI (24) boot: ESP-IDF v6.1-dirty 2nd stage bootloader[0m
+[0;32mI (24) boot: compile time Oct 11 2026 18:23:42[0m
+[0;32mI (25) boot: Multicore bootloader[0m
+[0;32mI (25) boot: chip revision: v0.1[0m
+[0;32mI (28) boot: efuse block revision: v1.2[0m
+[0;32mI (32) boot.esp32s3: Boot SPI Speed : 80MHz[0m
+[0;32mI (35) boot.esp32s3: SPI Mode       : DIO[0m
+[0;32mI (39) boot.esp32s3: SPI Flash Size : 4MB[0m
+[0;32mI (43) boot: Enabling RNG early entropy source...[0m
+[0;32mI (47) boot: Partition Table:[0m
+[0;32mI (50) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (56) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (63) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (69) boot:  2 factory          factory app      00 00 00010000 00200000[0m
+[0;32mI (76) boot: End of partition table[0m
+[0;32mI (79) esp_image: segment 0: paddr=00010020 vaddr=3c090020 size=1b328h (111400) map[0m
+[0;32mI (107) esp_image: segment 1: paddr=0002b350 vaddr=3fc96600 size=04cc8h ( 19656) load[0m
+[0;32mI (112) esp_image: segment 2: paddr=00030020 vaddr=42000020 size=8254ch (533836) map[0m
+[0;32mI (209) esp_image: segment 3: paddr=000b2574 vaddr=3fc9b2c8 size=00334h (   820) load[0m
+[0;32mI (210) esp_image: segment 4: paddr=000b28b0 vaddr=40374000 size=1258ch ( 75148) load[0m
+[0;32mI (230) esp_image: segment 5: paddr=000c4e44 vaddr=50000000 size=00024h (    36) load[0m
+[0;32mI (239) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (239) boot: Disabling RNG early entropy source...[0m
+[0;32mI (249) cpu_start: Multicore app[0m
+[0;32mI (258) cpu_start: GPIO 44 and 43 are used as console UART I/O pins[0m
+[0;32mI (258) cpu_start: Pro cpu start user code[0m
+[0;32mI (258) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (260) app_init: Application information:[0m
+[0;32mI (264) app_init: Project name:     super_small_screen[0m
+[0;32mI (269) app_init: App version:      5652ed40-dirty[0m
+[0;32mI (273) app_init: Compile time:     Oct 12 2026 00:36:02[0m
+[0;32mI (278) app_init: ELF file SHA256:  9b2cb853f...[0m
+[0;32mI (282) app_init: ESP-IDF:          v6.1-dirty[0m
+[0;32mI (287) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (290) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (294) efuse_init: Chip rev:         v0.1[0m
+[0;32mI (298) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (305) heap_init: At 3FC9F9F0 len 00049D20 (295 KiB): RAM[0m
+[0;32mI (310) heap_init: At 3FCE9710 len 00005724 (21 KiB): RAM[0m
+[0;32mI (315) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM[0m
+[0;32mI (320) heap_init: At 600FE000 len 00001FE8 (7 KiB): RTCRAM[0m
+[0;32mI (326) spi_flash: detected chip: generic[0m
+[0;32mI (329) spi_flash: flash io: dio[0m
+[0;32mI (333) sleep_gpio: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (338) sleep_gpio: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (345) main_task: Started on CPU0[0m
+[0;32mI (345) main_task: Calling app_main()[0m
+[0;32mI (355) main: boot: provisioning mode (SoftAP + UDP :5555)[0m
+[0;32mI (355) main: probe SDA=40 SCL=41 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (365) main: probe SDA=41 SCL=42 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (365) main: probe SDA= 8 SCL= 9 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (375) main: probe SDA= 9 SCL= 8 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (375) main: probe SDA=47 SCL=48 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (385) main: probe SDA=48 SCL=47 ... ESP_ERR_NOT_FOUND[0m
+[1;31mE (435) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (435) main: probe SDA=39 SCL=42 ... ESP_ERR_TIMEOUT[0m
+[1;31mE (485) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (485) main: probe SDA=42 SCL=39 ... ESP_ERR_TIMEOUT[0m
+[0;32mI (485) main: OLED found at 0x3C on SDA=41 SCL=40[0m
+[0;32mI (545) ssd1306: SSD1306 72x40 initialized[0m
+[0;32mI (545) main: OLED ready on SDA=41 SCL=40[0m
+[0;32mI (575) pp: pp rom version: e7ae62f[0m
+[0;32mI (575) net80211: net80211 rom version: e7ae62f[0m
+[0;32mI (585) wifi:wifi driver task: 3fceecc4, prio:23, stack:6656, core=0[0m
+[0;32mI (595) wifi:wifi firmware version: e12a754[0m
+[0;32mI (595) wifi:wifi certification version: v7.0[0m
+[0;32mI (595) wifi:config NVS flash: enabled[0m
+[0;32mI (595) wifi:config nano formatting: disabled[0m
+[0;32mI (595) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (605) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (605) wifi:Init management short buffer num: 32[0m
+[0;32mI (615) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (615) wifi:Init static tx FG buffer num: 2[0m
+[0;32mI (625) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (625) wifi:Init static rx buffer num: 10[0m
+[0;32mI (625) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (635) wifi_init: rx ba win: 6[0m
+[0;32mI (635) wifi_init: accept mbox: 6[0m
+[0;32mI (635) wifi_init: tcpip mbox: 32[0m
+[0;32mI (645) wifi_init: udp mbox: 6[0m
+[0;32mI (645) wifi_init: tcp mbox: 6[0m
+[0;32mI (645) wifi_init: tcp tx win: 5760[0m
+[0;32mI (655) wifi_init: tcp rx win: 5760[0m
+[0;32mI (655) wifi_init: tcp mss: 1440[0m
+[0;32mI (655) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (665) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (715) phy_init: phy_version 712,87e8c20e,Apr 13 2026,18:51:10[0m
+[0;32mI (765) wifi:mode : softAP (dc:54:75:df:3a:ad)[0m
+[0;32mI (765) wifi:Total power save buffer number: 16[0m
+[0;32mI (765) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (765) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (765) wifi_mgr: provisioning AP "XZS3-3AAD" (open), udp cfg on :5555, gw 192.168.4.1[0m
+[0;32mI (765) esp_netif_lwip: DHCP server started on interface WIFI_AP_DEF with IP: 192.168.4.1[0m
+[0;32mI (785) wifi_mgr: udp config server on port 5555[0m
+[0;32mI (795) main: provisioning AP "XZS3-3AAD" up (open), udp cfg on 192.168.4.1:5555[0m
+[0;32mI (795) main: send {"ssid":"...","password":"..."} to :5555 to save & reboot[0m
+[0;32mI (258) cpu_start: GPIO 44 and 43 are used as console UART I/O pE (455) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (455) main: probe SDA=39 SCL=42 ... ESP_ERR_TIMEOUT[0m
+[1;31mE (505) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (505) main: probe SDA=42 SCL=39 ... ESP_ERR_TIMEOUT[0m
+[0;32mI (505) main: OLED found at 0x3C on SDA=41 SCL=40[0m
+[0;32mI (565) ssd1306: SSD1306 72x40 initialized[0m
+[0;32mI (565) main: OLED ready on SDA=41 SCL=40[0m
+[0;32mI (595) pp: pp rom version: e7ae62f[0m
+[0;32mI (595) net80211: net80211 rom version: e7ae62f[0m
+[0;32mI (605) wifi:wifi driver task: 3fceed48, prio:23, stack:6656, core=0[0m
+[0;32mI (615) wifi:wifi firmware version: e12a754[0m
+[0;32mI (615) wifi:wifi certification version: v7.0[0m
+[0;32mI (615) wifi:config NVS flash: enabled[0m
+[0;32mI (615) wifi:config nano formatting: disabled[0m
+[0;32mI (615) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (625) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (625) wifi:Init management short buffer num: 32[0m
+[0;32mI (635) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (635) wifi:Init static tx FG buffer num: 2[0m
+[0;32mI (645) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (645) wifi:Init static rx buffer num: 10[0m
+[0;32mI (645) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (655) wifi_init: rx ba win: 6[0m
+[0;32mI (655) wifi_init: accept mbox: 6[0m
+[0;32mI (655) wifi_init: tcpip mbox: 32[0m
+[0;32mI (665) wifi_init: udp mbox: 6[0m
+[0;32mI (665) wifi_init: tcp mbox: 6[0m
+[0;32mI (665) wifi_init: tcp tx win: 5760[0m
+[0;32mI (675) wifi_init: tcp rx win: 5760[0m
+[0;32mI (675) wifi_init: tcp mss: 1440[0m
+[0;32mI (675) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (685) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (695) phy_init: phy_version 712,87e8c20e,Apr 13 2026,18:51:10[0m
+[0;32mI (745) wifi:mode : softAP (dc:54:75:df:3a:ad)[0m
+[0;32mI (745) wifi:Total power save buffer number: 16[0m
+[0;32mI (745) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (745) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (755) wifi_mgr: provisioning AP "XZS3-3AAD" (open), udp cfg on :5555, gw 192.168.4.1[0m
+[0;32mI (755) esp_netif_lwip: DHCP server started on interface WIFI_AP_DEF with IP: 192.168.4.1[0m
+[0;32mI (765) wifi_mgr: udp config server on port 5555[0m
+[0;32mI (775) main: provisioning AP "XZS3-3AAD" up (open), udp cfg on 192.168.4.1:5555[0m
+[0;32mI (775) main: send {"ssid":"...","password":"..."} to :5555 to save & reboot[0m
+[0;32mI (345) main_task: Started on CPU0[0m
+[0;32mI (345) main_task: Calling app_main()[0m
+[0;32mI (355) main: boot: provisioning mode (SoftAP + UDP :5555)[0m
+[0;32mI (355) main: probe SDA=40 SCL=41 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (365) main: probe SDA=41 SCL=42 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (365) main: probe SDA= 8 SCL= 9 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (375) main: probe SDA= 9 SCL= 8 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (375) main: probe SDA=47 SCL=48 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (385) main: probe SDA=48 SCL=47 ... ESP_ERR_NOT_FOUND[0m
+[1;31mE (435) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (435) main: probe SDA=39 SCL=42 ... ESP_ERR_TIMEOUT[0m
+[1;31mE (485) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (485) main: probe SDA=42 SCL=39 ... ESP_ERR_TIMEOUT[0m
+[0;32mI (485) main: OLED found at 0x3C on SDA=41 SCL=40[0m
+[0;32mI (545) ssd1306: SSD1306 72x40 initialized[0m
+[0;32mI (545) main: OLED ready on SDA=41 SCL=40[0m
+[0;32mI (575) pp: pp rom version: e7ae62f[0m
+[0;32mI (575) net80211: net80211 rom version: e7ae62f[0m
+[0;32mI (585) wifi:wifi driver task: 3fceed48, prio:23, stack:6656, core=0[0m
+[0;32mI (595) wifi:wifi firmware version: e12a754[0m
+[0;32mI (595) wifi:wifi certification version: v7.0[0m
+[0;32mI (595) wifi:config NVS flash: enabled[0m
+[0;32mI (595) wifi:config nano formatting: disabled[0m
+[0;32mI (595) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (605) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (605) wifi:Init management short buffer num: 32[0m
+[0;32mI (615) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (615) wifi:Init static tx FG buffer num: 2[0m
+[0;32mI (625) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (625) wifi:Init static rx buffer num: 10[0m
+[0;32mI (625) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (635) wifi_init: rx ba win: 6[0m
+[0;32mI (635) wifi_init: accept mbox: 6[0m
+[0;32mI (635) wifi_init: tcpip mbox: 32[0m
+[0;32mI (645) wifi_init: udp mbox: 6[0m
+[0;32mI (645) wifi_init: tcp mbox: 6[0m
+[0;32mI (645) wifi_init: tcp tx win: 5760[0m
+[0;32mI (655) wifi_init: tcp rx win: 5760[0m
+[0;32mI (655) wifi_init: tcp mss: 1440[0m
+[0;32mI (655) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (665) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (675) phy_init: phy_version 712,87e8c20e,Apr 13 2026,18:51:10[0m
+[0;32mI (745) wifi:mode : softAP (dc:54:75:df:3a:ad)[0m
+[0;32mI (745) wifi:Total power save buffer number: 16[0m
+[0;32mI (745) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (745) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (755) wifi_mgr: provisioning AP "XZS3-3AAD" (open), udp cfg on :5555, gw 192.168.4.1[0m
+[0;32mI (755) esp_netif_lwip: DHCP server started on interface WIFI_AP_DEF with IP: 192.168.4.1[0m
+[0;32mI (765) wifi_mgr: udp config server on port 5555[0m
+[0;32mI (785) main: provisioning AP "XZS3-3AAD" up (open), udp cfg on 192.168.4.1:5555[0m
+[0;32mI (785) main: send {"ssid":"...","password":"..."} to :5555 to save & reboot[0m
+[0;32mI (385) main: probe SDA= 9 SCL= 8 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (395) main: probe SDA=47 SCL=48 ... ESP_ERR_NOT_FOUND[0m
+[0;32mI (395) main: probe SDA=48 SCL=47 ... ESP_ERR_NOT_FOUND[0m
+[1;31mE (455) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (455) main: probe SDA=39 SCL=42 ... ESP_ERR_TIMEOUT[0m
+[1;31mE (505) i2c.master: probe device timeout. Please check if xfer_timeout_ms and pull-ups are correctly set up[0m
+[0;32mI (505) main: probe SDA=42 SCL=39 ... ESP_ERR_TIMEOUT[0m
+[0;32mI (505) main: OLED found at 0x3C on SDA=41 SCL=40[0m
+[0;32mI (565) ssd1306: SSD1306 72x40 initialized[0m
+[0;32mI (565) main: OLED ready on SDA=41 SCL=40[0m
+[0;32mI (595) pp: pp rom version: e7ae62f[0m
+[0;32mI (595) net80211: net80211 rom version: e7ae62f[0m
+[0;32mI (605) wifi:wifi driver task: 3fceed48, prio:23, stack:6656, core=0[0m
+[0;32mI (615) wifi:wifi firmware version: e12a754[0m
+[0;32mI (615) wifi:wifi certification version: v7.0[0m
+[0;32mI (615) wifi:config NVS flash: enabled[0m
+[0;32mI (615) wifi:config nano formatting: disabled[0m
+[0;32mI (615) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (625) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (625) wifi:Init management short buffer num: 32[0m
+[0;32mI (635) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (635) wifi:Init static tx FG buffer num: 2[0m
+[0;32mI (645) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (645) wifi:Init static rx buffer num: 10[0m
+[0;32mI (645) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (655) wifi_init: rx ba win: 6[0m
+[0;32mI (655) wifi_init: accept mbox: 6[0m
+[0;32mI (655) wifi_init: tcpip mbox: 32[0m
+[0;32mI (665) wifi_init: udp mbox: 6[0m
+[0;32mI (665) wifi_init: tcp mbox: 6[0m
+[0;32mI (665) wifi_init: tcp tx win: 5760[0m
+[0;32mI (675) wifi_init: tcp rx win: 5760[0m
+[0;32mI (675) wifi_init: tcp mss: 1440[0m
+[0;32mI (675) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (685) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (695) phy_init: phy_version 712,87e8c20e,Apr 13 2026,18:51:10[0m
+[0;32mI (785) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)[0m
+[0;32mI (815) wifi:mode : softAP (dc:54:75:df:3a:ad)[0m
+[0;32mI (815) wifi:Total power save buffer number: 16[0m
+[0;32mI (815) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (815) wifi:Init max length of beacon: 752/752[0m
+[0;32mI (815) wifi_mgr: provisioning AP "XZS3-3AAD" (open), udp cfg on :5555, gw 192.168.4.1[0m
+[0;32mI (815) esp_netif_lwip: DHCP server started on interface WIFI_AP_DEF with IP: 192.168.4.1[0m
+[0;32mI (835) wifi_mgr: udp config server on port 5555[0m
+[0;32mI (845) main: provisioning AP "XZS3-3AAD" up (open), udp cfg on 192.168.4.1:5555[0m
+[0;32mI (845) main: send {"ssid":"...","password":"..."} to :5555 to save & reboot[0m
+[0;32mI (835) main: provisioning AP "XZS3-3AAD" up (open), udp cfg on 192.168.4.1:5555[0m
+[0;32mI (835) main: send {"ssid":"...","password":"..."} to :5555 to save & reboot[0m

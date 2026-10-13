@@ -80,7 +80,7 @@ static void ui_draw_centered_scaled(const char *str, uint8_t y_top, uint8_t scal
 
 /* --- public screens --- */
 
-void ui_show_wifi_config(const char *ssid)
+void ui_show_wifi_config(const char *ssid, const char *url)
 {
     char line[17]; /* 12 chars + "..." + NUL */
 
@@ -96,6 +96,20 @@ void ui_show_wifi_config(const char *ssid)
             memcpy(line, ssid, len + 1);
         }
         ui_draw_centered_page(line, 3);
+    }
+
+    /* 配网页地址（去掉 "http://" 前缀，OLED 只显示主机部分） */
+    if (url && *url) {
+        const char *p = strstr(url, "://");
+        p = p ? p + 3 : url;
+        size_t len = strlen(p);
+        if (len > UI_MAX_LEN) {
+            memcpy(line, p, UI_MAX_LEN);
+            memcpy(line + UI_MAX_LEN, "...", 4);
+        } else {
+            memcpy(line, p, len + 1);
+        }
+        ui_draw_centered_page(line, 4);
     }
 
     ui_commit();

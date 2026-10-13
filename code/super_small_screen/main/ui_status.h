@@ -12,8 +12,9 @@ extern "C" {
 #endif
 
 /* No stored WiFi credentials -> AP mode provisioning.
- * Line 1: "WiFi CFG", line 2: SSID (truncated to 12 chars + "..." if long). */
-void ui_show_wifi_config(const char *ssid);
+ * Line 1: "WiFi CFG", line 2: SSID (truncated to 12 chars + "..." if long),
+ * line 4: config web URL (defaults to "192.168.4.1", "http://" prefix stripped). */
+void ui_show_wifi_config(const char *ssid, const char *url);
 
 /* Connecting to WiFi / server with stored credentials. */
 void ui_show_connecting(void);

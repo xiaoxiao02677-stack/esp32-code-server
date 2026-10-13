@@ -43,6 +43,13 @@
 - 烧录新鲜度自检：`strings` 查 bin 内特征串（如 "ni3 hao3 xiao3 he2"、NVS 清空日志串）可确认修复是否已编入。
 - 唤醒词日志锚点：`Initialized FD AFE detector`（afe_audio_engine.cc:243）、`Command: <拼音>`（custom_wake_word.cc:77）、`Received device_config`（application.cc:741）、`已清空云端唤醒词，恢复默认`（board.cc:242）、`Restored N server wake-word command(s) from NVS`（custom_wake_word.cc:159）。
 
+## 测试环境（2026-10-13 建立）
+- 测试服务器：root@sandyun.top:22223（Ubuntu 24.04 VMware VM，SSH 免密），部署包解压在 `/root/yh/`，与生产完全隔离。
+- 组件：MySQL8(root/123456, 库 xiaozhi_esp32_server)、Redis、nginx(8001 明文 ws+web / 9444 自签 TLS)、Java(xiaozhi-manager-api@8002, **须 JDK21**)、Python(xiaozhi-server WS:8000/HTTP:8003)。
+- 服务名：xiaozhi-manager-api / xiaozhi-server（systemd，适配 ~/yh 路径的 unit 与 nginx 站点存于 `code/test_environment/config/test/`，已开机自启）。
+- Python 依赖坑：torch/torchaudio==2.2.2+cpu 须走 `https://download.pytorch.org/whl/cpu`；须预装 python3-venv 与 ffmpeg。
+- gitee 分支 `test_environment`（基于 261012-backup）保存该部署包与配置；大文件 model.pt/sql.gz 被 .gitignore 排除。
+
 ## SSH 写文件规范（2026-10-10 踩坑，代价一次部署崩溃）
 - **禁止把命令回显/标记混进写入内容**：曾用 SSH 写文件时 `[rc=0]` 之类 shell 输出标记混入 db.changelog-master.yaml 第 840 行 → YAML 解析崩 → Liquibase 崩 → Java 崩溃循环并连累 Python。
 - 规范：写远程文件用 heredoc/`cat > file <<'EOF'` 且内容与命令输出严格隔离；写完必 `tail -n 5` + 语法校验（YAML 用 python -c yaml.safe_load，SQL/JSON 同理）再重启服务。
@@ -61,3 +68,34 @@
 - config.yaml 本地镜像与远程保持同步（auth_key 等），防后续全量推送覆盖回退。
 - 唤醒词推送链路（改造后）：WakeWordService 注册在 connection.py hello/device_register 处（断开双注销）；推送格式必须是 {"type":"device_config","payload":{"wake_word":[...]}}（固件只认这个 type）；空数组/空串 = 清空回默认词（固件 ClearWakeWordCommands 链路）。
 - 设备配置生效时机：开机连接时拉取 device_config；在线设备靠 push 实时生效；改 DB 后需设备重连或推送，光改库不生效。
+
+## 远端与上传（2026-10-12）
+- **gitee 远程**：`git@gitee.com:mm-Super-Nices/esp32-code-server.git`（账号 mm-Super-Nices，SSH 已认证）。本沙箱可直连 gitee/github（此前曾被 198.18.1.133 拦，现已通）。
+- `git push -u gitee main` 已成功：gitee `main=5652ed40`（全量 110 提交）；gitee `master=a76acb2` 为占位初始提交且是**默认分支**，仍空。
+- **baseline.json 决策（用户拍板）**：保持 git 追踪并提交（尽管 .gitignore 第21行本意忽略它，但文件此前已被追踪）。每次 reconcile 都会变更此文件，属预期。
+- **Windows 保留名 `nul` 隔离**：小屏仓库根曾存在未追踪的 `nul`(34B) 致 safe_reconcile 崩溃；用 `MoveFileExW` + `\\?\` 前缀隔离至 `G:/demo/21_xiaozhi/.trash/nul_quarantine.bin`。`safe_reconcile.py` 已加 RESERVED 设备名跳过逻辑（双重防护）。`.trash/` 与 `quarantine_nul.py` 等临时产物永不进提交。
+- **gitee master 已强制覆盖为本地 main（2026-10-12）**：旧 `master`(a76acb2, auto-sync 2026-10-08) 虽含 27223 文件但比本地 main 少 4304 个、且含两把私钥(certs/*.key)。先 `git show a76acb2:<path>` 抢救本地缺失的 6 个文档(PROJECT-HANDOFF/PROJECT-REQUIREMENTS*.md / 验收标准清单-v1/v2)并入 main 并提交(a5bc16d1)，再 `git push gitee main:master --force-with-lease`。结果 gitee master(=a5bc16d1) 与本地 main 完全一致、无私钥残留、共 31520 文件。两分支历史无关，直接 merge 会产约 6000 冲突，故用 force。**教训：gitee 旧快照里曾泄漏私钥，已借本次覆盖清除。**
+
+## Push Scheduler 话题源随机聊天（2026-10-13）
+- 服务端新增 `/api/push/schedule` 端点，支持 topic_sources 自动生成话题文案+TTS
+- 三场景校验：双空400、双填400、合法话题200
+- TopicGenerator 需在 app.py 中初始化并注入 PushScheduler
+- EdgeTTS 是 fallback provider，需本地配置 selected_module.TTS 和 TTS.EdgeTTS.type=edge
+
+## 测试环境（sandyun.top:22223）
+- 路径：`/root/yh/`
+- MySQL root/123456，库 xiaozhi_esp32_server
+- Java 8002（JDK 21），Python 8000/8003
+- nginx 8101/8144 路由
+- 生产快照已导入（Redis 18 keys, MySQL 33 tables）
+
+## 测试环境端口规划（2026-10-13）
+- 对外端口统一 8100-8200 范围（生产 8000-8100）
+- 8101: HTTP 设备连接/API/控制台 → Python WS:8000 + HTTP:8003, Java:8002
+- 8102: Health Check endpoint
+- 8104: MySQL 代理 (nginx stream)
+- 8105: Redis 代理 (nginx stream)
+- 8144: TLS (同 8101)
+- 8199: 心跳 (TCP/UDP)
+- nginx 已安装 nginx-extras，stream 模块支持
+- 所有配置已提交 gitee test_environment 分支

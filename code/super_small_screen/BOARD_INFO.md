@@ -46,18 +46,16 @@ super_small_screen/
 ├── build.bat                   # 全量编译（set-target esp32s3 + build，会 fullclean）
 ├── build_only.bat              # 增量编译（不动 sdkconfig，日常改代码用这个）
 ├── main/
-│   ├── main.c                  # HelloWorld + I2C 引脚自动探测
-│   ├── CMakeLists.txt
-│   └── idf_component.yml       # 托管组件清单（espressif/esp-websocket）
-└── components/ssd1306/         # 自研组件，零第三方依赖
-    ├── include/
-    │   ├── ssd1306.h           # OLED 宽高/地址/页数宏 + API
-    │   ├── i2cdev.h            # I2C 引脚宏 + 总线 API（含 probe）
-    │   └── font.h              # 5x7 字库声明
-    ├── ssd1306.c               # SSD1306 初始化/清屏/画字/刷新（帧缓冲 72x5）
-    ├── i2cdev.c                # 新版 i2c_master API 封装（ESP-IDF v6.x）
-    ├── font.c                  # 5x7 ASCII 字库（32..126）
-    └── CMakeLists.txt          # REQUIRES esp_driver_i2c（⚠️ 不是 driver）
+│   ├── main.c                  # 开机即配网模式（热点 + 网页配网）+ I2C 引脚自动探测
+│   ├── wifi_bridge.h/.cc       # C 桥接层：封装 C++ WifiManager 供 main.c(C) 调用
+│   ├── ui_status.c/h           # OLED 状态屏（配网/连接中/SYNC/CCC）
+│   ├── CMakeLists.txt          # SRCS main.c + ui_status.c + wifi_bridge.cc
+│   └── idf_component.yml       # 托管组件（espressif/esp-websocket、cjson）
+└── components/
+    ├── wifi_connect/           # 小圆屏同款配网组件（78/esp-wifi-connect v3.3.1 本地副本）
+    │   └── # 热点 XZS3-XXXX + DNS 劫持 + HTTP 配网页（assets/*.html 嵌入固件）
+    ├── ssd1306/                # 自研组件，零第三方依赖
+    └── server_link/            # WebSocket 客户端（ws://sandyun.top:8001/xiaozhi/v1/）
 ```
 
 ## 4. 编译（任何 agent 照做即可）
@@ -124,14 +122,27 @@ D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe -m serial.tools.miniter
 ```
 （或 IDF 环境下 `idf.py -p COM12 monitor`，退出 Ctrl+]）
 
-**关键日志（当前固件）：**
+**关键日志（当前固件 = 网页配网模式）：**
 ```
-I main: boot: ESP32-S3 + 0.42in SSD1306 hello world
+I main: boot: provisioning mode (hotspot + web portal)
 I main: probe SDA=40 SCL=41 ... ESP_ERR_TIMEOUT     <- 逐组扫描（每组约几十 ms）
 I main: OLED found at 0x3C on SDA=xx SCL=xx          <- ★ 真实引脚在这一行
-I ssd1306: SSD1306 72x40 initialized
-I main: hello world rendered on SDA=xx SCL=xx        <- 屏幕此时已显示 Hello / World!
+I WifiManager: Initializing...
+I WifiConfigurationAp: Access Point started with SSID XZS3-XXXX
+I main: config AP "XZS3-XXXX" up, portal http://192.168.4.1
 ```
+屏幕此时显示 `WiFi CFG` + 热点名 `XZS3-XXXX` + `192.168.4.1`。**不再硬编码/直连 WiFi**；
+配网页提交流程（组件自包含，无需 UDP 工具）：
+
+1. 手机连热点 `XZS3-XXXX`（开放）→ 自动弹配网页（DNS 劫持，或手动开 http://192.168.4.1，支持中文）
+2. 选 WiFi 输密码提交 → 设备 APSTA 下验证连接成功 → 凭据存 NVS（namespace "wifi"，键 ssid0/password0/...）
+3. 网页跳成功页 → 1s 后自动 POST /exit → 配网模式退出（日志 `WifiManager: Config exit requested from web`）
+4. main 收 CONFIG_MODE_EXIT → `wifi_bridge_start_station()` 连保存的 WiFi → CONNECTED → `server_link_start()`
+5. 串口出现 `WifiStation: Connected to ...` + `Got IP` → 服务器 config 同步完成显示 CCC
+
+日志对照：`I WifiConfigurationAp: Station xxx joined` = 手机连上热点；`WifiStation` 相关日志 = STA 阶段。
+配网组件 = `components/wifi_connect`（源：small_secreen 仓 managed_components/78__esp-wifi-connect v3.3.1），依赖 esp_http_server/DNS/cjson（cjson 复用 main 已声明的托管组件）。
+
 错误对照：`ESP_ERR_INVALID_RESPONSE` = NACK（引脚不对/地址不对）；`ESP_ERR_TIMEOUT` = 总线无应答（引脚不对或缺上拉）。
 
 ## 7. SSD1306 驱动要点（写新功能时参考）

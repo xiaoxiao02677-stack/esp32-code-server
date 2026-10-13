@@ -759,17 +759,17 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_manager/cmake_install.cmake")
+  include("G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_connect/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
   include("G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)

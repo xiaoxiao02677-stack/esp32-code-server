@@ -36,11 +36,9 @@ class PushScheduler:
         self._tasks: Dict[str, dict] = {}
         # 活跃 cron 循环任务：push_id -> asyncio.Task
         self._cron_tasks: Dict[str, asyncio.Task] = {}
-        # 活跃延迟推送任务：push_id -> asyncio.Task
-        self._delay_tasks: Dict[str, asyncio.Task] = {}
         # 频率限制：device_id -> {"count": int, "window_start": float}
         self._rate_limits: Dict[str, dict] = {}
-        # 优先级队列：(priority, timestamp) -> push_id (用于排序)
+        # 优先级队列：(priority, timestamp, push_id)
         self._priority_queue: List[tuple] = []
         # 执行中的任务 ID（防止重复执行同一优先级任务）
         self._executing: set = set()
@@ -49,10 +47,17 @@ class PushScheduler:
         self._wake_word_service = None  # 由 start() 注入
         # 并发度配置
         self._max_concurrent = 5  # 最大并发推送数
+        # 话题生成独立并发信号量（与 _max_concurrent 区分）
+        self._generation_semaphore = asyncio.Semaphore(3)
+        self._topic_generator = None  # 由 set_topic_generator() 注入
 
     def set_wake_word_service(self, service) -> None:
         """注入 WakeWordService 实例，用于获取在线设备。"""
         self._wake_word_service = service
+
+    def set_topic_generator(self, generator) -> None:
+        """注入 TopicGenerator 实例，用于 topic_sources 自动生成。"""
+        self._topic_generator = generator
 
     async def start(self) -> None:
         """启动调度器后台循环。"""
@@ -71,7 +76,7 @@ class PushScheduler:
             if executing_count >= self._max_concurrent:
                 continue
 
-            # 找出所有待执行的一次性任务（非 cron）
+            # 找出所有待执行的一次性任务（非 cron，cron 由独立协程管理）
             pending_tasks = [
                 (p, ts, pid)
                 for (p, ts, pid) in self._priority_queue
@@ -96,6 +101,18 @@ class PushScheduler:
             async with self._lock:
                 task = self._tasks.get(push_id)
             if task and task["status"] == PUSH_STATUS_PENDING:
+                # P0 修复：delayed 类型实际等待 delay_seconds 后再执行
+                push_type = task["schedule"].get("type", "immediate")
+                if push_type == "delayed":
+                    delay = task["schedule"].get("delay_seconds", 0)
+                    if isinstance(delay, (int, float)) and delay > 0:
+                        logger.info(f"推送任务 {push_id} 延迟 {delay}s 后执行")
+                        await asyncio.sleep(delay)
+                        # 重新检查状态（可能已被取消）
+                        async with self._lock:
+                            task = self._tasks.get(push_id)
+                        if not task or task["status"] != PUSH_STATUS_PENDING:
+                            return
                 await self._deliver(task)
         finally:
             self._executing.discard(push_id)
@@ -105,10 +122,7 @@ class PushScheduler:
         self._running = False
         for pid, task in list(self._cron_tasks.items()):
             task.cancel()
-        for pid, task in list(self._delay_tasks.items()):
-            task.cancel()
         self._cron_tasks.clear()
-        self._delay_tasks.clear()
         logger.info("PushScheduler 已停止")
 
     async def schedule_push(
@@ -153,7 +167,10 @@ class PushScheduler:
             self._priority_queue.sort(key=lambda x: (x[0], x[1]))
 
         if push_type == "immediate" or push_type == "delayed" or push_type == "cron":
-            # 任务已在优先级队列中，由 _priority_scheduler_loop 负责执行
+            # 任务已在优先级队列中，由 _priority_scheduler_loop 负责执行（immediate/delayed）
+            # 或启动独立循环协程（cron）
+            if push_type == "cron":
+                asyncio.create_task(self._execute_cron(push_id))
             logger.info(
                 f"推送任务已加入优先级队列: {push_id}, priority={priority}, type={push_type}, devices={len(task['device_ids'])}"
             )
@@ -185,11 +202,6 @@ class PushScheduler:
         if not task:
             return
         await self._deliver(task)
-
-    async def _execute_delayed(self, push_id: str, delay_seconds: float) -> None:
-        """延迟后执行推送。"""
-        await asyncio.sleep(delay_seconds)
-        await self._execute_immediate(push_id)
 
     async def _execute_cron(self, push_id: str) -> None:
         """按 cron 表达式周期执行推送（用 asyncio 模拟）。
@@ -257,6 +269,42 @@ class PushScheduler:
         rl = task["rate_limit"]
         priority = self._resolve_priority(task["schedule"].get("type", "immediate"), content)
         now = time.time()
+
+        # ---- 话题生成管线：content 含 topic_sources 且无 audio_url 时自动生成 ----
+        topic_sources = content.get("topic_sources")
+        if topic_sources and not content.get("audio_url") and self._topic_generator:
+            # 反查：从 _agent_devices 找到包含任一 device_id 的 agent
+            resolved_agent_id = None
+            if self._wake_word_service and hasattr(self._wake_word_service, "_agent_devices"):
+                for aid, devices in self._wake_word_service._agent_devices.items():
+                    if any(did in devices for did in device_ids):
+                        resolved_agent_id = aid
+                        break
+            try:
+                async with self._generation_semaphore:
+                    result = await self._topic_generator.generate_for_agent(
+                        resolved_agent_id or device_ids[0],
+                        topic_sources,
+                        location=content.get("location"),
+                    )
+                # 写回 content（所有设备共用同一话题）
+                content["text"] = result.get("text", "")
+                content["audio_url"] = result.get("audio_url", "")
+                content["subtitles"] = result.get("subtitles", [])
+                meta = result.get("generation_meta", {})
+                logger.info(
+                    f"话题生成完成: {push_id}, source={meta.get('source')}, "
+                    f"fallback={meta.get('fallback_used', False)}, audio_url={content.get('audio_url', '')}"
+                )
+            except Exception as e:
+                logger.error(f"话题生成失败，降级为纯文本推送: {e}", exc_info=True)
+                content["text"] = ""
+                content["audio_url"] = ""
+                content["subtitles"] = []
+        elif topic_sources and not content.get("audio_url") and not self._topic_generator:
+            logger.warning(
+                f"[{TAG}] content 含 topic_sources 但 TopicGenerator 未注入，跳过生成"
+            )
 
         sent = 0
         failed = 0

@@ -207,13 +207,13 @@ G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/perfmon/libperfmon.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/rt/librt.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/spiffs/libspiffs.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/ssd1306/libssd1306.a
-G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_manager/libwifi_manager.a
-G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/libespressif__esp_websocket_client.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/libespressif__cjson.a
+G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_connect/libwifi_connect.a
+G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/libespressif__cjson.a
+G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/libespressif__esp_websocket_client.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/server_link/libserver_link.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/libespressif__esp_websocket_client.a
-G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/libespressif__cjson.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/main/libmain.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/ssd1306/libssd1306.a
-G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_manager/libwifi_manager.a
+G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_connect/libwifi_connect.a
 G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/server_link/libserver_link.a

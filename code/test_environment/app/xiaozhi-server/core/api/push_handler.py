@@ -50,7 +50,8 @@ class PushHandler(BaseHandler):
                 "content": {
                     "push_type": "random",   // random | urgent
                     "audio_url": "https://...",
-                    "subtitles": [{"text": "..."}]
+                    "topic_sources": ["memory", "weather"],  // 与 audio_url 二选一
+                    "location": "杭州"        // 可选，影响 weather 源
                 },
                 "schedule": {
                     "type": "immediate",    // immediate | delayed | cron
@@ -72,8 +73,50 @@ class PushHandler(BaseHandler):
 
             if not isinstance(device_ids, list) or not device_ids:
                 return _json_response(400, "device_ids 必须为非空列表", status=400)
-            if not isinstance(content, dict) or not content.get("audio_url"):
-                return _json_response(400, "content 必须包含 audio_url", status=400)
+            if not isinstance(content, dict):
+                return _json_response(400, "content 必须为对象", status=400)
+
+            # ---- audio_url 与 topic_sources 二选一校验 ----
+            audio_url = content.get("audio_url")
+            topic_sources = content.get("topic_sources")
+
+            has_audio = bool(audio_url)
+            has_sources = topic_sources is not None and topic_sources != []
+
+            if not has_audio and not has_sources:
+                return _json_response(
+                    400,
+                    "content 必须包含 audio_url 或 topic_sources（二者至少选其一）",
+                    status=400,
+                )
+            if has_audio and has_sources:
+                return _json_response(
+                    400,
+                    "content 中 audio_url 与 topic_sources 不可同时存在（二选一）",
+                    status=400,
+                )
+
+            # ---- topic_sources 校验与归一化 ----
+            if has_sources:
+                # 单字符串归一化为列表
+                if isinstance(topic_sources, str):
+                    topic_sources = [topic_sources]
+                    content["topic_sources"] = topic_sources
+                if not isinstance(topic_sources, list) or not topic_sources:
+                    return _json_response(
+                        400, "topic_sources 必须为非空列表或单字符串", status=400
+                    )
+                valid_source_set = {"memory", "weather", "chat"}
+                invalid = set(topic_sources) - valid_source_set
+                if invalid:
+                    return _json_response(
+                        400,
+                        f"topic_sources 包含非法值: {invalid}，允许值: {valid_source_set}",
+                        status=400,
+                    )
+
+            # ---- content.location（可选，已透传）----
+            # content.get("location") 直接保留，不做额外校验
 
             # 校验 push_type
             push_type_value = content.get("push_type", "random")

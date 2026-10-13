@@ -171,9 +171,9 @@
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/spiffs/cmake_install.cmake",
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/ulp/cmake_install.cmake",
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/ssd1306/cmake_install.cmake",
-		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_manager/cmake_install.cmake",
-		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/cmake_install.cmake",
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__cjson/cmake_install.cmake",
+		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/wifi_connect/cmake_install.cmake",
+		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/espressif__esp_websocket_client/cmake_install.cmake",
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/server_link/cmake_install.cmake",
 		"G:/demo/21_xiaozhi/code/super_small_screen/build/esp-idf/main/cmake_install.cmake"
 	],

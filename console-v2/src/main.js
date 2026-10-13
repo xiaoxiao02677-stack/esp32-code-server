@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './styles/global.css'
-import { getToken } from './lib/api'
+import { getToken, startTokenCheck } from './lib/api'
 
 import CustomerHome from './views/customer/Home.vue'
 import CustomerDevices from './views/customer/Devices.vue'
@@ -30,6 +30,7 @@ import AdminEntityGraph from './views/admin/EntityGraph.vue'
 import AdminTimelineChart from './views/admin/TimelineChart.vue'
 import AdminPushScheduler from './views/admin/PushScheduler.vue'
 import AdminWeChatOpenClaw from './views/admin/WeChatOpenClaw.vue'
+import AdminWeChatClaw from './views/admin/WeChatClaw.vue'
 import Login from './views/Login.vue'
 
 const router = createRouter({
@@ -62,7 +63,8 @@ const router = createRouter({
     { path: '/admin/entity-graph', component: AdminEntityGraph },
     { path: '/admin/timeline-chart', component: AdminTimelineChart },
     { path: '/admin/push-scheduler', component: AdminPushScheduler },
-    { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw }
+    { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw },
+    { path: '/admin/wechat-claw', component: AdminWeChatClaw }
   ]
 })
 
@@ -75,3 +77,11 @@ router.beforeEach((to) => {
 })
 
 createApp(App).use(router).mount('#app')
+
+// 启动token过期检查：每30秒检查一次，过期时自动跳转登录页
+startTokenCheck(() => {
+  // token过期，跳转登录
+  if (!location.hash.startsWith('#/login')) {
+    location.hash = '#/login'
+  }
+})

@@ -1,0 +1,16 @@
+从API读取配置
+开始TTS性能测试...
+测试 TTS: EdgeTTS
+EdgeTTS 测试失败: Edge TTS请求失败: 403, message='Invalid response status', url='wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=2d073498afa044668d24df67b013bc3e&Sec-MS-GEC=63111F0EB0B014FDB63B22DF778FB2DC0E182585062492FD119661DCC8DC585D&Sec-MS-GEC-Version=1-143.0.3650.75'
+
+TTS性能测试结果:
++---------+-----------+---------+--------+
+| TTS模块   |   平均耗时(秒) |   测试句子数 | 状态     |
++=========+===========+=========+========+
+| EdgeTTS |         - |     0/3 | ❌ 网络错误 |
++---------+-----------+---------+--------+
+
+测试说明:
+- 超时控制: 单个请求最大等待时间为10秒
+- 错误处理: 无法连接和超时的列为网络错误
+- 排序规则: 按平均耗时从快到慢排序

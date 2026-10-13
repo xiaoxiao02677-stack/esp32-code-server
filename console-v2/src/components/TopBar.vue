@@ -79,6 +79,7 @@ const adminNav = [
   { label: '时间线', path: '/admin/timeline-chart', icon: '📊' },
   { label: '推送调度', path: '/admin/push-scheduler', icon: '📤' },
   { label: '微信绑定', path: '/admin/wechat-openclaw', icon: '💬' },
+  { label: '微信Claw', path: '/admin/wechat-claw', icon: '📱' },
   { label: '唤醒词', path: '/admin/wake-word', icon: '🔊' }
 ]
 const customerNav = [

@@ -1,0 +1,13 @@
+从API读取配置
+provider=LLMProvider model=deepseek-flash base_url=https://api.deepseek.com
+261013 05:56:52[0.9.7-00000000000000][core.providers.llm.openai.openai]-INFO-为域名 api.deepseek.com 禁用思考模式，参数: {'thinking': {'type': 'disabled'}}
+[1/5] first_token=0.84s total=1.14s chunks=36 chars=61 err=None
+261013 05:56:54[0.9.7-00000000000000][core.providers.llm.openai.openai]-INFO-为域名 api.deepseek.com 禁用思考模式，参数: {'thinking': {'type': 'disabled'}}
+[2/5] first_token=0.45s total=0.89s chunks=41 chars=73 err=None
+261013 05:56:56[0.9.7-00000000000000][core.providers.llm.openai.openai]-INFO-为域名 api.deepseek.com 禁用思考模式，参数: {'thinking': {'type': 'disabled'}}
+[3/5] first_token=0.58s total=1.24s chunks=81 chars=142 err=None
+261013 05:56:58[0.9.7-00000000000000][core.providers.llm.openai.openai]-INFO-为域名 api.deepseek.com 禁用思考模式，参数: {'thinking': {'type': 'disabled'}}
+[4/5] first_token=0.48s total=0.92s chunks=47 chars=84 err=None
+261013 05:57:00[0.9.7-00000000000000][core.providers.llm.openai.openai]-INFO-为域名 api.deepseek.com 禁用思考模式，参数: {'thinking': {'type': 'disabled'}}
+[5/5] first_token=0.64s total=1.09s chunks=57 chars=92 err=None
+SUMMARY ok=5/5 first_token p50=0.58s p95=0.84s total p50=1.09s p95=1.24s

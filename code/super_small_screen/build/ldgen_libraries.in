@@ -207,13 +207,13 @@ $<TARGET_FILE:idf::perfmon>
 $<TARGET_FILE:idf::rt>
 $<TARGET_FILE:idf::spiffs>
 $<TARGET_FILE:idf::ssd1306>
-$<TARGET_FILE:idf::wifi_manager>
-$<TARGET_FILE:idf::espressif__esp_websocket_client>
 $<TARGET_FILE:idf::espressif__cjson>
+$<TARGET_FILE:idf::wifi_connect>
+$<TARGET_FILE:__idf_espressif__cjson>
+$<TARGET_FILE:idf::espressif__esp_websocket_client>
 $<TARGET_FILE:idf::server_link>
 $<TARGET_FILE:__idf_espressif__esp_websocket_client>
-$<TARGET_FILE:__idf_espressif__cjson>
 $<TARGET_FILE:idf::main>
 $<TARGET_FILE:__idf_ssd1306>
-$<TARGET_FILE:__idf_wifi_manager>
+$<TARGET_FILE:__idf_wifi_connect>
 $<TARGET_FILE:__idf_server_link>

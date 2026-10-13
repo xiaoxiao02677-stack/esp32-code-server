@@ -129,7 +129,7 @@
 import { inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi } from '../../lib/api'
+import { adminApi, getToken } from '../../lib/api'
 
 const toast = inject('toast')
 const agents = ref([])
@@ -178,7 +178,7 @@ async function load() {
     // 加载在线设备
     try {
       const devRes = await fetch('/api/wake-word/devices', {
-        headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+        headers: { Authorization: 'Bearer ' + getToken() }
       })
       if (devRes.ok) {
         const d = await devRes.json()

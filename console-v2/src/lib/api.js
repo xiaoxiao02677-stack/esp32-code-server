@@ -7,20 +7,91 @@ import { sm2 } from 'sm-crypto'
 
 const API_BASE = '/xiaozhi'
 const TOKEN_KEY = 'cc_token'
+// Token提前过期检查阈值：剩余时间小于此值(毫秒)时提示续期
+const TOKEN_WARN_THRESHOLD_MS = 5 * 60 * 1000 // 5分钟
 
 export function getToken() {
-  // 一次性迁移：v2_token → cc_token（与原控制台登录态互通）
-  if (!localStorage.getItem(TOKEN_KEY)) {
-    const legacy = localStorage.getItem('v2_token')
-    if (legacy) {
-      localStorage.setItem(TOKEN_KEY, legacy)
-      localStorage.removeItem('v2_token')
+  const stored = localStorage.getItem(TOKEN_KEY)
+
+  // 如果已有cc_token，直接解析返回
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored)
+      if (parsed && parsed.token) return parsed.token
+      // 如果是纯字符串token（旧格式），直接返回
+      if (typeof parsed === 'string') return parsed
+    } catch {
+      // 解析失败，可能是纯字符串，直接返回
+      return stored
     }
   }
-  try { return JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null')?.token || localStorage.getItem(TOKEN_KEY) || '' } catch { return '' }
+
+  // 迁移：v2_token → cc_token（与原控制台登录态互通）
+  const legacy = localStorage.getItem('v2_token')
+  if (legacy) {
+    // 判断是否为纯字符串（JWT无"."分隔段解析失败即为纯串）
+    let isPlainString = false
+    try { JSON.parse(legacy); isPlainString = false } catch { isPlainString = true }
+    if (isPlainString) {
+      // 纯字符串JWT：包装为JSON格式并记录登录时间，供后续过期检测使用
+      localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: legacy, loginAt: Date.now() }))
+    } else {
+      // 已是JSON格式，原样迁移
+      localStorage.setItem(TOKEN_KEY, legacy)
+    }
+    localStorage.removeItem('v2_token')
+    return legacy
+  }
+
+  return ''
 }
+
+export function getTokenInfo() {
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    // 纯字符串token（迁移后或旧格式），补全必要字段避免误判过期
+    if (typeof parsed === 'string') {
+      return { token: parsed, loginAt: Date.now(), expire: 999999 }
+    }
+    // 兼容缺少loginAt/expire的残缺JSON
+    if (parsed.token && !parsed.loginAt) parsed.loginAt = Date.now()
+    if (parsed.token && !parsed.expire) parsed.expire = 999999
+    return parsed
+  } catch { return null }
+}
+
+/** 检查token是否即将过期（提前5分钟预警） */
+export function isTokenExpiringSoon() {
+  const info = getTokenInfo()
+  if (!info || !info.expire || !info.loginAt) return false
+  const remaining = info.loginAt + info.expire * 1000 - Date.now()
+  return remaining < TOKEN_WARN_THRESHOLD_MS
+}
+
+/** 检查token是否已过期 */
+export function isTokenExpired() {
+  const info = getTokenInfo()
+  if (!info || !info.expire || !info.loginAt) return true
+  return Date.now() >= info.loginAt + info.expire * 1000
+}
+
 export function setToken(raw) { localStorage.setItem(TOKEN_KEY, raw) }
 export function clearToken() { localStorage.removeItem(TOKEN_KEY) }
+
+// 定时器：每30秒检查一次token状态，即将过期时自动重新登录（如果有refresh机制）或提示
+let tokenCheckTimer = null
+export function startTokenCheck(onExpire) {
+  if (tokenCheckTimer) clearInterval(tokenCheckTimer)
+  tokenCheckTimer = setInterval(() => {
+    if (isTokenExpired()) {
+      clearToken()
+      if (onExpire && typeof onExpire === 'function') onExpire()
+      else if (!location.hash.startsWith('#/login')) location.hash = '#/login'
+    }
+  }, 30000) // 每30秒检查一次
+}
 
 function buildQuery(params) {
   if (!params) return ''
@@ -67,10 +138,17 @@ async function request(method, path, { body, params, formData, raw, rawBody, con
       const saved = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null')
       freshToken = !!(saved && saved.token && saved.expire && Date.now() < saved.loginAt + 10000)
     } catch { /* ignore */ }
-    if (!freshToken) {
+    // 仅对「用户会话类」接口清 token 踢登录；服务间代理/系统接口的 401
+    // （如"无效的服务器密钥"）属于后端配置问题，不应把用户踢出登录页。
+    const isAuthCheck = path.startsWith('/user/info') || path.startsWith('/user/pub-config')
+    if (!freshToken && (isAuthCheck || isTokenExpired())) {
       clearToken()
       if (!location.hash.startsWith('#/login')) location.hash = '#/login'
       throw { code: 401, msg: '登录已过期，请重新登录' }
+    }
+    if (!isAuthCheck) {
+      // 非会话校验接口的 401：仅抛错给调用方展示，不动登录态
+      throw { code: 401, msg: data.msg || '无权限访问该接口' }
     }
     throw { code: 401, msg: '登录已过期（在途请求）' }
   }
@@ -278,7 +356,25 @@ export const adminApi = {
   wakeWordPush: (agentId, config) => api.post('/api/wake-word/push', { agentId, ...config }),
   // ===== 记忆扩展API =====
   memoryTimelineChart: (agentId, days) => api.get(`/memory/timeline/${agentId}/chart?days=${days || 30}`),
+  // ===== 推送调度 API（Python /api/push/*，Bearer auth_key 鉴权） =====
+  // 任务列表：data.tasks[] = { push_id, status, type, priority, device_count, sent_count, failed_count, created_at }
   pushTasks: () => api.get('/api/push/tasks'),
+  // 创建任务：body = { device_ids: [..], content: { push_type, audio_url, subtitles }, schedule: { type, cron?, delay_seconds? }, rate_limit? }
+  // 返回 data.push_id
   pushSchedule: (data) => api.post('/api/push/schedule', data),
+  // 单任务详情：data = { push_id, status, device_ids, content, schedule, rate_limit, sent_count, failed_count, created_at }
   pushGetTask: (pushId) => api.get(`/api/push/tasks/${pushId}`),
+  pushOnlineDevices: () => api.get('/api/wake-word/devices'),
+
+  // ===== 微信ClawBot API =====
+  clawUsers: () => api.get('/wechat/claw/users'),
+  clawBind: (data) => api.post('/wechat/claw/bind', data),
+  clawUnbind: (openid) => api.del(`/wechat/claw/unbind/${openid}`),
+  clawConversations: (openid) => api.get(`/wechat/claw/conversations/${openid}`),
+  clawClearConversation: (openid) => api.del(`/wechat/claw/conversations/${openid}`),
+  clawSendMessage: (openid, data) => api.post(`/wechat/claw/messages/${openid}`, data),
+  clawSchedules: (openid) => api.get(`/wechat/claw/schedules/${openid}`),
+  clawCreateSchedule: (openid, data) => api.post(`/wechat/claw/schedules/${openid}`, data),
+  clawDeleteSchedule: (openid, id) => api.del(`/wechat/claw/schedules/${openid}/${id}`),
+  clawToggleSchedule: (openid, id) => api.put(`/wechat/claw/schedules/${openid}/${id}/toggle`),
 }

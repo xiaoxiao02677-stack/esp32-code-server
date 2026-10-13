@@ -1,0 +1,12 @@
+== DeepSeek API ==
+tcp=0.032864 tls=0.072031 ttfb=0.126925 total=0.127014
+tcp=0.021809 tls=0.061365 ttfb=0.115296 total=0.115357
+tcp=0.022318 tls=0.057821 ttfb=0.124225 total=0.124276
+== EdgeTTS (speech.platform.bing.com) ==
+tcp=0.146696 tls=0.272138 ttfb=0.330689 total=0.330740
+tcp=0.058017 tls=0.178950 ttfb=0.235980 total=0.236030
+tcp=0.059187 tls=0.184101 ttfb=0.243425 total=0.243474
+== QwenTTS upstream (maas.qianwenaiapi.com) ==
+tcp=0.102426 tls=0.146366 ttfb=0.173153 total=0.173208
+tcp=0.031062 tls=0.072952 ttfb=0.098866 total=0.098919
+tcp=0.027452 tls=0.062933 ttfb=0.090771 total=0.090803

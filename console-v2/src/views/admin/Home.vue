@@ -23,6 +23,7 @@
           <button class="btn btn-ghost" @click="$router.push('/admin/devices')">设备</button>
           <button class="btn btn-ghost" @click="$router.push('/admin/chat')">聊天记录</button>
           <button class="btn btn-ghost" @click="$router.push('/admin/templates')">模板</button>
+          <button class="btn btn-ghost" @click="$router.push('/admin/push-scheduler')">推送调度</button>
         </div>
         <div class="blob-3d">📊</div>
       </div>

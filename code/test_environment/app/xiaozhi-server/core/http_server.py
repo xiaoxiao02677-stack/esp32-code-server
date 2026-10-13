@@ -1,4 +1,6 @@
 import asyncio
+import os
+import re
 from aiohttp import web
 from config.logger import setup_logging
 from core.api.ota_handler import OTAHandler
@@ -132,6 +134,57 @@ class SimpleHttpServer:
         self.wechat_claw_handler = WeChatClawHandler(self.config, claw_service)
         self.logger.bind(tag=TAG).info("WeChatClawHandler 已绑定")
 
+    async def _handle_tmp_options(self, request: web.Request) -> web.Response:
+        """OPTIONS 预检，返回 CORS 头。"""
+        resp = web.Response(status=204)
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "client-id, content-type, device-id, authorization"
+        return resp
+
+    async def _handle_tmp_download(self, request: web.Request) -> web.Response:
+        """静态文件服务：从 tmp/ 目录提供 TTS 合成音频。
+
+        URL: /tmp/{filename}
+        - filename 只允许安全字符（字母、数字、点、下划线、横线）
+        - 路径须落在项目根目录下的 tmp/ 子目录内（防路径穿越）
+        """
+        try:
+            fname = request.match_info.get("filename", "")
+            if not fname:
+                return web.Response(text="filename required", status=400)
+            fname = os.path.basename(fname)
+            if not re.match(r"^[A-Za-z0-9.\-_]+$", fname):
+                return web.Response(text="invalid filename", status=400)
+
+            tmp_dir = os.path.join(os.getcwd(), "tmp")
+            file_path = os.path.join(tmp_dir, fname)
+            file_real = os.path.realpath(file_path)
+            tmp_dir_real = os.path.realpath(tmp_dir)
+            if not file_real.startswith(tmp_dir_real + os.sep) and file_real != tmp_dir_real:
+                return web.Response(text="forbidden", status=403)
+            if not os.path.isfile(file_real):
+                return web.Response(text="file not found", status=404)
+
+            # 推断 MIME 类型
+            ext = os.path.splitext(fname)[1].lower()
+            content_type = {
+                ".mp3": "audio/mpeg",
+                ".wav": "audio/wav",
+                ".ogg": "audio/ogg",
+                ".opus": "audio/opus",
+                ".flac": "audio/flac",
+            }.get(ext, "application/octet-stream")
+
+            resp = web.FileResponse(path=file_real, headers={
+                "Cache-Control": "no-cache",
+                "Access-Control-Allow-Origin": "*",
+            })
+            resp.content_type = content_type
+            return resp
+        except Exception as e:
+            self.logger.bind(tag=TAG).error(f"tmp 文件下载异常: {e}")
+            return web.Response(text="download error", status=500)
+
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
 
@@ -176,6 +229,10 @@ class SimpleHttpServer:
                             web.options(
                                 "/xiaozhi/ota/", self.ota_handler.handle_options
                             ),
+                            web.options(
+                                "/xiaozhi/ota/download/{filename}",
+                                self.ota_handler.handle_options,
+                            ),
                             # 下载接口，仅提供 data/bin/*.bin 下载
                             web.get(
                                 "/xiaozhi/ota/download/{filename}",
@@ -184,6 +241,15 @@ class SimpleHttpServer:
                             web.options(
                                 "/xiaozhi/ota/download/{filename}",
                                 self.ota_handler.handle_options,
+                            ),
+                            # TTS 临时音频静态暴露：/tmp/{filename}
+                            web.get(
+                                "/tmp/{filename}",
+                                self._handle_tmp_download,
+                            ),
+                            web.options(
+                                "/tmp/{filename}",
+                                self._handle_tmp_options,
                             ),
                         ]
                     )

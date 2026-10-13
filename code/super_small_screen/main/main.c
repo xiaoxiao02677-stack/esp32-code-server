@@ -1,21 +1,32 @@
 /*
- * main.c - 直接连接 Sandyun WiFi，测试 WebSocket 链路
- * 硬编码凭证，跳过 AP 配网，用于验证射频和服务器连通性
+ * main.c - 开机即配网模式（小圆屏同款：热点 + 浏览器网页配网）
+ *
+ * 上电后立刻启动热点 "XZS3-XXXX"（开放网络，网关 192.168.4.1）：
+ *   1. 手机连热点，自动弹出配网页（DNS 劫持/captive portal）
+ *   2. 网页选 WiFi 输密码提交 -> 设备验证连接成功 -> 凭据存 NVS
+ *   3. 网页跳转成功页 -> 自动请求 /exit -> 配网模式退出
+ *   4. 设备自动用保存的 WiFi 连接 STA（CONFIG_MODE_EXIT -> start_station）
+ *   5. STA 连上（CONNECTED）-> 启动 server_link（WebSocket 到服务器）
+ *
+ * 配网组件源码在 components/wifi_connect/（78/esp-wifi-connect v3.3.1 本地副本），
+ * C 桥接层 main/wifi_bridge.{h,cc}。屏幕状态机：
+ *   配网中  "WiFi CFG" + 热点名 + 192.168.4.1
+ *   连WiFi  Connecting
+ *   连服务器 SYNC...
+ *   配置完成 CCC（大眼）
  */
 #include <string.h>
 
 #include "esp_log.h"
 #include "esp_err.h"
-#include "nvs_flash.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
 
 #include "ssd1306.h"
 #include "i2cdev.h"
 #include "ui_status.h"
-#include "wifi_manager.h"
+#include "wifi_bridge.h"
 #include "server_link.h"
 
 static const char *TAG = "main";
@@ -51,34 +62,42 @@ static int detect_oled_pins(void)
     return -1;
 }
 
-#define APP_BIT_WIFI_CONNECTED  BIT0
-#define APP_BIT_CFG_RECEIVED    BIT1
-
-static EventGroupHandle_t s_app_events;
-
-static void on_config_received(device_config_t *cfg)
+/* WiFi 事件 -> UI + server_link 联动（在 WiFi 事件任务上下文，勿阻塞） */
+static void on_wifi_event(wifi_bridge_event_t ev, const char *data)
 {
-    ESP_LOGI(TAG, "config received: session_id=%s", cfg->session_id);
-    xEventGroupSetBits(s_app_events, APP_BIT_CFG_RECEIVED);
+    switch (ev) {
+    case WIFI_BRIDGE_EVENT_CONFIG_MODE_ENTER:
+        ESP_LOGI(TAG, "config AP up: ssid=%s url=%s",
+                 wifi_bridge_get_ap_ssid(), wifi_bridge_get_ap_url());
+        break;
+    case WIFI_BRIDGE_EVENT_CONFIG_MODE_EXIT:
+        ESP_LOGI(TAG, "config mode exit, connecting to saved WiFi...");
+        ui_show_connecting();
+        wifi_bridge_start_station();
+        break;
+    case WIFI_BRIDGE_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "WiFi connected: ssid=%s ip=%s",
+                 data, wifi_bridge_get_ip());
+        ui_show_sync();
+        {
+            int st = server_link_get_state();
+            if (st == SERVER_LINK_STATE_IDLE || st == SERVER_LINK_STATE_FAILED) {
+                int rc = server_link_start();
+                ESP_LOGI(TAG, "server_link_start() = %d", rc);
+            }
+        }
+        break;
+    case WIFI_BRIDGE_EVENT_DISCONNECTED:
+        ESP_LOGW(TAG, "WiFi disconnected (reason=%s)", data);
+        break;
+    }
 }
-
-/* Hard-coded WiFi credentials for Sandyun AP */
-#define WIFI_SSID     "Sandyun"
-#define WIFI_PASSWORD "87316918"
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "boot: connect to %s, test WebSocket link", WIFI_SSID);
+    ESP_LOGI(TAG, "boot: provisioning mode (hotspot + web portal)");
 
-    /* 1. NVS */
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-
-    /* 2. OLED */
+    /* 1. OLED（I2C 引脚自动探测） */
     int found = detect_oled_pins();
     if (found < 0) {
         ESP_LOGE(TAG, "no OLED - check wiring");
@@ -90,46 +109,39 @@ void app_main(void)
     ESP_ERROR_CHECK(ssd1306_init());
     ESP_LOGI(TAG, "OLED ready on SDA=%d SCL=%d", sda, scl);
 
-    s_app_events = xEventGroupCreate();
-    ESP_ERROR_CHECK(s_app_events ? ESP_OK : ESP_ERR_NO_MEM);
-
-    /* 3. Save WiFi creds to NVS and connect */
-    nvs_handle_t nvs;
-    nvs_open("wifi", NVS_READWRITE, &nvs);
-    nvs_set_str(nvs, "ssid", WIFI_SSID);
-    nvs_set_str(nvs, "password", WIFI_PASSWORD);
-    nvs_commit(nvs);
-    nvs_close(nvs);
-    ESP_LOGI(TAG, "WiFi creds saved: %s", WIFI_SSID);
-
-    ui_show_connecting();
-    ESP_LOGI(TAG, "Connecting to '%s'...", WIFI_SSID);
-    if (wifi_connect_sta() != ESP_OK) {
-        ESP_LOGE(TAG, "WiFi connect FAILED");
-        ui_show_hello_world();
+    /* 2. WiFi 配网组件（内部完成 NVS/netif/事件循环/wifi 驱动初始化） */
+    if (wifi_bridge_init("XZS3", "zh-CN") != ESP_OK) {
+        ESP_LOGE(TAG, "wifi_bridge_init failed");
+        ui_show_text("AP ERR", "RST");
         for (;;) vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    ESP_LOGI(TAG, "WiFi connected: ssid=%s ip=%s",
-             wifi_manager_get_sta_ssid(), wifi_manager_get_ip());
+    wifi_bridge_set_event_callback(on_wifi_event);
 
-    /* 4. Server link */
-    ui_show_sync();
-    server_link_set_on_config(on_config_received);
-    int rc = server_link_start();
-    ESP_LOGI(TAG, "server_link_start() = %d", rc);
+    /* 3. 开机直接启动配网热点（不连 WiFi，用户要求） */
+    wifi_bridge_start_config_ap();
+    wifi_bridge_set_tx_power_dbm(8); /* 发射功率上限 8dBm（档位值 34，非 ×4） */
 
-    EventBits_t bits = xEventGroupWaitBits(s_app_events, APP_BIT_CFG_RECEIVED,
-                                           pdTRUE, pdFALSE,
-                                           pdMS_TO_TICKS(30000));
-    if (bits & APP_BIT_CFG_RECEIVED ||
-        server_link_get_state() == SERVER_LINK_STATE_CONFIG_RECEIVED) {
-        ui_show_ccc();
-        ESP_LOGI(TAG, "CCC displayed - WebSocket link OK");
-    } else {
-        ESP_LOGE(TAG, "server config not received (state=%d)", server_link_get_state());
-        ui_show_hello_world();
+    const char *ssid = wifi_bridge_get_ap_ssid();
+    const char *url = wifi_bridge_get_ap_url();
+    ui_show_wifi_config(ssid, url);
+    ESP_LOGI(TAG, "config AP \"%s\" up, portal %s", ssid, url);
+    ESP_LOGI(TAG, "connect phone to AP -> portal -> submit WiFi -> STA -> server");
+
+    /* 4. 主循环：轮询 server_link 状态，配置同步完成即亮 CCC */
+    int last_state = -1;
+    for (;;) {
+        int st = server_link_get_state();
+        if (st != last_state) {
+            ESP_LOGI(TAG, "server_link state=%d", st);
+            last_state = st;
+            if (st == SERVER_LINK_STATE_CONFIG_RECEIVED) {
+                ui_show_ccc();
+                ESP_LOGI(TAG, "CCC displayed - WebSocket link OK");
+            } else if (st == SERVER_LINK_STATE_FAILED) {
+                /* 服务器不可达：保持现状，WiFi 重连后 CONNECTED 会再次 start */
+                ui_show_text("NO SRV", "RETRY...");
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
-
-    /* Keep alive */
-    for (;;) vTaskDelay(pdMS_TO_TICKS(1000));
 }

@@ -1,0 +1,8 @@
+从API读取配置
+provider=TTSProvider model=qwen3-tts-flash voice=Cherry type=qwen_tts
+warmup=0.67s ok=Y
+===FULL===
+provider=TTSProvider model=qwen3-tts-flash voice=Cherry type=qwen_tts
+warmup=0.67s ok=Y
+[1/2] total=30.98s bytes=126764 err=None
+[2/2] total=1.62s bytes=299564 err=None

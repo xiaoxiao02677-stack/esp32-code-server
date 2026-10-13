@@ -19,6 +19,8 @@ if("${CONFIG}" STREQUAL "" OR "${CONFIG}" STREQUAL "")
   "project_elf_src_esp32s3.c"
   "super_small_screen.bin"
   "super_small_screen.map"
+  "wifi_configuration.html.S"
+  "wifi_configuration_done.html.S"
   "x509_crt_bundle.S"
   )
 endif()
