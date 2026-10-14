@@ -4,9 +4,12 @@
 // 鉴权: Bearer token (localStorage)，登录密码 SM2 加密 —— 与原控制台完全一致 (C3)
 
 import { sm2 } from 'sm-crypto'
+import { ref } from 'vue'
 
 const API_BASE = '/xiaozhi'
 const TOKEN_KEY = 'cc_token'
+// 用户模块：登录后缓存的用户信息（username/superAdmin/roles[]），路由守卫与导航切换按钮用
+const USER_INFO_KEY = 'cc_user_info'
 // Token提前过期检查阈值：剩余时间小于此值(毫秒)时提示续期
 const TOKEN_WARN_THRESHOLD_MS = 5 * 60 * 1000 // 5分钟
 
@@ -78,7 +81,67 @@ export function isTokenExpired() {
 }
 
 export function setToken(raw) { localStorage.setItem(TOKEN_KEY, raw) }
-export function clearToken() { localStorage.removeItem(TOKEN_KEY) }
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_INFO_KEY)
+  // 退出登录/过期清理：同步重置响应式用户状态，避免界面按钮残留旧角色判断
+  userState.value = { username: '', superAdmin: 0, roles: [] }
+}
+
+/** 读取本地用户信息（登录时写入；旧登录态可能不存在，调用方需兜底） */
+export function getUserInfo() {
+  try {
+    const raw = localStorage.getItem(USER_INFO_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed
+  } catch { return null }
+}
+
+/** 是否具备管理端访问权限：superAdmin===1 或 roles 含 super_admin/admin */
+export function hasAdminRole(info) {
+  const u = info || getUserInfo()
+  if (!u) return false
+  if (Number(u.superAdmin) === 1) return true
+  const roles = Array.isArray(u.roles) ? u.roles : []
+  return roles.some(r => r === 'super_admin' || r === 'admin')
+}
+
+// 响应式用户状态：登录/守卫/按钮组件共用，避免裸读 localStorage 的非响应式陈旧值
+export const userState = ref(getUserInfo() || { username: '', superAdmin: 0, roles: [] })
+
+/** 是否为 demo 公开展示账号（DB super_admin=1）：默认进游客页但保留管理端切换按钮 */
+export function isDemoUser(info) {
+  const u = info || userState.value
+  return !!(u && u.username && String(u.username).toLowerCase() === 'demo')
+}
+
+// 登录后默认路由：demo 展示账号→游客页；超管/管理员→管理端；其余→游客页
+// 依赖 userState（refreshUserInfo 补全后调用才可靠；未补全时退化为角色未知→游客页，安全侧）
+export function defaultRouteAfterLogin() {
+  if (isDemoUser()) return '/customer'
+  if (hasAdminRole(userState.value)) return '/admin'
+  return '/customer'
+}
+
+// 用 /user/info 补全身份（TokenDTO 缺 superAdmin/roles 的旧后端兜底；新后端两源一致无副作用）
+// 成功后同步写回 cc_user_info 与 userState；失败静默返回 false（不 throw，调用方用 localStorage 旧值）
+export async function refreshUserInfo() {
+  if (!getToken()) return false
+  try {
+    const res = await api.get('/user/info')
+    const d = res.data || {}
+    const merged = {
+      username: d.username || (userState.value ? userState.value.username : '') || '',
+      superAdmin: Number(d.superAdmin) === 1 ? 1 : 0,
+      roles: Array.isArray(d.roles) ? d.roles : (userState.value && Array.isArray(userState.value.roles) ? userState.value.roles : [])
+    }
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(merged))
+    userState.value = merged
+    return true
+  } catch { return false }
+}
 
 // 定时器：每30秒检查一次token状态，即将过期时自动重新登录（如果有refresh机制）或提示
 let tokenCheckTimer = null
@@ -181,6 +244,17 @@ export const authApi = {
       username, password: encrypted, captchaId
     })
     setToken(JSON.stringify({ ...res.data, loginAt: Date.now() }))  // loginAt: 401 竞态防护
+    // 用户模块：缓存用户身份（username/superAdmin/roles），路由守卫与端切换按钮据此判断管理端权限。
+    // 老后端登录响应可能不带 superAdmin/roles —— roles 取不到存 []，superAdmin 缺省按普通用户处理。
+    const d = res.data || {}
+    const info = {
+      username: d.username || username,
+      superAdmin: d.superAdmin === undefined || d.superAdmin === null ? 0 : d.superAdmin,
+      roles: Array.isArray(d.roles) ? d.roles : []
+    }
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(info))
+    // 同步响应式状态：登录成功即写入（新后端 login 响应已带权威角色数据时立即生效，不等 refreshUserInfo）
+    userState.value = info
     return res.data
   },
   userInfo: () => api.get('/user/info')
@@ -297,6 +371,41 @@ export const adminApi = {
   deleteUser: (id) => api.del(`/admin/users/${id}`),
   changeUserStatus: (ids, status) => api.put(`/admin/users/changeStatus/${status}`, ids),
 
+  // ===== 用户模块：用户管理扩展（SPEC §4.2） =====
+  userCreate: (b) => api.post('/admin/users', b),
+  userDetail: (id) => api.get(`/admin/users/${id}`),
+  userAssignRoles: (b) => api.put('/admin/users/roles', b),
+  userRestore: (id) => api.put(`/admin/users/restore/${id}`),
+  userImport: (list) => api.post('/admin/users/import', list),
+  userExportUrl: (p) => `/xiaozhi/admin/users/export?${new URLSearchParams(p)}`,
+  userSessions: (p) => api.get('/admin/users/sessions', p),
+  userForceLogout: (id) => api.post(`/admin/users/forceLogout/${id}`, {}),
+
+  // ===== 用户模块：角色（SPEC §4.1） =====
+  rolePage: (p) => api.get('/admin/role/page', p),
+  roleList: () => api.get('/admin/role/list'),
+  roleDetail: (id) => api.get(`/admin/role/${id}`),
+  roleSave: (b) => api.post('/admin/role/save', b),
+  roleUpdate: (b) => api.put('/admin/role/update', b),
+  roleDelete: (ids) => api.post('/admin/role/delete', ids),
+
+  // ===== 用户模块：展示配置 / 默认配置（SPEC §4.3） =====
+  displayConfigGet: (p) => api.get('/admin/display-config', p),
+  displayConfigSave: (b) => api.put('/admin/display-config', b),
+  userDefaultGet: (p) => api.get('/admin/user-default', p),
+  userDefaultSave: (b) => api.put('/admin/user-default', b),
+
+  // ===== 用户模块：自定义模型/音色审核（SPEC §4.4 管理端） =====
+  customModelAuditPage: (p) => api.get('/admin/custom-models/page', p),
+  customModelAudit: (b) => api.post('/admin/custom-models/audit', b),
+  customModelQuota: (b) => api.put('/admin/custom-models/quota', b),
+  customVoiceAuditPage: (p) => api.get('/admin/custom-voices/page', p),
+  customVoiceAudit: (b) => api.post('/admin/custom-voices/audit', b),
+
+  // ===== 用户模块：审计日志（SPEC §4.5） =====
+  auditPage: (p) => api.get('/admin/audit/page', p),
+  auditModules: () => api.get('/admin/audit/modules'),
+
   // ===== 模板 =====
   templateList: () => api.get('/agent/template'),
   templatePage: (params) => api.get('/agent/template/page', params),
@@ -378,3 +487,64 @@ export const adminApi = {
   clawDeleteSchedule: (openid, id) => api.del(`/wechat/claw/schedules/${openid}/${id}`),
   clawToggleSchedule: (openid, id) => api.put(`/wechat/claw/schedules/${openid}/${id}/toggle`),
 }
+
+// ---------- 用户模块：当前用户资源端（SPEC §6 userApi，页面 agent 按此调用） ----------
+export const userApi = {
+  // 数据源聚合：模型选择 UI 的唯一入口（模型为 0 规则）
+  myResources: () => api.get('/user/resources'),
+  myDisplayConfig: () => api.get('/user/display-config'),
+  myDefaults: () => api.get('/user/defaults'),
+  // 自定义模型（本人数据，apiKey 掩码）
+  customModelPage: (p) => api.get('/user/custom-models', p),
+  customModelCreate: (b) => api.post('/user/custom-models', b),
+  customModelUpdate: (id, b) => api.put(`/user/custom-models/${id}`, b),
+  customModelDelete: (id) => api.del(`/user/custom-models/${id}`),
+  customModelHealth: (id) => api.post(`/user/custom-models/${id}/health`, {}),
+  // 自定义音色（同构，无 health）
+  customVoicePage: (p) => api.get('/user/custom-voices', p),
+  customVoiceCreate: (b) => api.post('/user/custom-voices', b),
+  customVoiceUpdate: (id, b) => api.put(`/user/custom-voices/${id}`, b),
+  customVoiceDelete: (id) => api.del(`/user/custom-voices/${id}`)
+}
+// ============ 订单管理API ============
+const orderApi = {
+  // 订单列表（分页）
+  orderPage: (params = {}) => {
+    const { page = 1, limit = 10, keyword = '' } = params
+    return api.get('/order/page', { params: { page, limit, keyword } })
+  },
+  
+  // 订单详情
+  orderInfo: (id) => {
+    return api.get(`/order/info/${id}`)
+  },
+  
+  // 新增订单
+  orderCreate: (data) => {
+    return api.post('/order/create', data)
+  },
+  
+  // 更新订单
+  orderUpdate: (id, data) => {
+    return api.put(`/order/update`, { ...data, id })
+  },
+  
+  // 删除订单
+  orderDelete: (id) => {
+    return api.del(`/order/delete/${id}`)
+  },
+  
+  // 导出订单（返回全量数据，统计卡用）
+  orderExport: (params = {}) => {
+    return api.get('/order/export', { params })
+  },
+
+  // 导出订单（返回可直接下载的 URL）
+  orderExportUrl: (params = {}) => {
+    const { keyword = '' } = params
+    return `${API_BASE}/order/export?keyword=${encodeURIComponent(keyword)}`
+  }
+}
+
+// 合并到adminApi
+Object.assign(adminApi, orderApi)

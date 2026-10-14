@@ -28,6 +28,9 @@
         </div>
       </div>
       <p v-if="errMsg" class="err">{{ errMsg }}</p>
+      <div class="login-toasts">
+        <div v-for="t in toasts" :key="t.id" class="mini-toast" :class="t.type">{{ t.msg }}</div>
+      </div>
       <button class="btn btn-primary login-btn" :disabled="loading" @click="doLogin">
         {{ loading ? '登录中…' : '登录' }}
       </button>
@@ -39,7 +42,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authApi } from '../lib/api'
+import { authApi, refreshUserInfo, defaultRouteAfterLogin } from '../lib/api'
 
 const router = useRouter()
 const showPw = ref(false)
@@ -63,11 +66,20 @@ async function doLogin() {
   errMsg.value = ''
   try {
     // 原控制台登录契约（App.vue:2500）：SM2(captcha+password) 加密传输
-    await authApi.login(form.username, form.password, form.captcha, captchaId)
+    const res = await authApi.login(form.username, form.password, form.captcha, captchaId)
     localStorage.setItem('v2-user', form.username)
+    // 强制改密：TokenDTO.mustChangePwd===true 时先提示，reload 让 App.vue onMounted 接管全局改密弹窗
+    if (res && res.mustChangePwd === true) {
+      toast('请先修改初始密码', 'info')
+      setTimeout(() => { location.reload() }, 600)
+      return
+    }
+    // 身份补全（旧后端 TokenDTO 缺 superAdmin/roles，用 /user/info 兜底）→ 角色分流跳转
+    await refreshUserInfo().catch(() => {})
+    const target = defaultRouteAfterLogin()
     // 双保险跳转：router.push + hash 直赋（防 router 时序问题导致"登录完还在login页"）
-    router.push('/customer').catch(() => {})
-    setTimeout(() => { if (location.hash.startsWith('#/login')) location.hash = '#/customer' }, 300)
+    router.push(target).catch(() => {})
+    setTimeout(() => { if (location.hash.startsWith('#/login')) location.hash = '#' + target }, 300)
   } catch (e) {
     errMsg.value = e.msg || '登录失败'
     refreshCaptcha()
@@ -75,6 +87,15 @@ async function doLogin() {
   } finally {
     loading.value = false
   }
+}
+
+// toast：登录页无 App.vue provide（booting 前），用轻量实现
+const toasts = reactive([])
+let toastId = 0
+function toast(msg, type = 'info') {
+  const id = ++toastId
+  toasts.push({ id, msg, type })
+  setTimeout(() => { const i = toasts.findIndex(t => t.id === id); if (i > -1) toasts.splice(i, 1) }, 3000)
 }
 
 onMounted(refreshCaptcha)
@@ -115,6 +136,15 @@ onMounted(refreshCaptcha)
 .cap-row input { flex: 1; }
 .cap-img { height: 44px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border); }
 .err { color: var(--danger); font-size: 12.5px; margin-bottom: 10px; }
+.login-toasts { position: relative; }
+.mini-toast {
+  border-radius: 10px; padding: 9px 14px; font-size: 13px; margin-bottom: 8px;
+  color: #fff; animation: toastIn .2s ease-out;
+}
+.mini-toast.info { background: var(--primary); }
+.mini-toast.success { background: var(--success); }
+.mini-toast.error { background: var(--danger); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .login-btn { width: 100%; justify-content: center; padding: 12px; font-size: 15px; }
 .tip { margin-top: 16px; color: var(--text-sub); font-size: 12px; text-align: center; }
 @media (max-width: 800px) { .login-wrap { grid-template-columns: 1fr; } .login-left { min-height: 200px; } }

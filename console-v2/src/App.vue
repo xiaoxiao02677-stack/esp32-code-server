@@ -18,16 +18,32 @@
           </div>
         </div>
       </div>
+      <!-- 强制改密弹窗：遮罩不可点关闭（无 click.self），期间锁定 body 滚动 -->
+      <div v-if="forcePwd.show" class="modal-mask force-mask">
+        <div class="modal">
+          <h3>🔑 请先修改初始密码</h3>
+          <p class="force-tip">管理员要求你修改初始密码后才能继续使用，修改成功后弹窗自动关闭。</p>
+          <div class="form-row"><label>旧密码</label><input type="password" v-model="forcePwd.oldPassword" placeholder="请输入当前密码" /></div>
+          <div class="form-row"><label>新密码</label><input type="password" v-model="forcePwd.newPassword" placeholder="需包含大写字母、小写字母和数字" /></div>
+          <div class="form-row"><label>确认新密码</label><input type="password" v-model="forcePwd.confirm" placeholder="再次输入新密码" @keyup.enter="submitForcePwd" /></div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" :disabled="forcePwdBusy || !forcePwd.oldPassword || !forcePwd.newPassword || !forcePwd.confirm || forcePwd.newPassword !== forcePwd.confirm" @click="submitForcePwd">
+              {{ forcePwdBusy ? '提交中…' : '提交' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, provide, reactive, ref } from 'vue'
+import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TopBar from './components/TopBar.vue'
 import DockNav from './components/DockNav.vue'
 import Toasts from './components/Toasts.vue'
+import { api, getToken } from './lib/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -72,6 +88,45 @@ function onToggleCompact(val) {
 
 onMounted(() => {
   setTimeout(() => { booting.value = false }, 300)
+  // 强制改密：booting 结束后检查 /user/info.mustChangePwd（有 token 才查，静默失败）
+  setTimeout(() => { checkForcePwd() }, 400)
+})
+
+// ===== 强制改密（mustChangePwd=1 → 全局不可关闭弹窗） =====
+const forcePwd = reactive({ show: false, oldPassword: '', newPassword: '', confirm: '' })
+const forcePwdBusy = ref(false)
+
+async function checkForcePwd() {
+  if (!getToken()) return
+  try {
+    const res = await api.get('/user/info')
+    const d = res.data || {}
+    if (Number(d.mustChangePwd) === 1) forcePwd.show = true
+  } catch { /* 静默：未登录/接口异常不打扰用户 */ }
+}
+
+async function submitForcePwd() {
+  if (!forcePwd.oldPassword || !forcePwd.newPassword) { toast('请填写旧密码和新密码', 'error'); return }
+  if (forcePwd.newPassword !== forcePwd.confirm) { toast('两次输入的新密码不一致', 'error'); return }
+  forcePwdBusy.value = true
+  try {
+    await api.put('/user/change-password', {
+      oldPassword: forcePwd.oldPassword,
+      newPassword: forcePwd.newPassword
+    })
+    toast('密码修改成功')
+    forcePwd.show = false
+    forcePwd.oldPassword = ''; forcePwd.newPassword = ''; forcePwd.confirm = ''
+  } catch (e) {
+    toast(e.msg || '修改失败', 'error')
+  } finally {
+    forcePwdBusy.value = false
+  }
+}
+
+// 弹窗打开期间锁定 body 滚动，关闭恢复
+watch(() => forcePwd.show, (v) => {
+  document.body.style.overflow = v ? 'hidden' : ''
 })
 </script>
 
@@ -91,4 +146,15 @@ onMounted(() => {
 .modal.confirm p { color: var(--text-sub); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .btn.danger { background: var(--danger); box-shadow: 0 4px 14px rgba(240,83,77,.35); }
+
+/* 强制改密弹窗 */
+.force-mask { z-index: 300; }
+.force-tip { color: var(--text-sub); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+.force-mask .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+.force-mask .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
+.force-mask .form-row input {
+  border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px;
+  font-size: 14px; outline: none; font-family: var(--font); background: #fff;
+}
+.force-mask .form-row input:focus { border-color: var(--primary); }
 </style>

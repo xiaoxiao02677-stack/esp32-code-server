@@ -35,7 +35,10 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button class="role-switch" @click="$emit('switch-role', role === 'admin' ? 'customer' : 'admin')">
+      <button
+        v-if="role === 'admin' || canSwitchRole"
+        class="role-switch" @click="$emit('switch-role', role === 'admin' ? 'customer' : 'admin')"
+      >
         {{ role === 'admin' ? '→ 顾客视图' : '→ 管理员视图' }}
       </button>
       <button class="btn btn-ghost logout-btn" @click="confirmLogout">退出登录</button>
@@ -47,7 +50,7 @@
 <script setup>
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { clearToken } from '../lib/api'
+import { clearToken, hasAdminRole, userState } from '../lib/api'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
 defineEmits(['switch-role'])
@@ -69,6 +72,11 @@ const adminNav = [
   { label: '设备', path: '/admin/devices', icon: '📡' },
   { label: '参数', path: '/admin/params', icon: '⚙️' },
   { label: '用户', path: '/admin/users', icon: '👥' },
+  { label: '角色', path: '/admin/roles', icon: '🎭' },
+  { label: '审计', path: '/admin/audit', icon: '📜' },
+  { label: '展示配置', path: '/admin/display', icon: '🖼' },
+  { label: '默认配置', path: '/admin/defaults', icon: '🎯' },
+  { label: '自定义审核', path: '/admin/custom-review', icon: '✅' },
   { label: 'OTA', path: '/admin/ota', icon: '📦' },
   { label: '字典', path: '/admin/dicts', icon: '📖' },
   { label: '服务器', path: '/admin/servers', icon: '🖥' },
@@ -86,7 +94,9 @@ const customerNav = [
   { label: '首页', path: '/customer', icon: '🏠' },
   { label: '我的设备', path: '/customer/devices', icon: '📡' },
   { label: '音色', path: '/customer/voices', icon: '🎙' },
-  { label: '积分', path: '/customer/points', icon: '💎' }
+  { label: '积分', path: '/customer/points', icon: '💎' },
+  { label: '个人中心', path: '/customer/profile', icon: '👤' },
+  { label: '我的模型', path: '/customer/my-models', icon: '🧩' }
 ]
 
 const searchInput = ref(null)
@@ -140,6 +150,16 @@ const avatarChar = computed(() => username.value
   ? username.value.charAt(0).toUpperCase()
   : (props.role === 'admin' ? '管' : '客'))
 const avatarTitle = computed(() => username.value || (props.role === 'admin' ? '管理员' : '顾客'))
+
+// 用户模块：普通用户（无 admin 系角色且非超管）在顾客端隐藏「→ 管理员视图」按钮（与 DockNav 切换按钮同规则）。
+// 切换按钮可见性：订阅响应式 userState（登录补全/老登录态异步修正后自动重算），
+// 不再裸调 getUserInfo()（读 localStorage 无响应式依赖，登录后写入 cc_user_info 不会触发重算）。
+// 未知状态（username 空且无角色数据）保守显示，向后兼容旧登录态。
+const canSwitchRole = computed(() => {
+  const u = userState.value
+  if (!u || (!u.username && !Array.isArray(u.roles))) return true
+  return hasAdminRole(u)
+})
 
 function confirmLogout() {
   askConfirm({

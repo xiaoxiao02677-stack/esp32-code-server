@@ -15,6 +15,10 @@
         <span class="ic">{{ item.icon }}</span>
         <span class="dock-label">{{ item.label }}</span>
       </router-link>
+      <a class="dock-item" href="/firmware-flash/" title="固件烧录">
+        <span class="ic">⚡</span>
+        <span class="dock-label">固件烧录</span>
+      </a>
       <div class="dock-foot">
         <div class="theme-row">
           <button
@@ -28,7 +32,10 @@
           class="compact-btn" :title="compact ? '切换宽松' : '切换紧凑'"
           :class="{ on: compact }" @click="toggleCompact"
         >⚅</button>
-        <button class="dock-more" :title="role === 'admin' ? '切换到顾客端' : '切换到管理端'" @click="toggle">
+        <button
+          v-if="role === 'admin' || canSwitchToAdmin"
+          class="dock-more" :title="role === 'admin' ? '切换到顾客端' : '切换到管理端'" @click="toggle"
+        >
           {{ role === 'admin' ? '⇄' : '→' }}
         </button>
       </div>
@@ -39,6 +46,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { hasAdminRole, userState } from '../lib/api'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
 const emit = defineEmits(['toggle-compact'])
@@ -95,10 +103,13 @@ const customerItems = [
   { to: '/customer', icon: '🏠', label: '首页' },
   { to: '/customer/devices', icon: '📡', label: '我的设备' },
   { to: '/customer/voices', icon: '🎙', label: '音色' },
-  { to: '/customer/points', icon: '💎', label: '积分' }
+  { to: '/customer/points', icon: '💎', label: '积分' },
+  { to: '/customer/profile', icon: '👤', label: '个人中心' },
+  { to: '/customer/my-models', icon: '🧩', label: '我的模型' }
 ]
 const adminItems = [
   { to: '/admin', icon: '🏠', label: '概览' },
+  { to: '/admin/orders', icon: '📦', label: '订单管理' },
   { to: '/admin/agents', icon: '🤖', label: '智能体' },
   { to: '/admin/chat', icon: '💬', label: '聊天' },
   { to: '/admin/memory', icon: '🧠', label: '记忆' },
@@ -109,6 +120,11 @@ const adminItems = [
   { to: '/admin/devices', icon: '📡', label: '设备' },
   { to: '/admin/params', icon: '⚙️', label: '参数' },
   { to: '/admin/users', icon: '👥', label: '用户' },
+  { to: '/admin/roles', icon: '🎭', label: '角色' },
+  { to: '/admin/audit', icon: '📜', label: '审计' },
+  { to: '/admin/display', icon: '🖼', label: '展示配置' },
+  { to: '/admin/defaults', icon: '🎯', label: '默认配置' },
+  { to: '/admin/custom-review', icon: '✅', label: '自定义审核' },
   { to: '/admin/ota', icon: '📦', label: 'OTA' },
   { to: '/admin/dicts', icon: '📖', label: '字典' },
   { to: '/admin/servers', icon: '🖥', label: '服务器' },
@@ -123,6 +139,15 @@ const items = computed(() => (props.role === 'admin' ? adminItems : customerItem
 function isActive(to) {
   return route.path === to
 }
+// 用户模块：普通用户（无 admin 系角色且非超管）在顾客端不显示「切换到管理端」按钮。
+// 切换按钮可见性：订阅响应式 userState（登录补全/老登录态异步修正后自动重算），
+// 不再裸调 getUserInfo()（读 localStorage 无响应式依赖，登录后写入 cc_user_info 不会触发重算）。
+// 未知状态（username 空且无角色数据）保守显示，向后兼容旧登录态；管理端角色照旧显示。
+const canSwitchToAdmin = computed(() => {
+  const u = userState.value
+  if (!u || (!u.username && !Array.isArray(u.roles))) return true
+  return hasAdminRole(u)
+})
 function toggle() {
   router.push(props.role === 'admin' ? '/customer' : '/admin')
 }

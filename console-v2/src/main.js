@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './styles/global.css'
-import { getToken, startTokenCheck } from './lib/api'
+import { getToken, getUserInfo, hasAdminRole, startTokenCheck, defaultRouteAfterLogin, refreshUserInfo } from './lib/api'
 
 import CustomerHome from './views/customer/Home.vue'
 import CustomerDevices from './views/customer/Devices.vue'
@@ -31,7 +31,21 @@ import AdminTimelineChart from './views/admin/TimelineChart.vue'
 import AdminPushScheduler from './views/admin/PushScheduler.vue'
 import AdminWeChatOpenClaw from './views/admin/WeChatOpenClaw.vue'
 import AdminWeChatClaw from './views/admin/WeChatClaw.vue'
+// 用户模块新增页面（admin 端）
+import AdminRoles from './views/admin/Roles.vue'
+import AdminAuditLog from './views/admin/AuditLog.vue'
+import AdminDisplayConfig from './views/admin/DisplayConfig.vue'
+import AdminUserDefaults from './views/admin/UserDefaults.vue'
+import AdminCustomReview from './views/admin/CustomReview.vue'
+// 订单管理页面
+import AdminOrders from './views/admin/Orders.vue'
+// 用户模块新增页面（customer 端）
+import CustomerProfile from './views/customer/Profile.vue'
+import CustomerMyModels from './views/customer/MyModels.vue'
 import Login from './views/Login.vue'
+
+// 老登录态身份补全：TokenDTO 缺角色字段的旧登录态，刷新后用 /user/info 异步修正按钮可见性
+if (getToken()) refreshUserInfo().catch(() => {})
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -42,7 +56,10 @@ const router = createRouter({
     { path: '/customer/devices', component: CustomerDevices },
     { path: '/customer/voices', component: CustomerVoices },
     { path: '/customer/points', component: CustomerPoints },
+    { path: '/customer/profile', component: CustomerProfile },
+    { path: '/customer/my-models', component: CustomerMyModels },
     { path: '/admin', component: AdminHome },
+    { path: '/admin/orders', component: AdminOrders },
     { path: '/admin/agents', component: AdminAgents },
     { path: '/admin/voices', component: AdminVoices },
     { path: '/admin/chat', component: AdminChat },
@@ -53,6 +70,11 @@ const router = createRouter({
     { path: '/admin/devices', component: AdminDevices },
     { path: '/admin/params', component: AdminParams },
     { path: '/admin/users', component: AdminUsers },
+    { path: '/admin/roles', component: AdminRoles },
+    { path: '/admin/audit', component: AdminAuditLog },
+    { path: '/admin/display', component: AdminDisplayConfig },
+    { path: '/admin/defaults', component: AdminUserDefaults },
+    { path: '/admin/custom-review', component: AdminCustomReview },
     { path: '/admin/ota', component: AdminOta },
     { path: '/admin/dicts', component: AdminDicts },
     { path: '/admin/servers', component: AdminServers },
@@ -72,7 +94,11 @@ const router = createRouter({
 router.beforeEach((to) => {
   const has = !!getToken()
   if (!has && to.path !== '/login') return '/login'
-  if (has && to.path === '/login') return '/customer'
+  if (has && to.path === '/login') return defaultRouteAfterLogin()
+  if (has && to.path.startsWith('/admin')) {
+    const info = getUserInfo()
+    if (info && !hasAdminRole(info)) return '/customer'
+  }
   return true
 })
 
@@ -80,7 +106,7 @@ createApp(App).use(router).mount('#app')
 
 // 启动token过期检查：每30秒检查一次，过期时自动跳转登录页
 startTokenCheck(() => {
-  // token过期，跳转登录
+  // token过期，跳转
   if (!location.hash.startsWith('#/login')) {
     location.hash = '#/login'
   }
