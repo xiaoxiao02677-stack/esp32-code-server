@@ -38,6 +38,14 @@
 ## TTS 音色（火山引擎）
 - `S_` 前缀=私有复刻音色（授权随免费额度失效，403 code=45000030）→ **禁止入 DB**；`ICL_uranus_*`=官方预置；推荐官方音色（TTS_DoubaoV3_V01 / zh_female_xiaohe_uranus_bigtts）
 - doubao_v3 的 resource_id 走 **X-Api-Resource-Id header**；403 先判永久/临时，8 种永久码快速失败不重试，TTS 全失败补发 FIRST 字幕保底
+- TTS 真实配置在 MySQL 表 `ai_model_config`（config_json 列），非 agent_config（不存在）
+
+## 推送音频（2026-10-15 修复，硬约束）
+- **固件 NotifyPlayer 只支持 Ogg Opus 单声道**（OpusHead 声道=1 + OpusTags + 合法帧时长；MP3 URL 必然 300ms 报 "Ogg stream ended before a complete audio stream"）→ **任何推送给设备的音频必须是 .ogg mono**
+- 生产 topic_generator.py 已加 `_ensure_device_playable_audio`（ffmpeg `-ac 1 -ar 24000 -c:a libopus -b:a 32k` 转码，mp3 删除）；ffmpeg 临时输出必须带 .ogg 扩展名
+- doubao_v3 上游每个 MP3 尾部带 150-450B 0xAA/0x55 垃圾（ffmpeg 可忽略，勿被误导）
+- 验证工具：`code/tests/push_chain_simulator.py`（复刻固件 OggDemuxer 状态机，check <url> 判 PLAYABLE）
+- 推送鉴权读 config.yaml 的 server.auth_key（非 data/.config.yaml）；`sent=1` ≠ 播放成功（设备先 ACK 再异步播放，无回执）
 
 ## AOCI 治理
 - git 仓根 = `G:/demo/21_xiaozhi`，`xiaozhi-esp32` 为子目录；`aoci.exe`（`D:/INSTALL/aoci/aoci.exe`）靠 `.git` 定位根 → **必须显式 `--repo <子项目绝对路径>`**
