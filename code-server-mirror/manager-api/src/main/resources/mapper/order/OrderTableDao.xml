@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xiaozhi.modules.order.dao.OrderTableDao">
+
+    <resultMap id="orderTableMap" type="xiaozhi.modules.order.entity.OrderTableEntity">
+        <id property="id" column="id"/>
+        <result property="userName" column="user_name"/>
+        <result property="contact" column="contact"/>
+        <result property="product" column="product"/>
+        <result property="amount" column="amount"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="address" column="address"/>
+        <result property="shippingStatus" column="shipping_status"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 分页查询订单列表 -->
+    <select id="selectPage" resultMap="orderTableMap">
+        SELECT * FROM order_table
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    user_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR contact LIKE CONCAT('%', #{keyword}, '%')
+                    OR product LIKE CONCAT('%', #{keyword}, '%')
+                    OR address LIKE CONCAT('%', #{keyword}, '%')
+                    OR remark LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY ${sortBy} ${sortOrder}
+        </if>
+        <if test="sortBy == null or sortBy == ''">
+            ORDER BY create_time DESC
+        </if>
+    </select>
+
+    <!-- 查询统计数据 -->
+    <select id="selectStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) as totalOrders,
+            SUM(CASE WHEN amount IS NOT NULL THEN amount ELSE 0 END) as totalAmount,
+            AVG(CASE WHEN amount IS NOT NULL THEN amount ELSE 0 END) as avgAmount
+        FROM order_table
+    </select>
+
+</mapper>
