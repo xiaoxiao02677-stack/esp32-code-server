@@ -75,3 +75,42 @@
 - 删除一律进 `.trash/`（本仓既有隔离区），不用 rm 直删；git 跟踪文件的"删除"通过 git mv/rm 走历史
 - 每步动作前备份受影响 index（baseline.json 不动）
 - 20 个并行 agent 因基础设施 406 全部失败，本次审计由主 agent 独立完成，结论均有一手命令输出佐证
+
+---
+
+## 六、执行结果（2026-10-15 22:40-22:55，用户确认 P1-P4 全做）
+
+### 已全部完成 ✓
+**P1 Git 保护（14 提交，git status → 0）**
+- 补提交：console-v2 7 个 .vue + deploy/ + 3 报告；push-audio 全部交付物；code-server-mirror order 模块（仅归档不部署）；workbuddy 产物 43 文件；杂项 7 文件
+- 22 个已修改文件分 5 组提交（固件双屏/console-v2/mirror/记忆）
+- camera 嵌套仓自身提交 `03b09d2`（653 处 dev 改动）；父仓加 ignore `code/camera/`
+- 3 个 nul 保留名文件 PowerShell `\\?\` 隔离 → .trash
+- token_main.json（登录 token）移出 git + 隔离 + ignore
+
+**P2 空间回收（全部进 .trash 可回滚）**
+- 5 处 build ≈1.7G + secrenn_test managed_components 758M = **2.5G**
+- manager-web 4 份死 dist + node_modules = **352M**
+- .workbuddy scope 死重 + backup + log = **504M**（含 150M scope_status_server.json）
+- super_small_screen/build 1718 文件 + 3 个 web_*.tar.gz 退出 git 跟踪
+
+**P3 目录规范化（git mv 保历史）**
+- 6 份 PROJECT-*.md → docs/；验收清单 ×2 → docs/；logs → docs/archive/logs-20261010/
+- TTS 探针 4 脚本 + tts_out/ + tts_ab_out/ + tts_output.opus → docs/archive/tts-probe-20261009/
+- sim-body.bin/sim-headers.txt → artifacts/push-debug/；README 充实；.mcp.json 拆分 small/big 条目
+
+**P4 大目录归档（git rm --cached 保历史后物理外移）→ G:/demo/archive-20261015/**
+- 网页后台 275M ✓、test_environment 1.2G ✓、super_small_screen 173M ✓
+- small_secrenn_test **保留**（清 build+managed_components，46M 源码沙盒）
+
+### 最终状态
+| 指标 | 整理前 | 整理后 |
+|---|---|---|
+| git 未提交/未跟踪 | 22 M + 57 ?? | **0** |
+| 仓库占用 | ~8.6G | **3.3G**（+.trash 3.3G 可回滚 + 外移 1.5G） |
+| 根目录条目 | 30+ 散件 | 9 目录 |
+
+### 遗留（后续可选）
+- .trash/ 3.3G 观察期后确认无用可删（含全部 build 缓存，删则彻底释放）
+- .git 468M 历史膨胀可 `git gc --aggressive`（可选，需用户确认）
+- 活跃固件区 build 已清 → 下次构建需全量编译
