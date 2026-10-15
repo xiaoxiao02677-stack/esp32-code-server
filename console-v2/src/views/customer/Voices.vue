@@ -60,8 +60,9 @@
       </table>
       <div v-if="voices.length === 0" class="empty-state">
         <div class="empty-icon">🎙</div>
-        <strong>暂无音色</strong>
-        <p>还没有可用的音色资源</p>
+        <strong>暂无可用音色</strong>
+        <p>请联系管理员开通平台音色，或前往「我的模型」添加自定义音色（审核通过后可用）</p>
+        <button class="btn btn-ghost" style="margin-top:6px" @click="$router.push('/customer/my-models')">前往我的模型</button>
       </div>
     </DataTable>
   </div>
@@ -71,7 +72,7 @@
 import { computed, inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { customerApi, adminApi } from '../../lib/api'
+import { customerApi, adminApi, api } from '../../lib/api'
 
 const toast = inject('toast')
 
@@ -90,19 +91,36 @@ function canPreview(v) {
 async function load() {
   loading.value = true
   try {
-    // 契约：GET /ttsVoice → data 为 { total, list: TimbreDetailsVO[] }
-    const res = await customerApi.ttsVoicePage({ page: 1, limit: 50 })
-    const data = res.data
-    const list = Array.isArray(data) ? data : (data?.list || [])
-    voices.value = list.map(v => ({
-      id: v.id,
-      name: v.name || v.voiceName || v.ttsVoice || '未命名音色',
-      languages: v.languages || '',
-      remark: v.remark || v.voiceInstruction || '',
-      ttsModelId: v.ttsModelId || '',
-      ttsVoice: v.ttsVoice || '',
-      createdAt: v.createdAt || v.createTime || ''
-    }))
+    // 模型为0规则：优先取 /user/resources 的 ttsVoices（平台音色+本人审核通过的自定义音色）
+    // resources 成功但为 0 → 保留空列表显示引导空状态；仅 resources 调用失败时回退原 /ttsVoice 数据源
+    let list = null
+    try {
+      const r = await api.get('/user/resources')
+      list = (r.data?.ttsVoices || []).map(v => ({
+        id: v.id,
+        name: v.name || v.voiceName || '未命名音色',
+        languages: v.languages || '',
+        remark: v.remark || '',
+        ttsModelId: v.ttsModelId || '',
+        ttsVoice: v.ttsVoice || v.voiceCode || '',
+        createdAt: ''
+      }))
+    } catch { list = null }
+    if (list === null) {
+      // 回退：原 /ttsVoice 数据源（保留原有逻辑，接口未上线时不破坏现有功能）
+      const res = await customerApi.ttsVoicePage({ page: 1, limit: 50 })
+      const data = res.data
+      list = (Array.isArray(data) ? data : (data?.list || [])).map(v => ({
+        id: v.id,
+        name: v.name || v.voiceName || v.ttsVoice || '未命名音色',
+        languages: v.languages || '',
+        remark: v.remark || v.voiceInstruction || '',
+        ttsModelId: v.ttsModelId || '',
+        ttsVoice: v.ttsVoice || '',
+        createdAt: v.createdAt || v.createTime || ''
+      }))
+    }
+    voices.value = list
   } catch (e) {
     voices.value = []
     if (!warned) { warned = true; toast(e.msg || '音色列表加载失败', 'error') }

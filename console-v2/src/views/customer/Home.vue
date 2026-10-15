@@ -6,7 +6,7 @@
         <p class="sub">智能体与设备管理</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-primary" :disabled="creating" @click="createAgent">{{ creating ? '创建中…' : '＋ 新增智能体' }}</button>
+        <button class="btn btn-primary" :disabled="creating" @click="openCreateModal">{{ creating ? '创建中…' : '＋ 新增智能体' }}</button>
         <button class="btn btn-ghost" :disabled="loading" @click="load">{{ loading ? '加载中…' : '↻ 刷新列表' }}</button>
       </div>
     </div>
@@ -34,7 +34,7 @@
 
     <DataTable title="智能体清单" hint="管理你的智能体配置" :total="agents.length" :page="1" :pages="1">
       <template #actions>
-        <button class="btn btn-ghost" style="padding:7px 16px;font-size:13px" @click="showCreate = true">新增</button>
+        <button class="btn btn-ghost" style="padding:7px 16px;font-size:13px" @click="openCreateModal">新增</button>
       </template>
       <table class="data-table">
         <thead>
@@ -71,10 +71,23 @@
       <div class="modal">
         <h3>新增智能体</h3>
         <div class="form-row"><label>智能体名称</label><input v-model="draft.name" placeholder="例如：小何" /></div>
+        <!-- 模型为0规则：LLM 数据源改为 /user/resources（平台启用+本人审核通过），为空隐藏下拉显示引导 -->
+        <div class="form-row"><label>大脑（LLM 模型）</label>
+          <select v-if="llmModels.length > 0" v-model="draft.llmModelId">
+            <option v-for="m in llmModels" :key="m.id" :value="m.id">{{ m.modelName }}</option>
+          </select>
+          <div v-else class="inline-empty">
+            <div>
+              <strong>暂无可用模型</strong>
+              <p>请联系管理员开通，或前往「我的模型」添加自定义模型（审核通过后可用）</p>
+            </div>
+            <button class="btn btn-ghost" style="padding:7px 16px;font-size:12.5px" @click="$router.push('/customer/my-models')">前往我的模型</button>
+          </div>
+        </div>
         <div class="form-row"><label>角色提示词</label><textarea v-model="draft.prompt" rows="3" placeholder="描述智能体的性格与说话风格"></textarea></div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="showCreate = false">取消</button>
-          <button class="btn btn-primary" :disabled="creating || !draft.name" @click="createAgent">创建</button>
+          <button class="btn btn-primary" :disabled="creating || !draft.name || (llmModels.length > 0 && !draft.llmModelId)" @click="createAgent">创建</button>
         </div>
       </div>
     </div>
@@ -85,7 +98,7 @@
 import { inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { customerApi } from '../../lib/api'
+import { customerApi, api } from '../../lib/api'
 
 const toast = inject('toast')
 
@@ -96,6 +109,8 @@ const loading = ref(false)
 const creating = ref(false)
 const deviceCount = ref(0)
 const voices = ref(0)
+// 模型为0规则：LLM 下拉数据源（平台启用+本人审核通过）
+const llmModels = ref([])
 let warned = false
 
 function fmtTime(s) {
@@ -160,16 +175,39 @@ async function createAgent() {
   if (!draft.value.name.trim()) return
   creating.value = true
   try {
-    await customerApi.createAgent({ agentName: draft.value.name.trim(), systemPrompt: draft.value.prompt })
+    const body = { agentName: draft.value.name.trim(), systemPrompt: draft.value.prompt }
+    // LLM 模型（/user/resources 提供时）随创建一并提交
+    if (draft.value.llmModelId) body.llmModelId = draft.value.llmModelId
+    await customerApi.createAgent(body)
     toast('已创建')
     showCreate.value = false
-    draft.value = { name: '', prompt: '' }
+    draft.value = { name: '', prompt: '', llmModelId: '' }
     load()
   } catch (e) {
     toast(e.msg || '创建失败', 'error')
   } finally {
     creating.value = false
   }
+}
+
+// 模型为0规则：拉取用户可用 LLM 列表（平台启用+本人审核通过的自定义模型）
+async function loadLlmModels() {
+  try {
+    const res = await api.get('/user/resources')
+    const d = res.data || {}
+    llmModels.value = (d.llmModels || []).map(m => ({ id: m.id, modelName: m.modelName }))
+    if (llmModels.value.length > 0 && !draft.value.llmModelId) {
+      draft.value.llmModelId = llmModels.value[0].id
+    }
+  } catch {
+    // 静默降级：接口不可用时不阻塞创建弹窗（无下拉，显示空状态引导）
+    llmModels.value = []
+  }
+}
+
+function openCreateModal() {
+  showCreate.value = true
+  if (!llmModels.value.length) loadLlmModels()
 }
 
 onMounted(load)
@@ -181,10 +219,17 @@ onMounted(load)
 .modal h3 { font-size: 17px; margin-bottom: 18px; }
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
-.form-row input, .form-row textarea {
+.form-row input, .form-row textarea, .form-row select {
   border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px;
-  font-size: 14px; outline: none; font-family: var(--font); transition: border .15s;
+  font-size: 14px; outline: none; font-family: var(--font); transition: border .15s; background: #fff;
 }
-.form-row input:focus, .form-row textarea:focus { border-color: var(--primary); }
+.form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+/* 模型为0：弹窗内 inline 空状态（缩小版 empty-state） */
+.inline-empty {
+  border: 1.5px dashed var(--border); border-radius: 14px; padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg, #F8FAFD);
+}
+.inline-empty strong { font-size: 13.5px; }
+.inline-empty p { font-size: 12px; color: var(--text-sub); margin: 4px 0 0; line-height: 1.5; }
 </style>
