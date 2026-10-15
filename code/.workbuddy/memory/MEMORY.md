@@ -62,3 +62,14 @@
 - gitee `main` 与 `master` 均已同步为本地 main（master 曾用 `--force-with-lease` 覆盖，清除旧快照泄漏的私钥 certs/*.key）
 - `baseline.json` 保持 git 追踪并提交（用户拍板，每次 reconcile 变更属预期）；`.workbuddy`、`.trash/` 临时产物永不进提交
 - Windows 保留名 `nul` 已用 MoveFileExW 隔离至 `.trash/`；`safe_reconcile.py` 含 RESERVED 名跳过
+- **活跃工作分支 = `test_environment`**（10-13 起所有工作提交于此，领先 main 30+ 提交）；main/master 为 gitee 同步分支，勿在其上直接开发
+
+## 目录结构（2026-10-15 大整理后）
+- 仓库根仅 9 项：README/docs/code/console-v2/cc-console/code-server-mirror/hermes-agent-main/stylekit/aoci-code + 隐藏 .git/.trash/.workbuddy/.aoci；`git status` 保持 0 余项
+- **归档外移 → `G:/demo/archive-20261015/`**：网页后台(275M 最早期克隆)、test_environment(1.2G 部署包，远端 22223 才真实)、super_small_screen(原型)——历史仍在 git，可 `git rm --cached` 后 `git mv` 找回
+- **.trash/ 可回滚区**（3.3G）：build 缓存×5、死 dist、scope 死重、4 补丁对、3 nul、token；确认无用后可 rm
+- **嵌套 git 仓必须父仓 ignore**：`code/camera/`（上游完整仓，自带 .git，szpi-esp32s3 摄像头板 IDF v6.1，提交于其自身仓）、`code/small_secrenn_test/`（本地沙盒，不入库）
+- camera 仓身份：非 xiaozhi 克隆，是**独立上游镜像**，board=lckfb/szpi-esp32s3，构建脚本 build_szpi.bat
+- 活跃固件区 big/small/camera **build 已清空**（managed_components 保留）→ 下次构建需全量编译（时间成本换 2.5G 空间）
+- 项目文档集中在 `docs/`（PROJECT-*.md/验收清单/tts 探针归档 docs/archive/tts-probe-20261009/）
+- git 大文件教训：**super_small_screen/build 曾误提交 1718 文件**（.git 468M 膨胀主因），构建产物一律不入库
