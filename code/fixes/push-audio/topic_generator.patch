@@ -1,0 +1,129 @@
+--- topic_generator.py.orig-prod	2026-10-15 17:46:06.606471200 +0800
++++ topic_generator.py.fixed	2026-10-15 17:54:15.457090500 +0800
+@@ -15,6 +15,8 @@
+ import os
+ import random
+ import re
++import shutil
++import subprocess
+ import time
+ from typing import Any, Dict, List, Optional
+ 
+@@ -615,6 +617,17 @@
+         if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+             raise RuntimeError("TTS 合成文件为空")
+ 
++        # 固件 NotifyPlayer 只支持 Ogg Opus 单声道（OggDemuxer 强制
++        # OpusHead+OpusTags+mono；MP3/WAV 一律不可播），落盘后统一校验并
++        # 转码为 24k 单声道 Ogg Opus 再对外提供 URL。
++        try:
++            output_path = await self._ensure_device_playable_audio(output_path)
++            filename = os.path.basename(output_path)
++        except Exception as e:
++            # 转码失败：删除半成品后上抛；上层 push_scheduler 会降级为
++            # audio_url="" 仅推字幕，不会中断推送调度
++            raise RuntimeError(f"推送音频不可播放且转码失败: {e}") from e
++
+         # 构建 HTTP URL（设备需公网可达）：
+         # 1) server.public_audio_base_url 显式配置
+         # 2) 从 vision_explain 推导（形如 http://sandyun.top:8003/mcp/...）
+@@ -642,6 +655,99 @@
+         )
+         return audio_url
+ 
++    async def _ensure_device_playable_audio(self, output_path: str) -> str:
++        """校验 TTS 产物并转为固件可播放的 Ogg Opus 单声道格式。
++
++        固件 NotifyPlayer 的 OggDemuxer 只接受 Ogg Opus 单声道
++        （必须 OpusHead + OpusTags + mono），任何 MP3/WAV 推过去都会报
++        "Notification Ogg stream ended before a complete audio stream"。
++
++        规则：
++        - .ogg/.opus：二进制探测（OggS 魔数 + OpusHead 存在）通过则原样返回
++        - 其他格式 / 探测不通过：ffmpeg 先探测时长（<0.5s 视为坏文件上抛），
++          再转码为同目录同名 .ogg（mono 24k libopus 32k），成功后删除中间文件
++        - 服务器无 ffmpeg/libopus：记 WARNING 降级返回原文件（保持现状不阻断）
++        """
++        ffmpeg = shutil.which("ffmpeg")
++        if not ffmpeg:
++            logger.warning(
++                "[%s] 服务器未安装 ffmpeg，跳过推送音频转码（设备可能无法播放 MP3）",
++                TAG,
++            )
++            return output_path
++
++        ext = os.path.splitext(output_path)[1].lower()
++        if ext in (".ogg", ".opus"):
++            head = open(output_path, "rb").read(64)
++            if head.startswith(b"OggS") and b"OpusHead" in head:
++                return output_path  # 已是固件可播放格式
++
++        out_path = os.path.splitext(output_path)[0] + ".ogg"
++        tmp_out = os.path.splitext(output_path)[0] + ".transcoding.ogg"
++        t0 = time.time()
++        try:
++            # 1) 探测源文件有效时长（火山上游偶发在 MP3 尾部附加垃圾字节，
++            #    ffmpeg 解码忽略之；但时长过短/解码失败说明文件本体损坏）
++            probe = subprocess.run(
++                [ffmpeg, "-v", "error", "-i", output_path, "-f", "null", "-"],
++                capture_output=True, text=True, timeout=30,
++            )
++            dur_cmd = subprocess.run(
++                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
++                 "-of", "csv=p=0", output_path],
++                capture_output=True, text=True, timeout=15,
++            )
++            try:
++                duration = float(dur_cmd.stdout.strip().splitlines()[-1])
++            except (ValueError, IndexError):
++                duration = 0.0
++            if probe.returncode != 0 or duration < 0.5:
++                errs = (probe.stderr or "").strip().splitlines()
++                raise RuntimeError(
++                    f"源音频无效（duration={duration:.2f}s, "
++                    f"ffmpeg_err={errs[0][:80] if errs else 'n/a'}）"
++                )
++
++            # 2) 转码 Ogg Opus 单声道 24k（固件支持档位）
++            trans = subprocess.run(
++                [ffmpeg, "-y", "-v", "error", "-i", output_path,
++                 "-ac", "1", "-ar", "24000", "-c:a", "libopus",
++                 "-b:a", "32k", tmp_out],
++                capture_output=True, text=True, timeout=60,
++            )
++            if trans.returncode != 0:
++                raise RuntimeError(
++                    f"ffmpeg 转码失败 rc={trans.returncode}: "
++                    f"{(trans.stderr or '').strip()[:120]}"
++                )
++            if not os.path.exists(tmp_out) or os.path.getsize(tmp_out) == 0:
++                raise RuntimeError("转码产物为空")
++            os.replace(tmp_out, out_path)
++            os.remove(output_path)
++            elapsed = time.time() - t0
++            logger.info(
++                "[%s] 推送音频已转码为 Ogg Opus(mono/24k): %s -> %s "
++                "(%.1fs -> %.1fs, 耗时 %.2fs)",
++                TAG, os.path.basename(output_path), os.path.basename(out_path),
++                duration, duration, elapsed,
++            )
++            return out_path
++        except Exception as e:
++            # 清理半成品后上抛（调用方 _synthesize_tts 已有删除+抛错兜底）
++            for p in (tmp_out, out_path):
++                try:
++                    if os.path.exists(p):
++                        os.remove(p)
++                except OSError:
++                    pass
++            raise
++        finally:
++            if os.path.exists(tmp_out):
++                try:
++                    os.remove(tmp_out)
++                except OSError:
++                    pass
++
+     async def _lazy_get_tts_provider_for_agent(self) -> Optional[Any]:
+         """按当前 agent 的设备真实 TTS 配置初始化 provider（缓存）。
+ 

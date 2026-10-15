@@ -1,0 +1,735 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""话题源随机聊天生成管线。
+
+功能：
+- 多源随机选题：从 memory / weather / chat 三个源中随机挑选一个，再在该源内随机取材。
+- 降级链：memory → weather → chat → 跳过（每步失败记日志并降级）。
+- LLM 调用包装 asyncio.to_thread，避免阻塞事件循环；外层 wait_for 设超时并自动重试。
+- TTS 合成复用 initialize_tts fallback 链（默认挂 EdgeTTS），仅可用 delete_audio_file=False 模式。
+- 合成结果写入 tmp/ 目录，返回 http://host/tmp/filename 格式的 URL。
+- 同 agent 去重：通过 wake_word_service._agent_devices 反查 agent → devices，按 agent 聚合后去重。
+"""
+import asyncio
+import logging
+import os
+import random
+import re
+import time
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+TAG = __name__
+
+# 降级链顺序
+_FALIBACK_CHAIN = ["memory", "weather", "chat"]
+
+# 闲聊开场白模板
+_CHAT_OPENINGS = [
+    "嘿，你今天在干嘛呀？",
+    "今天过得怎么样？",
+    "有什么有趣的事情想和我分享吗？",
+    "你现在心情怎么样？",
+    "今天天气不错呢，你有什么打算？",
+    "最近有没有遇到什么好玩的事？",
+    "你在做什么呢？",
+    "跟我说说你的今天吧！",
+]
+
+# LLM 调用超时（秒）
+_LLM_TIMEOUT = 20.0
+# LLM 重试次数
+_LLM_MAX_RETRIES = 2
+
+
+class TopicGenerator:
+    """话题源随机聊天生成器。
+
+    Args:
+        config: 服务端完整配置字典（包含 TTS、LLM、Memory、server 等 section）
+        conn: ConnectionHandler 实例（需要 client_ip、loop 属性）
+        wake_word_service: WakeWordService 实例（用于 agent→devices 反查）
+    """
+
+    def __init__(
+        self,
+        config: dict,
+        conn: Any,
+        wake_word_service=None,
+    ):
+        self._config = config
+        self._client_ip = getattr(conn, "client_ip", None)
+        self._loop = getattr(conn, "loop", None) or asyncio.get_event_loop()
+        self._wake_word_service = wake_word_service
+
+        # 延迟初始化，避免循环导入
+        self._tts_provider = None
+        self._tts_provider_agent = None  # 当前 TTS provider 对应的 agent_id
+        self._llm_provider = None
+        self._memory_providers: Dict[str, Any] = {}  # agent_id -> provider 惰性缓存
+        # agent 规范化缓存：agent_uuid -> device_mac（manager-api 反查用）
+        self._agent_device_cache: Dict[str, str] = {}
+        # agent 差异化配置缓存：agent_uuid -> manager-api 返回的完整配置
+        self._agent_cfg_cache: Dict[str, dict] = {}
+
+    # ------------------------------------------------------------------
+    # 公共接口
+    # ------------------------------------------------------------------
+
+    async def generate(
+        self,
+        device_id: str,
+        topic_sources: List[str],
+        location: Optional[str] = None,
+        agent_id: Optional[str] = None,
+    ) -> dict:
+        """随机生成一条话题文案 + TTS 音频 URL。
+
+        Args:
+            device_id: 触发设备的 ID（用于日志/TTS 文件命名）
+            topic_sources: 话题源列表，取值子集 ⊆ {"memory", "weather", "chat"}
+            location: 可选的地理位置（覆盖天气源默认城市）
+            agent_id: 可选的 agent ID（memory 源按 agent 查设备真实记忆库；
+                      缺省时尝试从 wake_word_service 反查，仍无则跳过 memory 源）
+
+        Returns:
+            {
+                "text": str,           # 生成文案（失败为 ""）
+                "audio_url": str,      # http URL，可被设备直接访问（失败为 ""）
+                "subtitles": [{"text": str}],
+                "generation_meta": {
+                    "source": str,     # 实际使用的源（memory/weather/chat/skipped）
+                    "fallback_used": bool,
+                },
+            }
+        """
+        # memory 源需要 agent 上下文：优先显式传入，否则从 WS 在线连接反查
+        if agent_id is None and "memory" in topic_sources:
+            agent_id = self._resolve_agent_id(device_id)
+        # MAC/UUID 规范化（manager-api 反查 + 缓存）；失败保持原值
+        if agent_id and "memory" in topic_sources:
+            try:
+                agent_id = await self._normalize_agent(agent_id)
+            except Exception as e:
+                logger.warning("[%s] agent 规范化失败: %s", TAG, e)
+        self._agent_id = agent_id  # _fetch_memory / TTS 解析使用
+
+        # 规范化 topic_sources
+        valid_sources = set(topic_sources) & set(_FALIBACK_CHAIN)
+        if not valid_sources:
+            logger.warning("[%s] topic_sources 全部无效，跳过生成", TAG)
+            return self._empty_result(device_id)
+
+        # 按降级链顺序，随机打乱后依次尝试
+        sources_to_try = list(valid_sources)
+        random.shuffle(sources_to_try)
+
+        text = None
+        used_source = None
+        fallback_used = False
+
+        for source in sources_to_try:
+            try:
+                text = await self._fetch_topic_text(source, location)
+                used_source = source
+                break
+            except Exception as e:
+                logger.warning(
+                    "[%s] 话题源 '%s' 获取失败，降级到下一源: %s", TAG, source, e
+                )
+                fallback_used = True
+
+        if text is None:
+            logger.error("[%s] 所有话题源均失败，跳过本次生成", TAG)
+            return self._empty_result(device_id)
+
+        # TTS 合成
+        try:
+            audio_url = await self._synthesize_tts(text, device_id, used_source)
+        except Exception as e:
+            logger.error("[%s] TTS 合成失败: %s", TAG, e, exc_info=True)
+            # TTS 失败时仍返回文案，audio_url 留空让设备仅显示字幕
+            audio_url = ""
+
+        meta = {
+            "source": used_source or "skipped",
+            "fallback_used": fallback_used,
+        }
+        subtitles = [{"text": text}]
+        return {
+            "text": text,
+            "audio_url": audio_url,
+            "subtitles": subtitles,
+            "generation_meta": meta,
+        }
+
+    async def generate_for_agent(
+        self,
+        agent_id: str,
+        topic_sources: List[str],
+        location: Optional[str] = None,
+    ) -> dict:
+        """按指定 agent 生成话题（该 agent 下所有设备共用同一话题）。
+
+        Returns:
+            dict 结构与 generate() 相同。
+        """
+        logger.info(
+            "[%s] agent=%s 生成话题: sources=%s, location=%s",
+            TAG, agent_id, topic_sources, location,
+        )
+        return await self.generate(
+            agent_id, topic_sources, location, agent_id=agent_id
+        )
+
+    def _resolve_agent_id(self, device_id: str) -> Optional[str]:
+        """从 wake_word_service 反查 device_id 所属 agent。
+
+        反查链：_agent_devices(agent -> devices) / _connections(device -> conn)。
+        conn 上若挂有 config（ConnectionHandler 读取的设备差异化配置），
+        优先取 config["agent_id"]。
+        """
+        try:
+            wws = self._wake_word_service
+            if wws is None:
+                return None
+            # 在线 WS 连接的差异化配置里有 agent_id
+            conn = getattr(wws, "_connections", {}).get(device_id)
+            if conn is not None:
+                cfg = getattr(conn, "config", None) or {}
+                aid = cfg.get("agent_id") if isinstance(cfg, dict) else None
+                if aid:
+                    return str(aid)
+            # agent -> devices 反查
+            for aid, devices in getattr(wws, "_agent_devices", {}).items():
+                if device_id in devices:
+                    return str(aid)
+        except Exception as e:
+            logger.warning("[%s] 反查 agent_id 失败: %s", TAG, e)
+        return None
+
+    async def _normalize_agent(self, agent_id: str) -> str:
+        """规范化 agent 标识：MAC（含 xiaozhi- 前缀格式）→ agent UUID。
+
+        push_scheduler 传来的可能是 agent UUID 或设备 MAC（反查失败时的
+        兜底值）。manager-api /config/agent-models 接受 macAddress，
+        返回的配置里带真实 agent_id——用它做一次规范化并缓存。
+        """
+        if not agent_id:
+            return agent_id
+        # 已经是 UUID 形态（32hex 或带连字符），直接返回
+        aid = agent_id.replace(":", "").replace("-", "")
+        if aid.startswith("xiaozhi"):
+            aid = aid[7:]
+        if len(aid) == 32 and all(c in "0123456789abcdef" for c in aid):
+            return agent_id if "-" in agent_id else agent_id
+        # MAC 形态：查 manager-api 拿 agent UUID
+        mac = agent_id if ":" in agent_id else self._mac_from_plain(agent_id)
+        if not mac:
+            return agent_id
+        cfg = await self._get_agent_cfg_from_api(mac)
+        if cfg and cfg.get("agent_id"):
+            return str(cfg["agent_id"])
+        return agent_id
+
+    @staticmethod
+    def _mac_from_plain(plain: str) -> Optional[str]:
+        """无分隔符 hex（12 位）转 MAC 冒号格式。"""
+        p = plain.replace("xiaozhi", "")
+        if len(p) == 12 and all(c in "0123456789abcdef" for c in p):
+            return ":".join(p[i:i + 2] for i in range(0, 12, 2))
+        return None
+
+    async def _get_agent_cfg_from_api(self, mac_or_agent: str) -> Optional[dict]:
+        """经 manager-api 取设备差异化配置（带缓存）。
+
+        mac_or_agent 优先是 MAC 冒号格式；若是 agent UUID 则先经
+        _agent_device_cache 反查 MAC。clientId 仅 DTO 层 @NotBlank
+        校验（Java 服务层不使用），传占位符。
+        """
+        # 命中缓存：按 agent UUID 或 MAC 双键查
+        cached = self._agent_cfg_cache.get(mac_or_agent)
+        if cached is not None:
+            return cached
+        # agent UUID -> MAC 反查
+        mac = mac_or_agent if ":" in mac_or_agent else (
+            self._agent_device_cache.get(mac_or_agent) or self._mac_from_plain(mac_or_agent)
+        )
+        if not mac:
+            return None
+        try:
+            from config.manage_api_client import get_agent_models
+
+            cfg = await get_agent_models(mac, "server-topic-generator", {})
+            if isinstance(cfg, dict) and cfg.get("agent_id"):
+                aid = str(cfg["agent_id"])
+                self._agent_cfg_cache[aid] = cfg
+                self._agent_cfg_cache[mac] = cfg
+                self._agent_device_cache[aid] = mac
+                return cfg
+        except Exception as e:
+            logger.warning("[%s] manager-api 反查配置失败(%s): %s", TAG, mac, e)
+        return None
+
+    # ------------------------------------------------------------------
+    # 内部实现
+    # ------------------------------------------------------------------
+
+    def _empty_result(self, device_id: str) -> dict:
+        return {
+            "text": "",
+            "audio_url": "",
+            "subtitles": [],
+            "generation_meta": {"source": "skipped", "fallback_used": False},
+        }
+
+    async def _fetch_topic_text(
+        self, source: str, location: Optional[str]
+    ) -> str:
+        """从指定源获取原始文本素材（未 LLM 加工）。"""
+        if source == "memory":
+            return await self._fetch_memory()
+        elif source == "weather":
+            return await self._fetch_weather(location)
+        elif source == "chat":
+            return await self._fetch_chat()
+        raise ValueError(f"未知话题源: {source}")
+
+    async def _fetch_memory(self) -> str:
+        """从记忆库随机取一条记忆作为话题素材。
+
+        注意：memory_type 不再从启动时的静态全局配置读取——设备记忆
+        是按 agent 差异化配置的（manager-api 下发 Memory_mem_hybrid 等），
+        启动配置 selected_module.Memory=nomem 不代表设备没有记忆库。
+        改为从 agent 上下文直接初始化记忆 provider，初始化失败自然会降级。
+        """
+        agent_id = getattr(self, "_agent_id", None)
+        if not agent_id:
+            raise RuntimeError("无法获取 agent_id，记忆源跳过")
+
+        # 优先用该 agent 真实连接配置里的 Memory 模块（差异化配置），
+        # 拿不到时按 agent_id 直接尝试各已知 memory 类型。
+        memory_type, memory_cfg = await self._resolve_memory_config(agent_id)
+        if memory_type is None:
+            raise RuntimeError(f"agent {agent_id} 无可用记忆配置，记忆源跳过")
+
+        provider = self._lazy_get_memory_provider(memory_type, memory_cfg, agent_id)
+        if provider is None:
+            raise RuntimeError("记忆 provider 初始化失败")
+
+        try:
+            # 先按开放式问题检索（内容命中的事实）
+            queries = [
+                "最近有什么值得记住的事情？",
+                "请回想一下之前聊过的有趣话题。",
+                "用户之前表达了哪些想法或情感？",
+            ]
+            query = random.choice(queries)
+            result = await provider.query_memory(query)
+            if result and result.strip():
+                return result.strip()
+            # 检索空（中文问句与陈述句事实字面不重叠时 FTS/bigram 召回为 0）：
+            # 直接从事实库随机抽素材，保证记忆源可用
+            fallback = self._random_facts_from_provider(provider)
+            if fallback:
+                return fallback
+            raise RuntimeError("记忆查询返回空结果")
+        except Exception as e:
+            raise RuntimeError(f"记忆查询失败: {e}") from e
+
+    @staticmethod
+    def _random_facts_from_provider(provider) -> str:
+        """从 provider 内部事实库随机抽取若干条作为话题素材。
+
+        适用于 query_memory 检索不到的场景（事实库为陈述句，
+        与问句字面无重叠）。兼容 mem_hybrid（_store.list_facts）。
+        """
+        try:
+            store = getattr(provider, "_store", None)
+            if store is None or not hasattr(store, "list_facts"):
+                return ""
+            facts = store.list_facts(
+                category=None,
+                min_trust=0.3,
+                limit=200,
+            )
+            if not facts:
+                return ""
+            # 随机抽 3-5 条拼接为素材
+            picks = random.sample(facts, k=min(len(facts), random.randint(3, 5)))
+            lines = []
+            for f in picks:
+                content = str(f.get("content", "")).strip()
+                if content:
+                    lines.append(f"- {content}")
+            return "\n".join(lines)
+        except Exception as e:
+            logger.warning("[%s] 随机抽取事实失败: %s", TAG, e)
+            return ""
+
+    async def _resolve_memory_config(self, agent_id: str) -> tuple:
+        """解析 agent 对应的真实 Memory 配置，返回 (memory_type, memory_section)。
+
+        解析链（任一命中即返回）：
+        1. 在线 WS 连接的设备差异化配置（conn.config）
+        2. manager-api 直查（设备空闲 WS 断开时也能拿到）
+        3. 全局静态配置兜底
+        memory_section 形如 {"Memory_mem_hybrid": {...}}（供初始化 provider 用）。
+        """
+        # 1) 在线连接的设备差异化配置
+        try:
+            wws = self._wake_word_service
+            if wws is not None:
+                for conn in getattr(wws, "_connections", {}).values():
+                    cfg = getattr(conn, "config", None) or {}
+                    if not isinstance(cfg, dict):
+                        continue
+                    if str(cfg.get("agent_id", "")) == str(agent_id):
+                        mt, sec = self._extract_memory_config(cfg)
+                        if mt:
+                            return mt, sec
+        except Exception as e:
+            logger.warning("[%s] 解析记忆配置异常(在线连接): %s", TAG, e)
+        # 2) manager-api 直查该 agent 下任一设备的差异化配置
+        mt, sec = await self._query_memory_config_from_api(agent_id)
+        if mt:
+            return mt, sec
+        # 3) 兜底：全局静态配置（服务器本机配置的记忆）
+        mt, sec = self._extract_memory_config(self._config)
+        return mt, sec
+
+    @staticmethod
+    def _extract_memory_config(cfg: dict) -> tuple:
+        """从配置 dict 提取 (memory_type, memory_section)。"""
+        if not isinstance(cfg, dict):
+            return None, None
+        sel = cfg.get("selected_module", {}) or {}
+        mt = sel.get("Memory")
+        section = cfg.get("Memory") or {}
+        if mt and mt not in ("nomem", "mem_report_only", "None") and mt in section:
+            return str(mt), {mt: section[mt]}
+        # selected_module 缺失时，从 Memory section 的实例键推断
+        for key in section:
+            if key and key not in ("nomem",):
+                return str(key), {str(key): section[key]}
+        return None, None
+
+    async def _query_memory_config_from_api(self, agent_id: str) -> tuple:
+        """经 manager-api 反查 agent 下设备的 Memory 配置，返回 (type, section)。
+
+        agent_id 兼容 agent UUID 与设备 MAC 两种形态（_get_agent_cfg_from_api
+        内部规范化）；带缓存，避免每次推送都打 manager-api。
+        """
+        try:
+            cfg = await self._get_agent_cfg_from_api(agent_id)
+            if isinstance(cfg, dict):
+                mt, sec = self._extract_memory_config(cfg)
+                if mt:
+                    logger.info(
+                        "[%s] manager-api 反查 agent=%s Memory=%s",
+                        TAG, agent_id, mt,
+                    )
+                    return mt, sec
+        except Exception as e:
+            logger.warning("[%s] manager-api 反查记忆配置失败: %s", TAG, e)
+        return None, None
+
+    def _lazy_get_memory_provider(
+        self, memory_type: str, memory_section: dict, agent_id: str
+    ) -> Optional[Any]:
+        """惰性缓存记忆 provider 实例（按 memory_type+agent_id 隔离）。
+
+        用设备真实 Memory 配置（memory_section）构造临时 config 初始化，
+        而非全局静态配置——全局 selected_module.Memory 可能是 nomem，
+        而 manager-api 下发的差异化配置才是设备实际使用的记忆模块。
+        """
+        cache_key = f"{memory_type}_{agent_id}"
+        if cache_key not in self._memory_providers:
+            try:
+                from core.utils.memory import create_instance as memory_create
+                from core.utils.modules_initialize import initialize_modules
+                from config.logger import setup_logging as _setup_logging
+
+                # 用真实 Memory 配置构造 initialize_modules 需要的结构。
+                # 注意：initialize_modules 的 _safe_init 会对 logger 调 .bind()，
+                # 必须传 loguru logger（setup_logging()），不能传本模块的 stdlib logger。
+                module_cfg = {
+                    "selected_module": {"Memory": memory_type},
+                    "Memory": memory_section,
+                    "summaryMemory": self._config.get("summaryMemory", None),
+                }
+                modules = initialize_modules(
+                    _setup_logging(),
+                    module_cfg,
+                    init_memory=True,
+                )
+                mem_inst = modules.get("memory")
+                if mem_inst is None:
+                    return None
+                mem_inst.init_memory(role_id=agent_id, llm=None)
+                self._memory_providers[cache_key] = mem_inst
+            except Exception as e:
+                logger.warning("[%s] 记忆 provider 初始化失败: %s", TAG, e)
+                return None
+        return self._memory_providers.get(cache_key)
+
+    async def _fetch_weather(self, location: Optional[str]) -> str:
+        """异步获取天气数据（不依赖 threading.Event 的同步封装）。"""
+        try:
+            import httpx
+            from plugins_func.functions.get_weather import (
+                HEADERS,
+                WEATHER_CODE_MAP,
+                fetch_city_info,
+                fetch_weather_page,
+                parse_weather_info,
+            )
+
+            weather_config = self._config.get("plugins", {}).get("get_weather", {})
+            api_host = weather_config.get("api_host", "mj7p3y7naa.re.qweatherapi.com")
+            api_key = weather_config.get("api_key", "a861d0d5e7bf4ee1a83d9a9e4f96d4da")
+            default_location = weather_config.get("default_location", "广州")
+
+            target_location = location or default_location
+
+            async with httpx.AsyncClient(timeout=httpx.Timeout(8.0, connect=3.0)) as client:
+                city_info = await fetch_city_info(target_location, api_key, api_host)
+            if not city_info:
+                raise RuntimeError(f"无法获取城市信息: {target_location}")
+
+            soup = await fetch_weather_page(city_info["fxLink"])
+            if not soup:
+                raise RuntimeError(f"天气页面请求失败: {target_location}")
+
+            city_name, current_abstract, current_basic, temps_list = parse_weather_info(soup)
+
+            lines = [f"您所在位置是：{city_name}，当前天气：{current_abstract}。"]
+            if current_basic:
+                params = [f"{k}：{v}" for k, v in current_basic.items() if v != "0"]
+                if params:
+                    lines.append("详细参数：" + "；".join(params) + "。")
+            if temps_list:
+                forecast = "未来几天预报："
+                for date, weather, high, low in temps_list[:3]:
+                    forecast += f"{date}{weather}，{low}到{high}度；"
+                lines.append(forecast)
+            return "\n".join(lines)
+        except Exception as e:
+            raise RuntimeError(f"天气获取失败: {e}") from e
+
+    async def _fetch_chat(self) -> str:
+        """纯闲聊模式：随机取一个开场白。"""
+        return random.choice(_CHAT_OPENINGS)
+
+    async def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
+        """异步调用 LLM（to_thread 包装，避免阻塞事件循环）。
+
+        失败时自动重试 _LLM_MAX_RETRIES 次。
+        """
+        llm_provider = self._lazy_get_llm_provider()
+        if llm_provider is None:
+            raise RuntimeError("LLM provider 未初始化，回退到原始文本")
+
+        last_error = None
+        for attempt in range(1, _LLM_MAX_RETRIES + 1):
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        llm_provider.response_no_stream,
+                        system_prompt,
+                        user_prompt,
+                    ),
+                    timeout=_LLM_TIMEOUT,
+                )
+                if result and isinstance(result, str) and result.strip():
+                    return result.strip()
+                raise RuntimeError("LLM 返回空文本")
+            except (asyncio.TimeoutError, Exception) as e:
+                last_error = e
+                logger.warning(
+                    "[%s] LLM 调用第 %d 次失败: %s", TAG, attempt, e
+                )
+                if attempt < _LLM_MAX_RETRIES:
+                    await asyncio.sleep(1.0 * attempt)  # 简单指数退避
+
+        raise RuntimeError(f"LLM 调用失败（已重试 {_LLM_MAX_RETRIES} 次）: {last_error}")
+
+    def _lazy_get_llm_provider(self) -> Optional[Any]:
+        """惰性初始化 LLM provider。"""
+        if self._llm_provider is not None:
+            return self._llm_provider
+        try:
+            from core.utils.modules_initialize import initialize_modules
+
+            modules = initialize_modules(
+                logger,
+                self._config,
+                init_llm=True,
+            )
+            self._llm_provider = modules.get("llm")
+            if self._llm_provider is None:
+                logger.warning("[%s] LLM 模块初始化失败", TAG)
+            else:
+                logger.info("[%s] LLM provider 已初始化", TAG)
+        except Exception as e:
+            logger.warning("[%s] LLM 初始化异常: %s", TAG, e)
+        return self._llm_provider
+
+    async def _synthesize_tts(self, text: str, device_id: str, source: str) -> str:
+        """使用 TTS 合成音频，写入 tmp/ 目录，返回 HTTP URL。
+
+        TTS provider 按设备真实差异化配置初始化（生产全局配置不含
+        selected_module/TTS，全部依赖 manager-api 下发）；同一个 agent
+        的设备共享同套 TTS 配置，按 agent 缓存。
+        """
+        tts_provider = await self._lazy_get_tts_provider_for_agent()
+        if tts_provider is None:
+            raise RuntimeError("TTS provider 初始化失败")
+
+        # 生成文件名（device_id 去冒号——URL 路由只放行 [A-Za-z0-9.\-_]，
+        # 且部分 HTTP 客户端对路径中的冒号处理不一致）
+        ext = getattr(tts_provider, "audio_file_type", "mp3")
+        dev_tag = re.sub(r"[^A-Za-z0-9.\-_]", "", str(device_id))[:12]
+        filename = f"topic-{int(time.time() * 1000)}-{dev_tag}.{ext}"
+        output_dir = self._config.get("tmp_dir", "tmp")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, filename)
+
+        try:
+            # 所有 TTS provider 的 text_to_speak 均为 async 协程：
+            # - 直接 asyncio.to_thread 包装 async 函数只会得到未执行的 coroutine（静默失败）
+            # - 直接 await 则 doubao_v3 内部的阻塞 requests 会卡主事件循环 1-3s
+            # 因此在独立线程 + 独立事件循环中执行，两全其美。
+            await asyncio.to_thread(
+                lambda: asyncio.run(tts_provider.text_to_speak(text, output_path))
+            )
+        except Exception as e:
+            # 清理可能的空文件
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except OSError:
+                    pass
+            raise RuntimeError(f"TTS 合成失败: {e}") from e
+
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            raise RuntimeError("TTS 合成文件为空")
+
+        # 构建 HTTP URL（设备需公网可达）：
+        # 1) server.public_audio_base_url 显式配置
+        # 2) 从 vision_explain 推导（形如 http://sandyun.top:8003/mcp/...）
+        # 3) 从 websocket 配置推导 host（形如 ws://sandyun.top:8001/...）
+        # 4) 兜底 sandyun.top:8003
+        # 音频路径固定 /audio/{filename}（http_server.py 受限路由，仅放行 topic- 前缀）
+        server_config = self._config.get("server", {})
+        base_url = str(server_config.get("public_audio_base_url", "")).rstrip("/")
+        if not base_url:
+            vision = str(self._config.get("server", {}).get("vision_explain", ""))
+            m = re.match(r"https?://([^/]+)", vision)
+            if m:
+                base_url = f"http://{m.group(1)}"
+            else:
+                ws = str(server_config.get("websocket", ""))
+                m = re.match(r"wss?://([^/:]+)", ws)
+                if m:
+                    base_url = f"http://{m.group(1)}:8003"
+                else:
+                    base_url = "http://sandyun.top:8003"
+        audio_url = f"{base_url}/audio/{filename}"
+        logger.info(
+            "[%s] TTS 合成成功: device=%s, source=%s, url=%s",
+            TAG, device_id, source, audio_url,
+        )
+        return audio_url
+
+    async def _lazy_get_tts_provider_for_agent(self) -> Optional[Any]:
+        """按当前 agent 的设备真实 TTS 配置初始化 provider（缓存）。
+
+        解析链：在线连接配置 → manager-api 反查 → 全局配置。
+        同一 agent 的设备共用同套 TTS；切换 agent 时重建。
+        """
+        agent_id = getattr(self, "_agent_id", None) or "_global_"
+        if self._tts_provider is not None and self._tts_provider_agent == agent_id:
+            return self._tts_provider
+        try:
+            from core.utils.modules_initialize import initialize_tts
+
+            tts_cfg = await self._resolve_tts_config(agent_id)
+            if tts_cfg is None:
+                logger.warning("[%s] 无法解析 TTS 配置（agent=%s）", TAG, agent_id)
+                return None
+            provider = initialize_tts(tts_cfg)
+            if provider is not None:
+                # 强制 delete_audio_file=False，保证生成的音频文件持久化；
+                # tts_timeout 提到 60s（推送文案较长，doubao 合成 15s 会超时）
+                provider.delete_audio_file = False
+                if hasattr(provider, "tts_timeout"):
+                    try:
+                        provider.tts_timeout = 60
+                    except Exception:
+                        pass
+                self._tts_provider = provider
+                self._tts_provider_agent = agent_id
+                logger.info(
+                    "[%s] TTS provider 已初始化（agent=%s, delete_audio_file=False）",
+                    TAG, agent_id,
+                )
+            else:
+                logger.warning("[%s] TTS provider 初始化返回 None", TAG)
+        except Exception as e:
+            logger.warning("[%s] TTS 初始化异常: %s", TAG, e)
+        return self._tts_provider
+
+    async def _resolve_tts_config(self, agent_id: str) -> Optional[dict]:
+        """解析 agent 的完整 TTS 配置 dict（含 selected_module.TTS 与 TTS section）。
+
+        返回可直接喂给 initialize_tts 的 config 子集。
+        """
+        # 1) 在线连接的设备差异化配置
+        try:
+            wws = self._wake_word_service
+            if wws is not None:
+                for conn in getattr(wws, "_connections", {}).values():
+                    cfg = getattr(conn, "config", None) or {}
+                    if not isinstance(cfg, dict):
+                        continue
+                    if agent_id == "_global_" or str(cfg.get("agent_id", "")) == str(agent_id):
+                        sel = cfg.get("selected_module", {}) or {}
+                        tts_sel = sel.get("TTS")
+                        tts_sec = cfg.get("TTS") or {}
+                        if tts_sel and tts_sel in tts_sec:
+                            return {
+                                "selected_module": {"TTS": tts_sel},
+                                "TTS": tts_sec,
+                            }
+        except Exception as e:
+            logger.warning("[%s] 解析 TTS 配置异常(在线连接): %s", TAG, e)
+        # 2) manager-api 反查（agent UUID / MAC 均可，带缓存）
+        if agent_id != "_global_":
+            try:
+                cfg = await self._get_agent_cfg_from_api(agent_id)
+                if isinstance(cfg, dict):
+                    sel = cfg.get("selected_module", {}) or {}
+                    tts_sel = sel.get("TTS")
+                    tts_sec = cfg.get("TTS") or {}
+                    if tts_sel and tts_sel in tts_sec:
+                        logger.info(
+                            "[%s] manager-api 反查 TTS agent=%s TTS=%s",
+                            TAG, agent_id, tts_sel,
+                        )
+                        return {
+                            "selected_module": {"TTS": tts_sel},
+                            "TTS": tts_sec,
+                        }
+            except Exception as e:
+                logger.warning("[%s] manager-api 反查 TTS 配置失败: %s", TAG, e)
+        # 3) 全局配置兜底
+        sel = self._config.get("selected_module", {}) or {}
+        tts_sel = sel.get("TTS")
+        tts_sec = self._config.get("TTS") or {}
+        if tts_sel and tts_sel in tts_sec:
+            return {
+                "selected_module": {"TTS": tts_sel},
+                "TTS": tts_sec,
+            }
+        return None
