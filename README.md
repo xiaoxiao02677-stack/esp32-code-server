@@ -10,7 +10,7 @@
 | `code/small_secreen/xiaozhi-esp32/` | 小屏固件**主工作区**（my-s3-tft 板，COM12） |
 | `code/small_secrenn_test/` | 小屏试验沙盒（本地不入库；与主区差异见项目记忆） |
 | `code/camera/` | 摄像头板固件（上游完整仓嵌套 git，lckfb/szpi-esp32s3，IDF v6.1） |
-| `code/super_small_screen/` | 早期小屏原型（已被 small_secreen 取代，归档） |
+| `code/small_secreen-camera/` | 摄像头板×小屏工作区（2026-10-15 新建，活跃开发中） |
 | `code-server-mirror/` | 服务端源码本地镜像（Java manager-api + manager-web + Python xiaozhi-server） |
 | `console-v2/` | 生产管理台前端（app + admin 双构建，源码权威副本） |
 | `cc-console/` | 旧版控制台（线上 /cc/ 仍在用） |
