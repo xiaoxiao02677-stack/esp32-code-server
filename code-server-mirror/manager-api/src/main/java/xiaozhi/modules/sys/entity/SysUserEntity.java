@@ -4,8 +4,8 @@ import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import org.apache.ibatis.annotation.TableLogic;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
