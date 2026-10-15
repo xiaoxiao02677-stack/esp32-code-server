@@ -57,9 +57,18 @@
 - aoci.code.txt 条目 `文件名[标签]: F:... | R:... | A:... | S:...`；规模档 S/T≈70 行（≥70 用 T）、~221→M、~449→L；**FRAS 四字段必须用 ` | `（空格竖线空格）分隔**，误用 `;`/`,` 会整行判为单 F 并报 fras_r/a/s_empty；`--preview --json` 只读探测可精确定位违规
 - 660 二进制资产已人工翻 observe；全部 2808 二进制资产在基线中为 observe；baseline 编辑前必备份 `baseline.json.bak-<UTC>`
 
+## 目录结构（2026-10-15 深夜重构后 · 双大目录）
+- **仓库根**：README、docs/、hardware/、yh/、third_party/、tools/、code/（+隐藏 .git/.trash/.workbuddy/.aoci）
+- **`hardware/`（固件，3.7G）**：big_secreen、small_secreen（主工作区 my-s3-tft/COM12）、small_secreen_test（沙盒，本地不入库）、camera（嵌套 git，szpi 板）、small_screen_camera（摄像头×小屏，活跃）、clawbot_llm、weixin_clawbot + fixes/artifacts/tests
+- **`yh/`（web 后台+服务端，106M）**：manager-api（Java）、manager-web（前端，含**必须入库的 public/generator 75M**——DeviceManagement.vue 引用、本地不可重建）、xiaozhi-server（Python）、console-v2、cc-console、_archive-order-module（两套 order 不可混用红线）
+- `third_party/`（hermes-agent-main、stylekit）、`tools/aoci-code`、`docs/`、`code/`（reports+.workbuddy 记忆）
+- **yh 后端从生产 22222 `/root/xiaozhi-server/main/` 同步**（测试 22223 才是 /root/yh/；生产无 yh 目录），排除 target/node_modules/models/data/.venv/.webpack_cache
+- 移动后 .gitignore 路径必须同步更新（失效规则会让 camera/沙盒 1.6G 脱离忽略）
+
 ## git / gitee 远端
 - 远程 `git@gitee.com:mm-Super-Nices/esp32-code-server.git`（账号 mm-Super-Nices，SSH 已认证；本沙箱可直连 gitee/github）
 - gitee `main` 与 `master` 均已同步为本地 main（master 曾用 `--force-with-lease` 覆盖，清除旧快照泄漏的私钥 certs/*.key）
+- **2026-10-15 重构后已推送 `master`（faaafaaf）**：本地 test_environment HEAD → `git push gitee master`（与远端同源快进，无需 force）
 - `baseline.json` 保持 git 追踪并提交（用户拍板，每次 reconcile 变更属预期）；`.workbuddy`、`.trash/` 临时产物永不进提交
 - Windows 保留名 `nul` 已用 MoveFileExW 隔离至 `.trash/`；`safe_reconcile.py` 含 RESERVED 名跳过
 - **活跃工作分支 = `test_environment`**（10-13 起所有工作提交于此，领先 main 30+ 提交）；main/master 为 gitee 同步分支，勿在其上直接开发
