@@ -306,7 +306,107 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     esp_pm_lock_release(pm_lock_);
 }
 
-void LvglDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {}
+namespace {
+// Tracks the full-screen preview overlay so a newer SetPreviewImage() call
+// replaces the previous one instead of stacking objects. LVGL state is
+// protected by DisplayLockGuard and there is exactly one Display instance per
+// build, so a file-scope static is safe here. The overlay's LV_EVENT_DELETE
+// handler frees the owned LvglImage and clears this pointer, so it never
+// dangles.
+lv_obj_t* s_preview_overlay = nullptr;
+}  // namespace
+
+void LvglDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
+    if (!setup_ui_called_) {
+        ESP_LOGW(TAG, "SetPreviewImage called before SetupUI() - preview will be ignored");
+        return;
+    }
+
+    DisplayLockGuard lock(this);
+
+    // A null image dismisses the current preview.
+    if (image == nullptr) {
+        if (s_preview_overlay != nullptr) {
+            lv_obj_delete(s_preview_overlay);
+            s_preview_overlay = nullptr;
+        }
+        return;
+    }
+
+    auto img_dsc = image->image_dsc();
+    if (img_dsc == nullptr || img_dsc->data == nullptr) {
+        ESP_LOGW(TAG, "SetPreviewImage: invalid image descriptor, dropping preview");
+        return;
+    }
+
+    // Replace the previous preview (its LV_EVENT_DELETE handler frees the old
+    // LvglImage and clears s_preview_overlay).
+    if (s_preview_overlay != nullptr) {
+        lv_obj_delete(s_preview_overlay);
+        s_preview_overlay = nullptr;
+    }
+
+    lv_obj_t* screen = lv_screen_active();
+    if (screen == nullptr) {
+        return;
+    }
+
+    // Full-screen dim overlay so the preview stands out against the UI.
+    lv_obj_t* overlay = lv_obj_create(screen);
+    lv_obj_remove_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_60, 0);
+    lv_obj_set_style_border_width(overlay, 0, 0);
+    lv_obj_set_style_pad_all(overlay, 0, 0);
+    lv_obj_set_size(overlay, LV_HOR_RES, LV_VER_RES);
+
+    // Preview image scaled to fit within 80% x 80% of the screen, capped at 100%.
+    lv_obj_t* preview_image = lv_image_create(overlay);
+    lv_coord_t max_width = LV_HOR_RES * 80 / 100;
+    lv_coord_t max_height = LV_VER_RES * 80 / 100;
+
+    lv_coord_t img_width = img_dsc->header.w;
+    lv_coord_t img_height = img_dsc->header.h;
+    if (img_width <= 0 || img_height <= 0) {
+        img_width = max_width;
+        img_height = max_height;
+        ESP_LOGW(TAG, "SetPreviewImage: invalid image dimensions %ld x %ld, using %ld x %ld",
+                 (long)img_dsc->header.w, (long)img_dsc->header.h, img_width, img_height);
+    }
+
+    lv_coord_t zoom_w = (max_width * 256) / img_width;
+    lv_coord_t zoom_h = (max_height * 256) / img_height;
+    lv_coord_t zoom = (zoom_w < zoom_h) ? zoom_w : zoom_h;
+    if (zoom > 256) {
+        zoom = 256;
+    }
+    if (zoom < 1) {
+        zoom = 1;
+    }
+
+    lv_image_set_src(preview_image, img_dsc);
+    lv_image_set_scale(preview_image, zoom);
+    lv_obj_center(preview_image);
+
+    // Transfer LvglImage ownership to the LVGL object: freed on LV_EVENT_DELETE
+    // (when the overlay is replaced or the screen is torn down).
+    LvglImage* raw_image = image.release();
+    lv_obj_add_event_cb(
+        overlay,
+        [](lv_event_t* e) {
+            lv_obj_t* obj = static_cast<lv_obj_t*>(lv_event_get_target(e));
+            if (s_preview_overlay == obj) {
+                s_preview_overlay = nullptr;
+            }
+            LvglImage* img = static_cast<LvglImage*>(lv_event_get_user_data(e));
+            if (img != nullptr) {
+                delete img;
+            }
+        },
+        LV_EVENT_DELETE, raw_image);
+
+    s_preview_overlay = overlay;
+}
 
 void LvglDisplay::SetPowerSaveMode(bool on) {
     if (on) {

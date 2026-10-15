@@ -24,6 +24,16 @@ echo   One-click build: %BOARD%
 echo ============================================================
 echo.
 
+rem ---------- 0. component manager workarounds ----------
+rem esp_video 2.5.0 的 esp_h264 依赖带 matches
+rem "$CONFIG{ESP_VIDEO_USE_CUSTOMIZED_ESP_H264_VERSION} == False"，
+rem esp32s3 构建时该 Kconfig 变量未定义（esp_h264 是 p4-only 依赖），
+rem 组件管理器的"新版本检查"（check_for_new_component_versions）求值
+rem 该条件抛 MissingKconfigError 导致 configure FATAL。关掉检查即可，
+rem 不影响 dependencies.lock 锁定的版本（2026-10-15 经验）。
+set IDF_COMPONENT_CHECK_NEW_VERSION=0
+set IDF_COMPONENT_SUPPRESS_UNKNOWN_FILE_WARNINGS=1
+
 rem ---------- 1. ESP-IDF environment ----------
 rem EIM layout: set toolchain vars directly (proven in P19-R build)
 if not exist "D:\INSTALL\esp\v6.1\esp-idf\tools\cmake\project.cmake" (

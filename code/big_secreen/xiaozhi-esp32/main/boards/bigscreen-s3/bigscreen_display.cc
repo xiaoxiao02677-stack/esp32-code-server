@@ -484,11 +484,15 @@ void BigscreenDisplay::HandleKeyEvent(int ev) {
                 SetBubbleText("我在听...");
             }
             break;
-        case 1:  // 双击
-            if (state == kDeviceStateIdle) {
+        case 1:  // 双击（表情彩蛋轮播）
+            // 仅安全状态允许触发；Speaking/Listening 等交互态忽略，
+            // 避免彩蛋动画覆盖协议驱动表情、干扰正常交互（Bug-8）
+            if (state == kDeviceStateIdle || state == kDeviceStateConnecting ||
+                state == kDeviceStateStarting) {
                 NextEasterEgg();
-            } else if (state == kDeviceStateSpeaking) {
-                LcdDisplay::SetEmotion("winking");
+            } else {
+                ESP_LOGW(TAG, "Double-click easter egg ignored (state=%d)",
+                         static_cast<int>(state));
             }
             break;
         case 2:  // 长按

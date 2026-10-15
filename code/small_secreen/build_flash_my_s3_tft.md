@@ -2,9 +2,11 @@
 
 ## 硬件信息
 - MCU: ESP32-S3-N16R8（16MB Flash, 8MB PSRAM）
-- Display: ST7789 240x240 SPI LCD
+- Display: ST7789 240x240 SPI LCD（主屏）/ SSD1306 128x64 I2C OLED（备用屏，SCL=9 SDA=8 VCC=3V3 GND，地址0x3C）
 - Audio: MAX98357A I2S功放 + INMP441麦克风
 - 框架: ESP-IDF 6.1
+
+> 屏幕兼容性：固件开机先探测 I2C 0x3C——识别到备用屏则用 SSD1306（单色基础 UI），识别不到自动回退主屏 ST7789（圆屏皮肤），无需改代码或重烧固件。
 
 ## 一、编译步骤
 
@@ -100,7 +102,8 @@ idf.py -p COM12 monitor
 |------|----------|----------|
 | 一直显示"配置同步中" | 设备未注册/未绑定 | 在Java后台添加设备MAC地址 |
 | 无法连接WiFi AP | 配网模式未启动 | 长按BOOT键30秒内 |
-| 屏幕无显示 | LCD初始化失败 | 检查SPI引脚连接 |
+| 屏幕无显示（主屏） | LCD初始化失败 | 检查SPI引脚连接 |
+| 屏幕无显示（备用屏） | I2C探测失败 | 检查SCL=9/SDA=8/VCC=3V3接线；启动日志搜 "Fallback SSD1306" |
 | 无声 | 音量设置/功放问题 | 长按BOOT调节音量 |
 
 ## 五、服务器端检查

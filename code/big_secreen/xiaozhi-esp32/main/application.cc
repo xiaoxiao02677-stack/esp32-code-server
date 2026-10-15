@@ -338,16 +338,23 @@ void Application::HandleNetworkConnectedEvent() {
 }
 
 void Application::HandleNetworkDisconnectedEvent() {
-    // Close current conversation when network disconnected
-    auto state = GetDeviceState();
-    if (state == kDeviceStateNotifying) {
+    // 断网时关闭音频通道并启动自动重连，不做整对象销毁：
+    // - WebsocketProtocol::OpenAudioChannel / MqttProtocol 每次调用都会全新创建
+    //   连接并重新握手（websocket_protocol.cc:112 / mqtt_protocol.cc:96），
+    //   协议对象存活时重连天然重建连接，不存在"假连接"（TCP 通但握手未重做）。
+    // - 若在此 ResetProtocol() 销毁 protocol_，则重建必须依赖 InitializeProtocol()，
+    //   而它读取的 ota_ 已在激活完成后释放（application.cc:379）——重连必崩；
+    //   且 ActivationTask 只在开机状态启动，无其他重建路径——设备将永久失联。
+    // - 故这里只 CloseAudioChannel（幂等，有 IsAudioChannelOpened 守卫），
+    //   并显式 StartAutoReconnect() 武装重连定时器（本事件不经过协议层
+    //   OnNetworkError，若不武装，断网后无任何路径触发重连）。
+    if (GetDeviceState() == kDeviceStateNotifying) {
         StopNotification();
     }
-    if (state == kDeviceStateConnecting || state == kDeviceStateListening ||
-        state == kDeviceStateSpeaking) {
-        ESP_LOGI(TAG, "Closing audio channel due to network disconnection");
+    if (protocol_ && protocol_->IsAudioChannelOpened()) {
         protocol_->CloseAudioChannel();
     }
+    StartAutoReconnect();
 
     // Update the status bar immediately to show the network state
     auto display = Board::GetInstance().GetDisplay();
@@ -876,9 +883,10 @@ void Application::StartAutoReconnect() {
                             app->StopAutoReconnect();
                             return;
                         }
-                        // 静默重连：直接调 OpenAudioChannel，失败会再次触发
+                        // 静默重连：直接调 OpenAudioChannel（每次调用都会在协议层
+                        // 全新建连并重新握手，无需整对象重建），失败会再次触发
                         // OnNetworkError -> StartAutoReconnect（幂等续期）
-                        if (!app->protocol_->OpenAudioChannel()) {
+                        if (app->protocol_ && !app->protocol_->OpenAudioChannel()) {
                             ESP_LOGW(TAG, "AutoReconnect attempt failed");
                         }
                     });
@@ -1186,7 +1194,12 @@ void Application::HandleStateChangedEvent() {
             }
             break;
         case kDeviceStateSpeaking:
-            display->SetStatus(Lang::Strings::SPEAKING);
+            // Defensive: guard the display pointer so a missing/null display
+            // cannot leave the status bar stuck on the previous "listening"
+            // text; the audio path below must run regardless.
+            if (display != nullptr) {
+                display->SetStatus(Lang::Strings::SPEAKING);
+            }
 
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableVoiceProcessing(false);
@@ -1201,6 +1214,32 @@ void Application::HandleStateChangedEvent() {
             audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
             break;
         case kDeviceStateWifiConfiguring:
+            audio_service_.EnableVoiceProcessing(false);
+            audio_service_.EnableWakeWordDetection(false);
+            break;
+        case kDeviceStateAudioTesting:
+            // 配网流程中的音频测试状态（WifiConfiguring ↔ AudioTesting 互切）。
+            // 该状态本身就在测试麦克风/扬声器，因此不要禁用语音处理。
+            display->SetStatus(Lang::Strings::AUDIO_TESTING);
+            display->SetEmotion("neutral");
+            break;
+        case kDeviceStateUpgrading:
+            // 升级入口（assets/OTA）已有独立的 SetChatMessage 进度反馈，
+            // 这里补上状态栏文字，避免残留上一次的状态文字。
+            display->SetStatus(Lang::Strings::UPGRADING);
+            break;
+        case kDeviceStateActivating:
+            // 激活流程有独立的 UI 调用（SetEmotion/SetChatMessage 等），
+            // 这里只设置状态栏文字保持一致性。
+            display->SetStatus(Lang::Strings::ACTIVATING);
+            break;
+        case kDeviceStateFatalError:
+            // 防御性兜底：kDeviceStateFatalError 是终态（状态机不允许转出），
+            // 当前代码库没有任何路径设置它；一旦进入必须给出明确的故障提示，
+            // 并停止语音采集，避免故障状态下继续录音。
+            display->SetStatus(Lang::Strings::FATAL_ERROR);
+            display->SetEmotion("neutral");
+            display->SetChatMessage("system", Lang::Strings::FATAL_ERROR);
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(false);
             break;
@@ -1320,6 +1359,16 @@ void Application::AbortSpeaking(AbortReason reason) {
     if (protocol_) {
         protocol_->SendAbortSpeaking(reason);
     }
+    // 立即清空本地解码/播放缓冲，不等服务器回 tts stop 或队列自然播放完。
+    // 修复前：auto 模式打断长回复时，已缓冲的旧回复尾音（最多约 1.2s）
+    // 会继续播放完才进入监听（pending_listening_start_ 等待 drain），
+    // 打断响应明显延迟。ResetDecoder() 幂等且线程安全（内部以
+    // audio_queue_mutex_ 保护），会 ++playback_generation_ 并清空三个队列，
+    // 随后 MarkPlaybackDrainedLocked 触发 MAIN_EVENT_PLAYBACK_DRAINED，
+    // 使 pending 监听立即满足（application.cc:244-248）。
+    // 通过 Schedule 回主循环执行，避免在按键/唤醒词回调上下文直接操作队列。
+    // 该修复对三种 listening mode（AutoStop/ManualStop/Realtime）统一生效。
+    Schedule([this]() { audio_service_.ResetDecoder(); });
 }
 
 void Application::SetListeningMode(ListeningMode mode) {

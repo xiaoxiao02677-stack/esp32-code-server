@@ -219,6 +219,9 @@ void WifiBoard::EnterWifiConfigMode() {
             // Enter config mode
             board->StartWifiConfigMode();
 
+            // Refresh the status bar immediately so the network icon reflects config mode
+            board->GetDisplay()->UpdateStatusBar(true);
+
             vTaskDelete(NULL);
         }, "wifi_cfg_delay", 4096, this, 2, NULL);
         return;
@@ -234,6 +237,9 @@ void WifiBoard::EnterWifiConfigMode() {
     WifiManager::GetInstance().StopStation();
 
     StartWifiConfigMode();
+
+    // Refresh the status bar immediately so the network icon reflects config mode
+    GetDisplay()->UpdateStatusBar(true);
 }
 
 bool WifiBoard::IsInWifiConfigMode() const {

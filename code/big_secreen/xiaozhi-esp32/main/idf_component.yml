@@ -48,7 +48,12 @@ dependencies:
     rules:
     - if: target in [esp32s3]
   espressif/esp_video:
-    version: ^2.4.1
+    # Pinned to ==2.4.1: esp_video 2.5.0's registry metadata adds a `matches`
+    # clause referencing $CONFIG{ESP_VIDEO_USE_CUSTOMIZED_ESP_H264_VERSION}
+    # (a symbol defined only in 2.5.0's own Kconfig). The component manager's
+    # new-version check evaluates that clause against the installed 2.4.1
+    # Kconfig set -> MissingKconfigError -> CMake configure fails at kconfgen.
+    version: ==2.4.1
     rules:
     - if: target in [esp32p4, esp32s3, esp32s31]
 
