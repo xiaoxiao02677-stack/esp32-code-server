@@ -48,6 +48,23 @@ code/.workbuddy/deploy_tmp/
 code/.workbuddy/archive/
 
 # ===== 大文件/临时 =====
+# .trash 隔离区（整理产物，永不入库）
+.trash/
+# 调试散件（10-15 推送排查的 HTTP 抓样）
+code/sim-body.bin
+code/sim-headers.txt
+# Windows 保留名误重定向产物
+code/nul
+code/*/nul
+# 一次性 agent 工作产物
+code/agents/
+code/artifacts/agent-*/
+console-v2/.tmpbuild/
+# 网页后台已整体归档外移（2026-10-15，历史在 git）
+# camera/ 为上游 xiaozhi-esp32 完整仓的嵌套 git 仓（自带版本保护），父仓不跟踪
+code/camera/
+# small_secrenn_test 为小屏试验沙盒（与 small_secreen 仅 4 文件差异，本地保留不入库）
+code/small_secrenn_test/
 *.log
 !code-server-mirror/xiaozhi-server/**/*.log
 sftp-test.txt
