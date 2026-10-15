@@ -1,7 +1,7 @@
 {
  "version": 1,
  "created_at": "2026-10-05T08:50:29Z",
- "updated_at": "2026-10-11T16:23:21Z",
+ "updated_at": "2026-10-15T16:16:00Z",
  "files": {
   ".clang-format": {
    "role": "index",
@@ -4949,8 +4949,8 @@
   },
   "main/boards/bread-compact-esp32/esp32_bread_board.cc": {
    "role": "index",
-   "sha256": "e29f0d02edfdb1e8ece0d477a8d5d5ae9cfe8245fa4b36a50a77d8966ebdb253",
-   "size": 5560,
+   "sha256": "41d1de492344992bd5de106cdfcab4de706dd5f71b48b8df957105ad99d953a7",
+   "size": 5398,
    "normalized_sha256": "41d1de492344992bd5de106cdfcab4de706dd5f71b48b8df957105ad99d953a7"
   },
   "main/boards/bread-compact-ml307/compact_ml307_board.cc": {
@@ -7409,15 +7409,15 @@
   },
   "main/boards/my-s3-tft/README.md": {
    "role": "index",
-   "sha256": "022e506704e8a81507e5062d8cadd97dd9f2c091d8e519b051196f950f6cdde0",
-   "size": 1289,
-   "normalized_sha256": "022e506704e8a81507e5062d8cadd97dd9f2c091d8e519b051196f950f6cdde0"
+   "sha256": "558306bb1c21e9022562f8b4d12311f03202b0b72b8af0b636f65dbe2550d0fe",
+   "size": 1913,
+   "normalized_sha256": "558306bb1c21e9022562f8b4d12311f03202b0b72b8af0b636f65dbe2550d0fe"
   },
   "main/boards/my-s3-tft/config.h": {
    "role": "index",
-   "sha256": "76cf94dda3d70eeeab24b5dc51cd5c8226ba6d6ef169274994f59c4ce13fc9d4",
-   "size": 2525,
-   "normalized_sha256": "76cf94dda3d70eeeab24b5dc51cd5c8226ba6d6ef169274994f59c4ce13fc9d4"
+   "sha256": "5b4932c0d2a94fe3547014b923a428f2e657843c9a88de3192fd2a383dc5e8fe",
+   "size": 3706,
+   "normalized_sha256": "5b4932c0d2a94fe3547014b923a428f2e657843c9a88de3192fd2a383dc5e8fe"
   },
   "main/boards/my-s3-tft/config.json": {
    "role": "index",
@@ -7427,9 +7427,9 @@
   },
   "main/boards/my-s3-tft/my_s3_tft_board.cc": {
    "role": "index",
-   "sha256": "9a6b910ed7a72da6d3f5fb0de976e17e9b509b5d4139710f609df552040983a1",
-   "size": 8223,
-   "normalized_sha256": "9a6b910ed7a72da6d3f5fb0de976e17e9b509b5d4139710f609df552040983a1"
+   "sha256": "ebb237b05b85263fb5fcce77a7856a190a4a72191999a34459b5a73d2866573f",
+   "size": 14444,
+   "normalized_sha256": "ebb237b05b85263fb5fcce77a7856a190a4a72191999a34459b5a73d2866573f"
   },
   "main/boards/my-s3-tft/round_screen_display.cc": {
    "role": "index",
