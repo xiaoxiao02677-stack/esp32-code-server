@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>控制台导航</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(255,255,255,0.95);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      max-width: 500px;
+      width: 90%;
+    }
+    h1 {
+      text-align: center;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+    .nav-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+      border-radius: 16px;
+      text-decoration: none;
+      color: #1a1a2e;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 6px 6px 12px #b8bcc2, -6px -6px 12px #ffffff;
+    }
+    .nav-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 8px 8px 16px #b8bcc2, -8px -8px 16px #ffffff;
+    }
+    .nav-item:active {
+      box-shadow: inset 4px 4px 8px #b8bcc2, inset -4px -4px 8px #ffffff;
+    }
+    .nav-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .nav-text {
+      flex: 1;
+    }
+    .nav-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .nav-desc {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .nav-arrow {
+      color: #667eea;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>屿禾工坊控制台</h1>
+    <p class="subtitle">选择功能模块开始使用</p>
+    <div class="nav-grid">
+      <a href="/orders" class="nav-item">
+        <div class="nav-icon">📦</div>
+        <div class="nav-text">
+          <div class="nav-title">订单管理</div>
+          <div class="nav-desc">查看和管理订单数据</div>
+        </div>
+        <div class="nav-arrow">›</div>
+      </a>
+      <a href="/" class="nav-item">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-text">
+          <div class="nav-title">返回首页</div>
+          <div class="nav-desc">回到屿禾工坊主页</div>
+        </div>
+        <div class="nav-arrow">›</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生产 / 测试 环境一致性同步报告</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --surface:#ffffff; --text:#1a2233; --sub:#6b7688; --border:#e6eaf0;
+    --blue:#1b6cff; --blue-soft:#eaf2ff; --green:#1f9d55; --green-soft:#e8f7ef;
+    --amber:#b7791f; --amber-soft:#fdf3e0; --red:#d64545; --red-soft:#fdecec;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+       background:var(--bg);color:var(--text);line-height:1.6;padding:32px 20px}
+  .wrap{max-width:1080px;margin:0 auto}
+  header{margin-bottom:26px}
+  h1{font-size:24px;font-weight:800;letter-spacing:.3px}
+  .meta{color:var(--sub);font-size:13px;margin-top:6px}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--green-soft);color:var(--green);
+         border:1px solid #c8ebd8;padding:5px 13px;border-radius:999px;font-size:13px;font-weight:700;margin-top:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(31,157,85,.15)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:22px 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;
+        box-shadow:0 1px 3px rgba(26,44,80,.04)}
+  .card .k{font-size:12px;color:var(--sub);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .card .v{font-size:26px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+  .card .d{font-size:12.5px;color:var(--sub);margin-top:4px}
+  .ok{color:var(--green)} .warn{color:var(--amber)}
+  h2{font-size:16px;font-weight:800;margin:30px 0 12px;padding-left:11px;border-left:4px solid var(--blue)}
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);
+        border-radius:12px;overflow:hidden;font-size:13.5px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:#f0f4fa;font-weight:700;font-size:12.5px;color:#3a4557;letter-spacing:.3px}
+  tr:last-child td{border-bottom:none}
+  td.mono,code,.mono{font-family:var(--mono);font-size:12.5px}
+  code{background:#eef2f8;color:#2b3a55;padding:1px 6px;border-radius:5px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .pill.g{background:var(--green-soft);color:var(--green)}
+  .pill.b{background:var(--blue-soft);color:var(--blue)}
+  .pill.a{background:var(--amber-soft);color:var(--amber)}
+  .pill.r{background:var(--red-soft);color:var(--red)}
+  .arrow{color:var(--sub);font-weight:700}
+  ul{margin:10px 0 0 18px}li{margin:5px 0;font-size:13.5px}
+  .note{background:var(--amber-soft);border:1px solid #f0dcb4;border-radius:12px;padding:14px 18px;
+        font-size:13.5px;margin-top:12px}
+  .note b{color:var(--amber)}
+  .foot{color:var(--sub);font-size:12px;margin-top:30px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>生产 / 测试环境一致性同步报告</h1>
+    <div class="meta">
+      生产 <span class="mono">sandyun.top:22222</span>（sand-VMware20-1）&nbsp;·&nbsp;
+      测试 <span class="mono">sandyun.top:22223</span>（demo-VMware20-1）&nbsp;·&nbsp;
+      2026-10-14 17:25 CST
+    </div>
+    <div class="badge"><span class="dot"></span>两环境已完全一致（代码 / 数据库 / 构建产物）</div>
+  </header>
+
+  <div class="grid">
+    <div class="card"><div class="k">Python 源码</div><div class="v ok">230 / 230</div><div class="d">文件 md5 完全一致</div></div>
+    <div class="card"><div class="k">Java Controller</div><div class="v ok">35 → 44</div><div class="d">生产补齐 9 个用户管理接口</div></div>
+    <div class="card"><div class="k">数据库表</div><div class="v ok">33 → 40</div><div class="d">Liquibase 自动建 7 表</div></div>
+    <div class="card"><div class="k">前端路由</div><div class="v ok">5 / 5</div><div class="d">两端 HTTP 200</div></div>
+  </div>
+
+  <h2>一、按层差异与同步结果</h2>
+  <table>
+    <thead><tr><th style="width:16%">层</th><th style="width:34%">同步前差异</th><th style="width:30%">处理</th><th style="width:20%">结果</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Python</b><br><span class="mono" style="color:#6b7688">xiaozhi-server</span></td>
+        <td>5 文件不同：<code>app.py</code>(仅注释)、<code>config_loader.py</code>(心跳透传+TTS本地优先)、<code>settings.py</code>(注释冲突检测)、<code>llm_preview_handler.py</code>(加 GET)、<code>http_server.py</code>(/tmp 路由等)</td>
+        <td>scp 测试 5 文件 → 生产，语法校验，重启</td>
+        <td><span class="pill g">100% 一致</span><br><span class="mono" style="font-size:11.5px">230/230 文件</span></td>
+      </tr>
+      <tr>
+        <td><b>Java</b><br><span class="mono" style="color:#6b7688">manager-api</span></td>
+        <td>生产仅 35 Controller / api-docs 166KB；缺 RBAC、审计、自定义模型等 <b>9 个 Controller</b></td>
+        <td>备份 jar/DB → 管道传输测试 jar(md5 校验) → 替换 → 重启</td>
+        <td><span class="pill g">44 Controller</span><br><span class="mono" style="font-size:11.5px">api-docs 192524B</span></td>
+      </tr>
+      <tr>
+        <td><b>数据库</b><br><span class="mono" style="color:#6b7688">MySQL</span></td>
+        <td>生产 33 表，缺 <span class="mono">sys_role / sys_user_role / sys_audit_log / sys_display_config / sys_user_default / sys_user_custom_model / sys_user_custom_voice</span></td>
+        <td>新 jar 启动自动跑 Liquibase <code>202610140100</code> + <code>202610140200</code>（幂等）</td>
+        <td><span class="pill g">40 表</span><br><span class="mono" style="font-size:11.5px">4 内置角色已种子</span></td>
+      </tr>
+      <tr>
+        <td><b>前端</b><br><span class="mono" style="color:#6b7688">console-v2</span></td>
+        <td>生产旧版 <span class="mono">index-yVy4HxGB.js</span>(378KB) vs 测试新版 <span class="mono">index-CnleoVhX.js</span>(468KB)</td>
+        <td>本地最新 dist → 生产 app/admin 两目录，标题保持「屿禾工坊」</td>
+        <td><span class="pill g">同构建产物</span></td>
+      </tr>
+      <tr>
+        <td><b>前端</b><br><span class="mono" style="color:#6b7688">cc-console</span></td>
+        <td>生产真实构建 vs 测试 179B 占位页</td>
+        <td>本地最新 dist → 两端部署（标题各自环境）</td>
+        <td><span class="pill g">两端一致</span></td>
+      </tr>
+      <tr>
+        <td><b>前端</b><br><span class="mono" style="color:#6b7688">firmware-flash</span></td>
+        <td>生产<b>完全缺失</b>，且 nginx 无 <code>/firmware-flash/</code> 路由</td>
+        <td>部署页面到生产 + 给 <span class="mono">snippets/xiaozhi-common.conf</span> 补 location，nginx reload</td>
+        <td><span class="pill g">已补齐</span></td>
+      </tr>
+      <tr>
+        <td><b>配置</b><br><span class="mono" style="color:#6b7688">application-dev.yml</span></td>
+        <td>生产无外置配置：上传上限默认 2MB；用户模块 AES 密钥用 jar 内置占位符</td>
+        <td>新建 <span class="mono">/opt/xiaozhi/application-dev.yml</span>：上传 20MB + <span class="mono">openssl rand -hex 32</span> 强密钥</td>
+        <td><span class="pill g">已对齐</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>二、验证结果</h2>
+  <table>
+    <thead><tr><th style="width:30%">项目</th><th style="width:42%">生产</th><th style="width:28%">测试</th></tr></thead>
+    <tbody>
+      <tr><td>前端 <span class="mono">/</span> · <span class="mono">/admin/</span> · <span class="mono">/admincc/</span></td><td><span class="pill g">200</span> 屿禾工坊</td><td><span class="pill g">200</span> 测试环境</td></tr>
+      <tr><td>前端 <span class="mono">/cc/</span></td><td><span class="pill g">200</span> 屿禾工坊</td><td><span class="pill g">200</span> 测试环境</td></tr>
+      <tr><td>前端 <span class="mono">/firmware-flash/</span></td><td><span class="pill g">200</span> ESP32 固件烧录</td><td><span class="pill g">200</span> ESP32 固件烧录</td></tr>
+      <tr><td>话题源 API（双空 / 双填 / 非法源 / 无鉴权 / 合法 / 列表）</td><td colspan="2"><span class="pill g">400 · 400 · 400 · 401 · 200 · 200</span> 两端逐项一致</td></tr>
+      <tr><td>Java 新端点（无 token）</td><td><span class="mono" style="font-size:11.5px">{"code":401,"msg":"未授权"}</span></td><td><span class="mono" style="font-size:11.5px">{"code":401,"msg":"未授权"}</span></td></tr>
+      <tr><td>服务状态（Java / Python / MySQL / Redis / nginx）</td><td><span class="pill g">全 active</span></td><td><span class="pill g">全 active</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>三、备份与回滚点</h2>
+  <ul>
+    <li><span class="mono">/root/xiaozhi-db-prod-20261014T091718Z.sql.gz</span> — 生产整库备份（255MB）</li>
+    <li><span class="mono">/opt/xiaozhi/xiaozhi-esp32-api.jar.bak-prejava-20261014T091718Z</span> — 生产旧 jar（85.4MB）</li>
+    <li><span class="mono">/root/console-v2.bak-20261014T090157Z.tgz</span> · <span class="mono">/root/cc-console.bak-20261014T090535Z.tgz</span> — 前端</li>
+    <li><span class="mono">/etc/nginx/snippets/xiaozhi-common.conf.bak-20261014T090424Z</span> — nginx</li>
+    <li><span class="mono">.bak-sync-20261014T085307Z/</span> — 生产 Python 原 5 文件</li>
+  </ul>
+
+  <h2>四、遗留问题</h2>
+  <div class="note">
+    <b>⚠ /tmp/{filename} TTS 音频路由未生效（两环境一致）</b><br>
+    该路由注册在 <span class="mono">if not read_config_from_api:</span> 代码块内，两端运行时
+    <span class="mono">read_config_from_api=True</span>，因此<strong>都不注册</strong>；话题生成产出的
+    <span class="mono">audio_url</span> 指向 <span class="mono">/tmp/</span> 会 404。放开此路由前须先收窄文件名规则
+    —— <span class="mono">tmp/</span> 目录内含 <span class="mono">server.log</span>，无条件放开会造成日志泄露。<br>
+    当前两端行为一致，不影响本次一致性目标；如需真正下发音频，建议单独排期修复。
+  </div>
+
+  <div class="foot">本报告由一致性同步流程自动生成 · 全部变更均已备份，可逐层回滚</div>
+</div>
+</body>
+</html>
