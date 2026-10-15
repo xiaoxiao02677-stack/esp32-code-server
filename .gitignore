@@ -69,8 +69,10 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# ===== 私钥/证书（避免泄露 & 绕过 GitHub push 保护拦截）=====
+# ===== 私钥/证书/令牌（避免泄露 & 绕过 GitHub push 保护拦截）=====
 tools/aoci-code/third_party/openGauss-connector-go-pq/certs/*.key
+# 运行令牌（原 code/artifacts/token_main.json，2026-10-15 随 artifacts 迁至 hardware/）
+hardware/artifacts/token_main.json
 
 # ===== 第三方参考仓 / 治理工具源码（2026-10-15 归类移入，只入库源码，不入库构建产物）=====
 third_party/**/node_modules/
@@ -87,6 +89,10 @@ yh/manager-web/node_modules/
 yh/manager-web/dist*/
 yh/xiaozhi-server/models/
 yh/xiaozhi-server/data/
+# tmp/ music/ 在 yh/xiaozhi-server/.gitignore（生产同步下来的文件）里已有，此处根级双保险：
+# 该文件本身来自生产，未来同步可能被覆盖，届时缺失规则会把运行时音频/临时文件当源码入库
+yh/xiaozhi-server/tmp/
+yh/xiaozhi-server/music/
 yh/*/logs/
 yh/**/__pycache__/
 yh/**/*.pyc
