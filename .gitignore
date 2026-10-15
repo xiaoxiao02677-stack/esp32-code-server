@@ -65,6 +65,8 @@ console-v2/.tmpbuild/
 code/camera/
 # small_secrenn_test 为小屏试验沙盒（与 small_secreen 仅 4 文件差异，本地保留不入库）
 code/small_secrenn_test/
+# small_secreen-camera 为摄像头板×小屏工作区（2026-10-15 深夜新建，用户活跃使用中，性质待定）
+code/small_secreen-camera/
 *.log
 !code-server-mirror/xiaozhi-server/**/*.log
 sftp-test.txt
