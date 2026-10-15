@@ -506,44 +506,23 @@ export const userApi = {
   customVoiceUpdate: (id, b) => api.put(`/user/custom-voices/${id}`, b),
   customVoiceDelete: (id) => api.del(`/user/custom-voices/${id}`)
 }
-// ============ 订单管理API ============
+// ============ 订单管理API（对齐已部署的 OrderController：@RequestMapping("/order")，context-path=/xiaozhi） ============
 const orderApi = {
-  // 订单列表（分页）
+  // 分页列表：GET /order/page（keyword 模糊匹配 user_name/contact/product）
   orderPage: (params = {}) => {
     const { page = 1, limit = 10, keyword = '' } = params
-    return api.get('/order/page', { params: { page, limit, keyword } })
+    return api.get('/order/page', { page, limit, keyword })
   },
-  
-  // 订单详情
-  orderInfo: (id) => {
-    return api.get(`/order/info/${id}`)
-  },
-  
-  // 新增订单
-  orderCreate: (data) => {
-    return api.post('/order/create', data)
-  },
-  
-  // 更新订单
-  orderUpdate: (id, data) => {
-    return api.put(`/order/update`, { ...data, id })
-  },
-  
-  // 删除订单
-  orderDelete: (id) => {
-    return api.del(`/order/delete/${id}`)
-  },
-  
-  // 导出订单（返回全量数据，统计卡用）
-  orderExport: (params = {}) => {
-    return api.get('/order/export', { params })
-  },
-
-  // 导出订单（返回可直接下载的 URL）
-  orderExportUrl: (params = {}) => {
-    const { keyword = '' } = params
-    return `${API_BASE}/order/export?keyword=${encodeURIComponent(keyword)}`
-  }
+  // 详情：GET /order/info/{id}
+  orderInfo: (id) => api.get(`/order/info/${id}`),
+  // 新增：POST /order/create
+  orderCreate: (data) => api.post('/order/create', data),
+  // 更新：PUT /order/update（body 必须含 id）
+  orderUpdate: (id, data) => api.put('/order/update', { ...data, id }),
+  // 删除（软删）：DELETE /order/delete/{id}
+  orderDelete: (id) => api.del(`/order/delete/${id}`),
+  // 导出数据：GET /order/export?keyword= → { code:0, data:[ {...订单字段...} ] }（由前端生成 Excel）
+  orderExportList: (params = {}) => api.get('/order/export', { keyword: params.keyword || '' })
 }
 
 // 合并到adminApi
