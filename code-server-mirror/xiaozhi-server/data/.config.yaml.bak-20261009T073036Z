@@ -1,9 +1,0 @@
-server:
-  ip: 0.0.0.0
-  port: 8000
-  http_port: 8003
-  websocket: ws://sandyun.top:8001/xiaozhi/v1/
-  vision_explain: http://sandyun.top:8003/mcp/vision/explain
-manager-api:
-  url: http://127.0.0.1:8002/xiaozhi
-  secret: 2d7b6bde-4de9-49f1-9072-476cec13292e
