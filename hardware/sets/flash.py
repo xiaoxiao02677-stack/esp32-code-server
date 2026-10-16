@@ -32,12 +32,20 @@ N × 超时；这里用 ThreadPoolExecutor 一个口一个线程并行做，整�
 pyserial / esptool 都取自 ESP-IDF 的 venv。当前解释器没有 pyserial 时，本脚本会
 自动改用 IDF venv 的 python 重新执行自己（可用 --python 指定，或 --no-reexec 关闭）。
 
+烧录前后各有一道闸（默认开启）：
+  · 烧录前核对 build 产物地址与分区表是否同源 —— 布局不一致直接拒烧。实机踩过的坑：
+    分区表是 16MB 布局（ota_0@0x20000），app 却按 4MB 布局写到 0x10000，bootloader
+    在 0x20000 找不到合法镜像（首字节不是 0xE9）就自杀重启 —— 屏幕不亮 + 无限重启。
+  · 烧录后回读逐字节比对，再复位读串口，明确给出「已启动 / 在循环重启」的结论。
+板子里是别的固件、或分区表被外来固件改过时，用 --clean 先整片擦除再全量重烧。
+
 用法（完整示例见 --help）：
   python hardware/sets/flash.py                  # 探测串口并烧录 <FW>/build 产物
   python hardware/sets/flash.py --list           # 只探测列出，不烧录
   python hardware/sets/flash.py --identify       # 探测 + 复位识别芯片型号
   python hardware/sets/flash.py --json           # 探测结果输出 JSON（脚本调用）
   python hardware/sets/flash.py --port COM5 -y   # 指定串口直接烧录
+  python hardware/sets/flash.py --port COM5 --clean   # 整片擦除后全量重烧
 """
 
 import argparse
@@ -45,8 +53,10 @@ import importlib.util
 import json
 import os
 import re
+import struct
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
@@ -865,6 +875,302 @@ def build_flash_command(
     return command, fw_root, "显式全量烧录（bootloader + 分区表 + ota_data + app + assets）"
 
 
+# ---------------------------------------------------------------------------
+# 5b. 烧录前自检 / 烧录后校验
+#
+# 血泪教训：**分区表与 app 必须是同一套布局**。实机出现过的死机形态：
+#   设备里的分区表是 16MB 布局（ota_0 @ 0x20000），而 app 却按 4MB 布局写到了
+#   0x10000 —— bootloader 在 0x20000 找不到合法镜像（首字节不是 0xE9），于是走
+#   bootloader_utility.c 的 bootloader_reset() 自杀重启，表现为「刷完屏幕不亮 /
+#   无限重启」。所以这里补三道闸：烧录前核对地址、烧录后回读核对内容、最后复位
+#   一次看它到底起没起来。
+# ---------------------------------------------------------------------------
+
+VERIFY_HEAD_SIZE = 0x1000     # app 只回读头部：esptool 写完本身会做全片哈希校验
+VERIFY_FULL_LIMIT = 0x20000   # 小于这个尺寸的镜像（bootloader/分区表/otadata）全量回读
+BOOT_CHECK_SECONDS = 8.0      # 烧完复位后读串口的时长
+
+# 固定区域：不在分区表里，但也必须写。其余目标地址**必须**落在某个分区起始处，
+# 否则就是「布局不同源」（例如 app 按 4MB 布局写到 0x10000，而分区表是 16MB 布局）。
+FIXED_REGIONS = {0x0: "bootloader", 0x8000: "partition-table"}
+
+
+def read_partition_offsets(table: Path) -> list[dict[str, Any]]:
+    """解析分区表二进制，返回 [{name, type, subtype, offset, size}]。"""
+    entries: list[dict[str, Any]] = []
+    try:
+        data = table.read_bytes()
+    except OSError:
+        return entries
+    for index in range(0, len(data) - 31, 32):
+        raw = data[index:index + 32]
+        if raw[:2] != b"\xaa\x50":
+            break
+        name = raw[12:28].split(b"\x00")[0].decode("utf-8", "replace")
+        if not name:
+            break
+        offset, size = struct.unpack("<II", raw[4:12])
+        entries.append(
+            {"name": name, "type": raw[2], "subtype": raw[3], "offset": offset, "size": size}
+        )
+    return entries
+
+
+def parse_write_targets(fw_root: Path) -> list[tuple[int, str, Path]]:
+    """列出真正会被写进 flash 的 (地址, 名字, 文件)，顺序与烧录顺序一致。
+
+    build/flash_args 里是 `0xXXXX <相对路径>` 交替出现的 token 流（前面还有
+    --flash-mode 之类的参数）；没有 flash_args 时按 FLASH_FULL_IMAGE 全量表推。
+    """
+    build_dir = fw_root / "build"
+    args_file = build_dir / "flash_args"
+    text = ""
+    if args_file.is_file():
+        try:
+            text = args_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+
+    targets: list[tuple[int, str, Path]] = []
+    tokens = text.split()
+    index = 0
+    while index + 1 < len(tokens):
+        if tokens[index].lower().startswith("0x"):
+            try:
+                offset = int(tokens[index], 16)
+            except ValueError:
+                index += 1
+                continue
+            relative = tokens[index + 1]
+            targets.append((offset, Path(relative).name, build_dir / relative))
+            index += 2
+            continue
+        index += 1
+    if targets:
+        return targets
+
+    for offset, relative in FLASH_FULL_IMAGE:
+        targets.append((int(offset, 16), Path(relative).name, fw_root / relative))
+    return targets
+
+
+def check_layout_consistency(fw_root: Path, targets: list[tuple[int, str, Path]]) -> list[str]:
+    """核对「要写的地址」与「正被写进去的那张分区表」是不是同一套布局。"""
+    problems: list[str] = []
+    for offset, name, path in targets:
+        if not path.is_file():
+            problems.append(f"{name}（0x{offset:x}）文件不存在：{path}")
+
+    table = fw_root / "build" / "partition_table" / "partition-table.bin"
+    entries = read_partition_offsets(table)
+    if not entries:
+        problems.append(f"读不出分区表 {table}，无法核对烧录地址")
+        return problems
+
+    by_offset = {entry["offset"]: entry for entry in entries}
+    for offset, name, path in targets:
+        if offset in FIXED_REGIONS:  # bootloader @0x0、分区表 @0x8000：固定位置，不在表里
+            continue
+        entry = by_offset.get(offset)
+        if entry is None:
+            listed = "、".join(f"{item['name']}@0x{item['offset']:x}" for item in entries)
+            problems.append(
+                f"{name} 要写到 0x{offset:x}，但分区表里没有任何分区起始于该地址（{listed}）"
+            )
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size > entry["size"]:
+            problems.append(f"{name} 有 {size} 字节，超过分区 {entry['name']} 的 {entry['size']} 字节")
+
+    app_offsets = [entry["offset"] for entry in entries if entry["type"] == 0]
+    app_target = next((item for item in targets if item[1] == "xiaozhi.bin"), None)
+    if app_target is None:
+        problems.append("这份烧录计划里没有 app 镜像（xiaozhi.bin）：设备必然起不来")
+    elif app_target[0] not in app_offsets:
+        listed = "、".join(f"0x{item:x}" for item in app_offsets) or "（一个都没有）"
+        problems.append(
+            f"app 要写到 0x{app_target[0]:x}，而分区表里的 app 分区在 {listed} —— 布局不同源"
+        )
+    return problems
+
+
+def _esptool_read(
+    python: str, port: str, plan: ResetPlan, baud: int, offset: int, size: int, target: Path
+) -> tuple[int, str]:
+    """回读一段 flash 到 target；反相板由调用方负责先把芯片送进下载模式。"""
+    if plan.our_reset:
+        enter_download_mode(port, plan.order)
+    command = [
+        python, "-m", "esptool",
+        "--chip", CHIP,
+        "-p", port,
+        "-b", str(baud),
+        "--before", "no-reset" if plan.our_reset else plan.before,
+        "--after", "no-reset",
+        "read-flash", hex(offset), hex(size), str(target),
+    ]
+    try:
+        completed = subprocess.run(
+            command, check=False, capture_output=True, env=sets_build._idf_env_vars()
+        )
+    except OSError as error:  # pragma: no cover - 环境相关
+        return 1, str(error)
+    raw = (completed.stdout or b"") + (completed.stderr or b"")
+    return completed.returncode, raw.decode("utf-8", "replace")
+
+
+def verify_written_regions(
+    fw_root: Path, port: str, plan: ResetPlan, baud: int, targets: list[tuple[int, str, Path]]
+) -> list[str]:
+    """回读刚写好的区域逐字节比对本地产物，返回不一致清单（空 = 全部一致）。"""
+    python = sets_build._idf_python()
+    bad: list[str] = []
+    say()
+    say(bold("[校验] 回读刚写入的区域，与本地产物逐字节比对"))
+    for offset, name, path in targets:
+        if not path.is_file():
+            continue
+        size = path.stat().st_size
+        read_size = size if size <= VERIFY_FULL_LIMIT else VERIFY_HEAD_SIZE
+        handle, temp_name = tempfile.mkstemp(prefix="sets_verify_", suffix=".bin")
+        os.close(handle)
+        temp = Path(temp_name)
+        try:
+            code, text = _esptool_read(python, port, plan, baud, offset, read_size, temp)
+            if code != 0:
+                tail = [line for line in text.splitlines() if line.strip()][-3:]
+                notice_warn(f"{name} 回读失败（esptool 返回码 {code}），跳过比对")
+                for line in tail:
+                    say("        " + line)
+                bad.append(f"{name}（0x{offset:x}）回读失败")
+                continue
+            got = temp.read_bytes()
+            want = path.read_bytes()[:read_size]
+            if got == want:
+                scope = "全量" if read_size == size else f"头部 {read_size // 1024}KB"
+                say(f"  {name:<26} 0x{offset:<9x} {green('[一致]')} {scope}（{read_size} 字节）")
+                continue
+            first = next(
+                (i for i in range(min(len(got), len(want))) if got[i] != want[i]), -1
+            )
+            if first >= 0:
+                detail = (f"{sum(1 for a, b in zip(got, want) if a != b)}/{read_size} 字节不同，"
+                          f"首个不同在 +0x{first:x}"
+                          f"（设备=0x{got[first]:02x} 本地=0x{want[first]:02x}）")
+            else:
+                detail = f"长度不符：设备 {len(got)} 字节 / 本地 {read_size} 字节"
+            notice_bad(f"{name} 0x{offset:x} 与本地不一致：{detail}")
+            bad.append(f"{name}（0x{offset:x}）{detail}")
+        finally:
+            try:
+                temp.unlink()
+            except OSError:
+                pass
+    return bad
+
+
+def _sample_window(port: Any, seconds: float, limit: int = 8192) -> bytes:
+    """在 seconds 内尽量收数据（给启动检查用：要够长才看得出是不是在循环重启）。"""
+    deadline = time.monotonic() + seconds
+    chunks = bytearray()
+    while time.monotonic() < deadline and len(chunks) < limit:
+        try:
+            waiting = port.in_waiting
+        except Exception:  # pragma: no cover - 驱动相关
+            waiting = 0
+        if waiting:
+            try:
+                chunks += port.read(min(waiting, limit - len(chunks)))
+            except Exception:  # pragma: no cover - 驱动相关
+                break
+        else:
+            time.sleep(0.05)
+    return bytes(chunks)
+
+
+def boot_check(port: str, plan: ResetPlan, seconds: float) -> str:
+    """复位一次并读串口，判断设备到底起没起来。
+
+    返回 started / loop / download / silent / unknown。
+    ROM 的 "ESP-ROM:" 横幅一定会打（ROM 代码，不受 sdkconfig 影响），应用日志
+    受 CONFIG_LOG_LEVEL 影响；因此「窗口里出现两次以上横幅」就能判定在循环重启。
+    """
+    if seconds <= 0:
+        return "skipped"
+    say()
+    say(bold(f"[启动检查] 复位设备并读 {seconds:.0f} 秒串口日志"))
+    try:
+        handle = _open_raw(port)
+    except Exception as error:
+        notice_warn(f"打不开串口做启动检查：{error}")
+        return "unknown"
+    order = plan.order if plan.our_reset else "classic"
+    try:
+        try:
+            handle.reset_input_buffer()
+        except Exception:  # pragma: no cover - 驱动相关
+            pass
+        try:
+            _reset_lines(handle, order)
+        except (OSError, ValueError) as error:
+            notice_warn(f"复位失败（{error}）：跳过启动检查")
+            return "unknown"
+        data = _sample_window(handle, seconds)
+    finally:
+        _close_quietly(handle)
+
+    sample = _summarize(data, 150)
+    if not data:
+        notice_warn("复位后串口没有任何输出")
+        return "silent"
+    if any(pattern.search(data) for pattern in DOWNLOAD_MARKERS):
+        say(f"  串口日志: {sample!r}")
+        notice_warn("设备停在下载模式（没有被复位回应用）")
+        return "download"
+    banners = data.count(b"ESP-ROM:")
+    if banners >= 2:
+        say(f"  串口日志: {sample!r}")
+        notice_bad(f"{seconds:.0f} 秒内出现了 {banners} 次 ROM 启动横幅：设备在**循环重启**")
+        return "loop"
+    if APP_LOG_HINT.search(data):
+        say(f"  串口日志: {sample!r}")
+        notice_ok("设备已正常启动（读到了应用运行日志）")
+        return "started"
+    say(f"  串口日志: {sample!r}")
+    notice_warn("既没读到应用日志，也没看到反复重启：判定不了（可能日志级别被关掉）")
+    return "unknown"
+
+
+def erase_flash(port: str, plan: ResetPlan, baud: int) -> int:
+    """整片擦除（--clean 用）：把外来的分区表 / 固件残骸清干净，避免布局混用。"""
+    python = sets_build._idf_python()
+    if plan.our_reset:
+        enter_download_mode(port, plan.order)
+    command = [
+        python, "-m", "esptool",
+        "--chip", CHIP,
+        "-p", port,
+        "-b", str(baud),
+        "--before", "no-reset" if plan.our_reset else plan.before,
+        "--after", "no-reset",
+        "erase-flash",
+    ]
+    say()
+    say(bold("[清空] 整片擦除 flash（erase-flash，16MB 大约要几十秒）"))
+    say("  " + " ".join(command))
+    try:
+        completed = subprocess.run(command, check=False, env=sets_build._idf_env_vars())
+    except OSError as error:
+        notice_bad(f"无法启动 esptool: {error}")
+        return EXIT_ERROR
+    if completed.returncode != 0:
+        notice_bad(f"整片擦除失败（esptool 返回码 {completed.returncode}）")
+    return completed.returncode
+
+
 def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
     """按 build/flash_args 烧录；不含 assets 时退回显式全量烧录。
 
@@ -875,10 +1181,35 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
         notice_bad(mode_desc + "：请确认编译是否成功（先跑 build.py）")
         return EXIT_ERROR
 
+    # ---- 烧录前自检：地址必须与分区表同源 ----
+    targets = parse_write_targets(fw_root)
+    problems = check_layout_consistency(fw_root, targets)
+    if problems:
+        say()
+        say(bold("[自检] 烧录地址与分区表对不上"))
+        for problem in problems:
+            say(f"        · {problem}")
+        notice_bad("已阻止烧录：照这样写下去，app 会落在分区表不认识的地方，刷完必然起不来")
+        say("        请确认 <FW>/build 里各项产物来自同一次编译（build.py 一次只编一个版型）。")
+        return EXIT_ERROR
+    say()
+    say(bold("[自检] 烧录地址与分区表一致"))
+    for offset, name, path in targets:
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        say(f"  0x{offset:<9x} {name:<26} {size:>9} 字节")
+
     say()
     say(bold(f"[烧录] {mode_desc}"))
     say(f"  串口: {port}    波特率: {baud}")
     say(f"  复位: {plan.note or f'--before {plan.before}'}")
+
+    if args.clean:
+        if erase_flash(port, plan, baud) != 0:
+            notice_bad("整片擦除没成功，已中止（继续烧录只会留下半套内容）")
+            return EXIT_ERROR
 
     attempts = max(1, args.attempts) if plan.our_reset else 1
     for attempt in range(1, attempts + 1):
@@ -915,8 +1246,34 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
             return EXIT_ERROR
         say(rule())
         if completed.returncode == 0:
-            notice_ok(f"烧录完成，设备已复位（{port}）")
-            say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 查看串口日志。")
+            notice_ok(f"烧录完成（{port}）")
+
+            # ---- 烧录后校验：内容对不对 ----
+            if not args.no_verify:
+                mismatches = verify_written_regions(fw_root, port, plan, baud, targets)
+                if mismatches:
+                    notice_bad("回读校验没通过：设备里的内容和本地产物不一样")
+                    for item in mismatches:
+                        say(f"        · {item}")
+                    say("        多半是写一半被打断了（拔线 / 复位 / 串口被抢）。整片重烧一次：")
+                    say(f"          python hardware/sets/flash.py --port {port} --clean")
+                    return EXIT_ERROR
+                notice_ok("回读校验通过：设备内容与本地产物完全一致")
+
+            # ---- 烧录后校验：起没起来 ----
+            state = boot_check(port, plan, args.boot_check)
+            if state == "loop":
+                say("        设备在循环重启。最常见的原因是分区表与 app 不同源")
+                say("        （例如分区表写的是 16MB 布局 ota_0@0x20000，而 app 落在 4MB 布局的 0x10000）——")
+                say("        bootloader 在 ota_0 找不到合法镜像就自杀重启，屏幕自然一直不亮。")
+                say("        排查：python hardware/sets/diag.py  （回读设备与产物逐字节比对）")
+                say(f"        处置：python hardware/sets/flash.py --port {port} --clean  （整片擦除后全量重烧）")
+                return EXIT_ERROR
+            if state in ("silent", "download"):
+                say("        设备没有进入应用。若确认写进去的内容一致，就该去看 bootloader 卡在哪：")
+                say("        在 version/config.json 的 sdkconfig_append 里加 CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y 重编，")
+                say("        再烧一次就能看到它到底为什么退出。")
+            say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 看串口日志。")
             return EXIT_OK
         if attempt < attempts:
             say()
@@ -1002,6 +1359,13 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/flash.py --board yh-cam     # 指定版型（校验 build 产物是否对得上）\n"
             "  python hardware/sets/flash.py --manual           # 手动进下载模式（按住 BOOT + 点 RST）\n"
             "  python hardware/sets/flash.py --reset none -y    # 设备已手动进下载模式，不再复位\n"
+            "  python hardware/sets/flash.py --port COM18 --clean   # 先整片擦除再全量重烧\n"
+            "\n"
+            "烧录前后各有一道闸（默认开启，--no-verify 可关）：\n"
+            "  · 烧录前：核对 build 产物地址与分区表是否同源，不同源直接拒烧\n"
+            "    （app 与分区表布局不一致时，刷完一定是「屏幕不亮 + 无限重启」）；\n"
+            "  · 烧录后：回读逐字节比对，再复位读串口，明确告诉你「已启动 / 在循环重启」。\n"
+            "  板子里是别的固件、或分区表被外来固件改过时，加 --clean 先整片擦除。\n"
             "\n"
             "复位线序（--reset，默认 auto）：本项目部分板子的 EN/GPIO0 是反相接线\n"
             "（DTR=EN、RTS=GPIO0），esptool 的 default-reset 对它们无效，会报\n"
@@ -1054,6 +1418,20 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     reset_group.add_argument(
         "--attempts", type=int, default=2, metavar="N",
         help="连不上时的尝试次数上限（默认 2；每次尝试前都会重新进下载模式）",
+    )
+
+    verify_group = parser.add_argument_group("校验 / 清空")
+    verify_group.add_argument(
+        "--clean", action="store_true",
+        help="烧录前先整片擦除 flash（erase-flash）：板子里是别的固件、或分区布局混用时用",
+    )
+    verify_group.add_argument(
+        "--no-verify", action="store_true",
+        help="跳过烧录后的回读比对与启动检查（默认都做）",
+    )
+    verify_group.add_argument(
+        "--boot-check", type=float, default=BOOT_CHECK_SECONDS, metavar="SEC",
+        help=f"烧完复位并读串口的时长（秒），默认 {BOOT_CHECK_SECONDS:.0f}；0 = 不做启动检查",
     )
 
     parser.add_argument("-y", "--yes", action="store_true", help="跳过烧录确认（物理操作，默认要确认）")

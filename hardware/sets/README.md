@@ -3,14 +3,16 @@
 一套固件源码 + N 套版型配置。在这里选一个版型，`build.py` 会自动完成
 **同步 → 注册 → 编译 → 归档产物**，你不需要手工去改固件源码树里的任何文件。
 
-**构建与烧录是两个脚本，职责分开：**
+**构建 / 烧录 / 诊断是三个脚本，职责分开：**
 
 | 脚本 | 职责 |
 |---|---|
 | `build.py` | 选版型 → 同步 → 注册 → 编译 → 归档产物。**不做任何串口操作** |
-| `flash.py` | **多线程并行探测 COM 口** → 复位线序识别 → 把芯片送进下载模式 → esptool 烧录。**不编译** |
+| `flash.py` | **多线程并行探测 COM 口** → 复位线序识别 → 把芯片送进下载模式 → esptool 烧录 → **烧录前后自检 + 回读校验 + 启动检查**。**不编译** |
+| `diag.py` | **只读**回读设备 flash，与 `<FW>/build` 产物逐字节比对，判定「烧录问题 / 产物问题」。**不写不擦** |
 
-先 `build.py` 出产物，再 `flash.py` 烧进去；只想烧已有的产物就直接跑 `flash.py`。
+先 `build.py` 出产物，再 `flash.py` 烧进去；只想烧已有的产物就直接跑 `flash.py`；
+刷完起不来（例如屏幕不亮、无限重启）就先跑 `diag.py` 体检。
 
 固件源码（下文记作 `<FW>`）默认使用**本目录自带的副本**：
 
@@ -191,6 +193,7 @@ python hardware/sets/flash.py --port COM18 -y    :: 指定串口，跳过确认�
 python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
 python hardware/sets/flash.py --manual           :: 手动进下载模式（按住 BOOT + 点 RST）
 python hardware/sets/flash.py --reset none -y    :: 设备已手动进下载模式，不再复位
+python hardware/sets/flash.py --port COM18 --clean   :: 先整片擦除，再全量重烧
 ```
 
 探测结果长这样（`[在线]` 表示口能打开、后面确实挂着设备）：
@@ -221,7 +224,70 @@ python hardware/sets/flash.py --reset none -y    :: 设备已手动进下载模�
 | `--manual` | 打印手动进下载模式步骤并等回车，随后按 `no-reset` 连接 |
 | `--before MODE` / `--after MODE` | 直接指定 esptool 的 `--before` / `--after`（默认 `no-reset` + `hard-reset`） |
 | `--attempts N` | 连不上时的尝试次数上限，默认 `2`（每次尝试前都会重新进下载模式） |
+| `--clean` | 烧录前先 `erase-flash` 整片擦除：板子里是别的固件、或分区表被外来固件改过时用 |
+| `--no-verify` | 跳过烧录后的回读比对与启动检查（默认都做） |
+| `--boot-check SEC` | 烧完复位并读串口的时长，默认 `8` 秒；`0` = 不做启动检查 |
 | `--no-reexec` | 缺 pyserial 时不自动换解释器（只枚举串口） |
+
+### 刷完起不来？烧录前后各有一道闸
+
+`flash.py` 默认在烧录**前**核对地址、烧录**后**核对内容和启动结果：
+
+```
+[自检] 烧录地址与分区表一致
+  0x0         bootloader.bin                   15536 字节
+  0x8000      partition-table.bin               3072 字节
+  0xd000      ota_data_initial.bin              8192 字节
+  0x800000    generated_assets.bin           4054873 字节
+  0x20000     xiaozhi.bin                    2757424 字节
+…
+[校验] 回读刚写入的区域，与本地产物逐字节比对
+  bootloader.bin             0x0         [一致] 全量（15536 字节）
+  …
+[启动检查] 复位设备并读 8 秒串口日志
+  串口日志: '.ESP-ROM:esp32s3-20210327...rst:0x1 (POWERON)..boot:0x1b (SPI_FAST_FLASH_BOOT)..I (123) cpu_start: ...'
+  设备已正常启动（读到了应用运行日志）
+```
+
+第一道闸解决的是**「分区表与 app 不同源」**这一类死机：分区表写的是 16MB 布局
+（`ota_0 @ 0x20000`），app 却按 4MB 布局写到了 `0x10000` —— bootloader 在
+`0x20000` 根本找不到合法镜像（首字节不是 `0xE9`），于是按
+`bootloader_utility.c` 里的 `bootloader_reset()` 自杀重启，观感就是**屏幕不亮 +
+无限重启**。现在这种情况会在烧录前被直接拒掉：
+
+```
+[自检] 烧录地址与分区表对不上
+        · xiaozhi.bin 要写到 0x10000，但分区表里没有任何分区起始于该地址
+        · app 要写到 0x10000，而分区表里的 app 分区在 0x20000、0x410000 —— 布局不同源
+```
+
+第二道闸（启动检查）会明确回报 `已正常启动 / 在**循环重启**`：判定依据是
+ROM 的 `ESP-ROM:` 横幅一定会打（ROM 代码，不受 sdkconfig 影响），8 秒里出现两次
+以上就是在循环重启。
+
+台账里已经有别的固件、或你不确定板子被谁刷过什么，直接加 `--clean`：先整片擦除
+再全量写入，不给「残留分区表 + 外来 app」任何混用的机会。
+
+### 刷完还是不对？用 diag.py 回读体检
+
+`diag.py` 是**只读**工具（不写、不擦、不改 eFuse，跑完把设备复位回运行态），
+回答一个问题：**芯片里存的，和本地编出来的，是不是一回事？**
+
+```bat
+python hardware/sets/diag.py                     :: 自动探测串口 + 复位线序
+python hardware/sets/diag.py --port COM18        :: 指定串口
+python hardware/sets/diag.py --board yh-154tft-wifi --full-app   :: 连 app 全量比对
+```
+
+它回读 `flash-id`、`0x0`~`0x10000`（bootloader + 分区表 + otadata）、`0x20000`
+（app 头部或全量），与 `<FW>/build/*.bin` 逐字节比对，会指出**首个不同的偏移**，
+然后给结论：
+
+| 结论 | 含义 | 下一步 |
+|---|---|---|
+| `[一致]` | 写进去的和编出来的一样 | 不是烧录问题 → 打开 bootloader 日志（`CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y`）看它卡在哪 |
+| `[空白]`（全 `0xFF`） | 这块区域根本没写进去 | `flash.py --clean` 全量重烧 |
+| `[不一致]` + 首个不同偏移 | 写了一半 / 写到了别处 / 板子里是别的固件 | 同上，`--clean` 重烧后再跑 diag 复核 |
 
 ### 复位线序：为什么这块板「按住 BOOT 也没用」
 
@@ -425,6 +491,39 @@ python hardware/sets/flash.py --list --identify --port COM18
 
 输出里 `芯片=esp32s3  复位线序=反相` 就是反相板（由脚本送进下载模式），
 `复位线序=标准` 则交给 esptool 自己复位。
+
+**Q：刷完屏幕一直不亮 / 串口里在无限重启（`bootloader_reset at bootloader_utility.c:1163`）**
+这通常不是固件写坏了，而是**板子里的内容与分区表不同源**。实机验证过的一种形态：
+
+- 设备里的分区表是 **16MB 布局**（`ota_0 @ 0x20000`）；
+- 而 app 却按 **4MB 布局**（`partitions/v2/4m.csv` 的 `factory` 分区，`0x10000`）写了进去。
+
+于是 bootloader 在 `0x20000` 找不到合法 app 镜像（首字节必须是 `0xE9`，实际是一段
+字符串），调用 `esp_rom_software_reset_system()` 自杀重启 →
+`Saved PC: bootloader_reset at bootloader_utility.c:1163`、`rst:0x3 (RTC_SW_SYS_RST)`
+一路循环，屏幕从头到尾不亮。`CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y` 时 bootloader
+一句话都不打，看着就像「什么都没发生」。
+
+先体检（**只读**，不写设备、不擦 flash）：
+
+```bat
+python hardware/sets/diag.py --board <id>
+```
+
+它回读 `0x0`~`0x10000`（bootloader + 分区表 + otadata）与 `0x20000`（app），与
+`<FW>/build/*.bin` 逐字节比对，逐段给出 `[一致]` / `[空白]` / `[不一致]` 和**首个
+不同的偏移**。只要有一段不一致，就整片擦除重烧：
+
+```bat
+python hardware/sets/flash.py --port COM18 --clean
+```
+
+`--clean` 先 `erase-flash` 清掉外来的分区表/固件残骸，再全量写入；随后 `flash.py`
+会回读校验、复位读串口，直接回报「已正常启动」或「在循环重启」。
+
+如果 diag 报全部 `[一致]` 却依然不启动，那就不是烧录问题 —— 打开 bootloader 日志
+再看它为什么退出：在版型 `config.json` 的 `sdkconfig_append` 里加
+`CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y`，重编重烧。
 
 **Q：`flash.py` 说没有检测到可用设备，但我确实插着板子**
 先看它是哪一种状态：
