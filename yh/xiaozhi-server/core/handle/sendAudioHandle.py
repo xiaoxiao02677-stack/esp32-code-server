@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from core.connection import ConnectionHandler
 from core.utils import textUtils
 from core.utils.util import audio_to_data
+from core.utils.glyph_push import attach_glyph_push
 from core.providers.tts.dto.dto import SentenceType
 from core.utils.audioRateController import AudioRateController
 
@@ -288,6 +289,8 @@ async def send_tts_message(conn: "ConnectionHandler", state, text=None):
     message = {"type": "tts", "state": state, "session_id": conn.session_id}
     if text is not None:
         message["text"] = textUtils.check_emoji(text)
+        # 设备声明了 glyph_push 能力时，把设备缺字字形挂到本条消息上
+        attach_glyph_push(conn, message, message["text"])
 
     # TTS播放结束
     if state == "stop":
@@ -340,9 +343,10 @@ async def send_stt_message(conn: "ConnectionHandler", text):
         # 如果不是JSON格式，直接使用原始文本
         display_text = text
     stt_text = textUtils.get_string_no_punctuation_or_emoji(display_text)
-    await conn.websocket.send(
-        json.dumps({"type": "stt", "text": stt_text, "session_id": conn.session_id})
-    )
+    message = {"type": "stt", "text": stt_text, "session_id": conn.session_id}
+    # 用户说的话同样可能需要补字（设备端 STT 显示）
+    attach_glyph_push(conn, message, stt_text)
+    await conn.websocket.send(json.dumps(message))
     await send_tts_message(conn, "start")
     # 发送start消息后客户端状态会处于说话中状态，同步服务端状态
     conn.client_is_speaking = True
@@ -355,4 +359,5 @@ async def send_display_message(conn: "ConnectionHandler", text):
         "text": text,
         "session_id": conn.session_id
     }
+    attach_glyph_push(conn, message, text)
     await conn.websocket.send(json.dumps(message))

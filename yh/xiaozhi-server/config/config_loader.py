@@ -79,6 +79,8 @@ async def get_config_from_api_async(config):
             # 测试环境端口映射（8100-8200）：心跳端口需本地透传，
             # 否则 heartbeat.py 永远回落到默认 12399
             "heartbeat_port": config["server"].get("heartbeat_port", 12399),
+            # WebSocket 旁路 UDP 心跳端口（固件写死 8002），置 0 关闭监听
+            "ws_udp_heartbeat_port": config["server"].get("ws_udp_heartbeat_port", 8002),
         }
     config_data["server"]["auth"] = {"enabled": auth_enabled}
     # 如果服务器没有prompt_template，则从本地配置读取

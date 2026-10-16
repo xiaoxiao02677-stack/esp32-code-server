@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 import uuid
 
@@ -57,6 +58,23 @@ class HeartbeatServer:
         self.writers = {}
         self._tcp_server = None
         self._udp_transport = None
+        # WebSocket 通道旁的 UDP 心跳端口：固件 websocket_protocol.cc 中
+        # OpenUdpChannel() 固定向 host:8002 发 {"type":"udp_heartbeat"}（15s 一次）。
+        # 该端口与 12399 互不相干，历史上无任何服务监听，固件每次发包都会收到
+        # ICMP 端口不可达，等于白跑一条心跳。此处补齐监听，收到即回 ack。
+        # 置 0 可关闭。
+        # 取值优先级：环境变量 XIAOZHI_WS_UDP_HEARTBEAT_PORT > 配置 > 默认 8002
+        try:
+            ws_udp_env = os.environ.get("XIAOZHI_WS_UDP_HEARTBEAT_PORT")
+            if ws_udp_env is not None and str(ws_udp_env).strip() != "":
+                self.ws_udp_port = int(ws_udp_env)
+            else:
+                self.ws_udp_port = int(server_config.get("ws_udp_heartbeat_port", 8002) or 0)
+        except (TypeError, ValueError):
+            self.ws_udp_port = 8002
+        self._ws_udp_transport = None
+        # ip -> {"count": n, "last_seen": ts}，仅用于观测固件是否真的在发心跳
+        self.ws_udp_stats = {}
 
     async def start(self):
         try:
@@ -101,6 +119,23 @@ class HeartbeatServer:
             self.logger.bind(tag=TAG).warning(
                 f"心跳服务(UDP)启动失败(不影响主服务): {e}"
             )
+
+        # UDP：固件 WebSocket 通道旁的独立心跳端口（默认 8002）
+        # 与上面的 12399 是两个互不相同的协议端口，故单独监听。
+        if self.ws_udp_port and self.ws_udp_port != self.port:
+            try:
+                loop = asyncio.get_running_loop()
+                self._ws_udp_transport, _ = await loop.create_datagram_endpoint(
+                    lambda: _WsUdpHeartbeatProtocol(self),
+                    local_addr=(self.host, self.ws_udp_port),
+                )
+                self.logger.bind(tag=TAG).info(
+                    f"WebSocket UDP心跳已启动\t{self.host}:{self.ws_udp_port}"
+                )
+            except Exception as e:
+                self.logger.bind(tag=TAG).warning(
+                    f"WebSocket UDP心跳({self.ws_udp_port})启动失败(不影响主服务): {e}"
+                )
 
         if self._tcp_server is None and self._udp_transport is None:
             self.logger.bind(tag=TAG).warning(
@@ -392,13 +427,53 @@ class HeartbeatServer:
         except Exception as e:
             self.logger.bind(tag=TAG).warning(f"UDP心跳处理异常 {peer_str}: {e}")
 
+    def handle_ws_udp_packet(self, data: bytes, addr):
+        """WebSocket 旁路 UDP 心跳处理：固件仅要求发得出去，服务端收到即回 ack。
+
+        报文为 {"type":"udp_heartbeat"}，不含 device_id（固件侧只带类型），
+        因此这里只做「到达性 + 频次」观测，不参与设备在线判定。
+        """
+        peer_ip = addr[0] if addr else "unknown"
+        entry = self.ws_udp_stats.get(peer_ip)
+        if entry is None:
+            self.ws_udp_stats[peer_ip] = {"count": 1, "last_seen": time.time()}
+            self.logger.bind(tag=TAG).info(
+                f"WebSocket UDP心跳首次收到来自 {peer_ip}: {data[:60]!r}"
+            )
+        else:
+            entry["count"] += 1
+            entry["last_seen"] = time.time()
+            self.logger.bind(tag=TAG).debug(
+                f"WebSocket UDP心跳 来自 {peer_ip} (累计 {entry['count']} 次)"
+            )
+
     def close(self):
-        for closer in (self._tcp_server, self._udp_transport):
+        for closer in (self._tcp_server, self._udp_transport, self._ws_udp_transport):
             try:
                 if closer:
                     closer.close()
             except Exception:
                 pass
+
+
+class _WsUdpHeartbeatProtocol(asyncio.DatagramProtocol):
+    """固件 WebSocket 通道旁路 UDP 心跳（默认 8002）：收到即回 JSON ack。"""
+
+    def __init__(self, server: HeartbeatServer):
+        self.server = server
+        self.logger = server.logger
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data: bytes, addr):
+        self.server.handle_ws_udp_packet(data, addr)
+        try:
+            if self.transport and not self.transport.is_closing():
+                self.transport.sendto(b'{"type":"udp_heartbeat_ack"}', addr)
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(f"WebSocket UDP心跳回包失败 {addr}: {e}")
 
 
 class _UdpHeartbeatProtocol(asyncio.DatagramProtocol):

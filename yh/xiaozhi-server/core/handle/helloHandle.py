@@ -14,6 +14,7 @@ from core.utils.wakeup_word import WakeupWordsConfig
 from core.handle.sendAudioHandle import sendAudioMessage, send_tts_message
 from core.utils.util import remove_punctuation_and_length, opus_datas_to_wav_bytes
 from core.providers.tools.device_mcp import MCPClient, send_mcp_initialize_message
+from core.utils.glyph_push import parse_text_font_capability
 
 TAG = __name__
 
@@ -57,6 +58,17 @@ async def handleHelloMessage(conn: "ConnectionHandler", msg_json):
         if features.get("aec"):
             conn.logger.bind(tag=TAG).debug("客户端启用了服务端AEC")
             conn.client_aec = True
+        # 设备字形补字能力（glyph_push）：设备声明后才在其文本消息里附带字模
+        glyph_capability = parse_text_font_capability(
+            features, msg_json.get("text_font")
+        )
+        if glyph_capability:
+            conn.glyph_capability = glyph_capability
+            conn.logger.bind(tag=TAG).info(
+                f"客户端字形补字能力: bundle={glyph_capability['bundle']}, "
+                f"charset={glyph_capability['charset']}, "
+                f"{glyph_capability['size']}_{glyph_capability['bpp']}"
+            )
 
     await conn.websocket.send(json.dumps(conn.welcome_msg))
 

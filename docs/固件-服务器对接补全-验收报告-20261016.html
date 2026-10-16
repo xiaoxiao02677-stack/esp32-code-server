@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>固件 ↔ 服务器 功能对接补全 · 验收报告</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --line:#e3e8ef; --tx:#1f2937; --tx2:#5b6675;
+    --ok:#0f9d58; --okbg:#e8f6ee; --warn:#b26a00; --warnbg:#fff4e0;
+    --bad:#d13438; --badbg:#fdeaea; --neu:#5b6675; --neubg:#eef1f5;
+    --blue:#1a5fb4; --bluebg:#e8f1fd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1220px;margin:0 auto;padding:32px 22px 70px}
+  h1{font-size:25px;margin:0 0 6px;letter-spacing:.3px}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:22px}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:26px}
+  .meta div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--tx2)}
+  .meta b{color:var(--tx);display:block;font-size:13px;margin-bottom:2px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:30px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .kpi .n{font-size:26px;font-weight:700;line-height:1.2}
+  .kpi .t{font-size:12.5px;color:var(--tx2);margin-top:2px}
+  .kpi .d{font-size:11.5px;color:#8a94a3;margin-top:3px}
+  h2{font-size:17px;margin:34px 0 10px;padding-left:11px;border-left:4px solid var(--blue)}
+  h2 small{font-weight:400;color:var(--tx2);font-size:12.5px;margin-left:8px}
+  h3{font-size:14.5px;margin:22px 0 8px;color:#2b3444}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+        border-radius:10px;overflow:hidden;font-size:13px;margin-bottom:8px}
+  th{background:#f0f3f8;text-align:left;padding:9px 11px;font-weight:600;color:#38414e;
+     border-bottom:1px solid var(--line);white-space:nowrap;font-size:12.5px}
+  td{padding:9px 11px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafbfd}
+  code{background:#f2f4f8;padding:1px 5px;border-radius:4px;font-size:12px;
+       font-family:Consolas,Monaco,monospace;color:#1f3a5f;word-break:break-all}
+  pre{background:#0f172a;color:#dbe4f0;padding:14px 16px;border-radius:10px;overflow:auto;
+      font-size:12.3px;line-height:1.62;font-family:Consolas,Monaco,monospace;margin:10px 0}
+  pre .c{color:#7c8ba1}
+  pre .g{color:#7ee2a8}
+  pre .y{color:#f3d17a}
+  pre .r{color:#ff9d9d}
+  .st{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;
+      font-weight:600;white-space:nowrap}
+  .s-ok{background:var(--okbg);color:var(--ok)}
+  .s-warn{background:var(--warnbg);color:var(--warn)}
+  .s-bad{background:var(--badbg);color:var(--bad)}
+  .s-neu{background:var(--neubg);color:var(--neu)}
+  .box{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--blue);
+       border-radius:10px;padding:13px 16px;margin:14px 0;font-size:13px}
+  .box.ok{border-left-color:var(--ok);background:var(--okbg)}
+  .box.warn{border-left-color:var(--warn);background:var(--warnbg)}
+  .box b{display:block;margin-bottom:4px}
+  ul{margin:8px 0 8px 20px;padding:0}
+  li{margin:4px 0}
+  .foot{margin-top:36px;padding-top:14px;border-top:1px dashed var(--line);
+        color:#8a94a3;font-size:12.3px}
+  .tag{display:inline-block;background:var(--bluebg);color:var(--blue);border-radius:5px;
+       padding:1px 7px;font-size:11.5px;font-weight:600;margin-right:5px}
+  .scroll{overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>固件 ↔ 服务器 功能对接补全 · 验收报告</h1>
+  <div class="sub">承接同日《固件-服务器功能对接核查报告》—— 把 5 项「未对接」全部落地，并在生产环境完成可复现验收</div>
+
+  <div class="meta">
+    <div><b>日期</b>2026-10-16</div>
+    <div><b>固件</b>hardware/sets/xiaozhi-esp32（四版型 · YH 协议 · 唤醒词「你好小禾」· 16M 分区表）</div>
+    <div><b>服务器</b>生产 sandyun.top —— Java 8002 / Python 8000(WS)·8003(HTTP)·12399(TCP+UDP) / nginx 8001</div>
+    <div><b>验收方式</b>生产真机端口 + 真实管理端 API + 固件报文同构模拟器（全部可复现命令）</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n" style="color:var(--ok)">31</div><div class="t">已对接</div><div class="d">原 27，本轮 +4</div></div>
+    <div class="kpi"><div class="n" style="color:var(--warn)">5</div><div class="t">部分对接 / 需注意</div><div class="d">原 4，本轮 +1（OTA 固件包）</div></div>
+    <div class="kpi"><div class="n" style="color:var(--ok)">0</div><div class="t">未对接</div><div class="d">原 5，已全部清零</div></div>
+    <div class="kpi"><div class="n" style="color:var(--neu)">3</div><div class="t">两端具备未启用</div><div class="d">MQTT / UDP 网关 / MCP 接入点</div></div>
+  </div>
+
+  <h2>一、结论速览 <small>5 项未对接的处置结果</small></h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:34px">#</th><th style="width:230px">原「未对接」项</th><th style="width:96px">结果</th><th>验收结论</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>配置版本检查<br><code>GET /ota/config/version</code></td>
+        <td><span class="st s-ok">✅ 已对接</span></td>
+        <td>生产 200，返回 <code>{version, download_url}</code>；<b>固件真实请求形态（双斜杠 <code>/ota//config/version</code>）同样 200</b></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>配置包下载</td>
+        <td><span class="st s-ok">✅ 已对接</span></td>
+        <td><code>GET /ota/config/download</code> 生产 200，返回确定性配置 JSON；配置变化即版本变化</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>OTA 固件包升级</td>
+        <td><span class="st s-warn">⚠️ 部分对接</span></td>
+        <td>链路全通并实测（管理端上传 → <code>ai_ota</code> 入库 → 设备取 URL → 下载 → md5 一致）；当前仅 <code>yh-cam</code> 有编译产物，另三版型编译后一条命令发布</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>WS UDP 心跳（8002）</td>
+        <td><span class="st s-ok">✅ 已对接</span></td>
+        <td>服务端已在 <code>0.0.0.0:8002/UDP</code> 监听并回 ack；固件侧零依赖（回包仅打日志）；公网 UDP 转发属路由器侧可选项</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>动态字形推送 <code>glyph_push</code></td>
+        <td><span class="st s-ok">✅ 已对接</span></td>
+        <td>真机 WS 链路实测：<code>stt</code> / <code>tts sentence_start</code> 均带字模，固件等价校验 <b>3/3 PASS</b>，负向 0 下发</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>二、代码与部署变更清单</h2>
+
+  <h3>2.1 Java 管理端 <span class="tag">yh/manager-api → 生产 /opt/xiaozhi/xiaozhi-esp32-api.jar</span></h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:430px">文件</th><th style="width:70px">类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>modules/device/service/DeviceConfigFileService.java</code></td><td>新增</td><td>设备配置包服务接口（buildPayload / buildVersion / buildDownloadUrl）</td></tr>
+      <tr><td><code>modules/device/service/impl/DeviceConfigFileServiceImpl.java</code></td><td>新增</td><td>读设备配置生成确定性 JSON；版本 = <code>cfg-</code> + payload SHA-256 前 12 位</td></tr>
+      <tr><td><code>modules/device/filter/OtaSlashNormalizeFilter.java</code></td><td>新增</td><td>最高优先级过滤器，归一化 <code>/xiaozhi/ota//config/version</code>，兼容固件 <code>GetCheckVersionUrl()</code> 尾部斜杠</td></tr>
+      <tr><td><code>modules/device/controller/OTAController.java</code></td><td>修改</td><td>新增 <code>GET config/version</code>、<code>GET config/download</code> 两个端点</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul>
+    <li>构建：服务器 <code>/root/build-manager-api/manager-api</code>（JDK21 + Maven），<b>BUILD SUCCESS 31s</b></li>
+    <li>备份：<code>/opt/xiaozhi/xiaozhi-esp32-api.jar.bak-otacfg-20261016T120213Z</code>；重启后 active</li>
+  </ul>
+
+  <h3>2.2 Python 服务端 <span class="tag">yh/xiaozhi-server → 生产 /root/xiaozhi-server/main/xiaozhi-server</span></h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:330px">文件</th><th style="width:70px">类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>core/utils/glyph_provider.py</code></td><td>新增</td><td>厂商官方 CBIN 字形提取器（<code>FullGlyphProvider</code>），逐字节引入未改</td></tr>
+      <tr><td><code>core/utils/glyph_push.py</code></td><td>新增</td><td>补字服务：单例懒加载、能力解析、把 <code>glyph_push</code> 挂到下行文本消息</td></tr>
+      <tr><td><code>core/handle/helloHandle.py</code></td><td>修改</td><td>解析 hello 的 <code>features.glyph_push</code> + <code>text_font{bundle,charset,size,bpp}</code></td></tr>
+      <tr><td><code>core/handle/sendAudioHandle.py</code></td><td>修改</td><td><code>tts sentence_start</code> / <code>stt</code> / 纯显示消息 三处挂载点</td></tr>
+      <tr><td><code>core/heartbeat.py</code></td><td>修改</td><td>新增 <code>0.0.0.0:8002/UDP</code> 旁路心跳监听，收到即回 <code>{"type":"udp_heartbeat_ack"}</code></td></tr>
+      <tr><td><code>config/config_loader.py</code></td><td>修改</td><td><code>read_config_from_api=True</code> 时 server 段为白名单重建，补入 <code>ws_udp_heartbeat_port</code>，使端口「置 0 关闭 / 改端口」真正可配</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul>
+    <li>备份：<code>/root/backup-glyphpush-20261016T120807Z</code>、<code>/root/backup-glyphcfg-20261016T123011Z</code>；重启后 active</li>
+    <li>字形包：<code>data/glyph_bundle/</code>（官方 <code>noto-v1-full</code>，35 MB，bundle=<code>noto-v1</code>，charset <code>basic</code> 890 / <code>common</code> 6845，档位 <code>14_1 / 16_4 / 20_4 / 30_4</code>）</li>
+    <li><b>一致性</b>：上述 6 个文件本地镜像与生产 <b>md5 逐一相同</b>（<code>37b639c4…</code> / <code>e9b454c6…</code> / <code>4d71889b…</code> / <code>5eae8d4d…</code> / <code>d5afca87…</code> / <code>0c80434d…</code>）</li>
+  </ul>
+
+  <h3>2.3 数据 & 新增工具</h3>
+  <ul>
+    <li><code>ai_ota</code> 新增 1 条：<code>type=yh-cam</code>、<code>version=2.5.1</code>、<code>size=2901888</code>、<code>firmware_path=uploadfile/cbe6adf17d9bf6b4e2b60677ef915733.bin</code>（无 schema 变更；验收用临时设备行已删除，<code>ai_device</code> 恢复 4 台真实设备）</li>
+    <li><code>hardware/tests/glyph_push_simulator.py</code> —— 字形推送端到端验收（复刻固件 <code>text_glyph_payload.cc</code> 全部拒绝规则）</li>
+    <li><code>hardware/tests/ota_simulator.py</code> —— OTA 链路验收（复刻固件 <code>GetSystemInfoJson()</code> 报文与 <code>Device-Id</code> 头）</li>
+    <li><code>hardware/sets/ota_publish.py</code> —— 构建产物 → 管理端上传 → <code>ai_ota</code> 幂等注册 → 自动复验</li>
+  </ul>
+
+  <h2>三、逐项验收证据</h2>
+
+  <h3>3.1 配置版本检查 + 配置包下载</h3>
+<pre><span class="c"># 固件为 CONFIG_OTA_URL 带尾斜杠，真实请求会拼出双斜杠</span>
+GET  /xiaozhi/ota/config/version?device_id=c4:9e:7e:08:c2:b4        <span class="g">→ 200</span>
+     {"version":"cfg-615ed27167d0",
+      "download_url":"http://sandyun.top:8002/xiaozhi/ota/config/download?device_id=c4:9e:7e:08:c2:b4"}
+
+GET  /xiaozhi/ota<span class="y">//</span>config/version?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>  <span class="c">← 固件真实请求形态</span>
+     同上 JSON（日志：[ota-config] 归一化重复斜杠: /xiaozhi/ota//config/version -&gt; /xiaozhi/ota/config/version）
+
+GET  /xiaozhi/ota/config/download?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>
+     {"device_id":"c4:9e:7e:08:c2:b4",
+      "server":{"ota":"http://sandyun.top:8002/xiaozhi/ota/","websocket":"ws://sandyun.top:8001/xiaozhi/v1/"},
+      "device_config":{"volume":20}}</pre>
+  <ul>
+    <li><b>确定性</b>：同设备重复请求版本恒定；不同设备版本互异（<code>cfg-615ed27167d0</code> / <code>cfg-1f0f6bdd6a77</code> / <code>cfg-bf75a80ffff5</code> / <code>cfg-63c2ab381554</code>）—— 设备配置变更即版本变更</li>
+    <li><b>经 nginx 8001 复验</b>：同样 200</li>
+    <li><b>契约匹配</b>：固件 <code>ota.cc:276</code> 要求 <code>version</code> 必须是<b>字符串</b>，返回值即字符串 ✅</li>
+    <li><b>回归</b>：<code>/user/pub-config</code> 200、<code>/v3/api-docs</code> 200、<code>:8001/</code> 200、<code>:8001/admincc/</code> 200、<code>POST /ota/</code> 200；Swagger 已收录两个新端点</li>
+  </ul>
+  <div class="box warn">
+    <b>⚠️ 固件侧说明（不阻塞）</b>
+    <code>application.cc:460</code> 目前只把服务端版本与 NVS 本地版本做<b>比较并打日志</b>，源码注释写明「实际下载可在协议连接成功后进行」。即服务端能力已完整就绪，设备端消费逻辑属固件后续增强 —— 检查失败也继续启动，前后均不阻塞。
+  </div>
+
+  <h3>3.2 OTA 固件包升级</h3>
+<pre><span class="c"># 真实管理端 API 全链路（非 SQL 直插）</span>
+POST /otaMag/upload   -F file=@yh-cam-xiaozhi.bin
+     <span class="g">→ {"code":0,"data":"uploadfile/cbe6adf17d9bf6b4e2b60677ef915733.bin"}</span>
+POST /otaMag          {"firmwareName":"屿禾-CAM版固件(OV2640+AEC)","type":"yh-cam",
+                       "version":"2.5.1","size":2901888,"firmwarePath":"uploadfile/cbe6adf1….bin",…}
+     <span class="g">→ {"code":0}</span>
+GET  /otaMag?page=1&amp;limit=10      <span class="g">→ 列表已出现该固件</span></pre>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:44px">场景</th><th>条件</th><th style="width:170px">期望</th><th style="width:190px">结果</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>已绑定 + <code>auto_update=1</code> + 设备 2.5.0 &lt; 库 2.5.1</td><td>返回真实升级 URL</td>
+          <td><span class="st s-ok">✅ PASS</span> <code>firmware.version=2.5.1</code>，URL=<code>/otaMag/download/f91e75f4-…</code>；<b>实际下载 2901888 字节，md5=<code>cbe6adf1…</code> 与本地固件完全一致</b></td></tr>
+      <tr><td>2</td><td>设备 2.5.1 = 库 2.5.1</td><td>不再升级（防死循环）</td><td><span class="st s-ok">✅ PASS</span> 哨兵 URL</td></tr>
+      <tr><td>3</td><td><code>board.type</code> 不匹配（<code>yh-n16r8-st7789</code>）</td><td>不升级</td><td><span class="st s-ok">✅ PASS</span> 哨兵 URL</td></tr>
+      <tr><td>4</td><td><code>auto_update=0</code></td><td>不下发 firmware 段</td><td><span class="st s-ok">✅ PASS</span> 响应仅 <code>{server_time, websocket}</code></td></tr>
+      <tr><td>5</td><td>未绑定设备（不在 <code>ai_device</code>）</td><td>不升级</td><td><span class="st s-ok">✅ PASS</span> 哨兵 URL</td></tr>
+      <tr><td>6</td><td>一次性下载 URL 的次数上限</td><td>第 4 次 404</td><td><span class="st s-ok">✅ PASS</span> 1/2/3 次 200（2901888 B），第 4 次 404</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <b>版本一致性硬约束（ota_publish.py 已内置）</b>
+    <code>ai_ota.version</code> 必须等于 bin 内嵌的 <code>esp_app_desc.version</code>（本包 = <code>2.5.1</code>），否则设备升完仍报旧版本 → <b>无限升级循环</b>。脚本会自动从镜像解析版本，无需手填。
+  </div>
+
+  <pre><span class="c"># 其余三版型编译后，各跑一条命令即可入库</span>
+python hardware/sets/ota_publish.py --board yh-154tft-wifi  --token &lt;管理端token&gt; --verify --mac &lt;已登记MAC&gt;
+python hardware/sets/ota_publish.py --board yh-big-ili9341  --token &lt;同上&gt; --verify --mac &lt;同上&gt;
+python hardware/sets/ota_publish.py --board yh-n16r8-st7789 --token &lt;同上&gt; --verify --mac &lt;同上&gt;
+<span class="c"># 或一次性：</span> python hardware/sets/ota_publish.py --all --token &lt;同上&gt;</pre>
+  <div class="box">
+    <b>说明</b>
+    本机既有约定为「编译烧录由用户手动执行」，故本轮未代为编译另三套固件；<code>--dry-run</code> 可先核对版本 / 大小 / md5。
+  </div>
+
+  <h3>3.3 WS UDP 心跳 8002</h3>
+<pre>ss -lunp | grep 8002
+    UNCONN 0 0  <span class="g">0.0.0.0:8002</span>  0.0.0.0:*  users:(("python",pid=568605,fd=21))
+启动日志： [core.heartbeat]-INFO-WebSocket UDP心跳已启动   0.0.0.0:8002
+配置读出： server.ws_udp_heartbeat_port = 8002（read_config_from_api=True 下仍生效）</pre>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:230px">来源</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td><code>127.0.0.1:8002</code></td><td><span class="st s-ok">✅</span> rtt 1.3 ms，回包 <code>{"type":"udp_heartbeat_ack"}</code></td></tr>
+      <tr><td><code>192.168.50.10:8002</code>（LAN）</td><td><span class="st s-ok">✅</span> rtt 0.9 ms，同上</td></tr>
+      <tr><td><code>sandyun.top:8002</code>（公网）</td><td><span class="st s-warn">⚠️ 超时</span>（基础设施层：路由器只做了 TCP 映射；同机既有 <code>12399/UDP</code> 公网同样不可达，其 TCP 端口可达）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul>
+    <li><b>固件侧为 fire-and-forget</b>：<code>websocket_protocol.cc:366</code> 对回包仅 <code>ESP_LOGD</code> 打日志，注释「可扩展为配置同步」；<code>OpenUdpChannel()</code> 在 WS 建链后无条件调用。故服务端监听到位即对接完成，设备功能不受影响</li>
+    <li>若需真机公网回环：出口路由器追加 <code>UDP 8002 → 192.168.50.10:8002</code> 映射即可，<b>无需改固件</b></li>
+  </ul>
+
+  <h3>3.4 动态字形推送 glyph_push</h3>
+<pre>hello: features.glyph_push=true, text_font={bundle:noto-v1, charset:basic, size:20, bpp:4}
+listen/detect "你好小禾，请用一句话介绍你自己"
+  &lt;- type=stt text='你好小禾，请用一句话介绍你自己' glyph_push=<span class="g">YES</span>
+     固件校验 <span class="g">PASS</span> | glyphs=7 | U+5C0F U+79BE U+53E5 U+4ECB U+7ECD U+81EA U+5DF1
+  &lt;- type=tts state=sentence_start text='主人，小智现在有点忙' glyph_push=<span class="g">YES</span>
+     固件校验 <span class="g">PASS</span> | glyphs=5 | U+4E3B U+4EBA U+5C0F U+667A U+5FD9
+  &lt;- type=tts state=sentence_start text='我们稍后再试吧' glyph_push=<span class="g">YES</span>
+     固件校验 <span class="g">PASS</span> | glyphs=2 | U+4EEC U+5427
+统计：文本消息=3 含 glyph_push=3 二进制音频帧=68 固件校验失败=<span class="g">0</span></pre>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:280px">用例</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>正向 <code>charset=basic</code>（四版型默认档）</td><td><span class="st s-ok">✅</span> 3/3 文本消息带字模，固件校验全 PASS，语音帧无异常</td></tr>
+      <tr><td>负向 <code>--no-glyph</code>（不声明能力）</td><td><span class="st s-ok">✅</span> 0/3 带字模（零开销、零回归）</td></tr>
+      <tr><td><code>charset=common</code> + 常用字</td><td><span class="st s-ok">✅</span> 0 字模（设备本就具备，正确跳过）</td></tr>
+      <tr><td><code>charset=common</code> + 生僻字 <code>𠮷</code>(U+20BB7)</td><td><span class="st s-ok">✅</span> 命中 1 字模，固件校验 PASS（与厂商 README 示例一致）</td></tr>
+      <tr><td>经 nginx 8001 真实链路</td><td><span class="st s-ok">✅</span> 同上 PASS</td></tr>
+      <tr><td>服务端日志</td><td><code>客户端字形补字能力: bundle=noto-v1, charset=basic, 20_4</code> → <code>字形补字已就绪: noto-v1, 字符集=['basic','common'], 档位=[(14,1),(16,4),(20,4),(30,4)]</code> → <code>已附带字形推送: 7 字</code></td></tr>
+      <tr><td>上限保护</td><td>提取器硬限 <b>64 字 / 64 KiB</b>，超限即截断（厂商实现内置）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="box ok">
+    <b>固件等价校验器</b>
+    复刻了 <code>text_glyph_payload.cc::Parse()</code> 的全部拒绝规则：<code>v==1</code>、<code>bundle</code>/<code>size</code>/<code>bpp</code> 与设备能力<b>完全相等</b>、<code>glyphs</code> ≤ 64、<code>codepoint∈(0,0x10FFFF]</code>、<code>adv_w∈[0,2^32)</code>、<code>box_w/box_h∈[0,64]</code>、<code>ofs_x/ofs_y∈int16</code>、base64 解码长度严格等于 <code>ceil(w*h*bpp/8)</code>、累计 bitmap ≤ 64 KiB。实测全部通过。
+  </div>
+  <div class="box">
+    <b>📌 观察（非缺陷）：该功能同时补齐了「小屏无法显示中文」的能力</b>
+    四版型内置字体为 <code>font_noto_sans_basic_20_4</code>、assets 未装 common 字库，设备上报 <code>charset=basic</code>（890 码位）→ <b>所有汉字都会被判为缺字并推送</b>。单句中文（约 15 字）约 3 KB 字模、base64 后约 4 KB。若想降低带宽，可在 assets 内装 common 字库，设备会自动改为 <code>charset=common</code>，此时只推生僻字。
+  </div>
+
+  <h2>四、更新后的全量对接表</h2>
+
+  <h3>4.1 设备直连通道（固件 → 服务器）</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:210px">功能</th><th>固件侧</th><th>服务器侧</th><th style="width:110px">状态</th><th style="width:240px">依据</th></tr></thead>
+    <tbody>
+      <tr><td>OTA 版本检查/设备信息</td><td><code>POST {OTA_URL}</code></td><td>Java <code>POST /ota/</code></td><td><span class="st s-ok">✅</span></td><td>实测 200</td></tr>
+      <tr><td>设备激活</td><td><code>POST {OTA_URL}/activate</code>（202=等待确认）</td><td>Java <code>POST /ota/activate</code></td><td><span class="st s-ok">✅</span></td><td>实测 202</td></tr>
+      <tr><td><b>配置版本检查</b></td><td><code>GET {OTA_URL}/config/version?device_id=</code></td><td><b>Java <code>GET /ota/config/version</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>生产 200；双斜杠形态亦 200</td></tr>
+      <tr><td><b>配置包下载</b></td><td><code>config_download_url_</code> → Assets</td><td><b>Java <code>GET /ota/config/download</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>生产 200，返回确定性配置 JSON</td></tr>
+      <tr><td>WebSocket 语音主通道</td><td><code>ws://sandyun.top:8001/xiaozhi/v1/</code></td><td>nginx → Python 8000</td><td><span class="st s-ok">✅</span></td><td>实测建链 + 68 音频帧</td></tr>
+      <tr><td>WS 鉴权</td><td><code>websocket.token</code> 存 NVS</td><td>Python <code>auth.verify_token</code></td><td><span class="st s-ok">✅</span></td><td><code>auth.enabled=false</code> 放行</td></tr>
+      <tr><td><b>WS UDP 心跳</b></td><td><code>host:8002</code> UDP <code>{"type":"udp_heartbeat"}</code></td><td><b>Python <code>0.0.0.0:8002/UDP</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>回 <code>udp_heartbeat_ack</code>；公网 UDP 转发属路由器侧</td></tr>
+      <tr><td>YH 私有协议</td><td>TCP 12399</td><td>Python <code>HeartbeatServer</code></td><td><span class="st s-ok">✅</span></td><td>端口可连，消息类型对齐</td></tr>
+      <tr><td>YH 下行 SET_LED</td><td>执行 + ACK</td><td>Python <code>send_to_device</code></td><td><span class="st s-ok">✅</span></td><td>ADVERTISE 白名单一致</td></tr>
+      <tr><td>YH 下行 SEND_NOTIFY</td><td>NotifyPlayer 播 Ogg Opus</td><td>Python push_scheduler</td><td><span class="st s-ok">✅</span></td><td>音频须 <code>.ogg</code> 单声道</td></tr>
+      <tr><td>MQTT 通道</td><td>完整实现</td><td><code>server.mqtt_gateway=null</code></td><td><span class="st s-neu">⚪ 未启用</span></td><td>两端具备</td></tr>
+      <tr><td>时间同步</td><td><code>server_time.timezone_offset</code></td><td>Java 返回 +480</td><td><span class="st s-ok">✅</span></td><td>实测</td></tr>
+      <tr><td><b>OTA 固件包升级</b></td><td><code>Ota::Upgrade(firmware.url)</code></td><td>Java <code>/otaMag/*</code> + <code>ai_ota</code></td><td><span class="st s-warn">⚠️ 部分</span></td><td>链路全通并实测；<code>ai_ota</code> 现 1 条（yh-cam），另三版型待编译后一键发布</td></tr>
+      <tr><td>assets 资源包 OTA</td><td>MCP <code>set_download_url</code></td><td><code>/otaMag/uploadAssetsBin</code></td><td><span class="st s-warn">⚠️ 部分</span></td><td>端点齐；<code>/xiaozhi/assets/download/*</code> 401 仍未处理</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>4.2 设备 ↔ 服务端 配置与能力</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:230px">功能</th><th>固件侧</th><th>服务器侧</th><th style="width:110px">状态</th></tr></thead>
+    <tbody>
+      <tr><td>云端设备配置下发</td><td><code>type=device_config</code> → <code>ApplyDeviceConfig</code></td><td>Python + Java <code>/config/device-config</code></td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>唤醒词云端下发</td><td>汉字→拼音→MultiNet</td><td>Java + Python WakeWordService</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>唤醒词默认值行为</td><td>编译期「你好小禾」</td><td>—</td><td><span class="st s-warn">⚠️ 设备级下发会覆盖默认值</span></td></tr>
+      <tr><td>交互字幕/表情</td><td><code>tts.sentence_start</code>/<code>stt.text</code>/<code>llm.emotion</code></td><td>Python 下发</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>通知播放 notify</td><td><code>type=notify</code>（Ogg Opus）</td><td>Python 推送（ffmpeg→ogg mono）</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>系统指令/告警/自定义/再见</td><td>4 类入站枚举</td><td>Python 下发</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>设备端 IoT 工具（MCP over WS）</td><td><code>mcp_server.cc</code> 14+ 工具</td><td>Python MCP + Java <code>/device/tools/*</code></td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>视觉/相机解释</td><td><code>ParseCapabilities.vision</code></td><td>Python <code>/mcp/vision/explain</code></td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td><b>动态字形推送 glyph_push</b></td><td><code>tts.sentence_start</code>/<code>stt</code> 内嵌字模</td><td><b>Python <code>core/utils/glyph_push.py</code>（新增）+ <code>data/glyph_bundle</code></b></td><td><span class="st s-ok">✅ 本轮打通</span></td></tr>
+      <tr><td>MCP 接入点</td><td>—</td><td><code>server.mcp_endpoint=null</code></td><td><span class="st s-neu">⚪ 未启用</span></td></tr>
+      <tr><td>声纹识别 / 知识库 / 长期记忆 / function-call</td><td>固件不涉及</td><td>Python + Java 齐备</td><td><span class="st s-ok">✅</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>4.3 语音链路模块（生产实测启用值）</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:120px">模块</th><th>生产启用值</th><th style="width:110px">状态</th></tr></thead>
+    <tbody>
+      <tr><td>VAD</td><td><code>SileroVAD</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>ASR</td><td><code>FunASR</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>LLM</td><td><code>LLM_DeepSeek</code>（deepseek-flash）</td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>VLLM</td><td><code>VLLM_ChatGLMVLLM</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>TTS</td><td><code>TTS_DoubaoV3</code> · <code>zh_female_xiaohe_uranus_bigtts</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>Intent</td><td><code>Intent_function_call</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+      <tr><td>Memory</td><td><code>Memory_mem_hybrid</code></td><td><span class="st s-ok">✅ 已启用</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>4.4 管理后台 ↔ 服务端</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:300px">模块</th><th style="width:330px">前缀</th><th style="width:90px">接口数</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>设备 OTA（固件直调）</td><td><code>/ota/</code></td><td>2 → <b>4</b></td><td><span class="st s-ok">✅ 本轮新增 2 个免鉴权端点</span></td></tr>
+      <tr><td>固件包管理</td><td><code>/otaMag/</code></td><td>9</td><td><span class="st s-warn">⚠️</span> 上传/注册/下载/限次均已实测；差另三版型产物</td></tr>
+      <tr><td>设备云端配置</td><td><code>/deviceConfigMag/</code>、<code>/config/device-config</code></td><td>5</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>设备管理/绑定/通讯录/工具</td><td><code>/device/</code></td><td>13</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>推送与唤醒词代理</td><td><code>/api/push/*</code>、<code>/api/wake-word/*</code></td><td>5</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>智能体/模板/标签/快照/MCP</td><td><code>/agent/*</code></td><td>49</td><td><span class="st s-ok">✅</span></td></tr>
+      <tr><td>记忆 / 知识库 / 模型与音色 / 音色库 / 替换词 / 订单 / 用户 / 系统管理</td><td>—</td><td>17 / 15 / 21 / 16 / 7 / 6 / 8 / 23</td><td><span class="st s-ok">✅</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>五、残留与建议</h2>
+  <h3>需要用户侧动作</h3>
+  <ul>
+    <li><b>另三版型固件产物</b>（<code>yh-154tft-wifi</code>、<code>yh-big-ili9341</code>、<code>yh-n16r8-st7789</code>）—— 按既有约定由用户编译，之后执行 <code>python hardware/sets/ota_publish.py --all --token &lt;token&gt;</code> 即全部入库</li>
+    <li><b>出口路由器 UDP 8002 映射</b>（可选）—— 仅当希望固件 UDP 心跳在公网真正收到 ack；不加也不影响功能</li>
+  </ul>
+
+  <h3>既有待办（本轮未涉及）</h3>
+  <ul>
+    <li><code>assets</code> 资源包 OTA：<code>/xiaozhi/assets/download/*</code> 仍返回 401</li>
+    <li>唤醒词真源：<code>ai_agent_wake_word</code> 0 行，实际落 <code>ai_device_config.wake_word</code>，两套入口并存</li>
+    <li>固件双副本（<code>hardware/sets/xiaozhi-esp32</code> 与 <code>hardware/small_screen_camera/xiaozhi-esp32</code>）需保持同步</li>
+  </ul>
+
+  <h3>回滚方式</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:110px">组件</th><th>回滚</th></tr></thead>
+    <tbody>
+      <tr><td>Java</td><td><code>cp /opt/xiaozhi/xiaozhi-esp32-api.jar.bak-otacfg-20261016T120213Z /opt/xiaozhi/xiaozhi-esp32-api.jar &amp;&amp; systemctl restart xiaozhi-manager-api</code></td></tr>
+      <tr><td>Python</td><td><code>cp -a /root/backup-glyphpush-20261016T120807Z/core/. /root/xiaozhi-server/main/xiaozhi-server/core/ &amp;&amp; systemctl restart xiaozhi-server</code></td></tr>
+      <tr><td>字形包</td><td>移除 <code>data/glyph_bundle/</code> 即自动降级为「不补字」（不影响语音链路）；或设 <code>XIAOZHI_GLYPH_BUNDLE_DIR</code> 指向其他目录</td></tr>
+      <tr><td>UDP 心跳</td><td>配置 <code>server.ws_udp_heartbeat_port: 0</code> 关闭监听；或环境变量 <code>XIAOZHI_WS_UDP_HEARTBEAT_PORT=0</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="foot">
+    注：Python 侧结论同时参考本地镜像 <code>yh/xiaozhi-server</code> 与生产 <code>/root/xiaozhi-server/main/xiaozhi-server</code>（二者改动后已逐文件同步，md5 可校验）。<br>
+    验收脚本：<code>hardware/tests/glyph_push_simulator.py</code> · <code>hardware/tests/ota_simulator.py</code> · <code>hardware/sets/ota_publish.py</code>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,8 @@
 package xiaozhi.modules.device.controller;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.MediaType;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -20,6 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +31,7 @@ import xiaozhi.common.constant.Constant;
 import xiaozhi.modules.device.dto.DeviceReportReqDTO;
 import xiaozhi.modules.device.dto.DeviceReportRespDTO;
 import xiaozhi.modules.device.entity.DeviceEntity;
+import xiaozhi.modules.device.service.DeviceConfigFileService;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.sys.service.SysParamsService;
 
@@ -38,6 +43,73 @@ import xiaozhi.modules.sys.service.SysParamsService;
 public class OTAController {
     private final DeviceService deviceService;
     private final SysParamsService sysParamsService;
+    private final DeviceConfigFileService deviceConfigFileService;
+
+    @Operation(summary = "设备配置版本检查")
+    @GetMapping("config/version")
+    public ResponseEntity<String> checkDeviceConfigVersion(
+            @Parameter(name = "device_id", description = "设备MAC地址", required = false, in = ParameterIn.QUERY) @RequestParam(value = "device_id", required = false) String deviceId,
+            @Parameter(name = "mac", description = "设备MAC地址（device_id 别名）", required = false, in = ParameterIn.QUERY) @RequestParam(value = "mac", required = false) String mac,
+            @Parameter(name = "Device-Id", description = "设备唯一标识", required = false, in = ParameterIn.HEADER) @RequestHeader(value = "Device-Id", required = false) String headerDeviceId,
+            HttpServletRequest request) {
+        String id = firstNonBlank(deviceId, mac, headerDeviceId);
+        // 契约：固件只读取 version / download_url 两个字段
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (StringUtils.isBlank(id)) {
+            log.warn("[ota-config] 配置版本检查缺少设备标识: uri={}", request.getRequestURI());
+            body.put("version", "");
+            body.put("download_url", "");
+        } else {
+            body.put("version", deviceConfigFileService.buildVersion(id));
+            body.put("download_url",
+                    deviceConfigFileService.buildDownloadUrl(id, fallbackOtaBase(request)));
+        }
+        return createResponse(body);
+    }
+
+    @Operation(summary = "下载设备配置文件")
+    @GetMapping("config/download")
+    public ResponseEntity<byte[]> downloadDeviceConfig(
+            @Parameter(name = "device_id", description = "设备MAC地址", required = false, in = ParameterIn.QUERY) @RequestParam(value = "device_id", required = false) String deviceId,
+            @Parameter(name = "mac", description = "设备MAC地址（device_id 别名）", required = false, in = ParameterIn.QUERY) @RequestParam(value = "mac", required = false) String mac,
+            @Parameter(name = "Device-Id", description = "设备唯一标识", required = false, in = ParameterIn.HEADER) @RequestHeader(value = "Device-Id", required = false) String headerDeviceId,
+            HttpServletRequest request) {
+        String id = firstNonBlank(deviceId, mac, headerDeviceId);
+        if (StringUtils.isBlank(id)) {
+            return ResponseEntity.badRequest().body(new byte[0]);
+        }
+        String payload = deviceConfigFileService.buildPayload(id);
+        byte[] body = payload.getBytes(StandardCharsets.UTF_8);
+        log.info("[ota-config] 下发设备配置: mac={}, bytes={}", id, body.length);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .contentLength(body.length)
+                .body(body);
+    }
+
+    /** 参数表未配置 server.ota 时的兜底基地址：由当前请求推导 <scheme>://<host>:<port><contextPath>/ota/ */
+    private String fallbackOtaBase(HttpServletRequest request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(request.getScheme()).append("://").append(request.getServerName());
+        int port = request.getServerPort();
+        if (port > 0 && port != 80 && port != 443) {
+            sb.append(':').append(port);
+        }
+        sb.append(request.getContextPath()).append("/ota/");
+        return sb.toString();
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.isNotBlank(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
 
     @Operation(summary = "OTA版本和设备激活状态检查")
     @PostMapping
@@ -97,6 +169,17 @@ public class OTAController {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         String json = objectMapper.writeValueAsString(deviceReportRespDTO);
+        byte[] jsonBytes = json.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .contentLength(jsonBytes.length)
+                .body(json);
+    }
+
+    @SneakyThrows
+    private ResponseEntity<String> createResponse(Map<String, Object> body) {
+        String json = new ObjectMapper().writeValueAsString(body);
         byte[] jsonBytes = json.getBytes(StandardCharsets.UTF_8);
         return ResponseEntity
                 .ok()

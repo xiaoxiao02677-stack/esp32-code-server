@@ -57,11 +57,26 @@ hardware/small_screen_camera/
 # 固件（hardware/）：ESP-IDF 构建输出（2026-10-15 由 code/xiaozhi-esp32 迁移而来，idf.py 可重建）
 hardware/*/xiaozhi-esp32/build/
 hardware/*/xiaozhi-esp32/managed_components/
+hardware/*/xiaozhi-esp32/sdkconfig
 hardware/*/xiaozhi-esp32/sdkconfig.old
 hardware/*/build/
 hardware/*/managed_components/
+# ===== hardware/sets 多版型适配中心（2026-10-16 新建）=====
+# 版型源码与自带固件副本的源码入库；编译产物、第三方依赖与注册备份不入库
+# （副本的 build/ 与 managed_components/ 已被上面 hardware/*/xiaozhi-esp32/ 两条规则覆盖）
+hardware/sets/xiaozhi-esp32/sdkconfig
+hardware/sets/out/
+hardware/sets/build*/
+hardware/sets/*.bak-sets
+hardware/sets/**/*.bak-sets
+__pycache__/
+*.pyc
 # console-v2 移入 yh/ 后更新临时构建目录规则
 yh/console-v2/.tmpbuild/
+# 临时工作区/部署打包（.workbuddy 内只保留 memory/ 与长期脚本）
+code/.workbuddy/tmp-*/
+code/.workbuddy/*.tar
+code/.workbuddy/*.log
 *.log
 !yh/xiaozhi-server/**/*.log
 sftp-test.txt
