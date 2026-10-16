@@ -28,7 +28,8 @@ set "TEMP=D:\INSTALL\esp\tmp"
 set "TMP=D:\INSTALL\esp\tmp"
 set "PATH=C:\Windows\System32;C:\Windows;D:\INSTALL\esp\tools\python\v6.1\venv\Scripts"
 
-cd /d "G:\demo\21_xiaozhi\code\big_secreen\xiaozhi-esp32\build"
+rem self-adaptive: was hardcoded to the pre-2026-10-15 repo layout
+cd /d "%~dp0build"
 
 rem ---- 烧录 + 复位 ----
 rem flash_args 由 idf.py 生成在 build\ 目录, esptool 按当前目录解析 @flash_args

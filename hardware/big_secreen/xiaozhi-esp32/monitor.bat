@@ -29,6 +29,7 @@ set IDF_PYTHON_ENV_PATH=D:\INSTALL\esp\tools\python\v6.1\venv
 set "TEMP=D:\INSTALL\esp\tmp"
 set "TMP=D:\INSTALL\esp\tmp"
 
-cd /d "G:\demo\21_xiaozhi\code\big_secreen\xiaozhi-esp32"
+rem self-adaptive: was hardcoded to the pre-2026-10-15 repo layout
+cd /d "%~dp0"
 call D:\INSTALL\esp\v6.1\esp-idf\export.bat
 idf.py -p %PORT% monitor

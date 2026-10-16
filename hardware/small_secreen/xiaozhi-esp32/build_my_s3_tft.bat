@@ -18,5 +18,6 @@ rem ESP-IDF linker breaks on spaces in project path (esp_audio_codec/esp_image_e
 rem -L flags). Those components' CMakeLists are patched in managed_components:
 rem "-L <dir>" -> "-L<dir>" so the whole path is passed as one quoted argument.
 call D:\INSTALL\esp\v6.1\esp-idf\export.bat
-cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32
+rem self-adaptive: was hardcoded to the pre-2026-10-15 repo layout
+cd /d "%~dp0"
 python scripts\build.py my-s3-tft --name my-s3-tft

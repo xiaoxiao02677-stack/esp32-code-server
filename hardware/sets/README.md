@@ -20,8 +20,11 @@ hardware/small_screen_camera/xiaozhi-esp32/     ← 回退：副本不存在时�
 
 ## 1. 一条命令起步
 
-先激活 ESP-IDF v6.1 环境（必须有 `IDF_PATH`，否则脚本只会提示你如何激活），
-然后：
+**不需要先激活 ESP-IDF 环境。** 脚本会自己把环境找齐：依次探测 `--python` →
+`IDF_PYTHON_ENV_PATH` → `eim_idf.json`（Espressif IDE Manager 的安装记录）→
+`IDF_TOOLS_PATH/python/*/venv` → 常见安装目录，然后把 IDF venv 的 python、
+`IDF_PATH`、`IDF_TOOLS_PATH`、`ESP_IDF_VERSION`，以及 cmake / ninja / 交叉工具链的
+PATH 一并交给编译子进程。所以用系统里任意一个 python 启动都可以：
 
 ```bat
 python hardware/sets/build.py
@@ -41,6 +44,20 @@ python hardware/sets/build.py --board yh-cam --yes
 ```bat
 python hardware/sets/build.py --board yh-cam --sync-only
 ```
+
+要强制指定解释器就用 `--python`：
+
+```bat
+python hardware/sets/build.py --board yh-cam ^
+  --python D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe
+```
+
+> **为什么要在意这件事**：PATH 里的 `python` 常常不是 IDF 的那个。本机就踩过
+> `python` 解析到 `Python310-32`（32 位、没装 `rich_click`），固件的
+> `scripts/build.py` 会用 `sys.executable` 把解释器一路传下去，于是报
+> `No module named 'rich_click'` / `idf.py was not spawned within an ESP-IDF shell`。
+> 现在脚本会自动切到 IDF venv，不再受 PATH 里是哪个 python 影响。编译前会打印
+> 实际使用的 `IDF_PATH` / `IDF_TOOLS` / `IDF python` / 工具链目录数，方便核对。
 
 ---
 
@@ -246,8 +263,8 @@ sdkconfig 的变更在老 build 目录里不会自动生效，这是 IDF 的常�
 > 发现上次编译的是别的版型时会主动中文告警并给出删除命令——看到就照做。
 > 另外切换前记得先归档（默认已归档到 `out/<id>/`）或自行备份产物。
 
-**Q：提示「未检测到 ESP-IDF 编译环境」**
-需要先激活 ESP-IDF v6.1。脚本会打印激活命令，参考固件自带的
+**Q：提示「未检测到可用的 ESP-IDF 编译环境」**
+先从上面那三种自动探测里找；全找不到时会打印下面两条路。手动激活参考固件自带的
 `build_yuhe_cam.bat`：
 
 ```bat
@@ -257,7 +274,26 @@ set IDF_PYTHON_ENV_PATH=D:\INSTALL\esp\tools\python\v6.1\venv
 call D:\INSTALL\esp\v6.1\esp-idf\export.bat
 ```
 
+或者直接把 IDF venv 的 python 指给脚本，连激活都省了：
+
+```bat
+D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe hardware/sets/build.py --board yh-cam
+```
+
 路径按你本机实际位置调整。只是同步/注册的话加 `--sync-only`，不需要 IDF。
+
+> 注意 `IDF_TOOLS_PATH` 是 `D:\INSTALL\esp`（**不是** `...\esp\tools`）。这里工具装在
+> `$IDF_TOOLS_PATH/tools/<name>/<version>`，所以少了 `\tools` 才是对的——本机用
+> `idf_tools.py check` 实测验证过。官方生成的 `Microsoft.v6.1.PowerShell_profile.ps1`
+> 里写的是 `...\esp\tools`，属于 eim 的命名偏差，别照抄。
+
+**Q：报 `No module named 'rich_click'`**
+说明 `idf.py` 被非 IDF 的 python 拉起来了。脚本已自动规避；若在别处遇到，
+用 IDF venv 的 python 重跑，或加 `--python` 指定。
+
+**Q：报 `Configuring incomplete` 且日志里有 `component_requires.temp.cmake`**
+空/半成品 `build/` 目录下的已知抖动，再跑一次通常就好；稳定复现就删掉
+`<FW>\build` 全量重配。
 
 **Q：中文输出乱码**
 脚本默认 UTF-8 输出，并会自动开 Windows 虚拟终端；GBK 控制台下会降级为

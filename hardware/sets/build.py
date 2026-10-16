@@ -749,31 +749,421 @@ def resolve_fw_root(explicit: Optional[str]) -> Optional[Path]:
     return None
 
 
-def check_idf_env() -> Optional[str]:
-    idf_path = os.environ.get("IDF_PATH", "").strip()
+# ---------------------------------------------------------------------------
+# 5.5 ESP-IDF 环境探测（避免误用系统 python）
+# ---------------------------------------------------------------------------
+#
+# 背景：<FW>/scripts/build.py 的 _get_idf_command() 用 sys.executable 启动
+# tools/idf.py，而 idf.py 依赖 IDF venv 里的 rich_click 等包。若本脚本被
+# 系统 python（如 Python310-32，32 位且无 rich_click）拉起，就会一路把错误的
+# 解释器传下去，报：
+#     No module named 'rich_click'
+#     This usually means that "idf.py" was not spawned within an ESP-IDF shell
+# 所以这里主动把 IDF venv 的 python 找出来，并用它去启动固件编译脚本。
+#
+# 探测优先级：--python 覆盖 > IDF_PYTHON_ENV_PATH > eim_idf.json（权威安装记录）
+#            > IDF_TOOLS_PATH/python/*/venv > 常见安装目录 > 当前解释器
+
+# Espressif IDE Manager 的安装记录位置（最可靠的 IDF 环境来源）
+EIM_CONFIG_CANDIDATES = [
+    Path("C:/Espressif/tools/eim_idf.json"),
+    Path.home() / ".espressif" / "eim_idf.json",
+]
+
+# idf_path 自动兜底探测位置
+IDF_PATH_GUESSES = [
+    Path("D:/INSTALL/esp/v6.1/esp-idf"),
+    Path("C:/Espressif/frameworks/esp-idf-v6.1/esp-idf"),
+]
+
+_IDF_ENV_CACHE: Optional[dict[str, Optional[str]]] = None
+_IDF_PYTHON_PROBE_CACHE: dict[str, bool] = {}
+_PYTHON_OVERRIDE: Optional[str] = None
+
+
+def _venv_python(venv_dir: Path) -> Optional[Path]:
+    """在 venv 目录里找 python 可执行文件（Windows Scripts/ 与 POSIX bin/ 都试）。"""
+    for candidate in (venv_dir / "Scripts" / "python.exe", venv_dir / "bin" / "python"):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _python_has_idf_deps(python: Path) -> bool:
+    """idf.py 依赖 rich_click，用它当作「这个 python 能跑 IDF」的判据（结果缓存）。"""
+    key = str(python).lower()
+    if key in _IDF_PYTHON_PROBE_CACHE:
+        return _IDF_PYTHON_PROBE_CACHE[key]
+    ok = False
+    if python.is_file():
+        try:
+            completed = subprocess.run(
+                [str(python), "-c", "import rich_click"],
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+            ok = completed.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            ok = False
+    _IDF_PYTHON_PROBE_CACHE[key] = ok
+    return ok
+
+
+def _read_eim_entries() -> list[dict[str, Any]]:
+    """读取 eim_idf.json 的 idfInstalled 列表（读不到就返回空）。"""
+    locations: list[Path] = []
+    tools_path = os.environ.get("IDF_TOOLS_PATH", "").strip()
+    if tools_path:
+        locations.append(Path(tools_path).parent / "eim_idf.json")
+    locations.extend(EIM_CONFIG_CANDIDATES)
+    for path in locations:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        entries = data.get("idfInstalled")
+        if isinstance(entries, list):
+            return [entry for entry in entries if isinstance(entry, dict)]
+    return []
+
+
+def _probe_idf_env() -> dict[str, Optional[str]]:
+    idf_path = os.environ.get("IDF_PATH", "").strip() or None
+    tools_path = os.environ.get("IDF_TOOLS_PATH", "").strip() or None
+    python_candidates: list[Path] = []
+
+    # 0) 命令行 --python 覆盖，优先级最高
+    if _PYTHON_OVERRIDE:
+        override = Path(_PYTHON_OVERRIDE).expanduser()
+        if override.is_file():
+            python_candidates.append(override)
+
+    # 1) 环境变量直指 venv 根
+    env_venv = os.environ.get("IDF_PYTHON_ENV_PATH", "").strip()
+    if env_venv:
+        candidate = _venv_python(Path(env_venv))
+        if candidate:
+            python_candidates.append(candidate)
+
+    # 2) eim 安装记录（与 idf_path 同源的那条排最前）
+    matched: Optional[Path] = None
+    for entry in _read_eim_entries():
+        entry_path = str(entry.get("path") or "").strip()
+        entry_tools = str(entry.get("idfToolsPath") or "").strip()
+        entry_python = str(entry.get("python") or "").strip()
+        if idf_path is None and entry_path:
+            idf_path = entry_path
+        if tools_path is None and entry_tools:
+            tools_path = entry_tools
+        if not entry_python:
+            continue
+        candidate = Path(entry_python)
+        if not candidate.is_file():
+            continue
+        if matched is None and entry_path and idf_path and Path(entry_path) == Path(idf_path):
+            matched = candidate
+            break
+        python_candidates.append(candidate)
+    if matched is not None:
+        python_candidates.insert(0, matched)
+
+    # 3) IDF_TOOLS_PATH/python/*/venv 与常见安装目录
+    search_roots: list[Path] = []
+    if tools_path:
+        search_roots.append(Path(tools_path))
+    search_roots.extend(
+        [
+            Path("D:/INSTALL/esp/tools"),
+            Path("C:/Espressif/tools"),
+            Path.home() / ".espressif",
+        ]
+    )
+    for root in search_roots:
+        version_dirs: list[Path] = []
+        try:
+            version_dirs = sorted((root / "python").glob("*/venv"), reverse=True)
+        except OSError:
+            version_dirs = []
+        for venv_dir in version_dirs:
+            candidate = _venv_python(venv_dir)
+            if candidate:
+                python_candidates.append(candidate)
+
+    # 4) idf_path 仍未确定时，从常见位置兜底
+    if idf_path is None:
+        for guess in IDF_PATH_GUESSES:
+            if (guess / "tools" / "idf.py").is_file():
+                idf_path = str(guess)
+                break
+
+    # 5) 从候选里挑第一个能 import rich_click 的
+    python: Optional[str] = None
+    seen: set[str] = set()
+    for candidate in python_candidates:
+        key = str(candidate).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if _python_has_idf_deps(candidate):
+            python = str(candidate)
+            break
+    if python is None and python_candidates:
+        # 全都没通过依赖校验时，仍用 IDF venv 的 python（报错信息更准确）
+        python = str(python_candidates[0])
+
+    return {"idf_path": idf_path, "tools_path": tools_path, "python": python}
+
+
+def discover_idf_env() -> dict[str, Optional[str]]:
+    """返回 {'idf_path','tools_path','python'}，首次探测后缓存。"""
+    global _IDF_ENV_CACHE
+    if _IDF_ENV_CACHE is None:
+        _IDF_ENV_CACHE = _probe_idf_env()
+    return dict(_IDF_ENV_CACHE)
+
+
+def _idf_version(idf_path: Optional[str]) -> Optional[str]:
+    """从 <IDF_PATH>/tools/cmake/version.cmake 解析出 "X.Y.Z"。
+
+    idf.py 启动扩展（idf-component-manager）时会读 ESP_IDF_VERSION，缺失会抛
+    `TypeError: expected string or bytes-like object, got 'NoneType'`；
+    而官方 export 脚本正是用这个值导出该变量的。
+    """
     if not idf_path:
-        return "环境变量 IDF_PATH 未设置"
-    idf_py = Path(idf_path) / "tools" / "idf.py"
-    if not idf_py.is_file():
+        return None
+    version_file = Path(idf_path) / "tools" / "cmake" / "version.cmake"
+    try:
+        text = version_file.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    parts: dict[str, str] = {}
+    for line in text.splitlines():
+        match = re.match(r"set\(IDF_VERSION_(MAJOR|MINOR|PATCH)\s+(\d+)\)", line)
+        if match:
+            parts[match.group(1)] = match.group(2)
+    if all(key in parts for key in ("MAJOR", "MINOR", "PATCH")):
+        return f"{parts['MAJOR']}.{parts['MINOR']}.{parts['PATCH']}"
+    return None
+
+
+# 用于判断「这个目录是工具链可执行目录」的探针文件
+_TOOLCHAIN_PROBES = (
+    "cmake.exe",
+    "ninja.exe",
+    "ccache.exe",
+    "xtensa-esp-elf-gcc.exe",
+    "xtensa-esp32s3-elf-gcc.exe",
+    "riscv32-esp-elf-gcc.exe",
+    "esp32ulp-elf-as.exe",
+    "openocd.exe",
+)
+
+
+def _tools_dir(tools_path: Optional[str]) -> Optional[Path]:
+    """把各种来源的「工具目录」统一成「直接包含 <name>/<version> 的那个目录」。
+
+    ESP-IDF 的约定是 IDF_TOOLS_PATH/tools/<name>/<version>，而 eim_idf.json 记录的
+    idfToolsPath 指向的却是工具所在的 tools 目录本身（多一层），官方激活脚本也照抄
+    了这个偏差。两种形态都兼容：
+      ...\\esp\\tools\\cmake\\4.0.3   -> IDF_TOOLS_PATH=...\\esp        (eim 风格)
+      ...\\esp\\tools\\tools\\cmake   -> IDF_TOOLS_PATH=...\\esp\\tools   (标准风格)
+    """
+    if not tools_path:
+        return None
+    root = Path(tools_path)
+    probes = ("cmake", "ninja", "esp-rom-elfs", "openocd-esp32")
+    if any((root / probe).is_dir() for probe in probes):
+        return root
+    nested = root / "tools"
+    if nested.is_dir() and any((nested / probe).is_dir() for probe in probes):
+        return nested
+    return None
+
+
+def _toolchain_bin_dirs(tools_path: Optional[str]) -> list[str]:
+    """在工具目录下扫描出真正含可执行文件的工具目录。
+
+    eim 安装的工具布局是 <tools>/<name>/<version>/[<name>/]bin，官方激活脚本
+    会把它们逐个前置到 PATH。但生成的脚本可能残留陈旧条目（例如 ccache 版本
+    目录换了），所以这里按实际存在的可执行文件重建，比信任脚本更稳。
+    """
+    tools_dir = _tools_dir(tools_path)
+    if tools_dir is None:
+        return []
+    found: list[str] = []
+    try:
+        name_dirs = sorted(entry for entry in tools_dir.iterdir() if entry.is_dir())
+    except OSError:
+        return []
+    for name_dir in name_dirs:
+        try:
+            version_dirs = sorted(entry for entry in name_dir.iterdir() if entry.is_dir())
+        except OSError:
+            continue
+        for version_dir in version_dirs:
+            # 三种已知层级：<ver>/bin、<ver>/<name>/bin、<ver> 本身
+            candidates = [
+                version_dir / "bin",
+                version_dir / name_dir.name / "bin",
+                version_dir,
+                version_dir / name_dir.name,
+            ]
+            for candidate in candidates:
+                if not candidate.is_dir():
+                    continue
+                try:
+                    if any((candidate / probe).is_file() for probe in _TOOLCHAIN_PROBES):
+                        found.append(str(candidate))
+                        break
+                except OSError:
+                    continue
+    return found
+
+
+def _toolchain_extra_vars(tools_path: Optional[str]) -> dict[str, str]:
+    """推导 ESP_ROM_ELF_DIR / OPENOCD_SCRIPTS（esptool 与 gdb 会用到）。"""
+    extras: dict[str, str] = {}
+    tools_dir = _tools_dir(tools_path)
+    if tools_dir is None:
+        return extras
+
+    rom_root = tools_dir / "esp-rom-elfs"
+    if rom_root.is_dir():
+        try:
+            versions = sorted(entry for entry in rom_root.iterdir() if entry.is_dir())
+        except OSError:
+            versions = []
+        if versions:
+            extras["ESP_ROM_ELF_DIR"] = str(versions[-1]) + os.sep
+
+    openocd_root = tools_dir / "openocd-esp32"
+    if openocd_root.is_dir():
+        try:
+            versions = sorted(entry for entry in openocd_root.iterdir() if entry.is_dir())
+        except OSError:
+            versions = []
+        for version_dir in reversed(versions):
+            scripts = version_dir / "openocd-esp32" / "share" / "openocd" / "scripts"
+            if scripts.is_dir():
+                extras["OPENOCD_SCRIPTS"] = str(scripts)
+                break
+    return extras
+
+
+def _idf_env_vars() -> dict[str, str]:
+    """子进程环境：补齐 IDF_PATH / IDF_TOOLS_PATH / IDF_PYTHON_ENV_PATH / ESP_IDF_VERSION / 工具链 PATH。
+
+    固件 scripts/build.py 自己会读 IDF_PATH 拼 tools/idf.py，所以这几个变量必须
+    在子进程里可见，否则它直接抛 "ESP-IDF environment is not initialized"。
+    没先激活 ESP-IDF 环境时 cmake / ninja / 交叉工具链不在 PATH 上，这里按工具目录
+    的实际布局补回去，让本脚本在裸 shell 里也能编译。
+    注意 IDF_VERSION 不在这里设置：idf.py 有自己的赋值与递归防护，代它设反而危险。
+    """
+    resolved = discover_idf_env()
+    env = dict(os.environ)
+    if resolved.get("idf_path"):
+        env["IDF_PATH"] = str(resolved["idf_path"])
+    tools_path = resolved.get("tools_path")
+    if tools_path:
+        # 注意：不要把 eim 的 idfToolsPath 改写成它的父目录。实测 idf_tools.py 与
+        # 官方激活脚本对这一层级的理解不一致（cmake 侧按环境值走），擅自纠正会让
+        # 组件管理阶段失败。这里只透传原值，工具目录的定位交给 _tools_dir()。
+        env["IDF_TOOLS_PATH"] = str(tools_path)
+    python = resolved.get("python")
+    if python:
+        env["IDF_PYTHON_ENV_PATH"] = str(Path(python).parent.parent)
+    version = _idf_version(resolved.get("idf_path"))
+    if version:
+        env["ESP_IDF_VERSION"] = version
+
+    for key, value in _toolchain_extra_vars(tools_path).items():
+        env.setdefault(key, value)
+
+    # 工具链目录前置到 PATH（已存在的跳过，避免反复变长）
+    bin_dirs = _toolchain_bin_dirs(tools_path)
+    if bin_dirs:
+        current = [part for part in env.get("PATH", "").split(os.pathsep) if part]
+        lowered = {part.rstrip("\\/").lower() for part in current}
+        prepend = [d for d in bin_dirs if d.rstrip("\\/").lower() not in lowered]
+        if prepend:
+            env["PATH"] = os.pathsep.join(prepend + current)
+    return env
+
+
+def announce_idf_env() -> None:
+    """打印本次实际使用的 IDF 环境与解释器，方便一眼看出用错 python 的情况。"""
+    resolved = discover_idf_env()
+    python = resolved.get("python") or sys.executable
+    version = _idf_version(resolved.get("idf_path"))
+    say(f"  IDF_PATH  : {resolved.get('idf_path') or '<未探测到>'}"
+        + (f"  (v{version})" if version else ""))
+    tools_path = resolved.get("tools_path")
+    if tools_path:
+        say(f"  IDF_TOOLS : {tools_path}")
+    if Path(python).resolve() != Path(sys.executable).resolve():
+        say(f"  IDF python: {python}")
+        say(f"  （本脚本自身跑在 {sys.executable}，编译子进程已切换到 IDF venv）")
+    say(f"  IDF 工具链: 探测到 {len(_toolchain_bin_dirs(tools_path))} 个可执行目录，已前置到编译子进程的 PATH")
+
+
+def check_idf_env() -> Optional[str]:
+    resolved = discover_idf_env()
+    idf_path = resolved.get("idf_path")
+    if not idf_path:
+        return "未找到 ESP-IDF（IDF_PATH 未设置，自动探测也失败）"
+    if not (Path(idf_path) / "tools" / "idf.py").is_file():
         return f"IDF_PATH={idf_path} 下找不到 tools/idf.py"
+
+    python = resolved.get("python")
+    if not python:
+        return (
+            "未找到 ESP-IDF 的 python 虚拟环境（idf.py 依赖其中的 rich_click）\n"
+            f"        当前解释器: {sys.executable}"
+        )
+    if not _python_has_idf_deps(Path(python)):
+        return (
+            f"IDF venv 的 python 依赖不完整（import rich_click 失败）: {python}\n"
+            f"        当前解释器: {sys.executable}"
+        )
+
+    # cmake / ninja 是编译硬依赖。PATH 已由 _idf_env_vars() 用 IDF_TOOLS_PATH
+    # 下的实际工具目录补齐，这里做一次最终预检，缺失就早失败、给明确提示。
+    wanted = ["cmake.exe", "ninja.exe"] if os.name == "nt" else ["cmake", "ninja"]
+    path_dirs = [part for part in _idf_env_vars().get("PATH", "").split(os.pathsep) if part]
+    missing = [
+        name for name in wanted
+        if not any((Path(directory) / name).is_file() for directory in path_dirs)
+    ]
+    if missing:
+        return (
+            "编译工具缺失：补齐后的 PATH 上仍找不到 " + "、".join(missing) + "\n"
+            f"        IDF_TOOLS_PATH={resolved.get('tools_path') or '<未探测到>'}\n"
+            "        请确认工具链已安装：idf_tools.py install"
+        )
     return None
 
 
 def print_idf_help() -> None:
     say()
     say(red(rule("=")))
-    say(red("未检测到 ESP-IDF 编译环境，无法开始编译"))
+    say(red("未检测到可用的 ESP-IDF 编译环境，无法开始编译"))
     say(rule("="))
-    say("请先激活 ESP-IDF v6.1 环境，再重新运行本脚本。参考固件自带的 build_yuhe_cam.bat：")
+    say("本脚本会依次尝试：--python 参数、IDF_PYTHON_ENV_PATH、eim_idf.json、")
+    say("IDF_TOOLS_PATH/python/*/venv、常见安装目录。全部失败时有两条路：")
     say()
+    say(bold("  方案一：先激活 ESP-IDF 环境，再重新运行本脚本"))
     say('    set IDF_TOOLS_PATH=D:\\INSTALL\\esp')
     say('    set IDF_PATH=D:\\INSTALL\\esp\\v6.1\\esp-idf')
     say('    set IDF_PYTHON_ENV_PATH=D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv')
     say('    call D:\\INSTALL\\esp\\v6.1\\esp-idf\\export.bat')
     say()
-    say("路径请按你本机的实际安装位置调整。也可以直接双击运行 <FW>\\build_yuhe_cam.bat")
-    say("确认它能跑通后，在同一个终端里执行本脚本。")
-    say("只做同步与注册（不编译）可加参数：--sync-only")
+    say(bold("  方案二：直接把 IDF venv 的 python 指给本脚本（无需激活环境）"))
+    say("    <IDF_PYTHON_ENV_PATH>\\Scripts\\python.exe hardware/sets/build.py --board <ID>")
+    say("    或加参数：--python D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv\\Scripts\\python.exe")
+    say()
+    say("路径请按本机实际安装位置调整。也可以先双击运行 <FW>\\build_yuhe_cam.bat")
+    say("确认它能跑通，再回到本脚本。只做同步与注册（不编译）可加参数：--sync-only")
 
 
 def warn_stale_build_dir(fw_root: Path, board: dict[str, Any]) -> None:
@@ -799,8 +1189,11 @@ def warn_stale_build_dir(fw_root: Path, board: dict[str, Any]) -> None:
 
 def run_build(fw_root: Path, board: dict[str, Any], config_name: str, extra_args: list[str]) -> int:
     board_dir = board["board_dir"]
+    # 必须用 IDF venv 的 python：固件 scripts/build.py 会用 sys.executable 启动
+    # idf.py，传错解释器就会报 "No module named 'rich_click'"。
+    python = _idf_python()
     command = [
-        sys.executable,
+        python,
         "scripts/build.py",
         board_dir,
         "--name", board["build_name"],
@@ -820,12 +1213,16 @@ def run_build(fw_root: Path, board: dict[str, Any], config_name: str, extra_args
         notice_bad(f"无法切换到固件目录 {fw_root}: {error}")
         return EXIT_ERROR
     say(f"  切换后 cwd: {os.getcwd()}")
-    completed = subprocess.run(command, check=False)
+    completed = subprocess.run(command, check=False, env=_idf_env_vars())
     say(rule())
     if completed.returncode != 0:
         notice_bad(f"固件编译脚本返回码 {completed.returncode}")
-        say("常见原因：Kconfig 符号未被识别（先删掉 <FW>\\build 目录后重跑）、")
-        say("          切换版型后 sdkconfig 变化需要全量重编、或板级源码编译报错。")
+        say("常见原因：")
+        say("          1) 解释器用错 —— 报 No module named 'rich_click' 时，说明没走 IDF venv，")
+        say("             用 --python <IDF venv>\\Scripts\\python.exe 重跑；")
+        say("          2) Kconfig 符号未被识别（先删掉 <FW>\\build 目录后重跑）；")
+        say("          3) 切换版型后 sdkconfig 变化需要全量重编；")
+        say("          4) 板级源码编译报错。")
         return completed.returncode or EXIT_ERROR
     notice_ok("编译成功")
     return EXIT_OK
@@ -988,13 +1385,12 @@ def choose_port(explicit: Optional[str], ports: list[tuple[str, str]]) -> Option
 
 
 def _idf_python() -> str:
-    """优先用 IDF venv 的 python（自带 esptool），否则回退当前解释器。"""
-    env_path = os.environ.get("IDF_PYTHON_ENV_PATH", "").strip()
-    if env_path:
-        for candidate in (Path(env_path) / "Scripts" / "python.exe", Path(env_path) / "bin" / "python"):
-            if candidate.is_file():
-                return str(candidate)
-    return sys.executable
+    """启动 idf.py / 固件编译脚本 / esptool 用的 python。
+
+    优先 IDF venv（自带 esptool 与 rich_click），探测不到才回退当前解释器。
+    探测逻辑见上文「ESP-IDF 环境探测」段。
+    """
+    return discover_idf_env().get("python") or sys.executable
 
 
 def run_flash(fw_root: Path, port: str, baud: int) -> int:
@@ -1115,6 +1511,11 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/build.py --flash-only --port COM5        # 只烧录上次产物\n"
             "  python hardware/sets/build.py --board yh-cam --no-flash       # 只编译不烧录\n"
             "  python hardware/sets/build.py --board yh-cam --yes --sync-only  # 只同步+注册\n"
+            "\n"
+            "不想先激活 ESP-IDF 环境时，直接用 IDF venv 的 python 跑本脚本：\n"
+            "  D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv\\Scripts\\python.exe "
+            "hardware/sets/build.py --board yh-n16r8-st7789\n"
+            "（脚本也会自动探测 IDF venv，一般无需手动指定；可用 --python 覆盖）\n"
         ),
     )
     parser.add_argument("--board", metavar="ID", help="直接指定版型 id，跳过交互选择")
@@ -1136,6 +1537,11 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         "--fw-arg", action="append", default=[], metavar="ARG",
         help="额外透传给 <FW>/scripts/build.py 的参数，可重复（须用等号形式，如 --fw-arg=--zip）",
     )
+    parser.add_argument(
+        "--python", metavar="EXE",
+        help="指定 IDF venv 的 python（覆盖自动探测；默认依次探测 IDF_PYTHON_ENV_PATH / eim_idf.json / "
+             "IDF_TOOLS_PATH/python/*/venv / 常见安装目录）",
+    )
     parser.add_argument("--no-color", action="store_true", help="关闭彩色输出")
     args = parser.parse_args(argv)
 
@@ -1149,12 +1555,16 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    global _USE_COLOR
+    global _USE_COLOR, _PYTHON_OVERRIDE, _IDF_ENV_CACHE
     args = parse_args(argv)
     _init_stdio()
     _USE_COLOR = not args.no_color and bool(getattr(sys.stdout, "isatty", lambda: False)())
     if _USE_COLOR:
         _enable_windows_ansi()
+
+    if args.python:
+        _PYTHON_OVERRIDE = args.python
+        _IDF_ENV_CACHE = None
 
     say(rule("="))
     say(bold("小智固件多版型编译 / 烧录入口 (hardware/sets)"))
@@ -1205,6 +1615,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             notice_bad(idf_error)
             print_idf_help()
             return EXIT_ENV
+        announce_idf_env()
         return flash_to_device(fw_root, selected, args)
 
     try:
@@ -1229,6 +1640,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         notice_bad(idf_error)
         print_idf_help()
         return EXIT_ENV
+    announce_idf_env()
 
     ensure_components(fw_root)
 
