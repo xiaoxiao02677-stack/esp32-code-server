@@ -15,9 +15,19 @@ N × 超时；这里用 ThreadPoolExecutor 一个口一个线程并行做，整�
 探测分两级：
   1) 快速探测（默认）：以 DTR/RTS 均不激活的方式打开串口（**不会复位目标板**），
      限时读一小段数据。能打开 = 设备在线且未被占用；读到数据 = 设备在输出。
-  2) 深度识别（--identify）：复刻 esptool 的 hard-reset 时序复位目标板并读 ROM
-     启动日志，匹配 "ESP-ROM:" 判定是不是 Espressif 芯片、具体是哪一款。
-     注意：该模式会复位目标板（复位后仍以正常运行模式启动，不会停在下载模式）。
+  2) 深度识别（--identify）：复位目标板读 ROM 启动日志，匹配 "ESP-ROM:"
+     判定是不是 Espressif 芯片、具体是哪一款。两种复位线序都会试（见下），
+     识别完再把设备复位回正常运行状态。
+
+烧录前还有一步 **复位线序识别（--reset auto，默认）**：
+  Espressif 参考设计是 DTR->GPIO0、RTS->EN，esptool 的 ClassicReset 就按这个
+  假定发时序。但**本项目部分板子是反相接线（DTR->EN、RTS->GPIO0）**，此时
+  esptool 的 --before default-reset 只会让芯片正常运行并开始打日志，日志首字节
+  'I'(0x49) 被 esptool 当成数据包包头，于是报：
+      Failed to connect to ESP32-S3: Invalid head of packet (0x49)
+  这块板「按住 BOOT 开机」也没用 —— esptool 在连接阶段会再复位一次。
+  脚本因此自带线序识别：反相板由我们按镜像时序把芯片送进下载模式，再让 esptool
+  用 --before no-reset 接管（实测一次连上，MAC/Flash ID 都能读）。
 
 pyserial / esptool 都取自 ESP-IDF 的 venv。当前解释器没有 pyserial 时，本脚本会
 自动改用 IDF venv 的 python 重新执行自己（可用 --python 指定，或 --no-reexec 关闭）。
@@ -131,6 +141,25 @@ ROM_PATTERNS = (
     (re.compile(rb"ESP-ROM:esp32", re.IGNORECASE), "esp32"),
 )
 
+# --- 复位线序 / 下载模式 ---------------------------------------------------
+RESET_HOLD = 0.12         # 复位线保持时长
+RESET_SETTLE = 0.12       # 放开复位到开始采样之间的等待
+RESET_READ_WINDOW = 1.6   # 复位后读启动日志的窗口
+RESET_ORDER_LABEL = {"classic": "标准（DTR=GPIO0 / RTS=EN）", "reversed": "反相（DTR=EN / RTS=GPIO0）"}
+
+# ROM 启动日志横幅：只要出现它，就说明这次复位真的生效了
+ROM_BANNER = re.compile(rb"ESP-ROM:esp32", re.IGNORECASE)
+# 停在下载模式的特征
+DOWNLOAD_MARKERS = (
+    re.compile(rb"waiting for download", re.IGNORECASE),
+    re.compile(rb"DOWNLOAD\(UART", re.IGNORECASE),
+    re.compile(rb"DOWNLOAD\(USB", re.IGNORECASE),
+)
+# 正常启动应用的特征
+APP_BOOT_MARKERS = (re.compile(rb"SPI_FAST_FLASH_BOOT", re.IGNORECASE),)
+# 应用运行日志（"I (1234) Tag: ..."）—— 报 0x49 时看到的就是它
+APP_LOG_HINT = re.compile(rb"[IWEDV] \(\d+\) ")
+
 
 # ---------------------------------------------------------------------------
 # 1. 串口枚举
@@ -180,6 +209,7 @@ class PortProbe:
     bytes_seen: int = 0
     sample: str = ""
     chip: str = ""
+    reset_order: str = ""  # identify 模式下命中的复位线序：classic / reversed
     elapsed: float = 0.0
 
     @property
@@ -204,16 +234,78 @@ class PortProbe:
         return data
 
 
-def _pulse_reset(port: Any) -> None:
-    """复刻 esptool 的 hard-reset 时序：RTS 拉低 EN 再放开，DTR(GPIO0) 全程保持高。
+def _reset_lines(port: Any, order: str = "classic") -> None:
+    """按指定线序复位目标板，最后把两根控制线都放开。
 
-    这样目标板复位后仍以正常运行模式启动，不会停在下载模式。
+    order="classic"  ：DTR=GPIO0、RTS=EN —— 与 esptool ClassicReset 完全一致。
+    order="reversed" ：DTR=EN、RTS=GPIO0 —— 本项目部分板子的实际接线。
+    复位后芯片以什么模式启动取决于「放开 EN 那一刻 GPIO0 的电平」：
+    镜像时序让 GPIO0 保持低 -> 进下载模式；标准时序让 GPIO0 回高 -> 正常运行。
     """
+    if order == "reversed":
+        port.dtr = True   # EN 拉低，芯片进入复位
+        port.rts = False
+        time.sleep(RESET_HOLD)
+        port.rts = True   # GPIO0 拉低
+        port.dtr = False  # 放开 EN -> 带着 GPIO0=L 启动
+    else:
+        port.dtr = False  # GPIO0 保持高
+        port.rts = True   # EN 拉低，芯片进入复位
+        time.sleep(RESET_HOLD)
+        port.dtr = True   # GPIO0 拉低
+        port.rts = False  # 放开 EN -> 带着 GPIO0=L 启动
+    time.sleep(RESET_SETTLE)
     port.dtr = False
-    port.rts = True
-    time.sleep(0.12)
     port.rts = False
-    time.sleep(0.05)
+
+
+def _classify_reset(data: bytes) -> str:
+    """判断复位后芯片落在哪种状态：download / app / none（没复位成功）。"""
+    if not ROM_BANNER.search(data):
+        return "none"
+    if any(pattern.search(data) for pattern in DOWNLOAD_MARKERS):
+        return "download"
+    if any(pattern.search(data) for pattern in APP_BOOT_MARKERS):
+        return "app"
+    return "app"
+
+
+def _open_raw(device: str) -> Any:
+    """以 DTR/RTS 均不激活的方式打开串口（打开动作本身不会打扰目标板）。"""
+    port = serial.Serial()
+    port.port = device
+    port.baudrate = PROBE_BAUD
+    port.timeout = 0.05
+    port.write_timeout = 0.2
+    port.dtr = False
+    port.rts = False
+    port.open()
+    return port
+
+
+def _reset_and_sample(port: Any, order: str, window: float = RESET_READ_WINDOW) -> tuple[str, bytes]:
+    """复位一次并读启动日志，返回（状态分类, 原始数据）。"""
+    try:
+        port.reset_input_buffer()
+    except Exception:  # pragma: no cover - 驱动相关
+        pass
+    try:
+        _reset_lines(port, order)
+    except (OSError, ValueError) as error:
+        # 少数 USB 转串口适配器不支持控制 DTR/RTS（esptool 同样会给出 ENOTTY 提示）
+        return "unsupported", str(error).encode("utf-8", "replace")
+    data = _read_window(port, window)
+    return _classify_reset(data), data
+
+
+def _close_quietly(port: Any) -> None:
+    try:
+        if port is not None:
+            port.dtr = False
+            port.rts = False
+            port.close()
+    except Exception:  # pragma: no cover - 驱动相关
+        pass
 
 
 def _read_window(port: Any, timeout: float, limit: int = 512) -> bytes:
@@ -241,6 +333,11 @@ def _summarize(data: bytes, width: int = 72) -> str:
     """把原始字节压成一行可见文本，方便一眼看出设备在输出什么。"""
     if not data:
         return ""
+    if len(data) > width:
+        # 复位采样的开头常混着上一轮启动的残留日志：让可见片段从最后一次 ROM 横幅开始
+        index = data.rfind(b"ESP-ROM:")
+        if 0 <= index < len(data) - 8:
+            data = data[index:]
     text = "".join(chr(byte) if 32 <= byte < 127 else "." for byte in data[:width])
     text = re.sub(r"\.{3,}", "...", text).strip(". ")
     return text
@@ -296,19 +393,41 @@ def _probe_one(device: str, description: str, hwid: str, timeout: float, identif
 
     try:
         if identify:
-            _pulse_reset(port)
-            try:
-                port.reset_input_buffer()
-            except Exception:
-                pass
-        data = _read_window(port, timeout + (0.8 if identify else 0.0))
+            # 两种线序都试：命中判据是「真的落进下载模式」。只读到 ROM 横幅不算 ——
+            # 那是复位成功了，但芯片可能正常运行了应用（本项目的反相板就是这样）。
+            data = b""
+            for candidate in ("classic", "reversed"):
+                status, sample = _reset_and_sample(port, candidate, timeout + 0.8)
+                data = sample
+                if status == "unsupported":
+                    probe.detail = "该适配器不支持控制 DTR/RTS，无法复位识别"
+                    break
+                if not probe.chip:
+                    probe.chip = _match_chip(sample)
+                if any(pattern.search(sample) for pattern in DOWNLOAD_MARKERS):
+                    probe.reset_order = candidate
+                    break
+        else:
+            data = _read_window(port, timeout)
         probe.bytes_seen = len(data)
         probe.sample = _summarize(data)
         probe.state = "ok"
         if identify:
             probe.chip = _match_chip(data)
             if not probe.chip:
-                probe.detail = "已复位但未读到 ESP-ROM 启动日志（可能不是 Espressif 芯片，或控制台不在 115200）"
+                if any(p.search(data) for p in DOWNLOAD_MARKERS):
+                    probe.detail = "已复位并停在下载模式（控制台不在 115200 时读不到 ROM 横幅）"
+                elif APP_LOG_HINT.search(data):
+                    probe.detail = "复位后读到的是应用运行日志 —— 本板复位线序与 esptool 假定相反"
+                else:
+                    probe.detail = "已复位但未读到 ESP-ROM 启动日志（可能不是 Espressif 芯片，或控制台不在 115200）"
+            if probe.reset_order:
+                # 命中的那次复位会把芯片留在下载模式；识别完用相反时序复位回正常运行
+                restore = "classic" if probe.reset_order == "reversed" else "reversed"
+                try:
+                    _reset_and_sample(port, restore, 0.4)
+                except Exception:  # pragma: no cover - 驱动相关
+                    pass
     except Exception as error:  # pragma: no cover - 驱动相关
         probe.state = "error"
         probe.detail = str(error)[:120]
@@ -335,6 +454,9 @@ def _format_probe(probe: PortProbe) -> str:
         parts.append(probe.description)
     if probe.chip:
         parts.append(green(f"芯片={probe.chip}"))
+    if probe.reset_order:
+        label = "反相" if probe.reset_order == "reversed" else "标准"
+        parts.append(f"复位线序={label}")
     if probe.bytes_seen:
         parts.append(f"数据={probe.bytes_seen}B")
     if probe.sample:
@@ -416,7 +538,166 @@ def _selection_key(probe: PortProbe) -> tuple:
 
 
 # ---------------------------------------------------------------------------
-# 3. 选择串口
+# 3. 下载模式（复位线序识别 / 送进下载模式）
+#
+# 背景：esptool 的 ClassicReset 假定 DTR=GPIO0、RTS=EN（Espressif 参考设计）。
+# 本项目部分板子是**反相**接线（DTR=EN、RTS=GPIO0），结果：
+#   * --before default-reset 只会让芯片正常运行，随后应用日志的首字节 'I'(0x49)
+#     被 esptool 当成数据包包头 -> "Invalid head of packet (0x49)"；
+#   * 「按住 BOOT 开机」也救不了，因为 esptool 在连接阶段还会自己再复位一次。
+# 对策：烧录前先识别线序；反相板由脚本按镜像时序送进下载模式，再用
+# --before no-reset 交给 esptool（已实测一次连上，能读 MAC / Flash ID）。
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ResetPlan:
+    """烧录前如何让芯片进入下载模式。"""
+
+    before: str = "default-reset"  # 传给 esptool 的 --before 取值
+    our_reset: bool = False        # True = 由本脚本负责把芯片送进下载模式
+    order: str = ""                # our_reset 时使用的线序：classic / reversed
+    note: str = ""
+
+
+def detect_reset_order(device: str) -> tuple[str, str]:
+    """识别本板复位线序，返回 (order, evidence)，order ∈ reversed / classic / unknown。
+
+    判据是「复位后芯片落在下载模式、还是正常运行应用」：镜像时序先试（本项目
+    反相板就是这一种），命中即返回；否则再按标准时序试一次。两次都没能让芯片
+    重启（读不到 ESP-ROM 横幅）则视为识别失败。
+    """
+    try:
+        port = _open_raw(device)
+    except Exception as error:
+        return "unknown", f"无法打开串口：{error}"
+    evidence = ""
+    try:
+        for order in ("reversed", "classic"):
+            status, data = _reset_and_sample(port, order)
+            if data:
+                evidence = _summarize(data, 108)
+            if status == "unsupported":
+                return "unknown", evidence or "该适配器不支持控制 DTR/RTS"
+            if status == "download":
+                return order, evidence
+    finally:
+        _close_quietly(port)
+    return "unknown", evidence
+
+
+def enter_download_mode(device: str, order: str, window: float = 0.9) -> tuple[bool, str]:
+    """按指定线序把芯片送进下载模式，并回读一段日志确认。"""
+    try:
+        port = _open_raw(device)
+    except Exception as error:
+        return False, f"无法打开串口：{error}"
+    try:
+        status, data = _reset_and_sample(port, order, window)
+    except Exception as error:  # pragma: no cover - 驱动相关
+        return False, f"复位失败：{error}"
+    finally:
+        _close_quietly(port)
+    return status == "download", _summarize(data, 108)
+
+
+def _manual_plan(port: str) -> ResetPlan:
+    """打印手动进下载模式的步骤、等用户回车，再回读串口做个确认。"""
+    if not sys.stdin.isatty():
+        notice_bad("--manual 需要交互式终端：请在真实终端里执行，或改用 --reset none")
+        return ResetPlan("no-reset", False, "", "--manual（非交互式终端，未等待）")
+    say()
+    say(bold("[手动] 请让设备进入下载模式："))
+    say("        1) 按住 BOOT 键不放")
+    say("        2) 点一下 RST 键（没有 RST 键就拔插一次 USB 供电）")
+    say("        3) 松开 BOOT 键")
+    say("        4) 回到这里按回车，脚本立刻用 --before no-reset 连接")
+    try:
+        input("        > ")
+    except (EOFError, KeyboardInterrupt):
+        say()
+        notice_warn("已取消")
+        return ResetPlan("no-reset", False, "", "--manual（已取消）")
+    try:
+        handle = _open_raw(port)
+        try:
+            data = _read_window(handle, 0.8)
+        finally:
+            _close_quietly(handle)
+        if APP_LOG_HINT.search(data):
+            notice_warn("设备看起来仍在运行应用（读到运行日志），可能没进下载模式；先试一次，失败可重来")
+        elif data:
+            say(f"        串口输出：{_summarize(data, 100)!r}")
+        else:
+            say(green("        串口安静 —— 符合下载模式的表现"))
+    except Exception:  # pragma: no cover - 驱动相关
+        pass
+    return ResetPlan("no-reset", False, "", "--manual：已由用户手动进入下载模式")
+
+
+def resolve_reset_plan(port: str, args: argparse.Namespace) -> ResetPlan:
+    """决定烧录前怎么让芯片进下载模式。"""
+    if args.manual:
+        return _manual_plan(port)
+    if args.before:
+        return ResetPlan(args.before, False, "", f"按 --before {args.before} 原样交给 esptool")
+    if args.reset == "none":
+        return ResetPlan("no-reset", False, "",
+                         "--reset none：不复位、直接连接（用于设备已手动进下载模式）")
+    if args.reset == "esptool":
+        return ResetPlan("default-reset", False, "", "--reset esptool：完全交给 esptool 自己复位")
+    if args.reset == "reversed":
+        return ResetPlan("no-reset", True, "reversed", "--reset reversed：按镜像时序送进下载模式")
+
+    # auto（默认）：先识别本板线序
+    say()
+    say(bold("[复位] 识别本板复位线序（最多复位两次，约 3~5 秒）"))
+    order, evidence = detect_reset_order(port)
+    if order == "reversed":
+        return ResetPlan(
+            "no-reset", True, "reversed",
+            f"检测到本板为反相接线（{RESET_ORDER_LABEL['reversed']}）：esptool 的 "
+            "--before default-reset 对这块板无效，改由脚本送进下载模式",
+        )
+    if order == "classic":
+        return ResetPlan("default-reset", False, "classic",
+                         f"检测到标准接线（{RESET_ORDER_LABEL['classic']}）：交给 esptool 自己复位")
+    notice_warn("未能识别复位线序：两种时序都没能让芯片重启（读不到 ESP-ROM 横幅）")
+    if evidence:
+        say(f"        复位后串口输出：{evidence!r}")
+    say("        可能原因：适配器不支持控制 DTR/RTS、EN/GPIO0 没接到串口，或设备本就不输出日志。")
+    say("        建议手动进入下载模式后重跑：按住 BOOT → 点一下 RST → 松开 BOOT，")
+    say("              再加 --reset none（或直接用 --manual 让脚本带你走一遍）。")
+    return ResetPlan("default-reset", False, "", "")
+
+
+def diagnose_after_failure(port: str) -> None:
+    """烧录失败后回读一小段串口，判断设备此刻到底在干什么（不依赖 esptool 的 stdout）。"""
+    try:
+        handle = _open_raw(port)
+    except Exception:
+        return
+    try:
+        data = _read_window(handle, 1.2)
+    finally:
+        _close_quietly(handle)
+    if not data:
+        say("        回读串口：没有数据（口可用，但设备没有任何输出）")
+        return
+    sample = _summarize(data, 120)
+    if any(pattern.search(data) for pattern in DOWNLOAD_MARKERS):
+        say(f"        回读串口：设备停在下载模式（{sample!r}）")
+        say("        esptool 却连不上 → 多半是波特率或线材问题：先试 --baud 115200。")
+    elif APP_LOG_HINT.search(data):
+        say(f"        回读串口：设备正在运行应用（{sample!r}）")
+        say("        即它压根没进下载模式 —— 这类板子的复位时序与 esptool 的假定不符。")
+        say("        手动进下载模式后重跑：按住 BOOT → 点一下 RST → 松开 BOOT，再加 --reset none。")
+    else:
+        say(f"        回读串口：{sample!r}")
+
+
+# ---------------------------------------------------------------------------
+# 4. 选择串口
 # ---------------------------------------------------------------------------
 
 
@@ -489,7 +770,7 @@ def select_port(probes: list[PortProbe], explicit: Optional[str]) -> Optional[st
 
 
 # ---------------------------------------------------------------------------
-# 4. 烧录
+# 5. 烧录
 # ---------------------------------------------------------------------------
 
 
@@ -530,83 +811,138 @@ def _esptool_ok(python: str) -> bool:
     return completed.returncode == 0
 
 
-def run_flash(fw_root: Path, port: str, baud: int) -> int:
-    """按 build/flash_args 烧录；不含 assets 时退回显式全量烧录。"""
+def _extra_flash_flags(text: str) -> list[str]:
+    """flash_args 里已经写明的烧录参数不再重复追加（让命令保持干净）。"""
+    extra: list[str] = []
+    for flag, value in (
+        ("--flash-mode", FLASH_MODE),
+        ("--flash-freq", FLASH_FREQ),
+        ("--flash-size", FLASH_SIZE),
+    ):
+        if not re.search(rf"{flag}[= ]{re.escape(value)}\b", text):
+            extra += [flag, value]
+    return extra
+
+
+def build_flash_command(
+    fw_root: Path, port: str, baud: int, plan: ResetPlan, after: str
+) -> tuple[list[str], Path, str]:
+    """拼装 esptool 命令，返回 (命令, 工作目录, 模式说明)；命令为空表示产物缺失。"""
     build_dir = fw_root / "build"
     flash_args = build_dir / "flash_args"
-    has_assets = False
+    text = ""
     if flash_args.is_file():
         try:
-            has_assets = "generated_assets" in flash_args.read_text(encoding="utf-8", errors="replace")
+            text = flash_args.read_text(encoding="utf-8", errors="replace")
         except OSError:
-            has_assets = False
+            text = ""
 
     base = [
         sets_build._idf_python(), "-m", "esptool",
         "--chip", CHIP,
         "-p", port,
         "-b", str(baud),
-        "--before", "default-reset",
-        "--after", "hard-reset",
+        "--before", plan.before,
+        "--after", after,
         "write-flash",
     ]
 
-    if has_assets:
-        command = base + [
-            "@flash_args",
-            "--flash-mode", FLASH_MODE,
-            "--flash-size", FLASH_SIZE,
-            "--flash-freq", FLASH_FREQ,
-        ]
-        cwd = build_dir
-        mode_desc = "按 build/flash_args 烧录（已含 assets 分区）"
-    else:
-        command = base + [
-            "--flash-mode", FLASH_MODE,
-            "--flash-size", FLASH_SIZE,
-            "--flash-freq", FLASH_FREQ,
-        ]
-        included = 0
-        for offset, relative in FLASH_FULL_IMAGE:
-            if not (fw_root / relative).is_file():
-                notice_warn(f"缺少 {relative}，跳过该分区")
-                continue
-            command += [offset, relative]
-            included += 1
-        if included == 0:
-            notice_bad("没有任何可烧录的镜像文件，请确认编译是否成功")
-            return EXIT_ERROR
-        cwd = fw_root
-        mode_desc = "显式全量烧录（bootloader + 分区表 + ota_data + app + assets）"
+    if "generated_assets" in text:
+        # 用 @flash_args 时工作目录必须是 build/（文件里的路径是相对的）
+        command = base + ["@flash_args", *_extra_flash_flags(text)]
+        return command, build_dir, "按 build/flash_args 烧录（已含 assets 分区）"
+
+    command = base + _extra_flash_flags("")
+    included = 0
+    for offset, relative in FLASH_FULL_IMAGE:
+        if not (fw_root / relative).is_file():
+            notice_warn(f"缺少 {relative}，跳过该分区")
+            continue
+        command += [offset, relative]
+        included += 1
+    if included == 0:
+        return [], fw_root, "没有任何可烧录的镜像文件"
+    return command, fw_root, "显式全量烧录（bootloader + 分区表 + ota_data + app + assets）"
+
+
+def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
+    """按 build/flash_args 烧录；不含 assets 时退回显式全量烧录。
+
+    plan.our_reset=True 时，每次尝试前都由本脚本把芯片送进下载模式（不进则重放）。
+    """
+    command, cwd, mode_desc = build_flash_command(fw_root, port, baud, plan, args.after)
+    if not command:
+        notice_bad(mode_desc + "：请确认编译是否成功（先跑 build.py）")
+        return EXIT_ERROR
 
     say()
     say(bold(f"[烧录] {mode_desc}"))
     say(f"  串口: {port}    波特率: {baud}")
-    say(f"  工作目录: {cwd}")
-    say("  " + " ".join(command))
-    say("  烧录中，请勿拔线……")
-    say(rule())
-    try:
-        completed = subprocess.run(
-            command, cwd=str(cwd), check=False, env=sets_build._idf_env_vars()
-        )
-    except OSError as error:
-        notice_bad(f"无法启动 esptool: {error}")
-        say("        请用 --python 指定 IDF venv 的 python（esptool 随它一起安装）。")
-        return EXIT_ERROR
-    say(rule())
-    if completed.returncode != 0:
+    say(f"  复位: {plan.note or f'--before {plan.before}'}")
+
+    attempts = max(1, args.attempts) if plan.our_reset else 1
+    for attempt in range(1, attempts + 1):
+        if plan.our_reset:
+            ok, evidence = enter_download_mode(port, plan.order)
+            label = "反相" if plan.order == "reversed" else "标准"
+            if ok:
+                say(green(f"  已按{label}时序送进下载模式") + f"    {evidence}")
+            elif evidence:
+                notice_warn(f"送进下载模式未确认（{label}时序）：{evidence}")
+            else:
+                notice_warn(f"送进下载模式未确认（{label}时序）：复位后串口无输出")
+        if attempt > 1:
+            say(f"  重试 {attempt}/{attempts}……")
+
+        say(f"  工作目录: {cwd}")
+        say("  " + " ".join(command))
+        say("  烧录中，请勿拔线……")
+        say(rule())
+        # esptool 直接写继承来的控制台句柄；日志重定向到文件时先刷新，
+        # 免得它的输出跑到我们前面去
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:  # pragma: no cover - 环境相关
+            pass
+        try:
+            completed = subprocess.run(
+                command, cwd=str(cwd), check=False, env=sets_build._idf_env_vars()
+            )
+        except OSError as error:
+            notice_bad(f"无法启动 esptool: {error}")
+            say("        请用 --python 指定 IDF venv 的 python（esptool 随它一起安装）。")
+            return EXIT_ERROR
+        say(rule())
+        if completed.returncode == 0:
+            notice_ok(f"烧录完成，设备已复位（{port}）")
+            say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 查看串口日志。")
+            return EXIT_OK
+        if attempt < attempts:
+            say()
+            say(f"  第 {attempt} 次失败（返回码 {completed.returncode}），重新复位后再试一次……")
+            continue
+
         notice_bad(f"烧录失败（esptool 返回码 {completed.returncode}）")
-        say("        常见原因：串口被占用（串口监视器 / 另一个烧录会话）、")
-        say("                  设备未进入下载模式（按住 BOOT 再复位）、或 USB 线不支持数据传输。")
+        diagnosis = completed.returncode == 2
+        if diagnosis:
+            say("        连不上芯片。先看看它现在在干什么：")
+        else:
+            say("        常见原因：串口被占用（串口监视器 / 另一个烧录会话）、")
+            say("                  设备未进入下载模式（按住 BOOT 再复位）、或 USB 线不支持数据传输。")
+        diagnose_after_failure(port)
+        say("        另外两条常被忽略的原因：")
+        say("          · 报 Invalid head of packet (0x49)：0x49 是字符 'I'，那是应用日志的首字节，")
+        say("            说明芯片在跑应用、没进下载模式（esptool 把日志当成了应答）。")
+        say("          · 波特率：先试 --baud 115200 排除线材/干扰因素。")
+        say("        仍不行就手动进下载模式：按住 BOOT → 点一下 RST → 松开 BOOT，")
+        say("        然后加 --reset none（或 --manual）重跑。")
         return completed.returncode or EXIT_ERROR
-    notice_ok(f"烧录完成，设备已复位（{port}）")
-    say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 查看串口日志。")
-    return EXIT_OK
+    return EXIT_ERROR
 
 
 # ---------------------------------------------------------------------------
-# 5. 解释器自愈（pyserial 只在 IDF venv 里）
+# 6. 解释器自愈（pyserial 只在 IDF venv 里）
 # ---------------------------------------------------------------------------
 
 
@@ -664,6 +1000,15 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/flash.py --port COM5 -y     # 指定串口，跳过确认直接烧录\n"
             "  python hardware/sets/flash.py --baud 921600      # 提高烧录波特率\n"
             "  python hardware/sets/flash.py --board yh-cam     # 指定版型（校验 build 产物是否对得上）\n"
+            "  python hardware/sets/flash.py --manual           # 手动进下载模式（按住 BOOT + 点 RST）\n"
+            "  python hardware/sets/flash.py --reset none -y    # 设备已手动进下载模式，不再复位\n"
+            "\n"
+            "复位线序（--reset，默认 auto）：本项目部分板子的 EN/GPIO0 是反相接线\n"
+            "（DTR=EN、RTS=GPIO0），esptool 的 default-reset 对它们无效，会报\n"
+            "\"Invalid head of packet (0x49)\"（0x49 就是应用日志首字节 'I'）。\n"
+            "auto 会先复位探测线序：反相板由脚本送进下载模式 + esptool --before no-reset；\n"
+            "标准板维持原样交给 esptool。可用 --reset {auto,esptool,reversed,none} 或\n"
+            "--before 手动指定。\n"
             "\n"
             "不想先激活 ESP-IDF 环境时，直接用 IDF venv 的 python 跑本脚本：\n"
             "  D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv\\Scripts\\python.exe hardware/sets/flash.py\n"
@@ -674,7 +1019,7 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     )
     parser.add_argument("--port", metavar="COMx", help="指定串口（默认多线程探测后自动/交互选择）")
     parser.add_argument("--baud", type=int, default=BAUD_DEFAULT, metavar="N",
-                        help=f"烧录波特率，默认 {BAUD_DEFAULT}")
+                        help=f"烧录波特率，默认 {BAUD_DEFAULT}；连不上时可降到 115200 排查")
     parser.add_argument("--list", action="store_true", help="只探测并列出串口状态，不烧录")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出探测结果（隐含 --list）")
     parser.add_argument("--identify", action="store_true",
@@ -685,6 +1030,32 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
                         help=f"探测线程数上限，默认 {PROBE_JOBS_DEFAULT}")
     parser.add_argument("--include-bluetooth", action="store_true",
                         help="把蓝牙虚拟串口也纳入探测（默认跳过：它们不是可烧录目标，open() 还可能阻塞数秒）")
+
+    reset_group = parser.add_argument_group("复位 / 下载模式")
+    reset_group.add_argument(
+        "--reset", choices=("auto", "esptool", "reversed", "none"), default="auto",
+        help="烧录前如何让芯片进下载模式：auto=先识别线序（默认）；esptool=完全交给 esptool "
+             "的 default-reset（标准接线）；reversed=按镜像时序（DTR=EN/RTS=GPIO0）由脚本送进下载模式；"
+             "none=不复位直接连接（设备已手动进下载模式）",
+    )
+    reset_group.add_argument(
+        "--manual", action="store_true",
+        help="打印手动进下载模式的步骤并等待回车，随后按 --reset none 连接（适配器无法控制 DTR/RTS 时用）",
+    )
+    reset_group.add_argument(
+        "--before", metavar="MODE",
+        help="直接指定 esptool 的 --before（default-reset/usb-reset/no-reset/no-reset-no-sync），"
+             "覆盖 --reset 的自动判断",
+    )
+    reset_group.add_argument(
+        "--after", choices=("hard-reset", "soft-reset", "no-reset", "no-reset-stub", "watchdog-reset"),
+        default="hard-reset", help="烧录完成后 esptool 的 --after，默认 hard-reset（复位回应用）",
+    )
+    reset_group.add_argument(
+        "--attempts", type=int, default=2, metavar="N",
+        help="连不上时的尝试次数上限（默认 2；每次尝试前都会重新进下载模式）",
+    )
+
     parser.add_argument("-y", "--yes", action="store_true", help="跳过烧录确认（物理操作，默认要确认）")
     parser.add_argument("--board", metavar="ID", help="指定版型 id（仅用于提示与产物一致性校验）")
     parser.add_argument("--fw-root", metavar="DIR", help="固件源码根目录（默认用 sets 自带副本）")
@@ -697,6 +1068,8 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
 
     if args.jobs < 1:
         parser.error("--jobs 至少为 1")
+    if args.attempts < 1:
+        parser.error("--attempts 至少为 1")
     if args.timeout <= 0:
         parser.error("--timeout 必须大于 0")
     return args
@@ -887,7 +1260,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         say("已取消烧录。")
         return EXIT_OK
 
-    return run_flash(fw_root, selected, args.baud)
+    # ---- 5. 决定复位方式（反相板由脚本送进下载模式）----
+    plan = resolve_reset_plan(selected, args)
+    return run_flash(fw_root, selected, args.baud, plan, args)
 
 
 if __name__ == "__main__":

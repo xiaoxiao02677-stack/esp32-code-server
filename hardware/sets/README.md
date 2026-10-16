@@ -8,7 +8,7 @@
 | 脚本 | 职责 |
 |---|---|
 | `build.py` | 选版型 → 同步 → 注册 → 编译 → 归档产物。**不做任何串口操作** |
-| `flash.py` | **多线程并行探测 COM 口** → 选择设备 → esptool 烧录。**不编译** |
+| `flash.py` | **多线程并行探测 COM 口** → 复位线序识别 → 把芯片送进下载模式 → esptool 烧录。**不编译** |
 
 先 `build.py` 出产物，再 `flash.py` 烧进去；只想烧已有的产物就直接跑 `flash.py`。
 
@@ -189,6 +189,8 @@ python hardware/sets/flash.py --identify         :: 探测 + 复位读 ROM 日�
 python hardware/sets/flash.py --json             :: 探测结果输出 JSON（供脚本调用）
 python hardware/sets/flash.py --port COM18 -y    :: 指定串口，跳过确认直接烧
 python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
+python hardware/sets/flash.py --manual           :: 手动进下载模式（按住 BOOT + 点 RST）
+python hardware/sets/flash.py --reset none -y    :: 设备已手动进下载模式，不再复位
 ```
 
 探测结果长这样（`[在线]` 表示口能打开、后面确实挂着设备）：
@@ -206,31 +208,73 @@ python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
 | 参数 | 作用 |
 |---|---|
 | `--port COMx` | 指定串口，跳过探测（仍会尝试校验） |
-| `--baud N` | 烧录波特率，默认 `460800` |
+| `--baud N` | 烧录波特率，默认 `460800`；连不上时先降到 `115200` 排查 |
 | `--list` | 只探测列出串口状态，不烧录 |
 | `--json` | 以 JSON 输出探测结果（隐含 `--list`），诊断信息走 stderr 不污染 stdout |
-| `--identify` | **会复位目标板**：读 ROM 启动日志判定是不是 ESP32、是哪一款 |
+| `--identify` | **会复位目标板**：读 ROM 启动日志判定是不是 ESP32、是哪一款，还会报告复位线序 |
 | `--timeout SEC` | 单口探测超时，默认 `0.6` |
 | `--jobs N` | 探测线程数上限，默认 `8` |
 | `--include-bluetooth` | 把蓝牙虚拟口也纳入探测（默认跳过） |
 | `-y` / `--yes` | 跳过烧录确认 |
 | `--board <id>` | 指定版型，用于提示 + 校验 `build/` 里的产物是不是这个版型编的 |
+| `--reset {auto,esptool,reversed,none}` | 烧录前如何让芯片进下载模式，默认 `auto`（自动识别线序） |
+| `--manual` | 打印手动进下载模式步骤并等回车，随后按 `no-reset` 连接 |
+| `--before MODE` / `--after MODE` | 直接指定 esptool 的 `--before` / `--after`（默认 `no-reset` + `hard-reset`） |
+| `--attempts N` | 连不上时的尝试次数上限，默认 `2`（每次尝试前都会重新进下载模式） |
 | `--no-reexec` | 缺 pyserial 时不自动换解释器（只枚举串口） |
+
+### 复位线序：为什么这块板「按住 BOOT 也没用」
+
+Espressif 参考设计里是 **DTR→GPIO0、RTS→EN**，esptool 的 `ClassicReset`
+（就是 `--before default-reset`）按这个假定发时序。**本项目部分板子是反相接线
+（DTR→EN、RTS→GPIO0）**，后果是：
+
+- `--before default-reset` 只会让芯片**正常运行**（`boot:0x1b (SPI_FAST_FLASH_BOOT)`），
+  接着应用日志刷到串口上，日志首字节 `I`(0x49) 被 esptool 当成数据包包头，于是报
+  `Failed to connect to ESP32-S3: Invalid head of packet (0x49)`；
+- **「按住 BOOT 开机」救不了它** —— esptool 连接阶段还会自己再复位一次，
+  那一次复位就把手动进下载模式的结果冲掉了。
+
+所以 `flash.py` 默认（`--reset auto`）会先复位一两次把线序认出来：
+
+```
+[复位] 识别本板复位线序（最多复位两次，约 3~5 秒）
+  已按反相时序送进下载模式    ESP-ROM:esp32s3-20210327..boot:0x13 (DOWNLOAD(USB/UART0))..waiting for
+```
+
+识别结果决定两条路：
+
+| 线序 | 行为 |
+|---|---|
+| **反相**（本项目这类板） | 脚本按镜像时序把芯片送进下载模式，再用 `--before no-reset` 交给 esptool |
+| **标准**（绝大多数开发板） | 什么都不改，仍旧交给 esptool 的 `default-reset` |
+
+要绕开自动识别：`--reset esptool`（强制老行为）、`--reset reversed`（强制脚本复位）、
+`--reset none`（不复位，用于你已手动进下载模式）、`--before <MODE>`（直接透传给 esptool）。
+
+适配器根本不支持控制 DTR/RTS（少数 USB 转串口），或线路没接 EN/GPIO0 时，
+用 `--manual`：脚本会打印「按住 BOOT → 点 RST → 松开 BOOT」并等你按回车，
+再用 `no-reset` 连上去。
+
+## 4.2 烧录细节
 
 烧录细节（与固件自带 `yh_flash.bat` 同源）：
 
 - 优先按 `<FW>/build/flash_args` 烧录；若该文件不含 assets 分区，
   自动退回**显式全量烧录**：`bootloader + 分区表 + ota_data + app + assets(0x800000)`
-- 固定参数：`esp32s3` / `460800` 波特 / `dio` / `16MB` / `80m`
+- 固定参数：`esp32s3` / `460800` 波特 / `dio` / `16MB` / `80m`；`flash_args` 里已写明的
+  参数不会重复追加
 - **assets 分区首次必须全量烧录**，之后 OTA 只刷 app 分区
 - 产物不存在时会直接告诉你去跑 `build.py`，不会瞎烧
+- 连不上时（esptool 返回码 2）脚本会**回读串口**告诉你设备此刻在干什么：
+  在读应用日志 = 没进下载模式；安静 = 已在下载模式（那就该怀疑波特率/线材）
 
 > 烧录是有副作用的物理操作，所以 `-y`/`--yes` 必须由你显式给出；
 > 不加时脚本会问一句「是否把 …… 烧录到 COMxx？[y/N]」。
 >
-> 探测本身**不会复位设备**（打开串口前把 DTR/RTS 都置为不激活，避开经典自动复位
-> 电路）；只有 `--identify` 会主动复位，且复位后仍以正常运行模式启动、不会停在
-> 下载模式。
+> 探测（`--list` / 默认那次快速探测）本身**不会复位设备**（打开串口前把 DTR/RTS
+> 都置为不激活，避开经典自动复位电路）；会复位设备的只有 `--identify`
+> 和真正烧录前的那一步线序识别。`--identify` 复位完会把设备还原成正常运行状态。
 
 ---
 
@@ -350,6 +394,37 @@ python hardware/sets/flash.py --port COM18 -y       :: 指定串口直接烧
 **assets 分区（`generated_assets.bin`）首次必须全量烧录**。
 注意固件自带的 `yh_flash.bat` 硬编码指向上游目录
 `hardware\small_screen_camera\xiaozhi-esp32`，用 sets 副本编译时请走 `flash.py`。
+
+**Q：报 `A fatal error occurred: Failed to connect to ESP32-S3: Invalid head of packet (0x49)`**
+**0x49 就是字符 `I`**，是应用日志（`I (123) Tag: ...`）的首字节 —— 说明芯片在跑应用、
+根本没进下载模式，esptool 把日志当成了应答包。这是**复位线序**问题，不是线材问题，
+也不是「没按住 BOOT」：按住 BOOT 也无效，因为 esptool 连接时还会自己再复位一次。
+
+`flash.py` 默认的 `--reset auto` 已经能处理（自动识别 + 自己送进下载模式），
+直接重跑即可：
+
+```bat
+python hardware/sets/flash.py --board <id>
+```
+
+如果报错信息不一样（比如 `No serial data received`、`The chip may not be in
+bootloader mode`），或者自动识别报「未能识别复位线序」，就手动走一遍：
+
+```bat
+python hardware/sets/flash.py --manual
+```
+
+它会提示你「按住 BOOT → 点一下 RST → 松开 BOOT」，然后按回车继续。也可以自己
+手动进下载模式后加 `--reset none`。
+
+想确认这块板到底是哪种线序：
+
+```bat
+python hardware/sets/flash.py --list --identify --port COM18
+```
+
+输出里 `芯片=esp32s3  复位线序=反相` 就是反相板（由脚本送进下载模式），
+`复位线序=标准` 则交给 esptool 自己复位。
 
 **Q：`flash.py` 说没有检测到可用设备，但我确实插着板子**
 先看它是哪一种状态：
