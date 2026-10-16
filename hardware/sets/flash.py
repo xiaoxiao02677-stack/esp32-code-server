@@ -375,9 +375,9 @@ def probe_all(
     if stream:
         say()
         window = timeout + (0.8 if identify else 0.0)
+        thread_note = f" / {max(1, min(jobs, len(targets)))} 线程" if targets else "（无可探测目标）"
         say(bold(
-            f"[探测] 枚举 {len(ports)} 个串口 → 并行探测 {len(targets)} 个"
-            f" / {max(1, min(jobs, len(targets)))} 线程"
+            f"[探测] 枚举 {len(ports)} 个串口 → 并行探测 {len(targets)} 个{thread_note}"
             + ("，复位识别芯片" if identify else f"，单口超时 {window:.1f}s")
         ))
         for device, _, _ in ports:
@@ -784,7 +784,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # ---- 1. 并行探测串口 ----
     ports = enumerate_ports()
-    if not ports:
+    if not ports and not args.port:
         reason = "缺少 pyserial，无法枚举串口" if not _HAVE_PYSERIAL else "没有枚举到任何串口"
         if json_mode:
             print(json.dumps(
@@ -808,14 +808,37 @@ def main(argv: Optional[list[str]] = None) -> int:
         say("        请检查 USB 线（要能传数据，不是纯充电线）与串口驱动是否安装。")
         return EXIT_ERROR if not list_mode else EXIT_OK
 
-    probes = probe_all(
-        ports,
-        timeout=args.timeout,
-        jobs=args.jobs,
-        identify=args.identify,
-        stream=not json_mode,
-        include_bluetooth=args.include_bluetooth,
-    )
+    if not ports:
+        # 用户点名了串口，即使枚举不到也照他的意思试（有些驱动的口枚举不到但能开）
+        notice_warn(f"没有枚举到任何串口，仍按 --port {args.port} 强制尝试")
+        if json_mode:
+            print(json.dumps(
+                {
+                    "fw_root": str(fw_root),
+                    "board": board["id"] if board else None,
+                    "chip": CHIP,
+                    "ports": [],
+                    "confirmed": [],
+                    "skipped_bluetooth": [],
+                    "selected": args.port,
+                    "error": "没有枚举到任何串口，按 --port 强制使用",
+                },
+                ensure_ascii=False, indent=2,
+            ))
+            return EXIT_OK
+        if list_mode:
+            notice_warn("探测完成（--list，未烧录）：没有枚举到任何串口")
+            return EXIT_OK
+        probes = [PortProbe(device=args.port, state="unknown", detail="未枚举到，按用户指定强制使用")]
+    else:
+        probes = probe_all(
+            ports,
+            timeout=args.timeout,
+            jobs=args.jobs,
+            identify=args.identify,
+            stream=not json_mode,
+            include_bluetooth=args.include_bluetooth,
+        )
     confirmed = [probe for probe in probes if probe.confirmed]
     skipped = [probe for probe in probes if probe.state == "skipped"]
 
