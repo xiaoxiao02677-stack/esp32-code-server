@@ -1,7 +1,16 @@
 # 小智固件 · 多版型适配中心（hardware/sets）
 
 一套固件源码 + N 套版型配置。在这里选一个版型，`build.py` 会自动完成
-**同步 → 注册 → 编译 → 归档 →（可选）烧录**，你不需要手工去改固件源码树里的任何文件。
+**同步 → 注册 → 编译 → 归档产物**，你不需要手工去改固件源码树里的任何文件。
+
+**构建与烧录是两个脚本，职责分开：**
+
+| 脚本 | 职责 |
+|---|---|
+| `build.py` | 选版型 → 同步 → 注册 → 编译 → 归档产物。**不做任何串口操作** |
+| `flash.py` | **多线程并行探测 COM 口** → 选择设备 → esptool 烧录。**不编译** |
+
+先 `build.py` 出产物，再 `flash.py` 烧进去；只想烧已有的产物就直接跑 `flash.py`。
 
 固件源码（下文记作 `<FW>`）默认使用**本目录自带的副本**：
 
@@ -81,7 +90,8 @@ python hardware/sets/build.py --board yh-cam ^
 hardware/sets/
 ├── README.md            ← 本文件（用户导航）
 ├── SPEC.md              ← 版型作者规范（要新增版型先读它）
-├── build.py             ← 唯一入口（编译 + 烧录）
+├── build.py             ← 编译入口（选版型 → 同步 → 注册 → 编译 → 归档）
+├── flash.py             ← 烧录入口（多线程探测 COM 口 → esptool 烧录）
 ├── xiaozhi-esp32/       ← 固件源码副本 <FW>（仅源码；build/ 与 managed_components/ 不入库）
 ├── boards/
 │   ├── yh-cam/          ← 一个版型一个目录
@@ -109,7 +119,7 @@ hardware/sets/
                     的 SETS-BOARDS 标记块
 [3/4] 编译           调用 <FW>/scripts/build.py <board_dir> --name <build_name>
 [4/4] 归档           ->  hardware/sets/out/<id>/
-     烧录（可选）     探测串口 -> esptool 烧录 -> 设备复位
+     收尾           打印下一步该执行的 flash.py 命令（本脚本不烧录）
 ```
 
 第 2 步是**幂等**的：它只替换 `# >>> SETS-BOARDS-BEGIN >>>` 和
@@ -160,45 +170,67 @@ hardware/sets/
 | `--fw-root <DIR>` | 手动指定固件根目录（默认用 sets 自带副本 `sets/xiaozhi-esp32/`） |
 | `--no-color` | 关闭彩色输出（日志重定向到文件时用） |
 
-烧录相关：
-
-| 参数 | 作用 |
-|---|---|
-| `--flash` | 编译成功后**直接烧录**，不再询问 |
-| `--flash-only` | 跳过编译，只烧录上一次的产物 |
-| `--no-flash` | 编译后不询问烧录（纯编译，适合 CI） |
-| `--port COMx` | 指定串口（默认自动探测；探测到多个时交互选择） |
-| `--baud N` | 烧录波特率，默认 `460800` |
+烧录不在这里，见下一节。
 
 ---
 
-## 4.1 烧录
+## 4.1 烧录：flash.py
 
-编译成功后脚本会问一句：
-
-```
-是否将「屿禾 AI Camera（摄像头版）」烧录到设备？[y/N]
-```
-
-回 `y` 即自动探测串口并烧录。也可以一步到位：
+独立的烧录脚本，核心是**多线程并行探测 COM 口**：宿主机「枚举到串口」并不等于
+「口上有设备」，也不等于「能打开」（可能被串口监视器占用）。串行逐个 `open()`
+的做法 N 个口要等 N × 超时（实测蓝牙虚拟口的 `open()` 能卡住 5～9 秒）；
+`flash.py` 一个口起一个线程，整体耗时 ≈ 最慢的那个口，而且谁先探完先打印谁。
 
 ```bat
-python hardware/sets/build.py --board yh-cam --flash              :: 编译后直接烧录
-python hardware/sets/build.py --board yh-cam --flash --port COM5  :: 指定串口
-python hardware/sets/build.py --flash-only --port COM5            :: 只烧录上次产物
-python hardware/sets/build.py --board yh-cam --no-flash           :: 只编译不烧
+python hardware/sets/flash.py                    :: 探测串口并烧录（唯一设备时问一句）
+python hardware/sets/flash.py --board yh-cam     :: 指定版型（校验产物是否对得上）
+python hardware/sets/flash.py --list             :: 只探测列出，不烧录
+python hardware/sets/flash.py --identify         :: 探测 + 复位读 ROM 日志识别芯片型号
+python hardware/sets/flash.py --json             :: 探测结果输出 JSON（供脚本调用）
+python hardware/sets/flash.py --port COM18 -y    :: 指定串口，跳过确认直接烧
+python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
 ```
+
+探测结果长这样（`[在线]` 表示口能打开、后面确实挂着设备）：
+
+```
+[探测] 枚举 3 个串口 → 并行探测 1 个 / 1 线程，单口超时 0.6s
+  COM3     [跳过]  蓝牙链接上的标准串行 (COM3)  蓝牙虚拟串口，默认跳过
+  COM4     [跳过]  蓝牙链接上的标准串行 (COM4)  蓝牙虚拟串口，默认跳过
+  COM18    [在线]  USB-SERIAL CH340K (COM18)  数据=61B  样本='I (51458) SystemInfo: ...'  610ms
+```
+
+状态共四种：`[在线]` 能打开、`[被占用]` 被别的程序占着、`[打不开]` 驱动层报错、
+`[跳过]` 蓝牙虚拟口。
+
+| 参数 | 作用 |
+|---|---|
+| `--port COMx` | 指定串口，跳过探测（仍会尝试校验） |
+| `--baud N` | 烧录波特率，默认 `460800` |
+| `--list` | 只探测列出串口状态，不烧录 |
+| `--json` | 以 JSON 输出探测结果（隐含 `--list`），诊断信息走 stderr 不污染 stdout |
+| `--identify` | **会复位目标板**：读 ROM 启动日志判定是不是 ESP32、是哪一款 |
+| `--timeout SEC` | 单口探测超时，默认 `0.6` |
+| `--jobs N` | 探测线程数上限，默认 `8` |
+| `--include-bluetooth` | 把蓝牙虚拟口也纳入探测（默认跳过） |
+| `-y` / `--yes` | 跳过烧录确认 |
+| `--board <id>` | 指定版型，用于提示 + 校验 `build/` 里的产物是不是这个版型编的 |
+| `--no-reexec` | 缺 pyserial 时不自动换解释器（只枚举串口） |
 
 烧录细节（与固件自带 `yh_flash.bat` 同源）：
 
-- 串口自动探测（pyserial，回退 `wmic`）；探测到多个时列出让你选，USB 转串口排前面
 - 优先按 `<FW>/build/flash_args` 烧录；若该文件不含 assets 分区，
   自动退回**显式全量烧录**：`bootloader + 分区表 + ota_data + app + assets(0x800000)`
 - 固定参数：`esp32s3` / `460800` 波特 / `dio` / `16MB` / `80m`
 - **assets 分区首次必须全量烧录**，之后 OTA 只刷 app 分区
+- 产物不存在时会直接告诉你去跑 `build.py`，不会瞎烧
 
-> 烧录是有副作用的物理操作，所以 `--yes` **不会**自动烧录——
-> 必须显式加 `--flash`，或在交互提示里回 `y`。
+> 烧录是有副作用的物理操作，所以 `-y`/`--yes` 必须由你显式给出；
+> 不加时脚本会问一句「是否把 …… 烧录到 COMxx？[y/N]」。
+>
+> 探测本身**不会复位设备**（打开串口前把 DTR/RTS 都置为不激活，避开经典自动复位
+> 电路）；只有 `--identify` 会主动复位，且复位后仍以正常运行模式启动、不会停在
+> 下载模式。
 
 ---
 
@@ -226,6 +258,7 @@ python hardware/sets/build.py --board yh-cam --no-flash           :: 只编译�
    （扫不到就看有没有必填字段写错，脚本会直接把原因打印出来）
 4. `python hardware/sets/build.py --board <new-id> --sync-only` 验证同步与注册
 5. 再跑一次完整编译
+6. `python hardware/sets/flash.py --list` 确认能看见设备，再 `flash.py` 烧进去
 
 `set.json` 的 12 个必填字段：`id`、`name`、`description`、`manufacturer`、
 `target`、`board_dir`、`kconfig_symbol`、`kconfig_prompt`、`text_font`、
@@ -300,17 +333,35 @@ D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe hardware/sets/build.py 
 ASCII 而不是抛异常。如果还是乱，试试 `--no-color`，或把输出重定向到文件。
 
 **Q：产物怎么烧**
-直接让脚本烧（推荐）：
+先探测看看口上有没有设备（不烧、不复位）：
 
 ```bat
-python hardware/sets/build.py --board <id> --flash          :: 编译 + 烧录一条龙
-python hardware/sets/build.py --flash-only --port COM5      :: 只烧录上次产物
+python hardware/sets/flash.py --list
+```
+
+确认后在烧：
+
+```bat
+python hardware/sets/flash.py --board <id>          :: 探测 + 烧录
+python hardware/sets/flash.py --port COM18 -y       :: 指定串口直接烧
 ```
 
 手工烧也行：`merged-binary.bin` 可直接用于 OTA 或首次烧录，
 **assets 分区（`generated_assets.bin`）首次必须全量烧录**。
 注意固件自带的 `yh_flash.bat` 硬编码指向上游目录
-`hardware\small_screen_camera\xiaozhi-esp32`，用 sets 副本编译时请走本脚本。
+`hardware\small_screen_camera\xiaozhi-esp32`，用 sets 副本编译时请走 `flash.py`。
+
+**Q：`flash.py` 说没有检测到可用设备，但我确实插着板子**
+先看它是哪一种状态：
+
+- `[跳过]` —— 蓝牙虚拟串口，本来就不是可烧录目标（想强行探测加 `--include-bluetooth`）
+- `[被占用]` —— 关掉串口监视器 / 另一个烧录会话（同一串口同一时刻只能一个程序占用）
+- `[打不开]` —— 串口驱动没装好，或换根能传数据的 USB 线
+- 一个口都没枚举到 —— 大概率是纯充电线，或驱动没装
+
+**Q：`flash.py` 提示当前解释器没有 pyserial**
+脚本会自动改用 ESP-IDF venv 的 python 重跑（pyserial 与 esptool 都装在那里），
+一般不用管。要手动指定就加 `--python D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe`。
 
 **Q：可以直接改 `<FW>/main/` 下的文件吗**
 不可以。`<FW>/main/Kconfig.projbuild`、`main/CMakeLists.txt` 以及

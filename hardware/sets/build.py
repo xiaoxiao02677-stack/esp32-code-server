@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""hardware/sets 多版型编译 + 烧录入口脚本。
+"""hardware/sets 多版型编译入口脚本（只负责构建，不负责烧录）。
 
 工作流：扫描版型 → 交互式选版型 → 同步到 <FW>/main/boards/<board_dir>
       → 幂等注册 Kconfig / CMakeLists 标记块 → 调用 <FW>/scripts/build.py 编译
-      → 产物归档到 hardware/sets/out/<id>/ → 可选烧录到设备
+      → 产物归档到 hardware/sets/out/<id>/
+
+烧录已拆分到同目录的 flash.py（多线程探测 COM 口 + esptool 烧录），
+本脚本结束后只打印下一步该执行的命令，不做任何串口操作。
 
 固件源码 <FW> 默认使用本目录自带的副本 hardware/sets/xiaozhi-esp32/，
 这样 sets 自成一体、不与上游工作区互相污染。副本缺失时回退到
@@ -21,7 +24,6 @@ hardware/small_screen_camera/xiaozhi-esp32/（可用 --fw-root 或
 import argparse
 import difflib
 import json
-import locale
 import os
 import re
 import shutil
@@ -57,28 +59,6 @@ COMPONENT_SOURCE_CANDIDATES = [
     UPSTREAM_FW,
     SETS_ROOT.parent.parent / "hardware" / "small_screen_camera" / "xiaozhi-esp32",
 ]
-
-# ---------------------------------------------------------------------------
-# 烧录参数（与 <FW>/yh_flash.bat 保持一致）
-# ---------------------------------------------------------------------------
-
-FLASH_CHIP = "esp32s3"
-FLASH_BAUD_DEFAULT = 460800
-FLASH_MODE = "dio"
-FLASH_SIZE = "16MB"
-FLASH_FREQ = "80m"
-
-# 全量烧录地址表；assets 分区（0x800000）必须全量写入，OTA 之后只刷 app 分区
-FLASH_FULL_IMAGE = [
-    ("0x0", "build/bootloader/bootloader.bin"),
-    ("0x8000", "build/partition_table/partition-table.bin"),
-    ("0xd000", "build/ota_data_initial.bin"),
-    ("0x20000", "build/xiaozhi.bin"),
-    ("0x800000", "build/generated_assets.bin"),
-]
-
-# 串口自动探测时优先匹配的 USB 转串口驱动关键字
-USB_SERIAL_HINTS = ("CP210", "CH340", "CH910", "USB Serial", "USB-SERIAL", "JTAG", "Silicon Labs")
 
 # Kconfig / CMakeLists 自动维护块标记
 BEGIN_MARKER = "# >>> SETS-BOARDS-BEGIN >>>"
@@ -923,6 +903,15 @@ def discover_idf_env() -> dict[str, Optional[str]]:
     return dict(_IDF_ENV_CACHE)
 
 
+def _idf_python() -> str:
+    """启动 idf.py / 固件编译脚本用的 python。
+
+    优先 IDF venv（自带 rich_click 与工具链依赖），探测不到才回退当前解释器。
+    烧录脚本 flash.py 也复用这个函数来拿 esptool 的解释器。
+    """
+    return discover_idf_env().get("python") or sys.executable
+
+
 def _idf_version(idf_path: Optional[str]) -> Optional[str]:
     """从 <IDF_PATH>/tools/cmake/version.cmake 解析出 "X.Y.Z"。
 
@@ -1259,7 +1248,8 @@ def archive_outputs(fw_root: Path, board: dict[str, Any]) -> None:
     for destination in copied:
         say(f"    {destination}")
     say()
-    say("烧录提示：本脚本已集成烧录，编译完成后可直接选择烧录到设备；")
+    say("烧录提示：烧录已拆分为独立脚本 flash.py（多线程探测 COM 口）：")
+    say(f"  python hardware/sets/flash.py --board {board['id']}")
     say("  assets 分区（generated_assets.bin）首次必须全量烧录，之后 OTA 只刷 app 分区。")
 
 
@@ -1299,199 +1289,6 @@ def ensure_components(fw_root: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 8. 烧录（串口探测 + esptool）
-# ---------------------------------------------------------------------------
-
-
-def detect_serial_ports() -> list[tuple[str, str]]:
-    """探测串口，返回 [(device, description), ...]。优先 pyserial，回退 wmic。"""
-    ports: list[tuple[str, str]] = []
-    try:
-        from serial.tools import list_ports  # type: ignore
-
-        for info in list_ports.comports():
-            ports.append((info.device, (info.description or "").strip()))
-    except Exception:
-        ports = []
-    if ports:
-        return ports
-
-    if os.name == "nt":
-        try:
-            completed = subprocess.run(
-                ["wmic", "path", "Win32_SerialPort", "get", "Caption,DeviceID", "/format:csv"],
-                capture_output=True, timeout=15, check=False,
-            )
-            # wmic 输出为本地 OEM 代码页（中文 Windows 为 GBK），必须按本机编码解码，
-            # 否则 reader 线程会抛 UnicodeDecodeError。COMx 本身是 ASCII，不受影响。
-            raw = completed.stdout or b""
-            codec = locale.getpreferredencoding(False) or "utf-8"
-            text = raw.decode(codec, errors="replace")
-            for line in text.splitlines():
-                line = line.strip()
-                if not line or line.startswith("Node,"):
-                    continue
-                parts = [part.strip() for part in line.split(",")]
-                if len(parts) >= 3 and re.fullmatch(r"COM\d+", parts[-1], re.IGNORECASE):
-                    ports.append((parts[-1], parts[-2]))
-        except Exception:
-            pass
-    return ports
-
-
-def _port_priority(description: str) -> int:
-    """USB 转串口设备排前面，方便默认选中。"""
-    upper = description.upper()
-    for hint in USB_SERIAL_HINTS:
-        if hint.upper() in upper:
-            return 0
-    return 1
-
-
-def choose_port(explicit: Optional[str], ports: list[tuple[str, str]]) -> Optional[str]:
-    if explicit:
-        return explicit
-
-    ordered = sorted(ports, key=lambda item: _port_priority(item[1]))
-    if not ordered:
-        notice_bad("没有探测到可用串口")
-        say("        请用 --port COMx 显式指定，或检查 USB 线 / 串口驱动是否安装。")
-        return None
-
-    if len(ordered) == 1:
-        device, description = ordered[0]
-        say(f"  自动探测到串口: {device}    {description}")
-        return device
-
-    say()
-    say(bold("检测到多个串口，请选择要烧录的设备："))
-    for index, (device, description) in enumerate(ordered, 1):
-        mark = " (USB 转串口)" if _port_priority(description) == 0 else ""
-        say(f"    [{index}] {device}    {description}{mark}")
-    say(f"    [0] 取消烧录")
-    try:
-        raw = input("  请输入编号: ").strip()
-    except EOFError:
-        return None
-    if not raw or raw == "0":
-        return None
-    if raw.isdigit() and 1 <= int(raw) <= len(ordered):
-        return ordered[int(raw) - 1][0]
-    for device, _ in ordered:
-        if device.upper() == raw.upper():
-            return device
-    notice_bad(f"无效输入: {raw}")
-    return None
-
-
-def _idf_python() -> str:
-    """启动 idf.py / 固件编译脚本 / esptool 用的 python。
-
-    优先 IDF venv（自带 esptool 与 rich_click），探测不到才回退当前解释器。
-    探测逻辑见上文「ESP-IDF 环境探测」段。
-    """
-    return discover_idf_env().get("python") or sys.executable
-
-
-def run_flash(fw_root: Path, port: str, baud: int) -> int:
-    """烧录到设备。优先按 build/flash_args 烧录，缺 assets 时退回显式全量烧录。"""
-    build_dir = fw_root / "build"
-    if not build_dir.is_dir():
-        notice_bad(f"找不到 build 目录: {build_dir}")
-        say("        请先编译一次再烧录（去掉 --flash-only）。")
-        return EXIT_ERROR
-
-    flash_args = build_dir / "flash_args"
-    has_assets = False
-    if flash_args.is_file():
-        try:
-            has_assets = "generated_assets" in flash_args.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            has_assets = False
-
-    base = [
-        _idf_python(), "-m", "esptool",
-        "--chip", FLASH_CHIP,
-        "-p", port,
-        "-b", str(baud),
-        "--before", "default-reset",
-        "--after", "hard-reset",
-        "write-flash",
-    ]
-
-    if has_assets:
-        command = base + [
-            "@flash_args",
-            "--flash-mode", FLASH_MODE,
-            "--flash-size", FLASH_SIZE,
-            "--flash-freq", FLASH_FREQ,
-        ]
-        cwd = build_dir
-        mode_desc = "按 build/flash_args 烧录（已含 assets 分区）"
-    else:
-        command = base + [
-            "--flash-mode", FLASH_MODE,
-            "--flash-size", FLASH_SIZE,
-            "--flash-freq", FLASH_FREQ,
-        ]
-        included = 0
-        for offset, relative in FLASH_FULL_IMAGE:
-            if not (fw_root / relative).is_file():
-                notice_warn(f"缺少 {relative}，跳过该分区")
-                continue
-            command += [offset, relative]
-            included += 1
-        if included == 0:
-            notice_bad("没有任何可烧录的镜像文件，请确认编译是否成功")
-            return EXIT_ERROR
-        cwd = fw_root
-        mode_desc = "显式全量烧录（bootloader + 分区表 + ota_data + app + assets）"
-
-    say()
-    say(bold(f"[烧录] {mode_desc}"))
-    say(f"  串口: {port}    波特率: {baud}")
-    say(f"  工作目录: {cwd}")
-    say("  " + " ".join(command))
-    say("  烧录中，请勿拔线……")
-    say(rule())
-    try:
-        completed = subprocess.run(command, cwd=str(cwd), check=False)
-    except OSError as error:
-        notice_bad(f"无法启动 esptool: {error}")
-        say("        请确认已在 ESP-IDF 环境中运行本脚本（esptool 随 IDF venv 一起安装）。")
-        return EXIT_ERROR
-    say(rule())
-    if completed.returncode != 0:
-        notice_bad(f"烧录失败（esptool 返回码 {completed.returncode}）")
-        say("        常见原因：串口被占用（串口监视器 / 另一个烧录会话）、")
-        say("                  设备未进入下载模式（按住 BOOT 再复位）、或 USB 线不支持数据传输。")
-        return completed.returncode or EXIT_ERROR
-    notice_ok(f"烧录完成，设备已复位（{port}）")
-    say("  提示：可用 <FW>\\yh_monitor.py 查看串口日志。")
-    return EXIT_OK
-
-
-def ask_flash(board: dict[str, Any]) -> bool:
-    say()
-    try:
-        raw = input(f"是否将「{board['name']}」烧录到设备？[y/N] ").strip().lower()
-    except EOFError:
-        return False
-    return raw in ("y", "yes")
-
-
-def flash_to_device(fw_root: Path, board: dict[str, Any], args: argparse.Namespace) -> int:
-    say()
-    say(bold("[烧录] 探测串口"))
-    ports = detect_serial_ports()
-    port = choose_port(getattr(args, "port", None), ports)
-    if not port:
-        notice_warn("已取消烧录")
-        return EXIT_OK
-    return run_flash(fw_root, port, int(getattr(args, "baud", FLASH_BAUD_DEFAULT)))
-
-
-# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1499,39 +1296,31 @@ def flash_to_device(fw_root: Path, board: dict[str, Any], args: argparse.Namespa
 def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="hardware/sets/build.py",
-        description="小智固件多版型编译 + 烧录入口：选版型 → 同步 → 注册 → 编译 → 归档 →（可选）烧录",
+        description="小智固件多版型编译入口：选版型 → 同步 → 注册 → 编译 → 归档产物（不含烧录）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "示例：\n"
             "  python hardware/sets/build.py                     # 交互式选版型并编译\n"
             "  python hardware/sets/build.py --list              # 只列出版型\n"
             "  python hardware/sets/build.py --board yh-cam      # 直接编译指定版型\n"
-            "  python hardware/sets/build.py --board yh-cam --flash          # 编译后直接烧录\n"
-            "  python hardware/sets/build.py --board yh-cam --flash --port COM5\n"
-            "  python hardware/sets/build.py --flash-only --port COM5        # 只烧录上次产物\n"
-            "  python hardware/sets/build.py --board yh-cam --no-flash       # 只编译不烧录\n"
             "  python hardware/sets/build.py --board yh-cam --yes --sync-only  # 只同步+注册\n"
+            "  python hardware/sets/build.py --board yh-cam --no-archive       # 编译但不归档\n"
             "\n"
             "不想先激活 ESP-IDF 环境时，直接用 IDF venv 的 python 跑本脚本：\n"
             "  D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv\\Scripts\\python.exe "
             "hardware/sets/build.py --board yh-n16r8-st7789\n"
             "（脚本也会自动探测 IDF venv，一般无需手动指定；可用 --python 覆盖）\n"
+            "\n"
+            "本脚本只编译，不烧录。烧录请用 flash.py：\n"
+            "  python hardware/sets/flash.py --board yh-cam --list      # 多线程探测串口\n"
+            "  python hardware/sets/flash.py --board yh-cam             # 探测并烧录\n"
         ),
     )
     parser.add_argument("--board", metavar="ID", help="直接指定版型 id，跳过交互选择")
     parser.add_argument("--list", action="store_true", help="只列出可用版型，不编译")
-    parser.add_argument("--sync-only", action="store_true", help="只做同步与注册，不编译不烧录")
+    parser.add_argument("--sync-only", action="store_true", help="只做同步与注册，不编译")
     parser.add_argument("-y", "--yes", action="store_true", help="跳过所有确认（含引脚未验证警告）")
     parser.add_argument("--no-archive", action="store_true", help="编译后不归档产物到 out/<id>/")
-
-    flash_group = parser.add_argument_group("烧录选项")
-    flash_group.add_argument("--flash", action="store_true", help="编译成功后直接烧录到设备，不再询问")
-    flash_group.add_argument("--flash-only", action="store_true", help="跳过编译，只烧录上一次的编译产物")
-    flash_group.add_argument("--no-flash", action="store_true", help="编译后不询问烧录（纯编译）")
-    flash_group.add_argument("--port", metavar="COMx", help="指定串口（默认自动探测，多个时交互选择）")
-    flash_group.add_argument("--baud", type=int, default=FLASH_BAUD_DEFAULT, metavar="N",
-                             help=f"烧录波特率，默认 {FLASH_BAUD_DEFAULT}")
-
     parser.add_argument("--fw-root", metavar="DIR", help="固件源码根目录（默认用 sets 自带副本）")
     parser.add_argument(
         "--fw-arg", action="append", default=[], metavar="ARG",
@@ -1544,13 +1333,6 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     )
     parser.add_argument("--no-color", action="store_true", help="关闭彩色输出")
     args = parser.parse_args(argv)
-
-    if args.flash and args.no_flash:
-        parser.error("--flash 与 --no-flash 不能同时使用")
-    if args.flash_only and args.sync_only:
-        parser.error("--flash-only 与 --sync-only 不能同时使用")
-    if args.flash_only and args.no_flash:
-        parser.error("--flash-only 与 --no-flash 不能同时使用")
     return args
 
 
@@ -1567,7 +1349,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         _IDF_ENV_CACHE = None
 
     say(rule("="))
-    say(bold("小智固件多版型编译 / 烧录入口 (hardware/sets)"))
+    say(bold("小智固件多版型编译 (hardware/sets/build.py)"))
     say(rule("="))
 
     boards, broken = discover_boards()
@@ -1607,16 +1389,6 @@ def main(argv: Optional[list[str]] = None) -> int:
             say(f"    {candidate}")
         return EXIT_ENV
     say(f"  固件根目录: {fw_root}")
-
-    # --flash-only：跳过同步 / 注册 / 编译，直接烧录上一次的产物
-    if args.flash_only:
-        idf_error = check_idf_env()
-        if idf_error:
-            notice_bad(idf_error)
-            print_idf_help()
-            return EXIT_ENV
-        announce_idf_env()
-        return flash_to_device(fw_root, selected, args)
 
     try:
         target = sync_board(selected, fw_root)
@@ -1658,22 +1430,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             notice_bad(f"归档失败（编译结果仍然有效）: {error}")
             return EXIT_ERROR
 
-    # ---- 烧录（可选） ----
-    if args.no_flash:
-        say()
-        say("--no-flash：跳过烧录")
-        say(f"        需要时执行：python hardware/sets/build.py --board {selected['id']} --flash-only")
-    elif args.flash or ask_flash(selected):
-        flash_rc = flash_to_device(fw_root, selected, args)
-        if flash_rc != EXIT_OK:
-            return flash_rc
-    else:
-        say()
-        say("未烧录。需要时执行：")
-        say(f"        python hardware/sets/build.py --board {selected['id']} --flash-only")
-
+    # ---- 收尾：本脚本只编译，烧录交给 flash.py ----
     say()
-    notice_ok(f"全部完成：{selected['id']} — {selected['name']}")
+    notice_ok(f"编译完成：{selected['id']} — {selected['name']}")
+    say("烧录（独立脚本，含多线程串口探测）：")
+    say(f"        python hardware/sets/flash.py --board {selected['id']}")
+    say(f"        只看有哪些设备在线：python hardware/sets/flash.py --list")
     say("提示：下次切换到其它版型时，请先删除 <FW>\\build 再全量重编（sdkconfig 会变）。")
     return EXIT_OK
 
