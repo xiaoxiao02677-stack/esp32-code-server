@@ -1,0 +1,16 @@
+{
+  "id": "yh-n16r8-st7789",
+  "name": "第一代小方块（ESP32-S3-N16R8 / ST7789）",
+  "description": "ST7789 240x240 + MAX98357A + INMP441，无 codec 直驱 I2S",
+  "manufacturer": "yuhe",
+  "target": "esp32s3",
+  "board_dir": "yuhe/yh-n16r8-st7789",
+  "kconfig_symbol": "BOARD_TYPE_YUHE_SET_N16R8_ST7789",
+  "kconfig_prompt": "Yuhe N16R8 ST7789 (sets)",
+  "text_font": "font_noto_sans_basic_20_4",
+  "icon_font": "font_material_symbols_20_4",
+  "build_name": "yh-n16r8-st7789",
+  "sdkconfig_append": [],
+  "pins_verified": true,
+  "notes": "按键引脚资料未给，BOOT 默认 GPIO0、音量键未接；LED 引脚资料未给，未实现（走 NoLed）；SSD1306 备用屏未实现；无电池检测"
+}

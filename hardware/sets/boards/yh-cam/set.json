@@ -1,0 +1,16 @@
+{
+  "id": "yh-cam",
+  "name": "屿禾 AI Camera（摄像头版）",
+  "description": "ESP32-S3 + OV2640 + ES8311/ES7210 + ST7789 320x240，带 AEC 回采",
+  "manufacturer": "yuhe",
+  "target": "esp32s3",
+  "board_dir": "yuhe/yh-cam",
+  "kconfig_symbol": "BOARD_TYPE_YUHE_SET_CAM",
+  "kconfig_prompt": "Yuhe AI Camera (sets)",
+  "text_font": "font_noto_sans_basic_20_4",
+  "icon_font": "font_material_symbols_20_4",
+  "build_name": "yh-cam",
+  "sdkconfig_append": [],
+  "pins_verified": true,
+  "notes": "功放由 PCA9557 P1 控制；LCD 无 CS/RST，RST 由 PCA9557 P0 软控；背光反相；ES8311/ES7210 用 8-bit 地址形式而 PCA9557 用 7-bit，别混"
+}

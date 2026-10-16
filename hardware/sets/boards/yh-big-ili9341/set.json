@@ -1,0 +1,16 @@
+{
+  "id": "yh-big-ili9341",
+  "name": "第二代大屏幕（ILI9341 2.8 寸 + ES8311）",
+  "description": "ESP32-S3 + ILI9341 2.8\" SPI 屏 320x240 + ES8311，引脚全部为推测值，未经实物核实",
+  "manufacturer": "yuhe",
+  "target": "esp32s3",
+  "board_dir": "yuhe/yh-big-ili9341",
+  "kconfig_symbol": "BOARD_TYPE_YUHE_SET_BIG_ILI9341",
+  "kconfig_prompt": "Yuhe BigScreen ILI9341 + ES8311 (sets) - PINS UNVERIFIED",
+  "text_font": "font_noto_sans_basic_20_4",
+  "icon_font": "font_material_symbols_20_4",
+  "build_name": "yh-big-ili9341",
+  "sdkconfig_append": [],
+  "pins_verified": false,
+  "notes": "【引脚未经实物核实，烧录前必须对照原理图】来源资料自述 GPIO 可信度低且多处冲突：GPIO7 在资料中同时归属 I2S DIN 与 LCD MOSI，GPIO6 同时归属 LCD DC 与 SCK，已按「I2S 优先」重新分配。自行补充/修改的引脚：I2S DOUT GPIO7→GPIO10（资料未给出）；LCD MOSI GPIO7→GPIO11（让给 I2S DIN）；LCD SCK GPIO6→GPIO12（避让 LCD DC）；LCD MISO GPIO1→NC（ILI9341 无需读回，且与触摸 SDA 候选冲突）；ES8311 I2C SDA/SCL 取自资料触摸候选集 GPIO8/GPIO9；背光 GPIO14、板载 LED GPIO48 均为纯推测。刻意未实现：I2C 触摸（资料记录 touch ic error!）、SD 卡（引脚与 LCD/I2S 冲突）。"
+}

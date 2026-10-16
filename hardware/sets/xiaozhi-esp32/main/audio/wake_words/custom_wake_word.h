@@ -1,0 +1,96 @@
+#ifndef CUSTOM_WAKE_WORD_H
+#define CUSTOM_WAKE_WORD_H
+
+#include <esp_attr.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <esp_mn_iface.h>
+#include <esp_mn_models.h>
+#include <model_path.h>
+
+#include <deque>
+#include <string>
+#include <vector>
+#include <functional>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+
+#include "audio_codec.h"
+#include "wake_word.h"
+#include "wake_word_audio_cache.h"
+
+class CustomWakeWord : public WakeWord {
+public:
+    CustomWakeWord();
+    ~CustomWakeWord();
+
+    bool Initialize(AudioCodec* codec, srmodel_list_t* models_list);
+    void Feed(const std::vector<int16_t>& data);
+    void FeedMono(const int16_t* data, size_t samples);
+    void OnWakeWordDetected(std::function<void(const std::string& wake_word)> callback);
+    void Start();
+    void Stop();
+    size_t GetFeedSize();
+    void EncodeWakeWordData();
+    bool GetWakeWordOpus(std::vector<uint8_t>& opus);
+    const std::string& GetLastDetectedWakeWord() const { return last_detected_wake_word_; }
+
+    // 服务器下发动态唤醒词：用拼音短语热更新命令表（不打断运行中的检测，
+    // 在 input_buffer_mutex_ 保护下原子替换；拼音为空则回退默认命令表）。
+    // 返回是否真正发生了变更。
+    bool UpdateCommands(const std::vector<std::string>& pinyin_texts, const std::vector<std::string>& display_texts);
+    // 当前命令表快照（text 列表）
+    std::vector<std::string> GetCommandTexts() const;
+
+    // 清空云端下发的唤醒词：恢复 index.json/Kconfig 默认命令表，并删除
+    // NVS("wakeword") 中的 pinyins/displays 缓存（重启后仍为默认词）。
+    // 返回是否成功恢复（默认表为空或引擎未初始化时返回 false）。
+    bool ClearWakeWordCommands();
+
+    // 服务器动态调整唤醒词参数（阈值 1-100，时长 500-5000ms）
+    void SetThreshold(float threshold);
+    void SetDuration(int duration);
+
+private:
+    struct Command {
+        std::string command;
+        std::string text;
+        std::string action;
+    };
+
+    // multinet 相关成员变量
+    esp_mn_iface_t* multinet_ = nullptr;
+    model_iface_data_t* multinet_model_data_ = nullptr;
+    srmodel_list_t *models_ = nullptr;
+    bool owns_models_ = false;
+    char* mn_name_ = nullptr;
+    std::string language_ = "cn";
+    int duration_ = 3000;
+    float threshold_ = 0.2;
+    std::deque<Command> commands_;
+    // 默认命令表快照（index.json 或 Kconfig CONFIG_CUSTOM_WAKE_WORD 解析结果），
+    // Initialize 时在 NVS 覆盖前暂存，供 ClearWakeWordCommands() 恢复默认唤醒词
+    std::deque<Command> default_commands_;
+ 
+    std::function<void(const std::string& wake_word)> wake_word_detected_callback_;
+    AudioCodec* codec_ = nullptr;
+    std::string last_detected_wake_word_;
+    std::atomic<bool> running_ = false;
+    std::vector<int16_t> input_buffer_;
+    // mutable：const 成员函数（GetCommandTexts）也需要加锁读命令表
+    mutable std::mutex input_buffer_mutex_;
+
+    TaskHandle_t wake_word_encode_task_ = nullptr;
+    StaticTask_t* wake_word_encode_task_buffer_ = nullptr;
+    StackType_t* wake_word_encode_task_stack_ = nullptr;
+    WakeWordAudioCache wake_word_audio_cache_;
+    std::deque<std::vector<uint8_t>> wake_word_opus_;
+    std::mutex wake_word_mutex_;
+    std::condition_variable wake_word_cv_;
+
+    void FeedSamples(const int16_t* data, size_t samples, bool mono);
+    void ParseWakenetModelConfig();
+};
+
+#endif
