@@ -804,7 +804,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
     /** 写入 ai_device_config 的 wallpaper 子对象（固件下次启动读取的完整字段） */
     private Map<String, Object> configWallpaper(WallpaperEntity wallpaper) {
         Map<String, Object> value = new LinkedHashMap<>();
-        value.put("version", WALLPAPER_VERSION);
+        value.put("version", wallpaperVersion(wallpaper));
         value.put("url", wallpaper.getUrl());
         value.put("md5", wallpaper.getMd5());
         value.put("size", wallpaper.getSize());
@@ -818,11 +818,21 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
     /** Python 即时通道契约对象（字段与 §4.9 契约严格一致） */
     private Map<String, Object> pythonWallpaper(WallpaperEntity wallpaper) {
         Map<String, Object> value = new LinkedHashMap<>();
-        value.put("version", WALLPAPER_VERSION);
+        value.put("version", wallpaperVersion(wallpaper));
         value.put("url", wallpaper.getUrl());
         value.put("md5", wallpaper.getMd5());
         value.put("size", wallpaper.getSize());
         value.put("format", wallpaper.getFormat());
         return value;
+    }
+
+    /**
+     * 壁纸版本号（固件幂等判据）：按内容寻址，version 相同 = 同一张图。
+     * 若用固定常量，固件在收到第二张不同壁纸时会因 version 未变而跳过下载，
+     * 导致换图永远不生效；md5 派生后「同图重复下发 → 幂等跳过，换图 → 必下载」。
+     */
+    private String wallpaperVersion(WallpaperEntity wallpaper) {
+        String md5 = wallpaper.getMd5();
+        return (md5 == null || md5.isBlank()) ? WALLPAPER_VERSION : WALLPAPER_VERSION + "-" + md5;
     }
 }
