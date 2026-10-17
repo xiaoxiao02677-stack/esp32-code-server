@@ -1234,10 +1234,10 @@ def render_report(pairs: list[FilePair], features: list[Feature], q7: Q7Result, 
                "`round_screen_display.cc` / `lcd_display.cc` 四个 TU `-fsyntax-only` 均 rc=0；"
                "再对 `wallpaper_manager.cc` 与 `application.cc` 追加 `-DCONFIG_USE_EMOTE_MESSAGE_STYLE=1` "
                "做 `-fsyntax-only`，两者同样 rc=0 —— 即 emote 语义下的头文件链与条件闸可解析。"
-               "**仍 `未跑 idf.py build`**，故本条标“静态核对”。")
+               "**仍未跑 `idf.py build`**，故本条标“静态核对”。")
     out.append("")
-    out.append("**残留**：建议构建矩阵至少跑一次 `esp-vocat` 与 `esp-sensairshuttle` 确认无 "
-               "`SetWallpaper` 相关错误。该项不影响同源审计结论"
+    out.append("**残留**：全量构建矩阵（`esp-vocat` / `esp-sensairshuttle`）仍待执行，跑通后可将本条升级为"
+               "“已构建验证”。该项不影响同源审计结论"
                "（`display/display.h` 的差异已按需求白名单化）。")
     out.append("")
     out.append("## 12. 备注")
