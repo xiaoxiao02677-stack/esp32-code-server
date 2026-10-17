@@ -120,7 +120,13 @@ WHITELIST: dict[str, dict] = {
     # ---- 服务端侧信道修复 ----
     "yh/yh_protocol.cc": {
         "kinds": {"DIFF"},
-        "reason": "G4 修复，A+B 同步打补丁；两端一致时本条目不会命中（保留以便分批落地期间重跑）",
+        "reason": "G4 修复（SEND_NOTIFY busy → NACKED/BUSY，A+B 同步）；需求二追加 SET_WALLPAPER 操作"
+                  "（B 独有：常连 TCP 通道下发壁纸，A 无壁纸模块）——本条同时覆盖两类差异",
+    },
+    "yh/yh_protocol.h": {
+        "kinds": {"DIFF"},
+        "reason": "需求二 SET_WALLPAPER 关联头文件：新增 SendWallpaperResult 公开接口与发送互斥锁，"
+                  "仅 B 有壁纸模块（A 侧保留原样）",
     },
     # ---- 需求二：壁纸模块（B 独有）----
     "wallpaper/**": {

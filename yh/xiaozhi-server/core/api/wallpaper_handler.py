@@ -8,11 +8,14 @@
 import json
 import logging
 
+from core.utils.stdlib_log_bridge import install_stdlib_log_bridge
+
 from aiohttp import web
 
 from core.api.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
+install_stdlib_log_bridge(__name__)
 TAG = __name__
 
 
@@ -98,7 +101,11 @@ class WallpaperHandler(BaseHandler):
             return _json_response(
                 0,
                 "success",
-                data={"sent": result["sent"], "offline": result["offline"]},
+                data={
+                    "sent": result["sent"],
+                    "queued": result.get("queued", []),
+                    "offline": result["offline"],
+                },
             )
         except json.JSONDecodeError:
             return _json_response(400, "请求体 JSON 解析失败", status=400)

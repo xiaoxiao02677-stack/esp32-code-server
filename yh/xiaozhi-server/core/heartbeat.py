@@ -56,6 +56,9 @@ class HeartbeatServer:
         # device_id -> asyncio StreamWriter（仅 TCP 连接；设备换连接/断开时更新/清理）
         # 用于下行推送：COMMAND SEND_NOTIFY 等直接经心跳 TCP 通道下发
         self.writers = {}
+        # 壁纸回执落库回调：由 app.py 注入，签名 (device_id, payload) -> Awaitable|None
+        # 固件执行 SET_WALLPAPER 后经本通道回 {"type":"wallpaper","action":"result",...}
+        self.wallpaper_ack_sink = None
         self._tcp_server = None
         self._udp_transport = None
         # WebSocket 通道旁的 UDP 心跳端口：固件 websocket_protocol.cc 中
@@ -245,12 +248,40 @@ class HeartbeatServer:
                 f"收到{msg_type} [{device_id or peer_str}] status={status} "
                 f"error={error_code} command_id={command_id}"
             )
+        elif msg_type == "wallpaper":
+            # 固件经本常连通道回壁纸执行结果（设备空闲时 WS 不保持，只能走这里）
+            self._handle_wallpaper_result(device_id or peer_str, msg)
         else:
             # 其他类型：仅记录，不回包
             self.logger.bind(tag=TAG).debug(
                 f"收到消息[{msg_type or '未知类型'}] 来自 {peer_str}"
             )
         return device_id or None
+
+    def _handle_wallpaper_result(self, device_id: str, msg: dict) -> None:
+        """壁纸执行结果（TCP 通道）→ 落 Redis 回执，供 manager-api 任务详情汇总。"""
+        payload = {
+            "version": str(msg.get("version", "")),
+            "status": str(msg.get("status", "")),
+            "reason": str(msg.get("reason", "")),
+            "ts": int(time.time() * 1000),
+        }
+        self.logger.bind(tag=TAG).info(
+            f"收到壁纸回执 [{device_id}] version={payload['version']} "
+            f"status={payload['status']} reason={payload['reason']}"
+        )
+        sink = self.wallpaper_ack_sink
+        if sink is None:
+            self.logger.bind(tag=TAG).info(
+                f"壁纸回执未落库（未注入 sink）: {payload}"
+            )
+            return
+        try:
+            result = sink(device_id, payload)
+            if asyncio.iscoroutine(result):
+                asyncio.create_task(result)
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(f"壁纸回执落库失败: {e}")
 
     def _tcp_send(self, writer, data: bytes):
         try:

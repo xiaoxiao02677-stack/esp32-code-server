@@ -361,8 +361,13 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
                 row.setError(ERROR_PUSH_UNREACHABLE);
             } else if (result.isOffline(mac)) {
                 row.setStatus(STATUS_PENDING);
-                // offline 含「WS 离线 / need_bind / MQTT 网关代连」三类，文案不能承诺下次启动一定生效
+                // offline 含「need_bind / MQTT 网关代连」两类，文案不能承诺下次启动一定生效
                 row.setError("设备非直连在线（离线/未绑定/MQTT 网关），配置已落库；直连在线后生效");
+            } else if (result.isQueued(mac)) {
+                row.setStatus(STATUS_PENDING);
+                // queued：设备仅心跳在线、文本通道（WS）未建立；Python 已入离线补投队列，
+                // 设备文本通道建立后自动下发并回执（device_config 路径同时保底）
+                row.setError("设备文本通道未就绪（心跳在线），已排队；设备上线后自动下发，下次启动亦会生效");
             } else {
                 row.setStatus(STATUS_SENT);
                 row.setError(null);

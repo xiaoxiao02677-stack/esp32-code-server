@@ -26,9 +26,12 @@ TODO(P1-3): xiaozhi-server 目前无 Redis 依赖，如需启用回执查询，
 """
 import json
 import logging
+
+from core.utils.stdlib_log_bridge import install_stdlib_log_bridge
 import time
 
 logger = logging.getLogger(__name__)
+install_stdlib_log_bridge(__name__)
 
 TAG = __name__
 

@@ -1,5 +1,6 @@
 #include "yh_protocol.h"
 #include "yh_ws2812_led.h"
+#include "wallpaper/wallpaper_manager.h"
 
 #include <application.h>
 #include <board.h>
@@ -47,9 +48,12 @@ constexpr const char* kErrMalformedMessage = "MALFORMED_MESSAGE";
 // 设备非 idle（listening/speaking/notifying/activating 等）拒绝 SEND_NOTIFY
 constexpr const char* kErrBusy = "BUSY";
 
-// 当前白名单：SET_LED + SEND_NOTIFY
+// 当前白名单：SET_LED + SEND_NOTIFY + SET_WALLPAPER
+// SET_WALLPAPER 走本常连通道下发：设备空闲时 WS 不保持（按次会话），
+// 只有本通道在线，壁纸需经此投递；执行结果另行以 type=wallpaper 回执。
 bool IsKnownOperation(const char* op) {
-    return strcmp(op, "SET_LED") == 0 || strcmp(op, "SEND_NOTIFY") == 0;
+    return strcmp(op, "SET_LED") == 0 || strcmp(op, "SEND_NOTIFY") == 0 ||
+           strcmp(op, "SET_WALLPAPER") == 0;
 }
 
 std::string MakeSessionId() {
@@ -210,10 +214,11 @@ void YhProtocol::Connect() {
     auto* ops = cJSON_AddArrayToObject(adv.get(), "operations");
     cJSON_AddItemToArray(ops, cJSON_CreateString("SET_LED"));
     cJSON_AddItemToArray(ops, cJSON_CreateString("SEND_NOTIFY"));
+    cJSON_AddItemToArray(ops, cJSON_CreateString("SET_WALLPAPER"));
     if (!SendJson(adv.get())) {
         return;
     }
-    ESP_LOGI(TAG, ">>> ADVERTISEMENT sent [SET_LED, SEND_NOTIFY]");
+    ESP_LOGI(TAG, ">>> ADVERTISEMENT sent [SET_LED, SEND_NOTIFY, SET_WALLPAPER]");
 
     // HEARTBEAT 定时器（30s）
     if (heartbeat_timer_ == nullptr) {
@@ -251,6 +256,7 @@ void YhProtocol::Disconnect() {
 // ---------------------------------------------------------------------------
 
 bool YhProtocol::SendJson(cJSON* root) {
+    std::lock_guard<std::mutex> lock(send_mutex_);
     if (tcp_ == nullptr || state_ != State::kOnline) {
         return false;
     }
@@ -269,6 +275,42 @@ bool YhProtocol::SendJson(cJSON* root) {
         return false;
     }
     return true;
+}
+
+// 壁纸执行结果回执：{"type":"wallpaper","action":"result",...}
+// 走本常连通道（设备空闲时 WS 不保持）；失败只记日志，不触发重连
+// （壁纸失败不应影响设备管理通道本身）。
+void YhProtocol::SendWallpaperResult(const std::string& version, bool ok,
+                                     const std::string& reason) {
+    std::lock_guard<std::mutex> lock(send_mutex_);
+    if (tcp_ == nullptr || state_ != State::kOnline) {
+        ESP_LOGW(TAG, "wallpaper: result dropped (channel offline) version=%s status=%s",
+                 version.c_str(), ok ? "ok" : "fail");
+        return;
+    }
+    auto root = CJsonUniquePtr(cJSON_CreateObject());
+    cJSON_AddStringToObject(root.get(), "type", "wallpaper");
+    cJSON_AddStringToObject(root.get(), "action", "result");
+    cJSON_AddStringToObject(root.get(), "device_id", device_id_.c_str());
+    cJSON_AddStringToObject(root.get(), "version", version.c_str());
+    cJSON_AddStringToObject(root.get(), "status", ok ? "ok" : "fail");
+    if (!ok && !reason.empty()) {
+        cJSON_AddStringToObject(root.get(), "reason", reason.c_str());
+    }
+    CJsonStringUniquePtr payload(cJSON_PrintUnformatted(root.get()));
+    if (payload == nullptr) {
+        return;
+    }
+    std::string line(payload.get());
+    line += '\n';
+    int sent = static_cast<Tcp*>(tcp_)->Send(line);
+    if (sent < 0) {
+        ESP_LOGW(TAG, "wallpaper: result send failed (errno=%d) version=%s", -sent,
+                 version.c_str());
+        return;
+    }
+    ESP_LOGI(TAG, ">>> wallpaper result sent version=%s status=%s reason=%s",
+             version.c_str(), ok ? "ok" : "fail", reason.c_str());
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +489,53 @@ void YhProtocol::HandleCommand(cJSON* root) {
             Application::GetInstance().NotifyAudio(audio_url, subtitles);
         });
         SendCommandAck(root, true, kErrNone);
+    } else if (strcmp(op->valuestring, "SET_WALLPAPER") == 0) {
+        // 壁纸下发（服务端在设备无 WS 连接时改经本常连通道投递）。
+        // parameters: {version,url,md5,size?,format?,width?,height?}
+        if (!cJSON_IsObject(params)) {
+            ESP_LOGE(TAG, "[ERR] INVALID_PARAMETERS: SET_WALLPAPER requires parameters object");
+            SendCommandAck(root, false, kErrInvalidParameters);
+            return;
+        }
+        const cJSON* j_version = cJSON_GetObjectItem(params, "version");
+        const cJSON* j_url = cJSON_GetObjectItem(params, "url");
+        const cJSON* j_md5 = cJSON_GetObjectItem(params, "md5");
+        if (!cJSON_IsString(j_version) || !cJSON_IsString(j_url) ||
+            !cJSON_IsString(j_md5) || j_url->valuestring[0] == '\0' ||
+            j_md5->valuestring[0] == '\0') {
+            ESP_LOGE(TAG, "[ERR] INVALID_PARAMETERS: SET_WALLPAPER requires {version,url,md5}");
+            SendCommandAck(root, false, kErrInvalidParameters);
+            return;
+        }
+        WallpaperRequest request;
+        request.version = j_version->valuestring;
+        request.url = j_url->valuestring;
+        request.md5 = j_md5->valuestring;
+        const cJSON* j_size = cJSON_GetObjectItem(params, "size");
+        if (cJSON_IsNumber(j_size)) {
+            request.size = j_size->valueint;
+        }
+        const cJSON* j_width = cJSON_GetObjectItem(params, "width");
+        if (cJSON_IsNumber(j_width)) {
+            request.width = j_width->valueint;
+        }
+        const cJSON* j_height = cJSON_GetObjectItem(params, "height");
+        if (cJSON_IsNumber(j_height)) {
+            request.height = j_height->valueint;
+        }
+        const cJSON* j_format = cJSON_GetObjectItem(params, "format");
+        request.format = cJSON_IsString(j_format) ? j_format->valuestring : "rgb565";
+        ESP_LOGI(TAG, "<<< COMMAND SET_WALLPAPER [%s] version=%s size=%d",
+                 cmd_id->valuestring, request.version.c_str(), request.size);
+        // 先回执「已受理」：下载/校验/应用在壁纸后台任务完成，结果另行以
+        // type=wallpaper 回执（不阻塞本通道的接收任务）。
+        SendCommandAck(root, true, kErrNone);
+        const std::string ack_version = request.version;
+        WallpaperManager::GetInstance().HandleSet(
+            request, [ack_version](bool ok, const std::string& reason) {
+                YhProtocol::GetInstance().SendWallpaperResult(ack_version, ok, reason);
+            });
+        return;
     }
 }
 

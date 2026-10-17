@@ -104,22 +104,26 @@ public class WallpaperDispatchClient {
     }
 
     /**
-     * 解析 {"code":0,"data":{"sent":[...],"offline":[...]}}；解析失败按「已受理但未区分」处理
+     * 解析 {"code":0,"data":{"sent":[...],"queued":[...],"offline":[...]}}；
+     * queued 为旧版 Python 不存在的字段（解析不到视为空集合，兼容回退）；
+     * 解析失败按「已受理但未区分」处理
      */
     private DispatchResult parseResult(String responseBody) {
         Set<String> sent = new HashSet<>();
+        Set<String> queued = new HashSet<>();
         Set<String> offline = new HashSet<>();
         try {
             Map<String, Object> root = JsonUtils.parseMap(responseBody);
             Object data = root == null ? null : root.get("data");
             if (data instanceof Map<?, ?> dataMap) {
                 collectMacs(dataMap.get("sent"), sent);
+                collectMacs(dataMap.get("queued"), queued);
                 collectMacs(dataMap.get("offline"), offline);
             }
         } catch (Exception e) {
             log.warn("[wallpaper] 即时下发响应解析失败: {}", e.getMessage());
         }
-        return new DispatchResult(true, sent, offline);
+        return new DispatchResult(true, sent, queued, offline);
     }
 
     private void collectMacs(Object value, Set<String> target) {
@@ -132,21 +136,24 @@ public class WallpaperDispatchClient {
         }
     }
 
-    /** 即时通道受理结果：sent 为已推送在线设备，offline 为离线设备（等下次启动） */
+    /** 即时通道受理结果：sent 已推送；queued 已入离线补投队列（设备上线自动下发）；offline 仅落 device_config */
     public static final class DispatchResult {
 
         private final boolean accepted;
         private final Set<String> sentMacs;
+        private final Set<String> queuedMacs;
         private final Set<String> offlineMacs;
 
-        DispatchResult(boolean accepted, Set<String> sentMacs, Set<String> offlineMacs) {
+        DispatchResult(boolean accepted, Set<String> sentMacs,
+                       Set<String> queuedMacs, Set<String> offlineMacs) {
             this.accepted = accepted;
             this.sentMacs = sentMacs;
+            this.queuedMacs = queuedMacs;
             this.offlineMacs = offlineMacs;
         }
 
         static DispatchResult rejected() {
-            return new DispatchResult(false, Set.of(), Set.of());
+            return new DispatchResult(false, Set.of(), Set.of(), Set.of());
         }
 
         public boolean isAccepted() {
@@ -158,7 +165,12 @@ public class WallpaperDispatchClient {
             return mac != null && sentMacs.contains(mac.toLowerCase());
         }
 
-        /** mac 是否离线（Python 未找到在线连接） */
+        /** mac 是否已入离线补投队列（设备文本通道上线后自动下发） */
+        public boolean isQueued(String mac) {
+            return mac != null && queuedMacs.contains(mac.toLowerCase());
+        }
+
+        /** mac 是否离线（need_bind / MQTT 网关等无法直投） */
         public boolean isOffline(String mac) {
             return mac != null && offlineMacs.contains(mac.toLowerCase());
         }

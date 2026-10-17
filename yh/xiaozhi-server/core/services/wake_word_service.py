@@ -25,6 +25,10 @@ class WakeWordService:
     def set_heartbeat_server(self, heartbeat_server) -> None:
         self.heartbeat_server = heartbeat_server
 
+    def set_wallpaper_service(self, wallpaper_service) -> None:
+        """注入壁纸服务：设备文本通道建立时回调其离线补投钩子。"""
+        self._wallpaper_service = wallpaper_service
+
     async def register_connection(self, device_id: str, conn: object) -> None:
         async with self._lock:
             self._connections[device_id] = conn
@@ -43,6 +47,13 @@ class WakeWordService:
                 # 发送失败的重新入队，等待下次上线或重试
                 async with self._lock:
                     self._offline_queue.setdefault(device_id, []).extend(failed)
+        # 壁纸离线补投钩子（失败自处理，不影响唤醒词流程）
+        wallpaper = getattr(self, "_wallpaper_service", None)
+        if wallpaper is not None:
+            try:
+                await wallpaper.on_connection_registered(device_id, conn)
+            except Exception as e:
+                logger.warning(f"壁纸补投钩子异常（不影响设备上线流程）: {e}")
 
     async def unregister_connection(self, device_id: str) -> None:
         async with self._lock:

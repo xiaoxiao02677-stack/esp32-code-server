@@ -86,6 +86,8 @@ async def main():
     from core.services.wallpaper_service import WallpaperService
     wallpaper_service = WallpaperService()
     wallpaper_service.bind_connections_provider(ws_server.wake_word_service.get_connections)
+    # 壁纸离线补投：设备文本通道建立（hello）时自动补投排队指令
+    ws_server.wake_word_service.set_wallpaper_service(wallpaper_service)
     ota_server.set_wallpaper_service(wallpaper_service)
     # 注入 TopicGenerator（话题源随机聊天功能）
     from core.services.topic_generator import TopicGenerator
@@ -106,6 +108,17 @@ async def main():
     heartbeat_server = HeartbeatServer(config)
     heartbeat_task = asyncio.create_task(heartbeat_server.start())
     ws_server.wake_word_service.set_heartbeat_server(heartbeat_server)
+
+    # 壁纸：无 WS 时经心跳 TCP 通道兜底下发；固件经该通道回的 result 落 Redis 回执
+    wallpaper_service.bind_wake_word_service(ws_server.wake_word_service)
+    try:
+        from core.utils.wallpaper_ack import save_ack as _save_wallpaper_ack
+
+        heartbeat_server.wallpaper_ack_sink = (
+            lambda device_id, payload: _save_wallpaper_ack(config, device_id, payload)
+        )
+    except Exception as e:  # 回执落库不可用不影响下发
+        logger.bind(tag=TAG).warning(f"壁纸回执 sink 注入失败: {e}")
 
     read_config_from_api = config.get("read_config_from_api", False)
     port = int(config["server"].get("http_port", 8003))

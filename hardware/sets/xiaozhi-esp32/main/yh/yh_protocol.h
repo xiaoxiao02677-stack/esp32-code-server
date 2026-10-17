@@ -2,6 +2,7 @@
 #define YH_PROTOCOL_H
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 
 // YH Device Protocol v1 适配层。
@@ -22,6 +23,11 @@ public:
     void Start();
     // 立即断开并停止重连（OTA 升级 / 深度逻辑需要时调用）。
     void Stop();
+
+    // 壁纸执行结果回执（SET_WALLPAPER 异步下载/应用完成后调用）。
+    // 走本通道（TCP 12399，常连）而非 WS：设备空闲时 WS 不保持，只有本通道在线。
+    // 线程安全：可从壁纸后台任务上下文调用（内部加锁；失败只记日志不触发重连）。
+    void SendWallpaperResult(const std::string& version, bool ok, const std::string& reason);
 
 private:
     YhProtocol();
@@ -48,6 +54,7 @@ private:
 
     // ---- 发送 ----
     bool SendJson(class cJSON* root);  // 序列化 + '\n' + Send；失败触发重连
+    std::mutex send_mutex_;            // 保护 tcp_->Send：RECV 任务与壁纸任务并发调用
 
     // ---- 入站处理（EspTcp 接收任务上下文） ----
     void OnStreamData(const std::string& data);   // 累积 + '\n' 分帧
