@@ -144,6 +144,14 @@ const API_CATALOG = {
       {m:"uploadFirmware",h:"POST",p:"/otaMag/upload",s:"上传固件",pa:"file(body)"},
       {m:"getDownloadUrl",h:"GET",p:"/otaMag/getDownloadUrl/${id}",s:"固件下载链接",pa:"id(路径)"}
     ]},
+    "wallpaper": {zh:"壁纸下发",icon:"system",apis:[
+      {m:"getWallpaperPage",h:"GET",p:"/wallpaperMag",s:"壁纸分页列表",pa:"page,limit,keyword(query)"},
+      {m:"uploadWallpaper",h:"POST",p:"/wallpaperMag/upload",s:"上传壁纸",pa:"file,name(formData)"},
+      {m:"deleteWallpaper",h:"DELETE",p:"/wallpaperMag/${id}",s:"删除壁纸",pa:"id(路径)"},
+      {m:"dispatchWallpaper",h:"POST",p:"/wallpaperMag/dispatch",s:"下发壁纸到目标设备",pa:"wallpaperId,targetType,deviceIds,agentIds,applyMode(body)"},
+      {m:"getWallpaperTask",h:"GET",p:"/wallpaperMag/task/${taskId}",s:"查询下发任务进度",pa:"taskId(路径)"},
+      {m:"retryWallpaperTask",h:"POST",p:"/wallpaperMag/task/${taskId}/retry",s:"重试失败设备",pa:"taskId(路径),deviceIds(body)"}
+    ]},
     "addressBook": {zh:"通讯录",icon:"contact",apis:[
       {m:"getAddressBookList",h:"GET",p:"/device/address-book/${macAddress}",s:"设备通讯录列表",pa:"macAddress(路径)"},
       {m:"updateAlias",h:"PUT",p:"/device/address-book/alias",s:"更新联系人别名",pa:"data(body)"},

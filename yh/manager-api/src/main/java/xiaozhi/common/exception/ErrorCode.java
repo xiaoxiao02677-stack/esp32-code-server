@@ -279,4 +279,9 @@ public interface ErrorCode {
     int PARAM_CODE_EXISTS = 10205; // 参数编码已存在
     int PARAM_NOT_EXIST = 10206; // 参数不存在
     int PARAM_BUILTIN_DELETE_FORBIDDEN = 10207; // 内置参数不可删除
+
+    // 壁纸管理相关错误码（P1-3）
+    int WALLPAPER_NOT_FOUND = 10401; // 壁纸不存在
+    int WALLPAPER_DEVICE_UNREACHABLE = 10402; // 设备不可达
+    int WALLPAPER_FORMAT_INVALID = 10403; // 壁纸格式或大小超限
 }

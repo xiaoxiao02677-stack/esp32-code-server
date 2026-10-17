@@ -78,6 +78,8 @@ public class ShiroConfig {
         Map<String, String> filterMap = new LinkedHashMap<>();
         filterMap.put("/ota/**", "anon");
         filterMap.put("/otaMag/download/**", "anon");
+        // 壁纸转码产物需固件匿名下载（P1-3）
+        filterMap.put("/wallpaperMag/download/**", "anon");
         filterMap.put("/webjars/**", "anon");
         filterMap.put("/druid/**", "anon");
         filterMap.put("/v3/api-docs/**", "anon");

@@ -12,5 +12,5 @@
   "build_name": "yh-n16r8-st7789",
   "sdkconfig_append": [],
   "pins_verified": true,
-  "notes": "按键引脚资料未给，BOOT 默认 GPIO0、音量键未接；LED 引脚资料未给，未实现（走 NoLed）；SSD1306 备用屏未实现；无电池检测"
+  "notes": "圆屏皮肤版：RoundScreenDisplay（240x240 时间/电量/表情/气泡/提示 + good.jpg 背景），BOOT 键三事件（短按对话/双击表情彩蛋/长按待机静音·配网）、1 秒节拍（夜间睡觉·早晨问好），PWM 背光 GPIO42；本板无电池检测，电量区隐藏不显示 0%；按键引脚资料未给，BOOT 默认 GPIO0、音量键未接；LED 引脚资料未给，未实现（走 NoLed）；SSD1306 备用屏未实现"
 }

@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "system_info.h"
 #include "text_glyph_payload.h"
+#include "wallpaper/wallpaper_manager.h"
 #include "websocket_protocol.h"
 
 #ifdef CONFIG_YH_PROTOCOL_ENABLED
@@ -25,6 +26,63 @@
 #include <limits>
 
 #define TAG "Application"
+
+namespace {
+
+// 壁纸字段解析：WS 的 {"type":"wallpaper",...} 与 device_config.payload.wallpaper 同构
+WallpaperRequest ParseWallpaperRequest(const cJSON* object, bool from_config) {
+    WallpaperRequest request;
+    request.from_config = from_config;
+    if (object == nullptr) {
+        return request;
+    }
+    auto version = cJSON_GetObjectItem(object, "version");
+    if (cJSON_IsString(version)) {
+        request.version = version->valuestring;
+    }
+    auto url = cJSON_GetObjectItem(object, "url");
+    if (cJSON_IsString(url)) {
+        request.url = url->valuestring;
+    }
+    auto md5 = cJSON_GetObjectItem(object, "md5");
+    if (cJSON_IsString(md5)) {
+        request.md5 = md5->valuestring;
+    }
+    auto format = cJSON_GetObjectItem(object, "format");
+    if (cJSON_IsString(format)) {
+        request.format = format->valuestring;
+    }
+    auto size = cJSON_GetObjectItem(object, "size");
+    if (cJSON_IsNumber(size)) {
+        request.size = static_cast<int>(size->valuedouble);
+    }
+    auto width = cJSON_GetObjectItem(object, "width");
+    if (cJSON_IsNumber(width)) {
+        request.width = static_cast<int>(width->valuedouble);
+    }
+    auto height = cJSON_GetObjectItem(object, "height");
+    if (cJSON_IsNumber(height)) {
+        request.height = static_cast<int>(height->valuedouble);
+    }
+    return request;
+}
+
+// 回执里的字符串只允许来自服务端标识（version/reason），仍做最小转义防破坏 JSON
+std::string EscapeJson(const std::string& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (char c : value) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+            out.push_back(c);
+        } else if (static_cast<unsigned char>(c) >= 0x20) {
+            out.push_back(c);
+        }
+    }
+    return out;
+}
+
+}  // namespace
 
 // 人声打断的播放起始保护窗（毫秒）。TTS 刚开始播放时 AEC 还没有收敛，codec 起停
 // 也会产生瞬态，此时设备自己的声音会被 VAD 判成用户说话，导致播报被自己掐断
@@ -378,6 +436,8 @@ void Application::Run() {
 
 void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
+    // 壁纸持久化恢复（FR-2.16）：异步重拉，失败静默，不影响启动/连接流程。
+    WallpaperManager::GetInstance().RestoreFromNvsAsync();
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
@@ -741,6 +801,38 @@ void Application::InitializeProtocol() {
                       subtitles = std::move(subtitles), priority]() mutable {
                 StartNotification(std::move(url), std::move(subtitles), priority);
             });
+        } else if (strcmp(type->valuestring, "wallpaper") == 0) {
+            // 壁纸即时下发（FR-2.11）。下载在 WallpaperManager 的后台任务里执行，
+            // 此回调只做参数解析与投递，不阻塞协议接收线程。
+            auto action = cJSON_GetObjectItem(root, "action");
+            if (!cJSON_IsString(action)) {
+                ESP_LOGW(TAG, "Wallpaper message requires action");
+                return;
+            }
+            if (strcmp(action->valuestring, "clear") == 0) {
+                WallpaperManager::GetInstance().HandleClear(
+                    [this](bool ok, const std::string& reason) {
+                        Schedule([this, ok, reason]() { SendWallpaperAck("", ok, reason); });
+                    });
+            } else if (strcmp(action->valuestring, "set") == 0) {
+                WallpaperRequest request = ParseWallpaperRequest(root, false);
+                const std::string version = request.version;
+                if (request.url.empty() || request.md5.empty()) {
+                    ESP_LOGW(TAG, "Wallpaper set requires url and md5");
+                    Schedule([this, version]() {
+                        SendWallpaperAck(version, false, "bad_format");
+                    });
+                    return;
+                }
+                WallpaperManager::GetInstance().HandleSet(
+                    request, [this, version](bool ok, const std::string& reason) {
+                        Schedule([this, version, ok, reason]() {
+                            SendWallpaperAck(version, ok, reason);
+                        });
+                    });
+            } else {
+                ESP_LOGW(TAG, "Unknown wallpaper action: %s", action->valuestring);
+            }
         } else if (strcmp(type->valuestring, "tts") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
             if (!cJSON_IsString(state)) {
@@ -837,6 +929,20 @@ void Application::InitializeProtocol() {
                             return;
                         }
                         Board::GetInstance().ApplyDeviceConfig(payload.get());
+                        // 壁纸（FR-2.16）：与唤醒词同一条 device_config 路径下发；
+                        // 来自云端配置不回执，幂等由 WallpaperManager 保证。
+                        auto wallpaper = cJSON_GetObjectItem(payload.get(), "wallpaper");
+                        if (cJSON_IsObject(wallpaper)) {
+                            WallpaperRequest wallpaper_request =
+                                ParseWallpaperRequest(wallpaper, true);
+                            if (!wallpaper_request.url.empty() &&
+                                !wallpaper_request.md5.empty()) {
+                                WallpaperManager::GetInstance().HandleSet(wallpaper_request,
+                                                                           nullptr);
+                            } else {
+                                ESP_LOGW(TAG, "Ignore device_config wallpaper without url/md5");
+                            }
+                        }
                         // 首次云端配置处理完毕（含唤醒词）：仅在日志输出，屏幕直接显示待机
                         // 语音引擎未就绪时词会被缓存并随后生效（见 AudioService）
                         if (!cloud_config_synced_) {
@@ -1660,6 +1766,30 @@ void Application::SendMcpMessage(const std::string& payload) {
             mcp_broadcast_callback_(payload);
         }
     });
+}
+
+void Application::SendWallpaperAck(const std::string& version, bool ok,
+                                   const std::string& reason) {
+    // 运行在主任务（调用方已 Schedule），protocol_ 生命周期安全
+    if (protocol_ == nullptr) {
+        ESP_LOGW(TAG, "Drop wallpaper ack: protocol is not ready");
+        return;
+    }
+    std::string message = "{\"type\":\"wallpaper\",\"action\":\"result\",\"version\":\"";
+    message += EscapeJson(version);
+    message += "\",\"status\":\"";
+    message += ok ? "ok" : "fail";
+    message += "\"";
+    if (!ok) {
+        // reason 只在失败回执里出现（成功回执保持最小字段集）
+        message += ",\"reason\":\"";
+        message += EscapeJson(reason);
+        message += "\"";
+    }
+    message += "}";
+    protocol_->SendJsonText(message);
+    ESP_LOGI(TAG, "wallpaper ack: version=%s status=%s reason=%s", version.c_str(),
+             ok ? "ok" : "fail", reason.c_str());
 }
 
 void Application::SetAecMode(AecMode mode) {

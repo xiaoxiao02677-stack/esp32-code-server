@@ -195,4 +195,12 @@ public class RedisKeys {
         return "device:address_book:all";
     }
 
+    /**
+     * 壁纸下发回执Key（Python 写入：JSON{version,status,reason,ts}，TTL 7 天）
+     * 注意：该 key 由 Python 以普通字符串写入，读取须用 StringRedisTemplate。
+     */
+    public static String getWallpaperAckKey(String deviceId) {
+        return "wallpaper:ack:" + deviceId;
+    }
+
 }

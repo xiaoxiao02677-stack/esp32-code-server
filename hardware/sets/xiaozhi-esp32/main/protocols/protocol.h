@@ -67,6 +67,10 @@ public:
     virtual void SendStopListening();
     virtual void SendAbortSpeaking(AbortReason reason);
     virtual void SendMcpMessage(const std::string& message);
+    // 发送任意 JSON 文本帧（壁纸回执等设备主动上报用）。
+    // SendText 是 protected 的传输层实现，这里给应用层一个最小的公开出口，
+    // 避免为每种新消息类型都在 Protocol 上加专用方法。
+    virtual bool SendJsonText(const std::string& text) { return SendText(text); }
 
 protected:
     std::function<void(const cJSON* root)> on_incoming_json_;

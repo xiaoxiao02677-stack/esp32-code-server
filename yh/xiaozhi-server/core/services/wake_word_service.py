@@ -108,6 +108,10 @@ class WakeWordService:
             logger.info(f"唤醒词已缓存至 {len(offline_updates)} 个离线设备")
         return result
 
+    def get_connections(self) -> Dict[str, object]:
+        """返回 WS 连接快照 {device_id: conn}（供壁纸下发等服务按设备直投）。"""
+        return dict(self._connections)
+
     def get_online_devices(self) -> List[str]:
         """在线设备 = WS 连接中的设备 ∪ 心跳在线的设备。
 

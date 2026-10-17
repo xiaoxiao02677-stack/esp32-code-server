@@ -19,6 +19,15 @@
         <span class="ic">⚡</span>
         <span class="dock-label">固件烧录</span>
       </a>
+      <!-- 壁纸下发：就地浮层（不新增路由/不 router.push），仅管理端且具备 admin 角色时显示 -->
+      <button
+        v-if="canManageWallpaper"
+        type="button" class="dock-item" :class="{ active: wallpaperOpen }" title="壁纸下发"
+        @click="wallpaperOpen = true"
+      >
+        <span class="ic">🎨</span>
+        <span class="dock-label">壁纸下发</span>
+      </button>
       <div class="dock-foot">
         <div class="theme-row">
           <button
@@ -40,6 +49,8 @@
         </button>
       </div>
     </nav>
+    <!-- 浮层组件内部 Teleport 到 body（.dock 的 backdrop-filter 会成为 fixed 包含块，不能就地定位） -->
+    <WallpaperDispatch v-model:open="wallpaperOpen" />
   </div>
 </template>
 
@@ -47,6 +58,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasAdminRole, userState } from '../lib/api'
+import WallpaperDispatch from './WallpaperDispatch.vue'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
 const emit = defineEmits(['toggle-compact'])
@@ -78,6 +90,8 @@ const THEMES = [
 ]
 const currentTheme = ref('blue')
 const compact = ref(false)
+// 壁纸下发浮层开关（P1-4）：入口是 button 而非 router-link，浮层在 WallpaperDispatch 内
+const wallpaperOpen = ref(false)
 
 function setTheme(id) {
   currentTheme.value = id
@@ -148,6 +162,10 @@ const canSwitchToAdmin = computed(() => {
   if (!u || (!u.username && !Array.isArray(u.roles))) return true
   return hasAdminRole(u)
 })
+// 壁纸下发入口可见性：与「切换管理端」同一套判断（hasAdminRole 已含 superAdmin===1），
+// 额外要求当前处于管理端 role；userState 登录后异步补全，必须用 computed 实时重算。
+// 与切换按钮的「未知态保守显示」相反：此处 fail-closed，身份未知时不显示入口。
+const canManageWallpaper = computed(() => props.role === 'admin' && hasAdminRole(userState.value))
 function toggle() {
   router.push(props.role === 'admin' ? '/customer' : '/admin')
 }

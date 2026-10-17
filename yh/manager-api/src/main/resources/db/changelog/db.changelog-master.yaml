@@ -856,3 +856,12 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610100930.sql
+  - changeSet:
+      id: 202610171030
+      author: server-java
+      # P1-3 壁纸管理：ai_wallpaper / ai_wallpaper_task / ai_wallpaper_task_device 三表
+      # 全部使用 CREATE TABLE IF NOT EXISTS，重放安全。
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610171030.sql

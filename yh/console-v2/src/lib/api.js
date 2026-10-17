@@ -488,6 +488,23 @@ export const adminApi = {
   clawToggleSchedule: (openid, id) => api.put(`/wechat/claw/schedules/${openid}/${id}/toggle`),
 }
 
+// ---------- 壁纸下发（P1-4，独立端点组，不并入 adminApi） ----------
+// 契约：SPEC §4.8 —— 壁纸库 CRUD + 下发任务 + 结果轮询/重试
+export const wallpaperApi = {
+  // 壁纸库分页：GET /wallpaperMag?page&limit&keyword → { list, total }
+  page: (params) => api.get('/wallpaperMag', params || { page: 1, limit: 50 }),
+  // 上传壁纸（multipart：file、name）→ { id,name,url,thumbUrl,md5,size,width,height,format }
+  upload: (formData) => api.upload('/wallpaperMag/upload', formData),
+  // 删除壁纸：DELETE /wallpaperMag/{id}
+  remove: (id) => api.del(`/wallpaperMag/${id}`),
+  // 下发：POST /wallpaperMag/dispatch，body = { wallpaperId,targetType,deviceIds,agentIds,applyMode } → { taskId }
+  dispatch: (payload) => api.post('/wallpaperMag/dispatch', payload),
+  // 任务进度：GET /wallpaperMag/task/{taskId} → { status,total,sent,success,failed,devices[] }
+  task: (taskId) => api.get(`/wallpaperMag/task/${taskId}`),
+  // 失败重试：POST /wallpaperMag/task/{taskId}/retry，body = { deviceIds } → { taskId }
+  retry: (taskId, deviceIds) => api.post(`/wallpaperMag/task/${taskId}/retry`, { deviceIds })
+}
+
 // ---------- 用户模块：当前用户资源端（SPEC §6 userApi，页面 agent 按此调用） ----------
 export const userApi = {
   // 数据源聚合：模型选择 UI 的唯一入口（模型为 0 规则）

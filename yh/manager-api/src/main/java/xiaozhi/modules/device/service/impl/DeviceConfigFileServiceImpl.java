@@ -44,6 +44,9 @@ public class DeviceConfigFileServiceImpl implements DeviceConfigFileService {
     /** 配置下载端点相对路径（拼接在 server.ota 之后） */
     private static final String DOWNLOAD_PATH = "config/download";
 
+    /** 壁纸子对象键（P1-3：由壁纸下发写入 ai_device_config.config_json） */
+    private static final String WALLPAPER_KEY = "wallpaper";
+
     private final DeviceService deviceService;
     private final DeviceConfigService deviceConfigService;
     private final SysParamsService sysParamsService;
@@ -74,9 +77,29 @@ public class DeviceConfigFileServiceImpl implements DeviceConfigFileService {
                 }
             }
         }
-        root.put("device_config", deviceConfig);
+        root.put("device_config", normalizeWallpaper(deviceConfig, macAddress));
 
         return JsonUtils.toJsonString(root);
+    }
+
+    /**
+     * 壁纸透出（P1-3）：config_json 中的 wallpaper 子对象原样带到 device_config.wallpaper，
+     * 固件下次启动即可拿到 url/md5/size/format 并从 /wallpaperMag/download 拉取。
+     * 类型异常（脏数据）时丢弃该键并告警，避免整包配置解析失败。
+     */
+    private Map<String, Object> normalizeWallpaper(Map<String, Object> deviceConfig, String macAddress) {
+        if (deviceConfig == null) {
+            return Collections.emptyMap();
+        }
+        Object wallpaper = deviceConfig.get(WALLPAPER_KEY);
+        if (wallpaper == null || wallpaper instanceof Map) {
+            return deviceConfig;
+        }
+        log.warn("[ota-config] 壁纸配置类型异常，按无壁纸下发: mac={}, type={}",
+                macAddress, wallpaper.getClass().getSimpleName());
+        Map<String, Object> copy = new LinkedHashMap<>(deviceConfig);
+        copy.remove(WALLPAPER_KEY);
+        return copy;
     }
 
     @Override

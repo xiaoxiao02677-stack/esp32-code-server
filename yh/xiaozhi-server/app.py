@@ -82,6 +82,11 @@ async def main():
     push_scheduler.set_wake_word_service(ws_server.wake_word_service)
     await push_scheduler.start()
     ota_server.set_push_scheduler(push_scheduler)
+    # 壁纸即时下发服务：复用设备 WS 连接注册表按 device_id 直投
+    from core.services.wallpaper_service import WallpaperService
+    wallpaper_service = WallpaperService()
+    wallpaper_service.bind_connections_provider(ws_server.wake_word_service.get_connections)
+    ota_server.set_wallpaper_service(wallpaper_service)
     # 注入 TopicGenerator（话题源随机聊天功能）
     from core.services.topic_generator import TopicGenerator
     topic_generator = TopicGenerator(config, ws_server, wake_word_service=ws_server.wake_word_service)

@@ -204,6 +204,8 @@ private:
                            NotifyPriority priority = NotifyPriority::kNotifyPriorityNormal);
     void StopNotification();
     void HandleNotificationFinished(uint32_t playback_id, bool success);
+    // 壁纸回执（FR-2.11）：WS/MQTT 文本帧回到服务端
+    void SendWallpaperAck(const std::string& version, bool ok, const std::string& reason);
 public:
     /**
      * 定时触发一次 notify 播报。设备不空闲时丢弃并记录日志。

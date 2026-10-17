@@ -12,6 +12,7 @@ from core.api.llm_preview_handler import LlmPreviewHandler
 from core.api.model_test_handler import ModelTestHandler
 from core.api.wake_word_handler import WakeWordHandler
 from core.api.push_handler import PushHandler
+from core.api.wallpaper_handler import WallpaperHandler
 from core.api.timeline_handler import TimelineHandler
 from core.api.entity_handler import EntityHandler
 from core.api.wechat_claw_handler import WeChatClawHandler
@@ -107,6 +108,7 @@ class SimpleHttpServer:
         self.model_test_handler = ModelTestHandler(config)
         self.wake_word_handler = None
         self.push_handler = None
+        self.wallpaper_handler = None
         self.timeline_handler = TimelineHandler(config)
         self.entity_handler = EntityHandler(config)
         self.wechat_claw_handler = None
@@ -128,6 +130,11 @@ class SimpleHttpServer:
         """绑定 PushScheduler 实例，用于 HTTP API 端点。"""
         self.push_handler = PushHandler(self.config, push_scheduler)
         self.logger.bind(tag=TAG).info("PushHandler 已绑定")
+
+    def set_wallpaper_service(self, wallpaper_service):
+        """绑定 WallpaperService 实例，用于壁纸下发 HTTP API。"""
+        self.wallpaper_handler = WallpaperHandler(self.config, wallpaper_service)
+        self.logger.bind(tag=TAG).info("WallpaperHandler 已绑定")
 
     def set_wechat_claw_service(self, claw_service):
         """绑定 WeChatClawService 实例，用于 HTTP API 端点。"""
@@ -488,6 +495,17 @@ class SimpleHttpServer:
                             web.get(
                                 "/api/push/tasks/{push_id}",
                                 self.push_handler.handle_get_task,
+                            ),
+                        ]
+                    )
+
+                # 壁纸即时下发 API（manager-api 经 server.secret 鉴权代理转发）
+                if self.wallpaper_handler is not None:
+                    app.add_routes(
+                        [
+                            web.post(
+                                "/api/wallpaper/dispatch",
+                                self.wallpaper_handler.handle_dispatch,
                             ),
                         ]
                     )

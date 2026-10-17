@@ -31,7 +31,7 @@
 | 5 | INMP441 | SCK | `AUDIO_I2S_MIC_GPIO_SCK` |
 | 4 | INMP441 | WS | `AUDIO_I2S_MIC_GPIO_WS` |
 | 6 | INMP441 | SD | `AUDIO_I2S_MIC_GPIO_DIN` |
-| 0 | BOOT 键 | 单击对话 / 长按配网 | `BOOT_BUTTON_GPIO` |
+| 0 | BOOT 键 | 短按对话 / 双击表情彩蛋 / 长按静音·配网 | `BOOT_BUTTON_GPIO` |
 
 未接线 / 未实现的外设：状态灯（无引脚资料）、音量键（无引脚资料）、电池 ADC 与充电检测（无引脚资料）、SSD1306 备用屏（有引脚但本版型不实现）。
 
@@ -67,7 +67,39 @@
 | `InitializeTools()` | 有（空函数） | **无** | 无工具初始化需求 |
 | LED / `GetLed()` | 只有 `#include "led/single_led.h"`，未实例化，走基类 `NoLed` | **连 include 一起删掉，同样走基类 `NoLed`** | 资料未给 LED 引脚，不为硬件做决定；与模板保持「除屏幕引脚外零差异」 |
 
-保留：SPI 总线初始化（SPI3_HOST）、ST7789 面板初始化（spi_mode 3 / 80MHz / RGB565 / 反色）、BOOT 单击与长按逻辑、`PowerSaveTimer`（-1 / 60s 息屏 / 300s）、`PwmBacklight` 背光、`SetPowerSaveLevel()` 覆盖。
+保留：SPI 总线初始化（SPI3_HOST）、ST7789 面板初始化（spi_mode 3 / 80MHz / RGB565 / 反色）、`PowerSaveTimer`（-1 / 60s 息屏 / 300s）、`PwmBacklight` 背光、`SetPowerSaveLevel()` 覆盖。
+BOOT 键与显示皮肤已升级为圆屏版（见下节）。
+
+## 圆屏皮肤（RoundScreenDisplay）
+
+显示类由 `SpiLcdDisplay` 换成 `RoundScreenDisplay`，源码全部在本目录内，随 `build.py` 同步：
+
+| 文件 | 作用 |
+| --- | --- |
+| `round_screen_display.h` | 皮肤类声明（类名与 A 板 `my-s3-tft` 一致） |
+| `round_screen_display.cc` | 圆屏布局 / 协议钩子 / 按键反馈 / 1 秒节拍 |
+| `good_bg.c` | 240×240 RGB565 背景图（`yh_round_bg_good`，为防同名冲突加了前缀） |
+
+布局：顶部 y=10 时间、y=28 电量（无电池时隐藏）、中心 y=-15 表情、底部 y=-55 气泡（200×50 / 文字宽 180 / 圆角 16 / 粉边框）、y=-18 操作提示；背景为 `good.jpg` 全屏图 + 深紫渐变兜底。
+
+BOOT 键三事件（与 A 板逐项对齐）：
+
+- 短按：待机/说话 → `ToggleChatState()`，皮肤反馈「我在听...」+ laughing
+- 双击：待机 → 表情彩蛋轮播（loving/embarrassed/cool/silly/surprised，10 秒后回 neutral）
+- 长按 1s：`Starting` 且开机 30s 内 → 进配网；聆听/说话 → 取消/打断；待机 → 静音切换
+
+1 秒节拍（`esp_timer` 周期 1s）：彩蛋超时恢复、23:30 睡觉提醒、07:00 早晨问好（仅待机 + 时间已同步）。
+
+相对 A 板只改了 5 处缺陷修复 + 1 处无电池适配（Q6 裁定）：
+
+| 编号 | 修复 |
+| --- | --- |
+| D1/D2 | 气泡文本按 **UTF-8 码点**截断到 72 码点（原按 96 字节硬切，会切半个汉字）；超长补 `…` |
+| D3 | 电量文本去掉 `⚡` 前缀，改纯数字 `NN%`（中文字库无该字形，会显示豆腐块） |
+| D4 | `ClearChatMessages()` 不再把 `chat_message_label_` 置空，改为隐藏占位（防 `SetTheme` 解引用崩溃） |
+| D5 | 底部提示 y=-12 → **y=-18**，避开 240×240 圆边裁切 |
+| G3 | 本板无电池检测，电量标签初始隐藏，`UpdateStatusBar` 在 `GetBatteryLevel()` 返回 false 时保持隐藏（不显示 `0%`） |
+
 
 > `main/CMakeLists.txt` 用 `file(GLOB boards/${BOARD_DIR}/*.cc *.c)` 只收当前选中板目录的源码（约 922 行），
 > 因此上面这些删除只影响本版型，不会牵连 `1.54tft-wifi` 等其它版型。
@@ -97,7 +129,7 @@ Xiaozhi Assistant -> Board Type -> Yuhe N16R8 ST7789 (sets)
 
 ## 已知缺口
 
-1. **按键**：硬件资料未给任何按键 GPIO。BOOT 采用 ESP32-S3 标准 BOOT 引脚 GPIO0；**音量键未接**，因此没有音量加减与静音功能（需用 App 或语音调节）。若实物 BOOT 不在 GPIO0，改 `config.h` 的 `BOOT_BUTTON_GPIO` 即可。
+1. **按键**：硬件资料未给任何按键 GPIO。BOOT 采用 ESP32-S3 标准 BOOT 引脚 GPIO0；**音量键未接**，因此没有音量加减（待机长按 BOOT 可做 0/70 静音切换，或由 App/语音调节音量）。若实物 BOOT 不在 GPIO0，改 `config.h` 的 `BOOT_BUTTON_GPIO` 即可。
 2. **LED**：资料未给状态灯引脚，**未实现**，走基类 `Board::GetLed()` 返回的 `static NoLed`（`main/boards/common/board.cc:167`，安全空实现，UI 只少灯效不会崩）。GPIO48 虽是 ESP32-S3 开发板板载 WS2812 的常见位置，但「常见」不等于「这块板就是」，故不替硬件做决定。启用方法见下节。
 3. **电池 / 充电检测**：资料未给 ADC 与充电检测引脚，`GetBatteryLevel()` 返回 false，UI 不显示电量。
 4. **芯片温度**：无 `PowerManager`，`GetTemperature()` 返回 false，无高温弹窗。

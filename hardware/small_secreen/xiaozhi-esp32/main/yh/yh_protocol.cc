@@ -44,6 +44,8 @@ constexpr const char* kErrUnknownCommand = "UNKNOWN_COMMAND";
 constexpr const char* kErrInvalidParameters = "INVALID_PARAMETERS";
 constexpr const char* kErrDuplicateCommand = "DUPLICATE_COMMAND";
 constexpr const char* kErrMalformedMessage = "MALFORMED_MESSAGE";
+// 设备非 idle（listening/speaking/notifying/activating 等）拒绝 SEND_NOTIFY
+constexpr const char* kErrBusy = "BUSY";
 
 // 当前白名单：SET_LED + SEND_NOTIFY
 bool IsKnownOperation(const char* op) {
@@ -380,6 +382,17 @@ void YhProtocol::HandleCommand(cJSON* root) {
     if (!IsKnownOperation(op->valuestring)) {
         ESP_LOGE(TAG, "[ERR] UNKNOWN_COMMAND: \"%s\"", op->valuestring);
         SendCommandAck(root, false, kErrUnknownCommand);
+        return;
+    }
+
+    // SEND_NOTIFY 是"播放通知"：Application::NotifyAudio 在非 idle 时静默丢弃。
+    // 必须在幂等登记前按状态拒绝，否则 busy 的 command_id 会被记入去重表，
+    // 服务端重试同一 id 会命中 DUPLICATE_COMMAND 而被误判为已执行（AC-14）。
+    if (strcmp(op->valuestring, "SEND_NOTIFY") == 0 &&
+        Application::GetInstance().GetDeviceState() != kDeviceStateIdle) {
+        ESP_LOGW(TAG, "<<< COMMAND SEND_NOTIFY [%s] rejected: device busy (state=%d)",
+                 cmd_id->valuestring, (int)Application::GetInstance().GetDeviceState());
+        SendCommandAck(root, false, kErrBusy);
         return;
     }
 

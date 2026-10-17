@@ -85,6 +85,16 @@ public:
         return false;
     }
 
+#ifndef CONFIG_USE_EMOTE_MESSAGE_STYLE
+    // 用户壁纸（FR-2.19 / FR-2.22）：
+    // 图缓冲与 lv_img_dsc_t 由 WallpaperManager 持有，这里只接收裸指针并立即消费；
+    // 默认空实现 → 不支持的显示驱动自动忽略（NFR-9 兼容）。
+    // emote 风格构建无 lvgl.h、也无壁纸渲染能力，故不声明这两个接口；
+    // 调用侧（wallpaper_manager.cc）用 WALLPAPER_HAS_LVGL_DISPLAY 条件闸对齐。
+    virtual void SetWallpaper(const lv_img_dsc_t* image) { (void)image; }
+    virtual void ClearWallpaper() {}
+#endif
+
     inline int width() const { return width_; }
     inline int height() const { return height_; }
     inline bool IsSetupUICalled() const { return setup_ui_called_; }
