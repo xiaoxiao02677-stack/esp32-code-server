@@ -507,6 +507,10 @@ class SimpleHttpServer:
                                 "/api/wallpaper/dispatch",
                                 self.wallpaper_handler.handle_dispatch,
                             ),
+                            web.get(
+                                "/api/wallpaper/queue",
+                                self.wallpaper_handler.handle_queue,
+                            ),
                         ]
                     )
 

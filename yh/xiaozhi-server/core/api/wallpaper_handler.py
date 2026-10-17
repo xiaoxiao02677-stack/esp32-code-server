@@ -4,6 +4,7 @@
 
 端点：
     POST /api/wallpaper/dispatch   向在线设备下发壁纸设置指令
+    GET  /api/wallpaper/queue      查看待补投队列（?flush=1 立即补投一轮）
 """
 import json
 import logging
@@ -111,4 +112,31 @@ class WallpaperHandler(BaseHandler):
             return _json_response(400, "请求体 JSON 解析失败", status=400)
         except Exception as e:
             logger.error("[%s] 壁纸下发异常: %s", TAG, e, exc_info=True)
+            return _json_response(500, f"内部错误: {str(e)}", status=500)
+
+    async def handle_queue(self, request: web.Request) -> web.Response:
+        """查看待补投队列；``?flush=1`` 时先立即补投一轮再返回结果。
+
+        响应 data：
+            {"pending": {"<device_id>": "<version>"}, "flushed": <本轮成功条数>}
+        """
+        try:
+            if not self._verify_auth(request):
+                return _json_response(401, "无效的认证token", status=401)
+            if self.wallpaper_service is None:
+                return _json_response(503, "WallpaperService 未初始化", status=503)
+
+            flushed = None
+            if request.query.get("flush", "") in ("1", "true", "yes"):
+                flushed = await self.wallpaper_service.sweep_once()
+            return _json_response(
+                0,
+                "success",
+                data={
+                    "pending": self.wallpaper_service.queue_snapshot(),
+                    "flushed": flushed,
+                },
+            )
+        except Exception as e:
+            logger.error("[%s] 查询壁纸队列异常: %s", TAG, e, exc_info=True)
             return _json_response(500, f"内部错误: {str(e)}", status=500)

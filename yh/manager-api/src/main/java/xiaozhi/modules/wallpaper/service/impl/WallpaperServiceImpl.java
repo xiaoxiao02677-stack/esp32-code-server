@@ -365,9 +365,10 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
                 row.setError("设备非直连在线（离线/未绑定/MQTT 网关），配置已落库；直连在线后生效");
             } else if (result.isQueued(mac)) {
                 row.setStatus(STATUS_PENDING);
-                // queued：设备仅心跳在线、文本通道（WS）未建立；Python 已入离线补投队列，
-                // 设备文本通道建立后自动下发并回执（device_config 路径同时保底）
-                row.setError("设备文本通道未就绪（心跳在线），已排队；设备上线后自动下发，下次启动亦会生效");
+                // queued：设备仅心跳在线、文本通道（WS）未建立；Python 已入待补投队列，
+                // 由「设备 WS 上线 / 心跳重连 / 30s 巡检」三个触发点自动补投并回执
+                row.setError("设备文本通道未就绪（心跳在线），已排队；设备上线后自动补投，"
+                        + "每次下发只保留最新一张，下次启动亦会生效");
             } else {
                 row.setStatus(STATUS_SENT);
                 row.setError(null);

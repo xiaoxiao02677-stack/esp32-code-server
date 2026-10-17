@@ -41,6 +41,13 @@ async def load_config():
 
     if custom_config.get("manager-api", {}).get("url"):
         config = await get_config_from_api_async(custom_config)
+        # 基础设施类配置（redis 等）不在 Java 下发的服务器配置范围内，
+        # 而 data/.config.yaml 通常只放 manager-api，因此必须从本地 config.yaml 补齐。
+        # 漏掉这一步会让 config["redis"] 恒为 None：壁纸回执悄悄丢失、
+        # 待补投队列退化为纯内存（进程重启即丢）。
+        for infra_key in ("redis",):
+            if default_config.get(infra_key) and not config.get(infra_key):
+                config[infra_key] = default_config[infra_key]
     else:
         # 合并配置
         config = merge_configs(default_config, custom_config)
@@ -92,7 +99,13 @@ async def get_config_from_api_async(config):
         config_data.setdefault("TTS", config["TTS"])
     if config.get("selected_module", {}).get("TTS"):
         config_data.setdefault("selected_module", {}).setdefault("TTS", config["selected_module"]["TTS"])
-    
+
+    # 基础设施类配置以本地为准：Java 下发的 server 配置里不含 redis，
+    # 而壁纸回执（wallpaper:ack:*）与待补投队列（wallpaper:pending:*）都依赖它。
+    # 漏了这一条会导致 config.get("redis") 恒为 None —— 回执悄悄丢失、队列退化为纯内存。
+    if config.get("redis"):
+        config_data["redis"] = config["redis"]
+
     return config_data
 
 

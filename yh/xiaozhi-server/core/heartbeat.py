@@ -59,6 +59,9 @@ class HeartbeatServer:
         # 壁纸回执落库回调：由 app.py 注入，签名 (device_id, payload) -> Awaitable|None
         # 固件执行 SET_WALLPAPER 后经本通道回 {"type":"wallpaper","action":"result",...}
         self.wallpaper_ack_sink = None
+        # 设备上线/恢复在线回调：由 app.py 注入，签名 (device_id) -> Awaitable|None
+        # 壁纸服务借此在设备心跳重连时立即补投排队指令（不必等后台巡检周期）
+        self.on_device_online = None
         self._tcp_server = None
         self._udp_transport = None
         # WebSocket 通道旁的 UDP 心跳端口：固件 websocket_protocol.cc 中
@@ -316,6 +319,7 @@ class HeartbeatServer:
                 f"firmware={msg.get('firmware', '')} session={msg.get('session_id', '')} "
                 f"operations={self.devices[device_id]['operations']}"
             )
+            self._fire_device_online(device_id)
             return
         was_offline = not device.get("online", False)
         device["ip"] = peer_str
@@ -327,12 +331,29 @@ class HeartbeatServer:
             device["firmware"] = str(msg["firmware"])
         # ADVERTISEMENT 的能力列表（SET_LED / SEND_NOTIFY）更新
         ops = self._parse_operations(msg)
+        ops_changed = bool(ops) and ops != (device.get("operations") or [])
         if ops:
             device["operations"] = ops
         if was_offline:
             self.logger.bind(tag=TAG).info(f"设备恢复在线 [{device_id}] {peer_str}")
+            self._fire_device_online(device_id)
+        elif ops_changed:
+            # 能力声明变化（如新固件首次声明 SET_WALLPAPER）：重投一次排队指令
+            self._fire_device_online(device_id)
         elif msg.get("type") == "HEARTBEAT":
             self.logger.bind(tag=TAG).info(f"心跳 [{device_id}] {peer_str}")
+
+    def _fire_device_online(self, device_id: str) -> None:
+        """触发「设备上线」外部回调（异常完全隔离，不影响心跳主流程）。"""
+        hook = self.on_device_online
+        if hook is None:
+            return
+        try:
+            result = hook(device_id)
+            if asyncio.iscoroutine(result):
+                asyncio.create_task(result)
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(f"设备上线回调失败 [{device_id}]: {e}")
 
     @staticmethod
     def _parse_operations(msg: dict) -> list:

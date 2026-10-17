@@ -46,8 +46,11 @@ def build_ack_key(device_id: str) -> str:
     return f"{ACK_KEY_PREFIX}{device_id}"
 
 
-async def _get_client(config: dict):
-    """惰性创建 Redis 客户端；不可用时返回 None（只打一次告警）。"""
+async def get_client(config: dict):
+    """惰性创建 Redis 客户端；不可用时返回 None（只打一次告警）。
+
+    供壁纸回执与壁纸待补投队列（wallpaper_service）共用同一连接。
+    """
     global _redis_client, _redis_unavailable
     if _redis_client is not None:
         return _redis_client
@@ -107,7 +110,7 @@ async def save_ack(config: dict, device_id: str, ack: dict) -> bool:
         return False
 
     value = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
-    client = await _get_client(config)
+    client = await get_client(config)
     if client is None:
         logger.info(f"[{TAG}] 壁纸回执（未落 Redis）device={device_id} {value}")
         return False

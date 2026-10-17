@@ -86,6 +86,8 @@ async def main():
     from core.services.wallpaper_service import WallpaperService
     wallpaper_service = WallpaperService()
     wallpaper_service.bind_connections_provider(ws_server.wake_word_service.get_connections)
+    # 待补投队列落 Redis（重启不丢），配置不可用时自动降级为内存队列
+    wallpaper_service.bind_config(config)
     # 壁纸离线补投：设备文本通道建立（hello）时自动补投排队指令
     ws_server.wake_word_service.set_wallpaper_service(wallpaper_service)
     ota_server.set_wallpaper_service(wallpaper_service)
@@ -119,6 +121,13 @@ async def main():
         )
     except Exception as e:  # 回执落库不可用不影响下发
         logger.bind(tag=TAG).warning(f"壁纸回执 sink 注入失败: {e}")
+
+    # 壁纸补投的两个自动触发点：设备心跳上线即时补投 + 后台巡检兜底
+    heartbeat_server.on_device_online = wallpaper_service.on_device_online
+    try:
+        await wallpaper_service.start_sweeper()
+    except Exception as e:
+        logger.bind(tag=TAG).warning(f"壁纸补投巡检启动失败（不影响下发）: {e}")
 
     read_config_from_api = config.get("read_config_from_api", False)
     port = int(config["server"].get("http_port", 8003))
