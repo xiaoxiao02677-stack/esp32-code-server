@@ -8,7 +8,7 @@
 | 脚本 | 职责 |
 |---|---|
 | `build.py` | 选版型 → 同步 → 注册 → 编译 → 归档产物。**不做任何串口操作** |
-| `flash.py` | **多线程并行探测 COM 口** → 复位线序识别 → 把芯片送进下载模式 → esptool 烧录 → **烧录前后自检 + 回读校验 + 启动检查**。**不编译** |
+| `flash.py` | **多线程并行探测 COM 口** → 复位线序识别 → 把芯片送进下载模式 → 烧录 → **烧录前后自检 + 回读校验 + 启动检查**。两种方式：`--mode idf`（直接吃 `build/flash_args`，最省事）/ `--mode staged`（逐段 + 切块，默认）。**不编译** |
 | `diag.py` | **只读**回读设备 flash，与 `<FW>/build` 产物逐字节比对，判定「烧录问题 / 产物问题」。**不写不擦** |
 
 先 `build.py` 出产物，再 `flash.py` 烧进去；只想烧已有的产物就直接跑 `flash.py`；
@@ -198,7 +198,40 @@ python hardware/sets/flash.py --port COM18 --baud 460800   :: 想快点（线材
 python hardware/sets/flash.py --port COM18 --chunk-size 512K  :: 大镜像还断就用更小的块
 python hardware/sets/flash.py --port COM18 --skip-assets   :: 跳过 3.9MB assets，先确认 app 能起来
 python hardware/sets/flash.py --single           :: 退回「一次会话写完所有镜像」的旧行为
+python hardware/sets/flash.py --port COM18 --mode idf      :: 用 build/flash_args 一次写完（最省事）
+python hardware/sets/flash.py --port COM18 --mode staged   :: 强制走逐段加固流程
+python hardware/sets/flash.py --port COM18 --mode diag     :: 只回读体检，不写 flash
 ```
+
+### 两种烧录方式（`--mode`，交互式终端会弹菜单）
+
+不给 `--mode`、又是在真终端里跑，脚本会先问一句：
+
+```
+请选择烧录方式（直接回车 = 1）：
+  1) idf.py 快速烧录   —— 直接用 build/flash_args 一次写完，最省事
+  2) 分段加固烧录      —— 逐段写 + 1MB 切块 + 双端校验，链路不稳时用
+  d) 只体检不烧录      —— 回读设备内容与产物逐字节比对（不改 flash）
+```
+
+| 方式 | 做什么 | 什么时候用 |
+|---|---|---|
+| `idf` | 直接用项目里的 `build` 目录：读 `build/flash_args`，**一条命令**写完所有镜像。标准接线时就是真的 `idf.py flash` | 日常烧录，最省事 |
+| `staged` | 逐段 + 切块 + 探活 + 自愈，断了只补那一段 | 链路不稳、assets 老断链、排查启动问题（默认） |
+| `diag` | 只回读比对，不写 flash（等价于 `diag.py`） | 怀疑「烧了没生效」时先取证 |
+
+两种方式**共用同一套闸门**：烧录前核对地址与分区表同源、烧录后回读比对 + 复位读串口。
+
+> **反相接线的板子（本项目 1.54 寸板）走 `idf` 时用「等价写法」**：`idf.py` 的
+> `--before` 是编译期从 `sdkconfig` 的 `CONFIG_ESPTOOLPY_BEFORE` 固化的，命令行改不了
+> （实测 `write-flash --before no-reset` 被 esptool 拒绝：`No such option '--before'`，
+> 而 `--extra-args` 只能把参数追加在 `write-flash` **后面**）。它那次 `default-reset`
+> 在这类板子上会把芯片留在应用态，必然报 `Invalid head of packet (0x49)`。所以这种
+> 板子改用「同一份 `build/flash_args` + 一条 `write-flash`」，只把那次复位换成脚本
+> 按正确时序送进下载模式 —— 写入内容、地址、速度都和 `idf.py flash` 一致。
+
+`idf` 模式默认沿用 IDF 的快速重烧（只写与上次成功烧录不同的扇区，写完 MD5 校验，
+校验不过会自动全量重写）；要每次都全量写就加 `--idf-all`。
 
 **默认逐段写入**：一个镜像一个 esptool 会话，顺序按地址升序 ——
 `bootloader(0x0) → 分区表(0x8000) → otadata(0xd000) → app(0x20000) → assets(0x800000)`。
@@ -232,7 +265,8 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
 | `--timeout SEC` | 单口探测超时，默认 `0.6` |
 | `--jobs N` | 探测线程数上限，默认 `8` |
 | `--include-bluetooth` | 把蓝牙虚拟口也纳入探测（默认跳过） |
-| `-y` / `--yes` | 跳过烧录确认 |
+| `-y` / `--yes` | 跳过烧录确认，也不再弹方式选择菜单（非交互式默认走 `staged`） |
+| `--mode {idf,staged,diag}` | 烧录方式：`idf`=用 `build/flash_args` 一次写完；`staged`=逐段加固（默认）；`diag`=只体检。不指定且是交互式终端时会让你选 |
 | `--board <id>` | 指定版型，用于提示 + 校验 `build/` 里的产物是不是这个版型编的 |
 | `--reset {auto,esptool,reversed,none}` | 烧录前如何让芯片进下载模式，默认 `auto`（自动识别线序） |
 | `--manual` | 打印手动进下载模式步骤并等回车，随后按 `no-reset` 连接 |
@@ -243,6 +277,7 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
 | `--only NAME` | 只写指定镜像（逗号分隔，可用 `bootloader` / `partition-table` / `otadata` / `app` / `assets`）。例：`--only assets` 只补资源分区 |
 | `--chunk-size BYTES` | 大镜像切块大小，默认 `1M`（可写 `512K` / `1M`）。块越小越不容易断，断了只重写这一块 |
 | `--no-chunk` | 关掉切块（大镜像整段写），只在链路非常稳时用 |
+| `--idf-all` | `idf` 模式强制全量写（`idf.py flash --all`），关掉 IDF 的快速重烧 |
 | `--clean` | 烧录前先 `erase-flash` 整片擦除：板子里是别的固件、或分区表被外来固件改过时用 |
 | `--no-verify` | 跳过烧录后的回读比对与启动检查（默认都做） |
 | `--boot-check SEC` | 烧完复位并读串口的时长，默认 `8` 秒；`0` = 不做启动检查 |

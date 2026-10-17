@@ -39,6 +39,11 @@ pyserial / esptool 都取自 ESP-IDF 的 venv。当前解释器没有 pyserial �
   · 顺序：按地址升序（bootloader → 分区表 → otadata → app → assets），assets 垫底，
     它断了设备照样能启动，缺的只是字库 / 表情 / 唤醒词。
 
+两种烧录方式（--mode，交互式终端会弹菜单让你选）：
+  · idf  —— 直接用项目里的 build 目录：一条命令读完 build/flash_args 写完所有镜像
+            （标准接线时就是真的 `idf.py flash`），连一次、最快、最省事；
+  · staged —— 上面那套逐段 + 切块 + 自愈的加固流程，链路不稳时用（默认）。
+
 烧录前后各有一道闸（默认开启）：
   · 烧录前核对 build 产物地址与分区表是否同源 —— 布局不一致直接拒烧。实机踩过的坑：
     分区表是 16MB 布局（ota_0@0x20000），app 却按 4MB 布局写到 0x10000，bootloader
@@ -130,6 +135,12 @@ FLASH_SIZE = "16MB"
 FLASH_FREQ = "80m"
 PROBE_TIMEOUT_DEFAULT = 0.6
 PROBE_JOBS_DEFAULT = 8
+
+# 烧录方式（交互式菜单 / --mode）
+METHOD_IDF = "idf"          # 直接吃 build/flash_args，一条命令写完（最省事）
+METHOD_STAGED = "staged"    # 逐段 + 切块 + 双端校验（链路不稳时用）
+METHOD_DIAG = "diag"        # 只回读体检，不写 flash
+DEFAULT_MODE = METHOD_STAGED  # 非交互式（脚本 / -y / 管道）时的默认，保持旧行为
 
 # 全量烧录地址表；assets 分区（0x800000）必须全量写入，OTA 之后只刷 app 分区
 FLASH_FULL_IMAGE = [
@@ -1548,7 +1559,8 @@ def _write_all_at_once(
         "--flash-freq", FLASH_FREQ,
         "--flash-size", FLASH_SIZE,
     ]
-    for offset, _name, path in targets:
+    # 按地址升序写：app 先落盘，3.9MB 的 assets 垫底 —— 中途断了也更可能留下能启动的板子
+    for offset, _name, path in sorted(targets, key=lambda item: item[0]):
         command += [hex(offset), str(path)]
 
     attempts = max(1, args.attempts) if plan.our_reset else 1
@@ -1630,17 +1642,13 @@ def _report_flash_failure(
     return EXIT_ERROR
 
 
-def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
-    """烧录入口：默认逐段写（每段一个独立 esptool 会话），--single 退回一次性写。
+def _preflight(fw_root: Path) -> Optional[list[tuple[int, str, Path]]]:
+    """烧录前闸门：build 里的写入地址必须与分区表同源。返回 None = 拒绝烧录。
 
-    plan.our_reset=True 时，每段开始前都由本脚本把芯片送进下载模式。
+    实机踩过的坑：分区表是 16MB 布局（ota_0@0x20000），app 却按 4MB 布局写到
+    0x10000 —— bootloader 在 0x20000 找不到合法镜像（首字节不是 0xE9）就自杀重启，
+    表现是「屏幕不亮 + 无限重启」，而且日志一句话都不打。
     """
-    command, cwd, mode_desc = build_flash_command(fw_root, port, baud, plan, args.after)
-    if not command:
-        notice_bad(mode_desc + "：请确认编译是否成功（先跑 build.py）")
-        return EXIT_ERROR
-
-    # ---- 烧录前自检：地址必须与分区表同源 ----
     targets = parse_write_targets(fw_root)
     problems = check_layout_consistency(fw_root, targets)
     if problems:
@@ -1650,7 +1658,7 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
             say(f"        · {problem}")
         notice_bad("已阻止烧录：照这样写下去，app 会落在分区表不认识的地方，刷完必然起不来")
         say("        请确认 <FW>/build 里各项产物来自同一次编译（build.py 一次只编一个版型）。")
-        return EXIT_ERROR
+        return None
     say()
     say(bold("[自检] 烧录地址与分区表一致"))
     for offset, name, path in targets:
@@ -1659,6 +1667,190 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
         except OSError:
             size = 0
         say(f"  0x{offset:<9x} {name:<26} {size:>9} 字节")
+    return targets
+
+
+def _post_flash_checks(
+    fw_root: Path, port: str, plan: ResetPlan, baud: int,
+    args: argparse.Namespace, targets: list[tuple[int, str, Path]],
+) -> int:
+    """烧录后两道闸：内容对不对（回读比对）→ 起没起来（复位读串口）。"""
+    # ---- 烧录后校验：内容对不对 ----
+    if not args.no_verify:
+        mismatches = verify_written_regions(fw_root, port, plan, baud, targets)
+        if mismatches:
+            notice_bad("回读校验没通过：设备里的内容和本地产物不一样")
+            for item in mismatches:
+                say(f"        · {item}")
+            say("        多半是写一半被打断了（拔线 / 复位 / 串口被抢）。整片重烧一次：")
+            say(f"          python hardware/sets/flash.py --port {port} --clean")
+            return EXIT_ERROR
+        notice_ok("回读校验通过：设备内容与本地产物完全一致")
+
+    # ---- 烧录后校验：起没起来 ----
+    state = boot_check(port, plan, args.boot_check)
+    if state == "loop":
+        say("        设备在循环重启。最常见的原因是分区表与 app 不同源")
+        say("        （例如分区表写的是 16MB 布局 ota_0@0x20000，而 app 落在 4MB 布局的 0x10000）——")
+        say("        bootloader 在 ota_0 找不到合法镜像就自杀重启，屏幕自然一直不亮。")
+        say("        排查：python hardware/sets/diag.py  （回读设备与产物逐字节比对）")
+        say(f"        处置：python hardware/sets/flash.py --port {port} --clean  （整片擦除后全量重烧）")
+        return EXIT_ERROR
+    if state in ("silent", "download"):
+        say("        设备没有进入应用。若确认写进去的内容一致，就该去看 bootloader 卡在哪：")
+        say("        在 version/config.json 的 sdkconfig_append 里加 CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y 重编，")
+        say("        再烧一次就能看到它到底为什么退出。")
+    say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 看串口日志。")
+    return EXIT_OK
+
+
+# ---------------------------------------------------------------------------
+# 5c. idf.py 快速烧录（直接吃 build/ 里的 flash_args）
+#
+# 「用项目里的 build 目录烧录」就是让它读 build/flash_args：写哪些镜像、写到哪个
+# 地址，全由这次编译的产物决定，脚本不再自己拼地址表 —— 少一层手写就少一处错。
+#
+# 但 idf.py 的 --before 是**编译期**从 sdkconfig 的 CONFIG_ESPTOOLPY_BEFORE 固化的，
+# 命令行改不了（实测 `write-flash --before no-reset` 会被 esptool 拒绝：
+# No such option '--before'），所以 EN/GPIO0 反相接线的板子没法直接用 idf.py flash：
+# 它那次 default-reset 会把芯片留在应用态，必然报 Invalid head of packet (0x49)。
+# 这种板子改用「同一份 flash_args + 一条 esptool 命令」，差别只有那一次复位。
+# ---------------------------------------------------------------------------
+
+
+def idf_script() -> Optional[Path]:
+    """定位 <IDF_PATH>/tools/idf.py；找不到返回 None（不影响分段烧录）。"""
+    resolved = sets_build.discover_idf_env()
+    idf_path = resolved.get("idf_path")
+    if not idf_path:
+        return None
+    script = Path(idf_path) / "tools" / "idf.py"
+    return script if script.is_file() else None
+
+
+def build_idf_command(
+    script: Path, port: str, baud: int, build_name: str = "build", all_data: bool = False
+) -> list[str]:
+    """idf.py flash 的完整命令（端口 / 波特率 / 构建目录，其余交给 flash_args）。"""
+    command = [
+        sets_build._idf_python(), str(script),
+        "-p", port,
+        "-b", str(baud),
+        "-B", build_name,
+        "flash",
+    ]
+    if all_data:
+        # --all 关掉 IDF 的快速重烧（只写与上次成功烧录不同的扇区），每次都全量写
+        command.append("--all")
+    return command
+
+
+def _idf_env() -> dict[str, str]:
+    """idf.py 的子进程环境：补齐 IDF 变量，并去掉 Git Bash 的 MSYSTEM。
+
+    idf.py 见到 MSYSTEM 会打「MSys/Mingw is no longer supported」的警告；而本机
+    在 Git Bash 下启动 idf.py 出现过「只打印提示就退出、退出码 0」的假成功，
+    去掉这个变量最省事。真退出码不可信时，后面的回读校验会兜住。
+    """
+    env = sets_build._idf_env_vars()
+    for key in ("MSYSTEM", "MSYS2_ENV_CONV_EXCL"):
+        env.pop(key, None)
+    env.setdefault("PYTHONUTF8", "1")
+    return env
+
+
+def _report_idf_failure(port: str, plan: ResetPlan, code: int) -> int:
+    say()
+    notice_bad(f"idf.py flash 失败（返回码 {code}）")
+    say("        idf.py 的复位方式固化在 sdkconfig 的 CONFIG_ESPTOOLPY_BEFORE 里，命令行改不了：")
+    say("        反相接线的板子（DTR=EN / RTS=GPIO0）在这一步必然报 Invalid head of packet (0x49)，")
+    say("        因为它的 default-reset 会把芯片留在应用态、继续跑应用。换个方式重烧：")
+    say(f"          python hardware/sets/flash.py --port {port} --mode staged")
+    say("        分段模式会自己按正确时序把芯片送进下载模式，大镜像还会降速 + 切块重试。")
+    diagnose_after_failure(port)
+    return EXIT_ERROR
+
+
+def run_idf_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
+    """idf.py 快速烧录：一条命令写完 build/flash_args 里的全部镜像。
+
+    标准接线的板子用真正的 `idf.py flash`（它还负责先跑一次增量编译）；
+    反相接线或找不到 idf.py 时，退到等价的单会话 esptool 写入，并说明原因。
+    """
+    targets = _preflight(fw_root)
+    if targets is None:
+        return EXIT_ERROR
+
+    if args.only or args.skip_assets:
+        say()
+        notice_warn("idf.py 快速烧录按 build/flash_args 写全部镜像：本次忽略 --only / --skip-assets")
+
+    if args.clean:
+        if erase_flash(port, plan, baud) != 0:
+            notice_bad("整片擦除没成功，已中止（继续烧录只会留下半套内容）")
+            return EXIT_ERROR
+
+    script = idf_script()
+    if script is not None and not plan.our_reset:
+        command = build_idf_command(script, port, baud, all_data=args.idf_all)
+        say()
+        say(bold("[烧录] idf.py flash：用 build/flash_args 一次写完所有镜像"))
+        say(f"  串口: {port}    波特率: {baud}")
+        say("  idf.py 会先跑一次增量编译（产物没变时几秒），再交给 esptool 写入")
+        say("  " + " ".join(command))
+        say(rule())
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:  # pragma: no cover - 环境相关
+            pass
+        try:
+            completed = subprocess.run(
+                command, cwd=str(fw_root), env=_idf_env(), check=False
+            )
+        except OSError as error:
+            notice_bad(f"无法启动 idf.py: {error}")
+            return EXIT_ENV
+        say(rule())
+        if completed.returncode != 0:
+            return _report_idf_failure(port, plan, completed.returncode)
+        notice_ok(f"idf.py flash 完成（{port}）")
+        return _post_flash_checks(fw_root, port, plan, baud, args, targets)
+
+    # ---- 等价替代：同一份 flash_args，只换掉那次错误复位 ----
+    say()
+    say(bold("[烧录] idf.py 快速烧录（等价的单会话写法）"))
+    if plan.our_reset:
+        say("  这块板的复位线是反相接的：idf.py 的 --before 固化在 sdkconfig 里改不了，")
+        say("  它那次复位会把芯片留在应用态（然后报 Invalid head of packet 0x49）。")
+    else:
+        say("  没找到 idf.py（IDF_PATH 未探测到）：用等价的 esptool 单会话写入。")
+    say("  用的是同一份 build/flash_args、同一条 write-flash，只是复位由脚本负责。")
+
+    ok, detail, failed_name = _write_all_at_once(fw_root, port, baud, plan, args, targets)
+    if not ok:
+        if failed_name:
+            return _report_flash_failure(port, plan, failed_name, detail)
+        notice_bad("烧录失败：" + (detail or "未知原因"))
+        return EXIT_ERROR
+    notice_ok(f"烧录完成（{port}）")
+    return _post_flash_checks(fw_root, port, plan, baud, args, targets)
+
+
+def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
+    """分段烧录入口：默认逐段写（每段一个独立 esptool 会话），--single 退回一次性写。
+
+    plan.our_reset=True 时，每段开始前都由本脚本把芯片送进下载模式。
+    """
+    command, cwd, mode_desc = build_flash_command(fw_root, port, baud, plan, args.after)
+    if not command:
+        notice_bad(mode_desc + "：请确认编译是否成功（先跑 build.py）")
+        return EXIT_ERROR
+
+    # ---- 烧录前自检：地址必须与分区表同源 ----
+    targets = _preflight(fw_root)
+    if targets is None:
+        return EXIT_ERROR
 
     if args.skip_assets:
         targets = [item for item in targets if item[1] != "generated_assets.bin"]
@@ -1707,36 +1899,7 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
         return EXIT_ERROR
 
     notice_ok(f"烧录完成（{port}）")
-
-    # ---- 烧录后校验：内容对不对 ----
-    if not args.no_verify:
-        mismatches = verify_written_regions(fw_root, port, plan, baud, targets)
-        if mismatches:
-            notice_bad("回读校验没通过：设备里的内容和本地产物不一样")
-            for item in mismatches:
-                say(f"        · {item}")
-            say("        多半是写一半被打断了（拔线 / 复位 / 串口被抢）。整片重烧一次：")
-            say(f"          python hardware/sets/flash.py --port {port} --clean")
-            return EXIT_ERROR
-        notice_ok("回读校验通过：设备内容与本地产物完全一致")
-
-    # ---- 烧录后校验：起没起来 ----
-    state = boot_check(port, plan, args.boot_check)
-    if state == "loop":
-        say("        设备在循环重启。最常见的原因是分区表与 app 不同源")
-        say("        （例如分区表写的是 16MB 布局 ota_0@0x20000，而 app 落在 4MB 布局的 0x10000）——")
-        say("        bootloader 在 ota_0 找不到合法镜像就自杀重启，屏幕自然一直不亮。")
-        say("        排查：python hardware/sets/diag.py  （回读设备与产物逐字节比对）")
-        say(f"        处置：python hardware/sets/flash.py --port {port} --clean  （整片擦除后全量重烧）")
-        return EXIT_ERROR
-    if state in ("silent", "download"):
-        say("        设备没有进入应用。若确认写进去的内容一致，就该去看 bootloader 卡在哪：")
-        say("        在 version/config.json 的 sdkconfig_append 里加 CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y 重编，")
-        say("        再烧一次就能看到它到底为什么退出。")
-    say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 看串口日志。")
-    return EXIT_OK
-
-
+    return _post_flash_checks(fw_root, port, plan, baud, args, targets)
 
 
 # ---------------------------------------------------------------------------
@@ -1821,6 +1984,17 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/flash.py --port COM18 --skip-assets  # 跳过 3.9MB assets，先确认 app 能起来\n"
             "  python hardware/sets/flash.py --port COM18 --baud 460800   # 想快点（默认 230400，稳优先）\n"
             "  python hardware/sets/flash.py --port COM18 --chunk-size 512K  # 大镜像还断就用更小的块\n"
+            "  python hardware/sets/flash.py --port COM18 --mode idf   # 用 build/flash_args 一次写完（最省事）\n"
+            "  python hardware/sets/flash.py --port COM18 --mode staged   # 强制走逐段加固流程\n"
+            "  python hardware/sets/flash.py --port COM18 --mode diag   # 只回读体检，不写 flash\n"
+            "\n"
+            "烧录方式（--mode；交互式终端不给 --mode 时会弹菜单，回车 = 1）：\n"
+            "  1) idf    —— 直接用项目里的 build 目录：读 build/flash_args 一次写完所有镜像。\n"
+            "              标准接线时就是真的 idf.py flash；反相板（本项目的 1.54 寸板）改用等价的\n"
+            "              单会话 esptool —— idf.py 的 --before 固化在 sdkconfig 里改不了，\n"
+            "              它那次复位会把芯片留在应用态（Invalid head of packet 0x49）。\n"
+            "  2) staged —— 逐段写 + 切块 + 双端校验（默认；链路不稳时用）。\n"
+            "  d) diag   —— 只回读比对，不改 flash。\n"
             "\n"
             "默认**逐段写入**：一个镜像一个 esptool 会话（bootloader → 分区表 → otadata → app → assets），\n"
             "每段写之前先 flash-id 探活（约 1.8 秒）：失败重试 3 次 → 降速 → 换复位线序，全做完才报错。\n"
@@ -1913,6 +2087,10 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         "--no-chunk", action="store_true",
         help="关掉切块（大镜像整段写）。只在链路非常稳、想省连接开销时用",
     )
+    write_group.add_argument(
+        "--idf-all", action="store_true",
+        help="idf 模式强制全量写（idf.py flash --all）：关掉 IDF 的快速重烧（只写变化扇区）",
+    )
 
     verify_group = parser.add_argument_group("校验 / 清空")
     verify_group.add_argument(
@@ -1928,7 +2106,14 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         help=f"烧完复位并读串口的时长（秒），默认 {BOOT_CHECK_SECONDS:.0f}；0 = 不做启动检查",
     )
 
-    parser.add_argument("-y", "--yes", action="store_true", help="跳过烧录确认（物理操作，默认要确认）")
+    parser.add_argument("-y", "--yes", action="store_true",
+                        help="跳过烧录确认（物理操作，默认要确认）；同时不再弹方式选择菜单")
+    parser.add_argument(
+        "--mode", choices=(METHOD_IDF, METHOD_STAGED, METHOD_DIAG), default=None,
+        help="烧录方式：idf=直接用 build/flash_args 一次写完（最省事）；"
+             "staged=逐段写 + 切块 + 双端校验（默认，链路不稳时用）；"
+             "diag=只回读体检、不写 flash。不指定且是交互式终端时会让你选",
+    )
     parser.add_argument("--board", metavar="ID", help="指定版型 id（仅用于提示与产物一致性校验）")
     parser.add_argument("--fw-root", metavar="DIR", help="固件源码根目录（默认用 sets 自带副本）")
     parser.add_argument("--python", metavar="EXE",
@@ -1952,14 +2137,72 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     return args
 
 
-def _ask_flash(port: str, board: Optional[dict[str, Any]]) -> bool:
+METHOD_LABEL = {
+    METHOD_IDF: "idf.py 快速烧录",
+    METHOD_STAGED: "分段加固烧录",
+    METHOD_DIAG: "只体检不烧录",
+}
+
+
+def ask_method() -> Optional[str]:
+    """交互式选择烧录方式；返回 None = 用户取消。
+
+    stdin 不是终端时（脚本 / 管道 / 重定向）不提问，直接返回默认方式，
+    免得自动化流程卡在 input() 上。
+    """
+    if not sys.stdin.isatty():
+        return DEFAULT_MODE
+    say()
+    say(bold("请选择烧录方式（直接回车 = 1）："))
+    say("  1) idf.py 快速烧录   —— 直接用 build/flash_args 一次写完，最省事")
+    say("  2) 分段加固烧录      —— 逐段写 + 1MB 切块 + 双端校验，链路不稳时用")
+    say("  d) 只体检不烧录      —— 回读设备内容与产物逐字节比对（不改 flash）")
+    while True:
+        try:
+            raw = input("  选择 [1/2/d] > ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            say()
+            return None
+        if raw in ("", "1", "i", "idf"):
+            return METHOD_IDF
+        if raw in ("2", "s", "staged"):
+            return METHOD_STAGED
+        if raw in ("d", "diag", "0"):
+            return METHOD_DIAG
+        notice_warn("请输入 1、2 或 d")
+
+
+def run_diag(port: str, board: Optional[dict[str, Any]], fw_root: Path) -> int:
+    """走 diag.py 做只读体检（不改 flash）。"""
+    script = Path(__file__).resolve().parent / "diag.py"
+    if not script.is_file():
+        notice_bad("找不到 diag.py（只读体检工具），已跳过")
+        return EXIT_ENV
+    command = [sets_build._idf_python(), str(script), "--port", port, "--fw-root", str(fw_root)]
+    if board:
+        command += ["--board", board["id"]]
+    say()
+    say(bold("[体检] 回读设备内容与 build 产物逐字节比对（只读，不写 flash）"))
+    say("  " + " ".join(command))
+    say(rule())
+    try:
+        completed = subprocess.run(command, check=False, env=_idf_env())
+    except OSError as error:
+        notice_bad(f"无法启动 diag.py: {error}")
+        return EXIT_ENV
+    return completed.returncode
+
+
+def _ask_flash(port: str, board: Optional[dict[str, Any]], method: str = "") -> bool:
     if not sys.stdin.isatty():
         notice_bad("非交互式终端，请加 --yes 明确确认后重试")
         return False
     target = f"「{board['name']}」的产物" if board else "当前 build 产物"
+    label = METHOD_LABEL.get(method)
+    via = f"用{label}" if label else "烧录"
     say()
     try:
-        raw = input(f"是否把 {target} 烧录到 {port}？[y/N] ").strip().lower()
+        raw = input(f"是否{via}把 {target} 写到 {port}？[y/N] ").strip().lower()
     except EOFError:
         return False
     return raw in ("y", "yes")
@@ -2126,24 +2369,36 @@ def main(argv: Optional[list[str]] = None) -> int:
         notice_warn("已取消烧录")
         return EXIT_OK
 
-    # ---- 4. 确认并烧录 ----
+    # ---- 4. 选烧录方式（--mode 指定 / -y 或非交互式走默认，否则菜单）----
+    method = args.mode
+    if method is None:
+        method = DEFAULT_MODE if args.yes else ask_method()
+        if method is None:
+            say("已取消。")
+            return EXIT_OK
+    if method == METHOD_DIAG:
+        return run_diag(selected, board, fw_root)
+
+    # ---- 5. 确认并烧录 ----
     python = sets_build._idf_python()
     if not _esptool_ok(python):
         notice_bad(f"所用解释器里没有 esptool: {python}")
         say("        请用 --python 指定 IDF venv 的 python（esptool 随它一起安装）。")
         return EXIT_ENV
 
-    if not args.yes and not _ask_flash(selected, board):
+    if not args.yes and not _ask_flash(selected, board, method):
         say("已取消烧录。")
         return EXIT_OK
 
-    # ---- 5. 决定复位方式（反相板由脚本送进下载模式）----
+    # ---- 6. 决定复位方式（反相板由脚本送进下载模式）----
     plan = resolve_reset_plan(selected, args)
     # --after auto：反相板上 esptool 的 hard-reset 实际拉的是 GPIO0（不是 EN），
     # 收尾必然报 "No more data to read from the serial port"；这种板子改用 no-reset，
     # 写完由脚本自己按正确时序复位。
     if args.after == "auto":
         args.after = "no-reset" if plan.our_reset else "hard-reset"
+    if method == METHOD_IDF:
+        return run_idf_flash(fw_root, selected, args.baud, plan, args)
     return run_flash(fw_root, selected, args.baud, plan, args)
 
 
