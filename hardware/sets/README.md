@@ -194,7 +194,19 @@ python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
 python hardware/sets/flash.py --manual           :: 手动进下载模式（按住 BOOT + 点 RST）
 python hardware/sets/flash.py --reset none -y    :: 设备已手动进下载模式，不再复位
 python hardware/sets/flash.py --port COM18 --clean   :: 先整片擦除，再全量重烧
+python hardware/sets/flash.py --port COM18 --baud 230400   :: 大镜像写到一半断链时降速
+python hardware/sets/flash.py --port COM18 --skip-assets   :: 跳过 3.9MB assets，先确认 app 能起来
+python hardware/sets/flash.py --single           :: 退回「一次会话写完所有镜像」的旧行为
 ```
+
+**默认逐段写入**：一个镜像一个 esptool 会话，顺序按地址升序 ——
+`bootloader(0x0) → 分区表(0x8000) → otadata(0xd000) → app(0x20000) → assets(0x800000)`。
+某段断了只重写那一段，并自动 `460800 → 230400 → 115200` 降速重试。
+
+`assets` 特意排在最后：它最大（3.9MB）也最容易断，但它断了设备照样能启动 ——
+缺的只是字库 / 表情 / 唤醒词。旧顺序（照 `flash_args` 书写顺序）把 assets 排在
+app **前面**，assets 一断 app 就一个字节也没写，设备留着上一次的旧 app，看起来
+像「烧了但没生效」。
 
 探测结果长这样（`[在线]` 表示口能打开、后面确实挂着设备）：
 
@@ -222,8 +234,10 @@ python hardware/sets/flash.py --port COM18 --clean   :: 先整片擦除，再全
 | `--board <id>` | 指定版型，用于提示 + 校验 `build/` 里的产物是不是这个版型编的 |
 | `--reset {auto,esptool,reversed,none}` | 烧录前如何让芯片进下载模式，默认 `auto`（自动识别线序） |
 | `--manual` | 打印手动进下载模式步骤并等回车，随后按 `no-reset` 连接 |
-| `--before MODE` / `--after MODE` | 直接指定 esptool 的 `--before` / `--after`（默认 `no-reset` + `hard-reset`） |
+| `--before MODE` / `--after MODE` | 直接指定 esptool 的 `--before` / `--after`。`--after` 默认 `auto`：反相板用 `no-reset`，标准板用 `hard-reset` |
 | `--attempts N` | 连不上时的尝试次数上限，默认 `2`（每次尝试前都会重新进下载模式） |
+| `--single` | 一次性写完所有镜像（默认逐段写，断了只补那一段） |
+| `--skip-assets` | 不写 assets 分区（3.9MB）。排查启动问题时跳过最慢的一段 |
 | `--clean` | 烧录前先 `erase-flash` 整片擦除：板子里是别的固件、或分区表被外来固件改过时用 |
 | `--no-verify` | 跳过烧录后的回读比对与启动检查（默认都做） |
 | `--boot-check SEC` | 烧完复位并读串口的时长，默认 `8` 秒；`0` = 不做启动检查 |
@@ -238,16 +252,26 @@ python hardware/sets/flash.py --port COM18 --clean   :: 先整片擦除，再全
   0x0         bootloader.bin                   15536 字节
   0x8000      partition-table.bin               3072 字节
   0xd000      ota_data_initial.bin              8192 字节
-  0x800000    generated_assets.bin           4054873 字节
   0x20000     xiaozhi.bin                    2757424 字节
+  0x800000    generated_assets.bin           4054873 字节
 …
+[烧录] 逐段写入：一个镜像一个 esptool 会话，某段断了只补这一段
+  [1/5] bootloader.bin
+  0x0         bootloader.bin                   15536 字节   @ 460800
+        OK
+  …
 [校验] 回读刚写入的区域，与本地产物逐字节比对
   bootloader.bin             0x0         [一致] 全量（15536 字节）
+  ota_data_initial.bin       0xd000      [信息] 已选中 ota_0（ota_seq=1）—— 设备启动过，属正常状态
   …
 [启动检查] 复位设备并读 8 秒串口日志
   串口日志: '.ESP-ROM:esp32s3-20210327...rst:0x1 (POWERON)..boot:0x1b (SPI_FAST_FLASH_BOOT)..I (123) cpu_start: ...'
   设备已正常启动（读到了应用运行日志）
 ```
+
+> `ota_data_initial.bin` 永远显示 `[信息]` 而不是 `[一致]`：它是全 `0xFF`（"从未 OTA
+> 启动过"），而设备只要成功启动一次，bootloader 就会把 `ota_seq=1` 写进去表示"正在用
+> ota_0"。按逐字节比对只会每次启动后误报，所以这里只报状态。
 
 第一道闸解决的是**「分区表与 app 不同源」**这一类死机：分区表写的是 16MB 布局
 （`ota_0 @ 0x20000`），app 却按 4MB 布局写到了 `0x10000` —— bootloader 在
@@ -268,6 +292,42 @@ ROM 的 `ESP-ROM:` 横幅一定会打（ROM 代码，不受 sdkconfig 影响）�
 台账里已经有别的固件、或你不确定板子被谁刷过什么，直接加 `--clean`：先整片擦除
 再全量写入，不给「残留分区表 + 外来 app」任何混用的机会。
 
+### 写到一半断链：`No more data to read from the serial port`
+
+这是**写入过程中链路断了**，不是"连不上芯片"。典型日志：
+
+```
+Writing 'generated_assets.bin' at 0x00800000...
+Compressed 4054876 bytes to 2938793...
+Writing at 0x00981b87 [========>          ]  32.3% 950272/2938793 bytes...
+Hard resetting via RTS pin...
+A fatal error occurred: No more data to read from the serial port.
+```
+
+逐条读：
+
+- **`Hard resetting via RTS pin` 是收尾动作**，说明写入流程已经走到最后一步；
+  在这块**反相接线**的板子上它拉的是 GPIO0（不是 EN），所以复位语义是反的，
+  在收尾阶段等着读响应自然读不到 → 冒出 `No more data`。现在 `--after auto`
+  对反相板改用 `no-reset`，改由脚本自己按正确时序复位。
+- **进度条停在 32% 也可能已经写完**：esptool 的进度按"已发送的压缩字节"计，
+  最后一屏常常来不及刷到 100%。
+- **真正要确认的是「谁没写进去」**：跑 `diag.py`，它会逐段告诉你。实机遇到过
+  app 段停在**上一次编译**的版本（`esp_app_desc` 时间戳对不上），原因就是旧流程
+  把 3.9MB 的 assets 排在 app 前面，assets 一断 app 根本没轮到 —— 现在按地址升序，
+  app 先落盘，assets 垫底。
+
+按这个顺序处理：
+
+```bat
+python hardware/sets/flash.py --port COM18 --baud 230400   :: 降速重烧（分段，断了只补那一段）
+python hardware/sets/flash.py --port COM18 --baud 115200   :: 还断就再降
+python hardware/sets/flash.py --port COM18 --skip-assets   :: 先跳过 3.9MB，确认应用能起来
+```
+
+反复断更可能是**供电**问题（写 4MB 时电流冲击最大）：换 USB 口、拔掉外设、
+用带供电的 HUB、或先把背光调暗。
+
 ### 刷完还是不对？用 diag.py 回读体检
 
 `diag.py` 是**只读**工具（不写、不擦、不改 eFuse，跑完把设备复位回运行态），
@@ -287,7 +347,15 @@ python hardware/sets/diag.py --board yh-154tft-wifi --full-app   :: 连 app 全�
 |---|---|---|
 | `[一致]` | 写进去的和编出来的一样 | 不是烧录问题 → 打开 bootloader 日志（`CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y`）看它卡在哪 |
 | `[空白]`（全 `0xFF`） | 这块区域根本没写进去 | `flash.py --clean` 全量重烧 |
+| `[另一份构建]` | 设备上那份 app 来自**另一个编译批次**（`esp_app_desc` 的版本/日期/时间对不上） | 不算写坏，能启动；想让设备与 `build/` 完全对齐就重烧一次 |
 | `[不一致]` + 首个不同偏移 | 写了一半 / 写到了别处 / 板子里是别的固件 | 同上，`--clean` 重烧后再跑 diag 复核 |
+| `[信息]`（otadata） | 只是状态播报，不判对错 | 无 |
+
+`[另一份构建]` 这个判定很关键：换一次编译，镜像头 `+0x4` 的入口地址、`+0x1c` 的
+校验和、以及 `esp_app_desc` 里的编译时间全都会变，**逐字节比对必然不同**。
+拿它去区分「写坏了」和「只是编了两次」，能把排查方向一次拨正 ——
+实机就出现过「`+0x4` 差 8 字节」被误判成写坏，实际设备上是 21:22 那份、本地是
+23:04 那份，同版型、同功能，只是两次编译。
 
 ### 复位线序：为什么这块板「按住 BOOT 也没用」
 

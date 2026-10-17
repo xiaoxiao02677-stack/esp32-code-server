@@ -876,6 +876,144 @@ def build_flash_command(
 
 
 # ---------------------------------------------------------------------------
+# 5a-2. 分段烧录：一次 esptool 会话只写一个镜像
+#
+# 血泪教训（2026-10-17 实机）：一次性 write-flash 写 5 个镜像、其中 assets 有
+# 3.9MB 时，只要中途链路断一次，**整条命令**就作废 —— 已写进去的还在，但后面
+# 的镜像一个都没写；而 esptool 只会甩一句
+#     A fatal error occurred: No more data to read from the serial port.
+# 看起来像「连不上芯片」，实际是「写到一半掉线」，于是很容易误判。
+#
+# 分段后：每段独立「进下载模式 → 连接 → 写 → 断开」，某段断了只重写那一段，
+# 还能顺带自动降速重试。assets 单独成段，慢但不再拖累前面四个关键镜像。
+# ---------------------------------------------------------------------------
+
+BAUD_LADDER = (460800, 230400, 115200)
+OTADATA_NAME = "ota_data_initial.bin"
+
+
+def describe_otadata(data: bytes) -> str:
+    """解析 otadata（两个 4KB 记录）给出人话。
+
+    `ota_data_initial.bin` 是全 0xFF，含义是「从未通过 OTA 启动过」；而设备只要成功
+    启动过一次，bootloader 就会把 `ota_seq=1` 写进记录里表示「正在用 ota_0」。
+    所以它**天然不等于**本地产物 —— 按逐字节比对，每次启动后再校验都会误报。
+    """
+    def seq_of(base: int) -> Optional[int]:
+        if len(data) < base + 4:
+            return None
+        value = struct.unpack("<I", data[base:base + 4])[0]
+        return None if value == 0xFFFFFFFF else value
+
+    values = [item for item in (seq_of(0), seq_of(0x1000)) if item is not None]
+    if not values:
+        return "未使用（全 0xFF）—— bootloader 会默认启动 ota_0"
+    active = max(values)
+    slot = "ota_0" if active % 2 == 1 else "ota_1"
+    return f"已选中 {slot}（ota_seq={active}）—— 设备启动过，属正常状态"
+
+
+def baud_candidates(baud: int) -> list[int]:
+    """从给定波特率往下退到 115200，用于失败后自动降速重试。"""
+    ladder = [baud]
+    for item in BAUD_LADDER:
+        if item < baud and item not in ladder:
+            ladder.append(item)
+    if ladder[-1] != 115200:
+        ladder.append(115200)
+    return ladder
+
+
+def stage_command(
+    port: str, baud: int, plan: ResetPlan, after: str, offset: int, path: Path
+) -> list[str]:
+    """拼装「只写一个镜像」的 esptool 命令。"""
+    return [
+        sets_build._idf_python(), "-m", "esptool",
+        "--chip", CHIP,
+        "-p", port,
+        "-b", str(baud),
+        "--before", plan.before,
+        "--after", after,
+        "write-flash",
+        "--flash-mode", FLASH_MODE,
+        "--flash-freq", FLASH_FREQ,
+        "--flash-size", FLASH_SIZE,
+        hex(offset), str(path),
+    ]
+
+
+def run_stage(
+    port: str, plan: ResetPlan, offset: int, name: str, path: Path, bauds: list[int]
+) -> tuple[bool, str]:
+    """写一个镜像；失败自动降速重试同一段。返回 (是否成功, 失败说明)。
+
+    段内一律用 --after no-reset：写完后芯片留在下载模式，下一段无需重新同步；
+    收尾由 run_flash 统一复位回应用（反相板上 esptool 的 hard-reset 是反的，
+    拉的是 GPIO0 而不是 EN，只会换来一句 No more data to read）。
+    """
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return False, f"文件不存在：{path}"
+
+    detail = ""
+    for index, baud in enumerate(bauds):
+        if plan.our_reset:
+            enter_download_mode(port, plan.order)
+        command = stage_command(port, baud, plan, "no-reset", offset, path)
+        say(f"  0x{offset:<9x} {name:<26} {size:>9} 字节   @ {baud}")
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:  # pragma: no cover - 环境相关
+            pass
+        try:
+            completed = subprocess.run(command, check=False, env=sets_build._idf_env_vars())
+        except OSError as error:  # pragma: no cover - 环境相关
+            return False, f"无法启动 esptool: {error}"
+        if completed.returncode == 0:
+            return True, ""
+        detail = f"esptool 返回码 {completed.returncode}（{baud}）"
+        if index + 1 < len(bauds):
+            notice_warn(f"{name} 在 {baud} 下没写成，降到 {bauds[index + 1]} 重试这一段")
+            time.sleep(0.6)
+    return False, detail
+
+
+def run_staged_flash(
+    port: str, plan: ResetPlan, targets: list[tuple[int, str, Path]], baud: int
+) -> tuple[bool, str, str]:
+    """逐段烧录。返回 (是否全部成功, 失败说明, 出问题的镜像名)。
+
+    **顺序按地址升序**，不是 flash_args 里的书写顺序 —— flash_args 把 assets（8MB）
+    排在 app（0x20000）前面，照它写就会「先啃最慢的 3.9MB，断了 app 还没写」。
+    升序后关键的四段先落盘，assets 垫底：它断了设备也能启动（只是没字库/唤醒词）。
+    """
+    targets = sorted(targets, key=lambda item: item[0])
+    bauds = baud_candidates(baud)
+    if len(bauds) > 1:
+        say(f"  失败自动降速阶梯: {' → '.join(str(item) for item in bauds)}")
+    failed_name = ""
+    failed_detail = ""
+    total = len(targets)
+    for index, (offset, name, path) in enumerate(targets, start=1):
+        say()
+        say(bold(f"  [{index}/{total}] {name}"))
+        ok, detail = run_stage(port, plan, offset, name, path, bauds)
+        if ok:
+            say(green("        OK"))
+            continue
+        notice_bad(f"{name} 写入失败：{detail}")
+        failed_name, failed_detail = name, detail
+        break
+
+    if failed_name:
+        return False, failed_detail, failed_name
+    return True, "", ""
+
+
+# ---------------------------------------------------------------------------
 # 5b. 烧录前自检 / 烧录后校验
 #
 # 血泪教训：**分区表与 app 必须是同一套布局**。实机出现过的死机形态：
@@ -1048,6 +1186,10 @@ def verify_written_regions(
                 bad.append(f"{name}（0x{offset:x}）回读失败")
                 continue
             got = temp.read_bytes()
+            if name == OTADATA_NAME:
+                # otadata 被 bootloader 改写属正常，只报状态、不判对错
+                say(f"  {name:<26} 0x{offset:<9x} {green('[信息]')} {describe_otadata(got)}")
+                continue
             want = path.read_bytes()[:read_size]
             if got == want:
                 scope = "全量" if read_size == size else f"头部 {read_size // 1024}KB"
@@ -1171,10 +1313,110 @@ def erase_flash(port: str, plan: ResetPlan, baud: int) -> int:
     return completed.returncode
 
 
-def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
-    """按 build/flash_args 烧录；不含 assets 时退回显式全量烧录。
+def _write_all_at_once(
+    fw_root: Path, port: str, baud: int, plan: ResetPlan,
+    args: argparse.Namespace, targets: list[tuple[int, str, Path]],
+) -> tuple[bool, str, str]:
+    """一次性把全部镜像交给同一条 esptool 命令（--single）。
 
-    plan.our_reset=True 时，每次尝试前都由本脚本把芯片送进下载模式（不进则重放）。
+    这么做有风险：中途一旦断链，整条命令作废、后面的镜像一个都不写。留着它是因为
+    连接稳定时它最快（一次连接写完）。日常用默认的分段模式。
+    """
+    command = [
+        sets_build._idf_python(), "-m", "esptool",
+        "--chip", CHIP,
+        "-p", port,
+        "-b", str(baud),
+        "--before", plan.before,
+        "--after", args.after,
+        "write-flash",
+        "--flash-mode", FLASH_MODE,
+        "--flash-freq", FLASH_FREQ,
+        "--flash-size", FLASH_SIZE,
+    ]
+    for offset, _name, path in targets:
+        command += [hex(offset), str(path)]
+
+    attempts = max(1, args.attempts) if plan.our_reset else 1
+    detail = ""
+    say("  " + " ".join(command))
+    say("  烧录中，请勿拔线……")
+    say(rule())
+    for attempt in range(1, attempts + 1):
+        if plan.our_reset:
+            ok, evidence = enter_download_mode(port, plan.order)
+            label = "反相" if plan.order == "reversed" else "标准"
+            if ok:
+                say(green(f"  已按{label}时序送进下载模式") + f"    {evidence}")
+            elif evidence:
+                notice_warn(f"送进下载模式未确认（{label}时序）：{evidence}")
+            else:
+                notice_warn(f"送进下载模式未确认（{label}时序）：复位后串口无输出")
+        if attempt > 1:
+            say(f"  重试 {attempt}/{attempts}……")
+        # esptool 直接写继承来的控制台句柄；日志重定向到文件时先刷新，
+        # 免得它的输出跑到我们前面去
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:  # pragma: no cover - 环境相关
+            pass
+        try:
+            completed = subprocess.run(command, check=False, env=sets_build._idf_env_vars())
+        except OSError as error:
+            return False, f"无法启动 esptool: {error}", ""
+        say(rule())
+        if completed.returncode == 0:
+            return True, "", ""
+        detail = f"esptool 返回码 {completed.returncode}"
+        if attempt < attempts:
+            say()
+            say(f"  第 {attempt} 次失败（{detail}），重新复位后再试一次……")
+    return False, detail, ""
+
+
+def _report_flash_failure(
+    port: str, plan: ResetPlan, failed_name: str, detail: str
+) -> int:
+    """把「哪一段坏的」翻译成人话 —— 别再把写到一半掉线说成「连不上芯片」。"""
+    say()
+    if failed_name in ("bootloader.bin", "partition-table.bin"):
+        notice_bad(f"烧录在最早的一段「{failed_name}」就失败了：{detail}")
+        say("        说明还没开始真正写镜像，问题在连接阶段。先看设备现在在干什么：")
+        diagnose_after_failure(port)
+        say("        · 报 Invalid head of packet (0x49)：0x49 是字符 'I'，那是应用日志首字节，")
+        say("          说明芯片在跑应用、没进下载模式（esptool 把日志当成了应答）。")
+        say("        · 波特率：先试 --baud 115200 排除线材 / 干扰因素。")
+        say("        仍不行就手动进下载模式：按住 BOOT → 点一下 RST → 松开 BOOT，再 --reset none 重跑。")
+        return EXIT_ERROR
+
+    notice_bad(f"写到「{failed_name}」时断链了：{detail}")
+    say("        这不是「连不上芯片」—— 芯片是连上过的，只是写到一半链路断了。")
+    if failed_name == "generated_assets.bin":
+        say("        好消息：assets 是最后一段，bootloader / 分区表 / otadata / app 都已写好 ——")
+        say("        设备已经能启动，缺的只是唤醒词 / 字库 / 表情。先看屏幕起没起来，再单独补这一段：")
+        say(f"          python hardware/sets/flash.py --port {port} --baud 115200")
+        say("        要先把应用跑通、暂时不要资源，就加 --skip-assets 重烧一遍。")
+    else:
+        say("        前面几段已经写进芯片，重跑时每段都会重新写一遍并校验：")
+        say(f"          python hardware/sets/flash.py --port {port}")
+        say("        如果总在同一个大镜像上断，按顺序试：")
+        say(f"          python hardware/sets/flash.py --port {port} --baud 230400")
+        say(f"          python hardware/sets/flash.py --port {port} --baud 115200")
+    say("        反复断更可能是供电不足：换 USB 口 / 拔掉外设 / 用带供电的 HUB，")
+    say("        或把背光调暗——写 4MB 时电流冲击最大。")
+    if plan.our_reset:
+        say("        另外：这块板 EN/GPIO0 是反相接线，esptool 收尾那句")
+        say("        「Hard resetting via RTS pin / No more data to read」是它把复位拉成了 GPIO0 造成的假故障，")
+        say("        本脚本收尾已改成由自己复位（--after no-reset）。")
+    diagnose_after_failure(port)
+    return EXIT_ERROR
+
+
+def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argparse.Namespace) -> int:
+    """烧录入口：默认逐段写（每段一个独立 esptool 会话），--single 退回一次性写。
+
+    plan.our_reset=True 时，每段开始前都由本脚本把芯片送进下载模式。
     """
     command, cwd, mode_desc = build_flash_command(fw_root, port, baud, plan, args.after)
     if not command:
@@ -1201,101 +1443,68 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
             size = 0
         say(f"  0x{offset:<9x} {name:<26} {size:>9} 字节")
 
+    if args.skip_assets:
+        targets = [item for item in targets if item[1] != "generated_assets.bin"]
+        say()
+        notice_warn("--skip-assets：本次不写 assets 分区（唤醒词 / 字库 / 表情沿用设备里已有的那份）")
+
     say()
-    say(bold(f"[烧录] {mode_desc}"))
+    if args.single:
+        say(bold(f"[烧录] {mode_desc}"))
+    else:
+        say(bold("[烧录] 逐段写入：一个镜像一个 esptool 会话，某段断了只补这一段"))
     say(f"  串口: {port}    波特率: {baud}")
     say(f"  复位: {plan.note or f'--before {plan.before}'}")
+    if not args.single:
+        say("  每段写完都留在下载模式，全部写完后统一复位并检查启动")
 
     if args.clean:
         if erase_flash(port, plan, baud) != 0:
             notice_bad("整片擦除没成功，已中止（继续烧录只会留下半套内容）")
             return EXIT_ERROR
 
-    attempts = max(1, args.attempts) if plan.our_reset else 1
-    for attempt in range(1, attempts + 1):
-        if plan.our_reset:
-            ok, evidence = enter_download_mode(port, plan.order)
-            label = "反相" if plan.order == "reversed" else "标准"
-            if ok:
-                say(green(f"  已按{label}时序送进下载模式") + f"    {evidence}")
-            elif evidence:
-                notice_warn(f"送进下载模式未确认（{label}时序）：{evidence}")
-            else:
-                notice_warn(f"送进下载模式未确认（{label}时序）：复位后串口无输出")
-        if attempt > 1:
-            say(f"  重试 {attempt}/{attempts}……")
+    # ---- 写：默认逐段，--single 一次性 ----
+    if args.single:
+        ok, detail, failed_name = _write_all_at_once(fw_root, port, baud, plan, args, targets)
+    else:
+        ok, detail, failed_name = run_staged_flash(port, plan, targets, baud)
+    if not ok:
+        if failed_name:
+            return _report_flash_failure(port, plan, failed_name, detail)
+        notice_bad("烧录失败：" + (detail or "未知原因"))
+        return EXIT_ERROR
 
-        say(f"  工作目录: {cwd}")
-        say("  " + " ".join(command))
-        say("  烧录中，请勿拔线……")
-        say(rule())
-        # esptool 直接写继承来的控制台句柄；日志重定向到文件时先刷新，
-        # 免得它的输出跑到我们前面去
-        try:
-            sys.stdout.flush()
-            sys.stderr.flush()
-        except Exception:  # pragma: no cover - 环境相关
-            pass
-        try:
-            completed = subprocess.run(
-                command, cwd=str(cwd), check=False, env=sets_build._idf_env_vars()
-            )
-        except OSError as error:
-            notice_bad(f"无法启动 esptool: {error}")
-            say("        请用 --python 指定 IDF venv 的 python（esptool 随它一起安装）。")
+    notice_ok(f"烧录完成（{port}）")
+
+    # ---- 烧录后校验：内容对不对 ----
+    if not args.no_verify:
+        mismatches = verify_written_regions(fw_root, port, plan, baud, targets)
+        if mismatches:
+            notice_bad("回读校验没通过：设备里的内容和本地产物不一样")
+            for item in mismatches:
+                say(f"        · {item}")
+            say("        多半是写一半被打断了（拔线 / 复位 / 串口被抢）。整片重烧一次：")
+            say(f"          python hardware/sets/flash.py --port {port} --clean")
             return EXIT_ERROR
-        say(rule())
-        if completed.returncode == 0:
-            notice_ok(f"烧录完成（{port}）")
+        notice_ok("回读校验通过：设备内容与本地产物完全一致")
 
-            # ---- 烧录后校验：内容对不对 ----
-            if not args.no_verify:
-                mismatches = verify_written_regions(fw_root, port, plan, baud, targets)
-                if mismatches:
-                    notice_bad("回读校验没通过：设备里的内容和本地产物不一样")
-                    for item in mismatches:
-                        say(f"        · {item}")
-                    say("        多半是写一半被打断了（拔线 / 复位 / 串口被抢）。整片重烧一次：")
-                    say(f"          python hardware/sets/flash.py --port {port} --clean")
-                    return EXIT_ERROR
-                notice_ok("回读校验通过：设备内容与本地产物完全一致")
+    # ---- 烧录后校验：起没起来 ----
+    state = boot_check(port, plan, args.boot_check)
+    if state == "loop":
+        say("        设备在循环重启。最常见的原因是分区表与 app 不同源")
+        say("        （例如分区表写的是 16MB 布局 ota_0@0x20000，而 app 落在 4MB 布局的 0x10000）——")
+        say("        bootloader 在 ota_0 找不到合法镜像就自杀重启，屏幕自然一直不亮。")
+        say("        排查：python hardware/sets/diag.py  （回读设备与产物逐字节比对）")
+        say(f"        处置：python hardware/sets/flash.py --port {port} --clean  （整片擦除后全量重烧）")
+        return EXIT_ERROR
+    if state in ("silent", "download"):
+        say("        设备没有进入应用。若确认写进去的内容一致，就该去看 bootloader 卡在哪：")
+        say("        在 version/config.json 的 sdkconfig_append 里加 CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y 重编，")
+        say("        再烧一次就能看到它到底为什么退出。")
+    say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 看串口日志。")
+    return EXIT_OK
 
-            # ---- 烧录后校验：起没起来 ----
-            state = boot_check(port, plan, args.boot_check)
-            if state == "loop":
-                say("        设备在循环重启。最常见的原因是分区表与 app 不同源")
-                say("        （例如分区表写的是 16MB 布局 ota_0@0x20000，而 app 落在 4MB 布局的 0x10000）——")
-                say("        bootloader 在 ota_0 找不到合法镜像就自杀重启，屏幕自然一直不亮。")
-                say("        排查：python hardware/sets/diag.py  （回读设备与产物逐字节比对）")
-                say(f"        处置：python hardware/sets/flash.py --port {port} --clean  （整片擦除后全量重烧）")
-                return EXIT_ERROR
-            if state in ("silent", "download"):
-                say("        设备没有进入应用。若确认写进去的内容一致，就该去看 bootloader 卡在哪：")
-                say("        在 version/config.json 的 sdkconfig_append 里加 CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y 重编，")
-                say("        再烧一次就能看到它到底为什么退出。")
-            say("  提示：可用 <FW>\\monitor.bat 或 <FW>\\yh_monitor.py 看串口日志。")
-            return EXIT_OK
-        if attempt < attempts:
-            say()
-            say(f"  第 {attempt} 次失败（返回码 {completed.returncode}），重新复位后再试一次……")
-            continue
 
-        notice_bad(f"烧录失败（esptool 返回码 {completed.returncode}）")
-        diagnosis = completed.returncode == 2
-        if diagnosis:
-            say("        连不上芯片。先看看它现在在干什么：")
-        else:
-            say("        常见原因：串口被占用（串口监视器 / 另一个烧录会话）、")
-            say("                  设备未进入下载模式（按住 BOOT 再复位）、或 USB 线不支持数据传输。")
-        diagnose_after_failure(port)
-        say("        另外两条常被忽略的原因：")
-        say("          · 报 Invalid head of packet (0x49)：0x49 是字符 'I'，那是应用日志的首字节，")
-        say("            说明芯片在跑应用、没进下载模式（esptool 把日志当成了应答）。")
-        say("          · 波特率：先试 --baud 115200 排除线材/干扰因素。")
-        say("        仍不行就手动进下载模式：按住 BOOT → 点一下 RST → 松开 BOOT，")
-        say("        然后加 --reset none（或 --manual）重跑。")
-        return completed.returncode or EXIT_ERROR
-    return EXIT_ERROR
 
 
 # ---------------------------------------------------------------------------
@@ -1360,6 +1569,12 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/flash.py --manual           # 手动进下载模式（按住 BOOT + 点 RST）\n"
             "  python hardware/sets/flash.py --reset none -y    # 设备已手动进下载模式，不再复位\n"
             "  python hardware/sets/flash.py --port COM18 --clean   # 先整片擦除再全量重烧\n"
+            "  python hardware/sets/flash.py --port COM18 --skip-assets  # 跳过 3.9MB assets，先确认 app 能起来\n"
+            "\n"
+            "默认**逐段写入**：一个镜像一个 esptool 会话（bootloader → 分区表 → otadata → app → assets），\n"
+            "某段断了只补那一段，并自动 460800 → 230400 → 115200 降速重试。\n"
+            "assets 排在最后：它断了设备照样能启动，只是没字库 / 唤醒词。\n"
+            "（--single 可退回「一次会话写完所有镜像」的旧行为。）\n"
             "\n"
             "烧录前后各有一道闸（默认开启，--no-verify 可关）：\n"
             "  · 烧录前：核对 build 产物地址与分区表是否同源，不同源直接拒烧\n"
@@ -1412,12 +1627,25 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
              "覆盖 --reset 的自动判断",
     )
     reset_group.add_argument(
-        "--after", choices=("hard-reset", "soft-reset", "no-reset", "no-reset-stub", "watchdog-reset"),
-        default="hard-reset", help="烧录完成后 esptool 的 --after，默认 hard-reset（复位回应用）",
+        "--after", choices=("auto", "hard-reset", "soft-reset", "no-reset", "no-reset-stub", "watchdog-reset"),
+        default="auto",
+        help="烧录完成后 esptool 的 --after，默认 auto：反相板用 no-reset（esptool 的 "
+             "hard-reset 在反相板上拉的是 GPIO0，只会换来一句 No more data to read），"
+             "标准板用 hard-reset",
     )
     reset_group.add_argument(
         "--attempts", type=int, default=2, metavar="N",
         help="连不上时的尝试次数上限（默认 2；每次尝试前都会重新进下载模式）",
+    )
+
+    write_group = parser.add_argument_group("写入方式")
+    write_group.add_argument(
+        "--single", action="store_true",
+        help="一次性写完所有镜像（默认是逐段写：一个镜像一个会话，断了只补那一段）",
+    )
+    write_group.add_argument(
+        "--skip-assets", action="store_true",
+        help="不写 assets 分区（3.9MB，唤醒词 / 字库 / 表情）。排查启动问题时用它跳过最慢的一段",
     )
 
     verify_group = parser.add_argument_group("校验 / 清空")
@@ -1640,6 +1868,11 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # ---- 5. 决定复位方式（反相板由脚本送进下载模式）----
     plan = resolve_reset_plan(selected, args)
+    # --after auto：反相板上 esptool 的 hard-reset 实际拉的是 GPIO0（不是 EN），
+    # 收尾必然报 "No more data to read from the serial port"；这种板子改用 no-reset，
+    # 写完由脚本自己按正确时序复位。
+    if args.after == "auto":
+        args.after = "no-reset" if plan.our_reset else "hard-reset"
     return run_flash(fw_root, selected, args.baud, plan, args)
 
 

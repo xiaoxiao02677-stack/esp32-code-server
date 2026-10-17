@@ -26,6 +26,7 @@ import argparse
 import importlib.util
 import os
 import re
+import struct
 import subprocess
 import sys
 import tempfile
@@ -117,6 +118,33 @@ def parse_flash_id(text: str) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # 比对
 # ---------------------------------------------------------------------------
+
+
+APP_DESC_MAGIC = 0xABCD5432
+
+
+def describe_app(data: bytes) -> Optional[str]:
+    """从 app 镜像里找 esp_app_desc（magic 0xABCD5432），返回「版本 / 日期 时间」。
+
+    app 头 +0x4 的 entry_addr、+0x1c 的 checksum 每次编译都会变，所以两份固件
+    「看起来不一样」是常态 —— 靠这几个字段就能分辨「写坏了」和「只是另一批编译」。
+    """
+    index = data.find(struct.pack("<I", APP_DESC_MAGIC))
+    if index < 0:
+        return None
+    block = data[index:index + 144]
+    if len(block) < 144:
+        return None
+
+    def field(start: int, end: int) -> str:
+        return block[start:end].split(b"\x00")[0].decode("utf-8", "replace")
+
+    version = field(16, 48)
+    moment = field(80, 96)
+    date = field(96, 112)
+    if not version:
+        return None
+    return f"{version} / {date} {moment}"
 
 
 def diff_detail(device: bytes, local: bytes) -> tuple[str, str]:
@@ -359,6 +387,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         ("ota_data_initial.bin", 0xD000, build_dir / "ota_data_initial.bin"),
     ]
     verdict: list[str] = []
+    stale: list[str] = []
     if boot_dump is not None:
         for name, offset, path in rows:
             if not path.is_file():
@@ -366,6 +395,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             local = path.read_bytes()
             start = offset - BOOT_BASE
             got = boot_dump[start:start + len(local)]
+            if name == "ota_data_initial.bin":
+                # otadata 会被 bootloader 改写（启动一次就变成 ota_seq=1），不参与逐字节比对
+                flash.say(f"  {name:<22} 0x{offset:<7x} {flash.yellow('[信息]')}  "
+                          f"{flash.describe_otadata(got)}")
+                continue
             state, detail = diff_detail(got, local)
             tag = {
                 "ok": flash.green("[一致]"),
@@ -383,15 +417,27 @@ def main(argv: Optional[list[str]] = None) -> int:
         scope_len = min(len(app_dump), len(local_app))
         got = app_dump[:scope_len]
         state, detail = diff_detail(got, local_app[:scope_len])
+        extra = ""
+        if state == "diff":
+            # 逐字节不同 ≠ 写坏：换一次编译，entry_addr / checksum / 编译时间全都会变。
+            # 用 esp_app_desc 区分「另一批编译」和「真的写坏了」。
+            device_desc = describe_app(app_dump)
+            local_desc = describe_app(local_app)
+            if device_desc and local_desc and device_desc != local_desc:
+                state = "stale"
+                extra = f"设备 {device_desc}，本地 {local_desc}"
         tag = {
             "ok": flash.green("[一致]"),
             "blank": flash.red("[空白]"),
             "diff": flash.red("[不一致]"),
             "short": flash.red("[长度不足]"),
+            "stale": flash.yellow("[另一份构建]"),
         }.get(state, flash.yellow("[未知]"))
         scope = "全量" if args.full_app else f"头部 {APP_HEAD_SIZE // 1024}KB"
-        flash.say(f"  {'xiaozhi.bin':<22} 0x{APP_BASE:<7x} {tag}  {detail}（{scope}）")
-        if state != "ok":
+        flash.say(f"  {'xiaozhi.bin':<22} 0x{APP_BASE:<7x} {tag}  {extra or detail}（{scope}）")
+        if state == "stale":
+            stale.append(f"xiaozhi.bin（0x{APP_BASE:x}）{extra}")
+        elif state != "ok":
             verdict.append(f"xiaozhi.bin（0x{APP_BASE:x}）{detail}")
     else:
         verdict.append("app 区域回读失败，无法比对")
@@ -408,7 +454,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     flash.say()
     flash.say(flash.rule())
-    if not verdict:
+    if not verdict and not stale:
         flash.notice_ok("flash 内容与本地编译产物完全一致")
         flash.say("        既然写进去的和编出来的一样，设备仍然不启动，就不是烧录/产物问题。")
         flash.say("        下一步该看 bootloader 到底卡在哪：把 bootloader 日志打开重编一次，")
@@ -416,11 +462,24 @@ def main(argv: Optional[list[str]] = None) -> int:
         flash.say("          CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y")
         return flash.EXIT_OK
 
-    flash.notice_bad("发现不一致，设备里的内容和本地产物不一样")
-    for item in verdict:
-        flash.say(f"        · {item}")
-    flash.say("        结论：烧录没写全或写坏了。重新烧录一次：")
-    flash.say(f"          python hardware/sets/flash.py --port {port}")
+    if stale:
+        flash.notice_warn("app 段不是 <FW>/build 里这一份，而是另一个编译批次的产物")
+        for item in stale:
+            flash.say(f"        · {item}")
+        flash.say("        这不算写坏：bootloader 只校验镜像结构与校验和，不比对编译时间，能正常启动。")
+        flash.say("        要让设备和本地 build 完全对齐（比如刚改过代码），重烧一次即可：")
+        flash.say(f"          python hardware/sets/flash.py --port {port}")
+        if not verdict:
+            flash.notice_ok("除 app 外的区域（bootloader / 分区表 / otadata）都与本地逐字节一致")
+            return flash.EXIT_OK
+
+    if verdict:
+        flash.notice_bad("发现不一致，设备里的内容和本地产物不一样")
+        for item in verdict:
+            flash.say(f"        · {item}")
+        flash.say("        结论：烧录没写全或写坏了。重新烧录一次：")
+        flash.say(f"          python hardware/sets/flash.py --port {port}")
+        return flash.EXIT_ERROR
     return flash.EXIT_ERROR
 
 
