@@ -46,6 +46,12 @@ BOOT_SIZE = 0x10000
 APP_BASE = 0x20000
 APP_HEAD_SIZE = 0x2000
 
+# assets 分区（0x800000，8MB 容量）。只读头 + 尾：头部对得上说明起点没写错，
+# 尾部对得上说明整段写完了 —— 上一次翻车就坏在这块（3.9MB 写到 32% 断链）。
+ASSETS_BASE = 0x800000
+ASSETS_HEAD = 0x1000
+ASSETS_TAIL = 0x1000
+
 
 def _load_module(name: str, path: Path) -> Any:
     """按路径加载模块（同目录脚本互相复用，不依赖包结构）。"""
@@ -380,6 +386,23 @@ def main(argv: Optional[list[str]] = None) -> int:
     boot_dump = read_region(session_call, BOOT_BASE, BOOT_SIZE, "bootloader/分区表区")
     app_dump = read_region(session_call, APP_BASE, app_size, "app 区")
 
+    # assets 只在「有本地产物」且「文件不太大」时查头尾（8MB 分区全读太慢）
+    assets_path = build_dir / "generated_assets.bin"
+    assets_checks: list[tuple[str, Optional[bytes], bytes, int]] = []
+    if assets_path.is_file():
+        local_assets = assets_path.read_bytes()
+        head = local_assets[:ASSETS_HEAD]
+        tail_start = max(0, len(local_assets) - ASSETS_TAIL)
+        tail = local_assets[tail_start:]
+        assets_checks.append(
+            ("头部", read_region(session_call, ASSETS_BASE, len(head), "assets 头部"),
+             head, ASSETS_BASE)
+        )
+        assets_checks.append(
+            ("尾部", read_region(session_call, ASSETS_BASE + tail_start, len(tail), "assets 尾部"),
+             tail, ASSETS_BASE + tail_start)
+        )
+
     flash.say()
     rows: list[tuple[str, int, Path]] = [
         ("bootloader.bin", 0x0, build_dir / "bootloader" / "bootloader.bin"),
@@ -442,6 +465,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     else:
         verdict.append("app 区域回读失败，无法比对")
 
+    for label, got, want, where in assets_checks:
+        if got is None:
+            verdict.append(f"generated_assets.bin（0x{where:x}，{label}）回读失败")
+            continue
+        state, detail = diff_detail(got, want)
+        tag = {
+            "ok": flash.green("[一致]"),
+            "blank": flash.red("[空白]"),
+            "diff": flash.red("[不一致]"),
+            "short": flash.red("[长度不足]"),
+        }.get(state, flash.yellow("[未知]"))
+        flash.say(f"  {'generated_assets.bin':<22} 0x{where:<7x} {tag}  {label}：{detail}")
+        if state != "ok":
+            verdict.append(f"generated_assets.bin（0x{where:x}，{label}）{detail}")
+
     # ---- 收尾：把设备复位回运行状态 ----
     try:
         handle = flash._open_raw(port)
@@ -455,10 +493,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     flash.say()
     flash.say(flash.rule())
     if not verdict and not stale:
-        flash.notice_ok("flash 内容与本地编译产物完全一致")
-        flash.say("        既然写进去的和编出来的一样，设备仍然不启动，就不是烧录/产物问题。")
-        flash.say("        下一步该看 bootloader 到底卡在哪：把 bootloader 日志打开重编一次，")
-        flash.say("        在 version/config.json 的 sdkconfig_append 里加：")
+        flash.notice_ok("flash 内容与本地编译产物完全一致（bootloader / 分区表 / app / assets）")
+        flash.say("        设备运行正常的话，说明烧录链路没问题，到此为止。")
+        flash.say("        如果仍然不启动，那就不是烧录 / 产物问题，该看 bootloader 卡在哪：")
+        flash.say("        在 version/config.json 的 sdkconfig_append 里加下面这行，重编一次：")
         flash.say("          CONFIG_BOOTLOADER_LOG_LEVEL_INFO=y")
         return flash.EXIT_OK
 

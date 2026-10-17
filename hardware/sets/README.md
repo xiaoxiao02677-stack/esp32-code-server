@@ -194,14 +194,16 @@ python hardware/sets/flash.py --baud 921600      :: 提高烧录波特率
 python hardware/sets/flash.py --manual           :: 手动进下载模式（按住 BOOT + 点 RST）
 python hardware/sets/flash.py --reset none -y    :: 设备已手动进下载模式，不再复位
 python hardware/sets/flash.py --port COM18 --clean   :: 先整片擦除，再全量重烧
-python hardware/sets/flash.py --port COM18 --baud 230400   :: 大镜像写到一半断链时降速
+python hardware/sets/flash.py --port COM18 --baud 460800   :: 想快点（线材好时用，默认 230400）
+python hardware/sets/flash.py --port COM18 --chunk-size 512K  :: 大镜像还断就用更小的块
 python hardware/sets/flash.py --port COM18 --skip-assets   :: 跳过 3.9MB assets，先确认 app 能起来
 python hardware/sets/flash.py --single           :: 退回「一次会话写完所有镜像」的旧行为
 ```
 
 **默认逐段写入**：一个镜像一个 esptool 会话，顺序按地址升序 ——
 `bootloader(0x0) → 分区表(0x8000) → otadata(0xd000) → app(0x20000) → assets(0x800000)`。
-某段断了只重写那一段，并自动 `460800 → 230400 → 115200` 降速重试。
+每段写之前先 `flash-id` 探活；失败按 `波特率降档 → 换复位线序` 自愈。
+大镜像再按 **1MB 切块**（app 3 块、assets 4 块），崩一次只重写 1MB，不用从头再来。
 
 `assets` 特意排在最后：它最大（3.9MB）也最容易断，但它断了设备照样能启动 ——
 缺的只是字库 / 表情 / 唤醒词。旧顺序（照 `flash_args` 书写顺序）把 assets 排在
@@ -223,7 +225,7 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
 | 参数 | 作用 |
 |---|---|
 | `--port COMx` | 指定串口，跳过探测（仍会尝试校验） |
-| `--baud N` | 烧录波特率，默认 `460800`；连不上时先降到 `115200` 排查 |
+| `--baud N` | 烧录波特率，默认 `230400`。`460800` 更快，但长线 / 劣质线材 + 4MB 大镜像时容易断链（实机踩过） |
 | `--list` | 只探测列出串口状态，不烧录 |
 | `--json` | 以 JSON 输出探测结果（隐含 `--list`），诊断信息走 stderr 不污染 stdout |
 | `--identify` | **会复位目标板**：读 ROM 启动日志判定是不是 ESP32、是哪一款，还会报告复位线序 |
@@ -235,13 +237,30 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
 | `--reset {auto,esptool,reversed,none}` | 烧录前如何让芯片进下载模式，默认 `auto`（自动识别线序） |
 | `--manual` | 打印手动进下载模式步骤并等回车，随后按 `no-reset` 连接 |
 | `--before MODE` / `--after MODE` | 直接指定 esptool 的 `--before` / `--after`。`--after` 默认 `auto`：反相板用 `no-reset`，标准板用 `hard-reset` |
-| `--attempts N` | 连不上时的尝试次数上限，默认 `2`（每次尝试前都会重新进下载模式） |
+| `--attempts N` | 每段连接的**探活次数**，默认 `3`；用完降速再来一轮，仍未成会换复位线序 |
 | `--single` | 一次性写完所有镜像（默认逐段写，断了只补那一段） |
 | `--skip-assets` | 不写 assets 分区（3.9MB）。排查启动问题时跳过最慢的一段 |
+| `--only NAME` | 只写指定镜像（逗号分隔，可用 `bootloader` / `partition-table` / `otadata` / `app` / `assets`）。例：`--only assets` 只补资源分区 |
+| `--chunk-size BYTES` | 大镜像切块大小，默认 `1M`（可写 `512K` / `1M`）。块越小越不容易断，断了只重写这一块 |
+| `--no-chunk` | 关掉切块（大镜像整段写），只在链路非常稳时用 |
 | `--clean` | 烧录前先 `erase-flash` 整片擦除：板子里是别的固件、或分区表被外来固件改过时用 |
 | `--no-verify` | 跳过烧录后的回读比对与启动检查（默认都做） |
 | `--boot-check SEC` | 烧完复位并读串口的时长，默认 `8` 秒；`0` = 不做启动检查 |
 | `--no-reexec` | 缺 pyserial 时不自动换解释器（只枚举串口） |
+
+### 为什么会「连接失败」「烧录失败」，以及现在怎么兜住
+
+两条失败路径被分开处理，不再混成一句「连不上芯片」：
+
+| 失败点 | 以前 | 现在 |
+|---|---|---|
+| **连接** | 直接拿 `write-flash` 试，失败就退出 | 每段写之前先用 `flash-id` **探活**（约 1.8 秒）：失败重试 3 次 → 降速再试 → 还不行就**换另一条复位线序**再试（自动识别偶尔认错，认对的那条会沿用到后面所有段） |
+| **传输** | 一条命令写 5 个镜像，断一次全废 | 按地址升序逐段写；大镜像再按 **1MB 切块**，单块崩了只重写这 1MB。块边界与 4KB sector 对齐，相邻块不会互相擦掉 |
+
+最坏情况下的重试组合是：`3 次探活 × 2 种线序 × 2~3 档波特率` —— 全用完才报错，
+而且报错时会明确说清是"连接阶段没上去"还是"传输中途断了"，并给出下一步命令。
+
+默认波特率从 `460800` 降到 `230400` 就是这个取舍：写 4MB 慢约一倍，但不赌线材。
 
 ### 刷完起不来？烧录前后各有一道闸
 
@@ -317,12 +336,13 @@ A fatal error occurred: No more data to read from the serial port.
   把 3.9MB 的 assets 排在 app 前面，assets 一断 app 根本没轮到 —— 现在按地址升序，
   app 先落盘，assets 垫底。
 
-按这个顺序处理：
+按这个顺序处理（**前两条现在已经是默认行为**，正常情况直接跑第一条就行）：
 
 ```bat
-python hardware/sets/flash.py --port COM18 --baud 230400   :: 降速重烧（分段，断了只补那一段）
-python hardware/sets/flash.py --port COM18 --baud 115200   :: 还断就再降
-python hardware/sets/flash.py --port COM18 --skip-assets   :: 先跳过 3.9MB，确认应用能起来
+python hardware/sets/flash.py --port COM18                     :: 逐段 + 1MB 切块 + 230400，断了自动重来
+python hardware/sets/flash.py --port COM18 --chunk-size 512K   :: 还断就切更细
+python hardware/sets/flash.py --port COM18 --baud 115200       :: 再降一档波特率
+python hardware/sets/flash.py --port COM18 --skip-assets       :: 先跳过 3.9MB，确认应用能起来
 ```
 
 反复断更可能是**供电**问题（写 4MB 时电流冲击最大）：换 USB 口、拔掉外设、
@@ -340,8 +360,12 @@ python hardware/sets/diag.py --board yh-154tft-wifi --full-app   :: 连 app 全�
 ```
 
 它回读 `flash-id`、`0x0`~`0x10000`（bootloader + 分区表 + otadata）、`0x20000`
-（app 头部或全量），与 `<FW>/build/*.bin` 逐字节比对，会指出**首个不同的偏移**，
-然后给结论：
+（app 头部或全量）、`0x800000`（**assets 头 4KB + 尾 4KB**），与 `<FW>/build/*.bin`
+逐字节比对，会指出**首个不同的偏移**，然后给结论：
+
+> assets 尾部那 4KB 是关键：它对应资源的最后一段，实测出现过「assets 写到 95%
+> 就断、尾部 192KB 全 `0xFF`」而设备照样能启动（排在 app 后面），此时缺的是
+> 部分表情 / 字库。`diag.py` 现在能直接把它揪出来。
 
 | 结论 | 含义 | 下一步 |
 |---|---|---|

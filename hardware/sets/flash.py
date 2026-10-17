@@ -32,6 +32,13 @@ N × 超时；这里用 ThreadPoolExecutor 一个口一个线程并行做，整�
 pyserial / esptool 都取自 ESP-IDF 的 venv。当前解释器没有 pyserial 时，本脚本会
 自动改用 IDF venv 的 python 重新执行自己（可用 --python 指定，或 --no-reexec 关闭）。
 
+写入策略（默认，2026-10-17 按实机断链问题加固）：
+  · 逐段：一个镜像一个 esptool 会话；大镜像再按 1MB 切块，崩一次只重写这 1MB；
+  · 探活：每段写之前先跑 flash-id（约 1.8 秒）—— 连接问题不能拖到写了一半才暴露；
+  · 自愈：连接 / 写入失败 → 重试 3 次 → 降档波特率 → 换复位线序，全用完才报错；
+  · 顺序：按地址升序（bootloader → 分区表 → otadata → app → assets），assets 垫底，
+    它断了设备照样能启动，缺的只是字库 / 表情 / 唤醒词。
+
 烧录前后各有一道闸（默认开启）：
   · 烧录前核对 build 产物地址与分区表是否同源 —— 布局不一致直接拒烧。实机踩过的坑：
     分区表是 16MB 布局（ota_0@0x20000），app 却按 4MB 布局写到 0x10000，bootloader
@@ -116,7 +123,7 @@ except Exception:  # pragma: no cover - 环境相关
 # ---------------------------------------------------------------------------
 
 CHIP = "esp32s3"
-BAUD_DEFAULT = 460800
+BAUD_DEFAULT = 230400       # 460800 在长线/劣质线材 + 4MB 大镜像时会断链；稳优先
 PROBE_BAUD = 115200
 FLASH_MODE = "dio"
 FLASH_SIZE = "16MB"
@@ -891,6 +898,27 @@ def build_flash_command(
 BAUD_LADDER = (460800, 230400, 115200)
 OTADATA_NAME = "ota_data_initial.bin"
 
+# 大镜像切块阈值：超过 1.5MB 就切，块大小 1MB（与 4KB sector 对齐，互不擦除）。
+# 单次传输越长越容易中途断链；切块后崩一次只重写 1MB，而不是从头再来 4MB。
+CHUNK_THRESHOLD = 0x180000
+CHUNK_SIZE_DEFAULT = 0x100000
+
+CONNECT_TRIES = 3           # 每次连接的探活次数
+CONNECT_RETRY_DELAY = 0.4   # 两次探活之间的间隔（秒）
+
+# 这些字样出现就说明是「连不上」，而不是「写到一半坏了」—— 两者处置完全不同。
+CONNECT_ERROR_HINTS = (
+    "Failed to connect",
+    "Invalid head of packet",
+    "No serial data received",
+    "Timed out waiting for packet",
+    "Wrong boot mode",
+    "could not open port",
+    "PermissionError",
+    "Access is denied",
+    "拒绝访问",
+)
+
 
 def describe_otadata(data: bytes) -> str:
     """解析 otadata（两个 4KB 记录）给出人话。
@@ -924,10 +952,20 @@ def baud_candidates(baud: int) -> list[int]:
     return ladder
 
 
+def _last_error_line(text: str) -> str:
+    """从 esptool 输出里挑一行最能说明问题的话。"""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in reversed(lines):
+        lowered = line.lower()
+        if any(hint.lower() in lowered for hint in CONNECT_ERROR_HINTS) or "fatal error" in lowered:
+            return line
+    return lines[-1] if lines else ""
+
+
 def stage_command(
     port: str, baud: int, plan: ResetPlan, after: str, offset: int, path: Path
 ) -> list[str]:
-    """拼装「只写一个镜像」的 esptool 命令。"""
+    """拼装「只写一段」的 esptool 命令。"""
     return [
         sets_build._idf_python(), "-m", "esptool",
         "--chip", CHIP,
@@ -943,26 +981,96 @@ def stage_command(
     ]
 
 
-def run_stage(
-    port: str, plan: ResetPlan, offset: int, name: str, path: Path, bauds: list[int]
-) -> tuple[bool, str]:
-    """写一个镜像；失败自动降速重试同一段。返回 (是否成功, 失败说明)。
+def probe_connection(port: str, plan: ResetPlan, baud: int, tries: int) -> tuple[bool, str]:
+    """轻量探活（`esptool flash-id`，1~2 秒）：先确认连得上，再开始写。
 
-    段内一律用 --after no-reset：写完后芯片留在下载模式，下一段无需重新同步；
-    收尾由 run_flash 统一复位回应用（反相板上 esptool 的 hard-reset 是反的，
-    拉的是 GPIO0 而不是 EN，只会换来一句 No more data to read）。
+    不再拿 `write-flash` 去当探针 —— 连接问题必须暴露在传输 4MB 之前，而不是
+    写了一半才报 "No more data to read"。探活失败会重试，并把复位线序也换一遍
+    （自动识别偶尔会认错，认对的那条会沿用到后续所有段）。
     """
+    python = sets_build._idf_python()
+    last = ""
+    orders = [plan.order]
+    if plan.our_reset:
+        orders.append("classic" if plan.order == "reversed" else "reversed")
+
+    for order in orders:
+        for attempt in range(1, max(1, tries) + 1):
+            if plan.our_reset:
+                enter_download_mode(port, order)
+            command = [
+                python, "-m", "esptool",
+                "--chip", CHIP,
+                "-p", port,
+                "-b", str(baud),
+                "--before", plan.before,
+                "--after", "no-reset",
+                "flash-id",
+            ]
+            try:
+                completed = subprocess.run(
+                    command, check=False, capture_output=True, env=sets_build._idf_env_vars()
+                )
+            except OSError as error:  # pragma: no cover - 环境相关
+                return False, f"无法启动 esptool: {error}"
+            if completed.returncode == 0:
+                if plan.our_reset and order != plan.order:
+                    notice_ok(f"  换用 {order} 线序才连上（自动识别认错了，本次沿用这条）")
+                    plan.order = order
+                return True, ""
+            raw = (completed.stdout or b"") + (completed.stderr or b"")
+            last = _last_error_line(raw.decode("utf-8", "replace"))
+            if attempt < tries:
+                time.sleep(CONNECT_RETRY_DELAY)
+        if plan.our_reset:
+            notice_warn(f"  连不上（{order} 线序 @ {baud}）：{last or '无输出'} → 换另一种线序")
+    return False, last or "连接没有建立"
+
+
+def slice_chunk(path: Path, start: int, length: int) -> Optional[Path]:
+    """把文件的 [start, start+length) 切到临时文件（esptool 只能整文件写）。"""
+    handle, name = tempfile.mkstemp(prefix="sets_chunk_", suffix=".bin")
+    temp = Path(name)
     try:
-        size = path.stat().st_size
+        with os.fdopen(handle, "wb") as out, path.open("rb") as source:
+            source.seek(start)
+            remaining = length
+            while remaining > 0:
+                block = source.read(min(0x40000, remaining))
+                if not block:
+                    break
+                out.write(block)
+                remaining -= len(block)
+    except OSError:
+        try:
+            temp.unlink()
+        except OSError:
+            pass
+        return None
+    return temp
+
+
+def write_chunk(
+    port: str, baud: int, plan: ResetPlan,
+    base_offset: int, path: Path, start: int, length: int,
+) -> tuple[bool, str]:
+    """把文件的 [start, start+length) 写到 `base_offset + start`。"""
+    temp: Optional[Path] = None
+    try:
+        total = path.stat().st_size
     except OSError:
         return False, f"文件不存在：{path}"
 
-    detail = ""
-    for index, baud in enumerate(bauds):
-        if plan.our_reset:
-            enter_download_mode(port, plan.order)
-        command = stage_command(port, baud, plan, "no-reset", offset, path)
-        say(f"  0x{offset:<9x} {name:<26} {size:>9} 字节   @ {baud}")
+    if start == 0 and length == total:
+        source = path                       # 整段就是整个文件，不必切
+    else:
+        temp = slice_chunk(path, start, length)
+        if temp is None:
+            return False, "切分镜像失败（磁盘不可写？）"
+        source = temp
+
+    try:
+        command = stage_command(port, baud, plan, "no-reset", base_offset + start, source)
         try:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -972,17 +1080,71 @@ def run_stage(
             completed = subprocess.run(command, check=False, env=sets_build._idf_env_vars())
         except OSError as error:  # pragma: no cover - 环境相关
             return False, f"无法启动 esptool: {error}"
-        if completed.returncode == 0:
-            return True, ""
-        detail = f"esptool 返回码 {completed.returncode}（{baud}）"
-        if index + 1 < len(bauds):
-            notice_warn(f"{name} 在 {baud} 下没写成，降到 {bauds[index + 1]} 重试这一段")
-            time.sleep(0.6)
-    return False, detail
+    finally:
+        if temp is not None:
+            try:
+                temp.unlink()
+            except OSError:
+                pass
+
+    if completed.returncode == 0:
+        return True, ""
+    return False, f"esptool 返回码 {completed.returncode}"
+
+
+def run_stage(
+    port: str, plan: ResetPlan, offset: int, name: str, path: Path,
+    bauds: list[int], chunk_size: int, attempts: int,
+) -> tuple[bool, str]:
+    """写一个镜像（大文件切块），失败按「降速 → 重试 → 换线序」自愈。
+
+    每一块都：探活 → 写入。探活失败降速；写入失败降速并重写**这一块**（不是整段）。
+    """
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return False, f"文件不存在：{path}"
+
+    chunks: list[tuple[int, int, int]] = []      # (flash 地址, 文件内偏移, 长度)
+    if chunk_size > 0 and size > CHUNK_THRESHOLD:
+        for start in range(0, size, chunk_size):
+            chunks.append((offset + start, start, min(chunk_size, size - start)))
+        say(f"        {size} 字节 → 切成 {len(chunks)} 块（每块 {chunk_size // 1024}KB）")
+    else:
+        chunks.append((offset, 0, size))
+
+    baud_index = 0
+    index = 0
+    while index < len(chunks):
+        baud = bauds[baud_index]
+        ok, detail = probe_connection(port, plan, baud, attempts)
+        if not ok:
+            if baud_index + 1 < len(bauds):
+                notice_warn(f"  连接失败（{baud}）：{detail} → 降到 {bauds[baud_index + 1]}")
+                baud_index += 1
+                continue
+            return False, f"连不上芯片：{detail}"
+
+        chunk_offset, start, length = chunks[index]
+        label = f"块 {index + 1}/{len(chunks)}" if len(chunks) > 1 else "整段"
+        say(f"        0x{chunk_offset:<9x} {label:<9} {length:>9} 字节   @ {baud}")
+        ok, detail = write_chunk(port, baud, plan, offset, path, start, length)
+        if ok:
+            index += 1
+            continue
+
+        if baud_index + 1 < len(bauds):
+            notice_warn(f"  {label} 写入失败（{baud}）：{detail} → 降到 {bauds[baud_index + 1]} 重写这一块")
+            baud_index += 1
+            time.sleep(0.4)
+            continue
+        return False, detail
+    return True, ""
 
 
 def run_staged_flash(
-    port: str, plan: ResetPlan, targets: list[tuple[int, str, Path]], baud: int
+    port: str, plan: ResetPlan, targets: list[tuple[int, str, Path]],
+    baud: int, chunk_size: int, attempts: int,
 ) -> tuple[bool, str, str]:
     """逐段烧录。返回 (是否全部成功, 失败说明, 出问题的镜像名)。
 
@@ -993,14 +1155,15 @@ def run_staged_flash(
     targets = sorted(targets, key=lambda item: item[0])
     bauds = baud_candidates(baud)
     if len(bauds) > 1:
-        say(f"  失败自动降速阶梯: {' → '.join(str(item) for item in bauds)}")
+        say(f"  连接/写入失败自动降速: {' → '.join(str(item) for item in bauds)}")
+
     failed_name = ""
     failed_detail = ""
     total = len(targets)
     for index, (offset, name, path) in enumerate(targets, start=1):
         say()
         say(bold(f"  [{index}/{total}] {name}"))
-        ok, detail = run_stage(port, plan, offset, name, path, bauds)
+        ok, detail = run_stage(port, plan, offset, name, path, bauds, chunk_size, attempts)
         if ok:
             say(green("        OK"))
             continue
@@ -1024,7 +1187,8 @@ def run_staged_flash(
 #   一次看它到底起没起来。
 # ---------------------------------------------------------------------------
 
-VERIFY_HEAD_SIZE = 0x1000     # app 只回读头部：esptool 写完本身会做全片哈希校验
+VERIFY_HEAD_SIZE = 0x1000     # 大镜像回读头部 4KB：能发现「写到了别处 / 写错文件」
+VERIFY_TAIL_SIZE = 0x1000     # 大镜像再回读尾部 4KB：app 末尾是整段 SHA256，能发现「写一半断链」
 VERIFY_FULL_LIMIT = 0x20000   # 小于这个尺寸的镜像（bootloader/分区表/otadata）全量回读
 BOOT_CHECK_SECONDS = 8.0      # 烧完复位后读串口的时长
 
@@ -1090,6 +1254,36 @@ def parse_write_targets(fw_root: Path) -> list[tuple[int, str, Path]]:
     for offset, relative in FLASH_FULL_IMAGE:
         targets.append((int(offset, 16), Path(relative).name, fw_root / relative))
     return targets
+
+
+ONLY_ALIASES = {
+    "bootloader": "bootloader.bin",
+    "pt": "partition-table.bin",
+    "partition-table": "partition-table.bin",
+    "otadata": "ota_data_initial.bin",
+    "app": "xiaozhi.bin",
+    "xiaozhi": "xiaozhi.bin",
+    "assets": "generated_assets.bin",
+}
+
+
+def filter_targets(
+    targets: list[tuple[int, str, Path]], only: str
+) -> tuple[list[tuple[int, str, Path]], list[str]]:
+    """把 `--only app,assets` 解析成要写的镜像清单，返回 (选中, 不认识的名字)。"""
+    wanted: set[str] = set()
+    unknown: list[str] = []
+    available = {name for _offset, name, _path in targets}
+    for raw in only.replace(";", ",").replace(" ", ",").split(","):
+        token = raw.strip().lower()
+        if not token:
+            continue
+        name = ONLY_ALIASES.get(token, token)
+        if name not in available:
+            unknown.append(raw.strip())
+            continue
+        wanted.add(name)
+    return [item for item in targets if item[1] in wanted], unknown
 
 
 def check_layout_consistency(fw_root: Path, targets: list[tuple[int, str, Path]]) -> list[str]:
@@ -1163,7 +1357,13 @@ def _esptool_read(
 def verify_written_regions(
     fw_root: Path, port: str, plan: ResetPlan, baud: int, targets: list[tuple[int, str, Path]]
 ) -> list[str]:
-    """回读刚写好的区域逐字节比对本地产物，返回不一致清单（空 = 全部一致）。"""
+    """回读刚写好的区域逐字节比对本地产物，返回不一致清单（空 = 全部一致）。
+
+    小镜像全量比对；大镜像比对**头部 + 尾部**两段：
+      · 头部能发现「写到了别处 / 写错文件」；
+      · 尾部能发现「写到一半断链」—— app 镜像末尾就是整段镜像的 SHA256，
+        最后 4KB 对得上基本等于整段写完了（不做全量回读，省一半时间）。
+    """
     python = sets_build._idf_python()
     bad: list[str] = []
     say()
@@ -1171,46 +1371,60 @@ def verify_written_regions(
     for offset, name, path in targets:
         if not path.is_file():
             continue
-        size = path.stat().st_size
-        read_size = size if size <= VERIFY_FULL_LIMIT else VERIFY_HEAD_SIZE
-        handle, temp_name = tempfile.mkstemp(prefix="sets_verify_", suffix=".bin")
-        os.close(handle)
-        temp = Path(temp_name)
-        try:
-            code, text = _esptool_read(python, port, plan, baud, offset, read_size, temp)
-            if code != 0:
-                tail = [line for line in text.splitlines() if line.strip()][-3:]
-                notice_warn(f"{name} 回读失败（esptool 返回码 {code}），跳过比对")
-                for line in tail:
-                    say("        " + line)
-                bad.append(f"{name}（0x{offset:x}）回读失败")
-                continue
-            got = temp.read_bytes()
-            if name == OTADATA_NAME:
-                # otadata 被 bootloader 改写属正常，只报状态、不判对错
-                say(f"  {name:<26} 0x{offset:<9x} {green('[信息]')} {describe_otadata(got)}")
-                continue
-            want = path.read_bytes()[:read_size]
-            if got == want:
-                scope = "全量" if read_size == size else f"头部 {read_size // 1024}KB"
-                say(f"  {name:<26} 0x{offset:<9x} {green('[一致]')} {scope}（{read_size} 字节）")
-                continue
-            first = next(
-                (i for i in range(min(len(got), len(want))) if got[i] != want[i]), -1
-            )
-            if first >= 0:
-                detail = (f"{sum(1 for a, b in zip(got, want) if a != b)}/{read_size} 字节不同，"
-                          f"首个不同在 +0x{first:x}"
-                          f"（设备=0x{got[first]:02x} 本地=0x{want[first]:02x}）")
-            else:
-                detail = f"长度不符：设备 {len(got)} 字节 / 本地 {read_size} 字节"
-            notice_bad(f"{name} 0x{offset:x} 与本地不一致：{detail}")
-            bad.append(f"{name}（0x{offset:x}）{detail}")
-        finally:
+        data = path.read_bytes()
+        size = len(data)
+        if size <= VERIFY_FULL_LIMIT:
+            regions = [(offset, 0, size, "全量")]
+        else:
+            tail_start = max(0, size - VERIFY_TAIL_SIZE)
+            regions = [
+                (offset, 0, VERIFY_HEAD_SIZE, f"头部 {VERIFY_HEAD_SIZE // 1024}KB"),
+                (offset + tail_start, tail_start, VERIFY_TAIL_SIZE, "尾部校验和"),
+            ]
+
+        for read_offset, file_start, read_size, label in regions:
+            handle, temp_name = tempfile.mkstemp(prefix="sets_verify_", suffix=".bin")
+            os.close(handle)
+            temp = Path(temp_name)
             try:
-                temp.unlink()
-            except OSError:
-                pass
+                code, text = _esptool_read(
+                    python, port, plan, baud, read_offset, read_size, temp
+                )
+                if code != 0:
+                    tail = [line for line in text.splitlines() if line.strip()][-3:]
+                    notice_warn(f"{name} 回读失败（esptool 返回码 {code}），跳过比对")
+                    for line in tail:
+                        say("        " + line)
+                    bad.append(f"{name}（0x{read_offset:x}）回读失败")
+                    break
+                got = temp.read_bytes()
+                if name == OTADATA_NAME:
+                    # otadata 被 bootloader 改写属正常，只报状态、不判对错
+                    say(f"  {name:<26} 0x{offset:<9x} {green('[信息]')} {describe_otadata(got)}")
+                    break
+                want = data[file_start:file_start + read_size]
+                if got == want:
+                    say(f"  {name:<26} 0x{read_offset:<9x} {green('[一致]')} {label}（{read_size} 字节）")
+                    continue
+                first = next(
+                    (i for i in range(min(len(got), len(want))) if got[i] != want[i]), -1
+                )
+                if first >= 0:
+                    detail = (
+                        f"{sum(1 for a, b in zip(got, want) if a != b)}/{read_size} 字节不同，"
+                        f"首个不同在 +0x{file_start + first:x}"
+                        f"（设备=0x{got[first]:02x} 本地=0x{want[first]:02x}）"
+                    )
+                else:
+                    detail = f"长度不符：设备 {len(got)} 字节 / 本地 {read_size} 字节"
+                notice_bad(f"{name} 0x{read_offset:x} 与本地不一致（{label}）：{detail}")
+                bad.append(f"{name}（0x{read_offset:x}，{label}）{detail}")
+                break
+            finally:
+                try:
+                    temp.unlink()
+                except OSError:
+                    pass
     return bad
 
 
@@ -1382,27 +1596,30 @@ def _report_flash_failure(
     say()
     if failed_name in ("bootloader.bin", "partition-table.bin"):
         notice_bad(f"烧录在最早的一段「{failed_name}」就失败了：{detail}")
-        say("        说明还没开始真正写镜像，问题在连接阶段。先看设备现在在干什么：")
+        say("        已经试过：3 次探活 × 2 种复位线序 × 2~3 档波特率，都没连上。")
+        say("        设备现在在干什么：")
         diagnose_after_failure(port)
-        say("        · 报 Invalid head of packet (0x49)：0x49 是字符 'I'，那是应用日志首字节，")
-        say("          说明芯片在跑应用、没进下载模式（esptool 把日志当成了应答）。")
-        say("        · 波特率：先试 --baud 115200 排除线材 / 干扰因素。")
-        say("        仍不行就手动进下载模式：按住 BOOT → 点一下 RST → 松开 BOOT，再 --reset none 重跑。")
+        say("        人工排查顺序：")
+        say("          1) 换一根短一点的 USB 数据线（很多线只有充电线芯，传数据必失败）；")
+        say("          2) 关掉串口监视器 / 另一个烧录窗口（串口独占，被占用时连不上）；")
+        say("          3) 手动进下载模式：按住 BOOT → 点一下 RST → 松开 BOOT，再 --reset none 重跑；")
+        say("          4) 报 Invalid head of packet (0x49)：0x49 是字符 'I'（应用日志首字节），")
+        say("             说明芯片在跑应用没进下载模式 —— 上面的 --reset none 就是解这个的。")
         return EXIT_ERROR
 
     notice_bad(f"写到「{failed_name}」时断链了：{detail}")
-    say("        这不是「连不上芯片」—— 芯片是连上过的，只是写到一半链路断了。")
+    say("        这不是「连不上芯片」—— 芯片是连上过的（连接前已探活），是传输中途断了。")
     if failed_name == "generated_assets.bin":
         say("        好消息：assets 是最后一段，bootloader / 分区表 / otadata / app 都已写好 ——")
-        say("        设备已经能启动，缺的只是唤醒词 / 字库 / 表情。先看屏幕起没起来，再单独补这一段：")
-        say(f"          python hardware/sets/flash.py --port {port} --baud 115200")
+        say("        设备已经能启动，缺的只是唤醒词 / 字库 / 表情。单独补这一段：")
+        say(f"          python hardware/sets/flash.py --port {port} --chunk-size 512K")
         say("        要先把应用跑通、暂时不要资源，就加 --skip-assets 重烧一遍。")
     else:
-        say("        前面几段已经写进芯片，重跑时每段都会重新写一遍并校验：")
+        say("        前面几段已经写进芯片，重跑会逐段补写并校验：")
         say(f"          python hardware/sets/flash.py --port {port}")
-        say("        如果总在同一个大镜像上断，按顺序试：")
-        say(f"          python hardware/sets/flash.py --port {port} --baud 230400")
+        say("        还断就再往下退：")
         say(f"          python hardware/sets/flash.py --port {port} --baud 115200")
+        say(f"          python hardware/sets/flash.py --port {port} --chunk-size 512K")
     say("        反复断更可能是供电不足：换 USB 口 / 拔掉外设 / 用带供电的 HUB，")
     say("        或把背光调暗——写 4MB 时电流冲击最大。")
     if plan.our_reset:
@@ -1448,6 +1665,19 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
         say()
         notice_warn("--skip-assets：本次不写 assets 分区（唤醒词 / 字库 / 表情沿用设备里已有的那份）")
 
+    if args.only:
+        selected, unknown = filter_targets(targets, args.only)
+        if unknown:
+            notice_bad(f"--only 里有不认识的镜像名：{'、'.join(unknown)}")
+            say("        可用：bootloader / partition-table / otadata / app / assets")
+            return EXIT_ERROR
+        if not selected:
+            notice_bad("--only 过滤之后没有剩下任何镜像")
+            return EXIT_ERROR
+        targets = selected
+        say()
+        notice_warn(f"--only {args.only}：只写 {len(targets)} 段（{', '.join(t[1] for t in targets)}）")
+
     say()
     if args.single:
         say(bold(f"[烧录] {mode_desc}"))
@@ -1467,7 +1697,9 @@ def run_flash(fw_root: Path, port: str, baud: int, plan: ResetPlan, args: argpar
     if args.single:
         ok, detail, failed_name = _write_all_at_once(fw_root, port, baud, plan, args, targets)
     else:
-        ok, detail, failed_name = run_staged_flash(port, plan, targets, baud)
+        ok, detail, failed_name = run_staged_flash(
+            port, plan, targets, baud, args.chunk_size, args.attempts
+        )
     if not ok:
         if failed_name:
             return _report_flash_failure(port, plan, failed_name, detail)
@@ -1552,6 +1784,23 @@ def reexec_with_idf_python(argv: list[str], allow_reexec: bool) -> Optional[int]
 # ---------------------------------------------------------------------------
 
 
+def _size_arg(text: str) -> int:
+    """把 `512K` / `1M` / `1048576` 解析成字节数（切块参数用）。"""
+    raw = text.strip().lower()
+    multiplier = 1
+    if raw.endswith("k"):
+        multiplier, raw = 1024, raw[:-1]
+    elif raw.endswith("m"):
+        multiplier, raw = 1024 * 1024, raw[:-1]
+    try:
+        value = int(raw, 0) * multiplier
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"看不懂的大小：{text}") from error
+    if value < 0x1000:
+        raise argparse.ArgumentTypeError("切块至少 4KB（必须与 flash sector 对齐）")
+    return value
+
+
 def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="hardware/sets/flash.py",
@@ -1570,9 +1819,12 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/flash.py --reset none -y    # 设备已手动进下载模式，不再复位\n"
             "  python hardware/sets/flash.py --port COM18 --clean   # 先整片擦除再全量重烧\n"
             "  python hardware/sets/flash.py --port COM18 --skip-assets  # 跳过 3.9MB assets，先确认 app 能起来\n"
+            "  python hardware/sets/flash.py --port COM18 --baud 460800   # 想快点（默认 230400，稳优先）\n"
+            "  python hardware/sets/flash.py --port COM18 --chunk-size 512K  # 大镜像还断就用更小的块\n"
             "\n"
             "默认**逐段写入**：一个镜像一个 esptool 会话（bootloader → 分区表 → otadata → app → assets），\n"
-            "某段断了只补那一段，并自动 460800 → 230400 → 115200 降速重试。\n"
+            "每段写之前先 flash-id 探活（约 1.8 秒）：失败重试 3 次 → 降速 → 换复位线序，全做完才报错。\n"
+            "大镜像再按 1MB 切块（app 3 块、assets 4 块），崩一次只重写这 1MB，不用从头再来。\n"
             "assets 排在最后：它断了设备照样能启动，只是没字库 / 唤醒词。\n"
             "（--single 可退回「一次会话写完所有镜像」的旧行为。）\n"
             "\n"
@@ -1634,8 +1886,8 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
              "标准板用 hard-reset",
     )
     reset_group.add_argument(
-        "--attempts", type=int, default=2, metavar="N",
-        help="连不上时的尝试次数上限（默认 2；每次尝试前都会重新进下载模式）",
+        "--attempts", type=int, default=CONNECT_TRIES, metavar="N",
+        help=f"每段连接的探活次数，默认 {CONNECT_TRIES}；用完就降速再来一轮（仍未成会换复位线序）",
     )
 
     write_group = parser.add_argument_group("写入方式")
@@ -1646,6 +1898,20 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     write_group.add_argument(
         "--skip-assets", action="store_true",
         help="不写 assets 分区（3.9MB，唤醒词 / 字库 / 表情）。排查启动问题时用它跳过最慢的一段",
+    )
+    write_group.add_argument(
+        "--only", metavar="NAME",
+        help="只写指定镜像（逗号分隔）。可用名：bootloader / partition-table / otadata / app / assets，"
+             "例：--only assets 只补写资源分区，不碰前面的镜像",
+    )
+    write_group.add_argument(
+        "--chunk-size", type=_size_arg, default=CHUNK_SIZE_DEFAULT, metavar="BYTES",
+        help=f"大镜像切块大小，默认 {CHUNK_SIZE_DEFAULT // 1024}KB（可写 512K / 1M）；"
+             "单次传输越短越不容易中途断链，断了也只重写这一块",
+    )
+    write_group.add_argument(
+        "--no-chunk", action="store_true",
+        help="关掉切块（大镜像整段写）。只在链路非常稳、想省连接开销时用",
     )
 
     verify_group = parser.add_argument_group("校验 / 清空")
@@ -1678,6 +1944,11 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         parser.error("--attempts 至少为 1")
     if args.timeout <= 0:
         parser.error("--timeout 必须大于 0")
+    if args.no_chunk:
+        args.chunk_size = 0
+    elif args.chunk_size % 0x1000:
+        # 必须与 4KB sector 对齐，否则相邻块擦除时会互相吃掉尾巴
+        args.chunk_size -= args.chunk_size % 0x1000
     return args
 
 
