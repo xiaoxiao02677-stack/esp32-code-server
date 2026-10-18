@@ -5,6 +5,10 @@
 #include <mutex>
 #include <string>
 
+// 壁纸槽位种类（wallpaper/wallpaper_manager.h）。enum class 可前向声明，
+// 本头只需要它做 SendWallpaperResult 的参数类型。
+enum class WallpaperKind;
+
 // YH Device Protocol v1 适配层。
 //
 // 职责边界：小智固件 <-> 屿禾工坊服务器 (TCP :12399, newline-delimited JSON)。
@@ -26,8 +30,10 @@ public:
 
     // 壁纸执行结果回执（SET_WALLPAPER 异步下载/应用完成后调用）。
     // 走本通道（TCP 12399，常连）而非 WS：设备空闲时 WS 不保持，只有本通道在线。
+    // kind 标识槽位（idle/boot），服务端按槽位分别记账；缺省 idle 兼容旧调用。
     // 线程安全：可从壁纸后台任务上下文调用（内部加锁；失败只记日志不触发重连）。
-    void SendWallpaperResult(const std::string& version, bool ok, const std::string& reason);
+    void SendWallpaperResult(const std::string& version, bool ok, const std::string& reason,
+                             WallpaperKind kind = WallpaperKind::Idle);
 
 private:
     YhProtocol();

@@ -281,11 +281,12 @@ bool YhProtocol::SendJson(cJSON* root) {
 // 走本常连通道（设备空闲时 WS 不保持）；失败只记日志，不触发重连
 // （壁纸失败不应影响设备管理通道本身）。
 void YhProtocol::SendWallpaperResult(const std::string& version, bool ok,
-                                     const std::string& reason) {
+                                     const std::string& reason, WallpaperKind kind) {
     std::lock_guard<std::mutex> lock(send_mutex_);
     if (tcp_ == nullptr || state_ != State::kOnline) {
-        ESP_LOGW(TAG, "wallpaper: result dropped (channel offline) version=%s status=%s",
-                 version.c_str(), ok ? "ok" : "fail");
+        ESP_LOGW(TAG, "wallpaper: result dropped (channel offline) kind=%s version=%s status=%s",
+                 kind == WallpaperKind::Boot ? "boot" : "idle", version.c_str(),
+                 ok ? "ok" : "fail");
         return;
     }
     auto root = CJsonUniquePtr(cJSON_CreateObject());
@@ -294,6 +295,8 @@ void YhProtocol::SendWallpaperResult(const std::string& version, bool ok,
     cJSON_AddStringToObject(root.get(), "device_id", device_id_.c_str());
     cJSON_AddStringToObject(root.get(), "version", version.c_str());
     cJSON_AddStringToObject(root.get(), "status", ok ? "ok" : "fail");
+    // kind 与 WS 回执契约一致：boot 槽必须可分辨，服务端按槽位分别记账
+    cJSON_AddStringToObject(root.get(), "kind", kind == WallpaperKind::Boot ? "boot" : "idle");
     if (!ok && !reason.empty()) {
         cJSON_AddStringToObject(root.get(), "reason", reason.c_str());
     }
@@ -305,12 +308,13 @@ void YhProtocol::SendWallpaperResult(const std::string& version, bool ok,
     line += '\n';
     int sent = static_cast<Tcp*>(tcp_)->Send(line);
     if (sent < 0) {
-        ESP_LOGW(TAG, "wallpaper: result send failed (errno=%d) version=%s", -sent,
-                 version.c_str());
+        ESP_LOGW(TAG, "wallpaper: result send failed (errno=%d) kind=%s version=%s", -sent,
+                 kind == WallpaperKind::Boot ? "boot" : "idle", version.c_str());
         return;
     }
-    ESP_LOGI(TAG, ">>> wallpaper result sent version=%s status=%s reason=%s",
-             version.c_str(), ok ? "ok" : "fail", reason.c_str());
+    ESP_LOGI(TAG, ">>> wallpaper result sent kind=%s version=%s status=%s reason=%s",
+             kind == WallpaperKind::Boot ? "boot" : "idle", version.c_str(),
+             ok ? "ok" : "fail", reason.c_str());
 }
 
 // ---------------------------------------------------------------------------
@@ -525,15 +529,24 @@ void YhProtocol::HandleCommand(cJSON* root) {
         }
         const cJSON* j_format = cJSON_GetObjectItem(params, "format");
         request.format = cJSON_IsString(j_format) ? j_format->valuestring : "rgb565";
-        ESP_LOGI(TAG, "<<< COMMAND SET_WALLPAPER [%s] version=%s size=%d",
-                 cmd_id->valuestring, request.version.c_str(), request.size);
+        // 槽位（可选）："boot" = 开机壁纸，缺省/"idle" = 待机壁纸（与 WS 消息契约一致）
+        const cJSON* j_kind = cJSON_GetObjectItem(params, "kind");
+        if (cJSON_IsString(j_kind) && strcmp(j_kind->valuestring, "boot") == 0) {
+            request.kind = WallpaperKind::Boot;
+        } else {
+            request.kind = WallpaperKind::Idle;
+        }
+        ESP_LOGI(TAG, "<<< COMMAND SET_WALLPAPER [%s] kind=%s version=%s size=%d",
+                 cmd_id->valuestring, request.kind == WallpaperKind::Boot ? "boot" : "idle",
+                 request.version.c_str(), request.size);
         // 先回执「已受理」：下载/校验/应用在壁纸后台任务完成，结果另行以
         // type=wallpaper 回执（不阻塞本通道的接收任务）。
         SendCommandAck(root, true, kErrNone);
         const std::string ack_version = request.version;
+        const WallpaperKind ack_kind = request.kind;
         WallpaperManager::GetInstance().HandleSet(
-            request, [ack_version](bool ok, const std::string& reason) {
-                YhProtocol::GetInstance().SendWallpaperResult(ack_version, ok, reason);
+            request, [ack_version, ack_kind](bool ok, const std::string& reason) {
+                YhProtocol::GetInstance().SendWallpaperResult(ack_version, ok, reason, ack_kind);
             });
         return;
     }

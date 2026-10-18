@@ -203,4 +203,12 @@ public class RedisKeys {
         return "wallpaper:ack:" + deviceId;
     }
 
+    /**
+     * 开机壁纸（boot 槽）回执 key：与 idle 槽分键，互不覆盖。
+     * 由 Python 侧按 kind 分键写入（wallpaper_ack.py build_ack_key），读取须用 StringRedisTemplate。
+     */
+    public static String getWallpaperBootAckKey(String deviceId) {
+        return "wallpaper:ack:boot:" + deviceId;
+    }
+
 }

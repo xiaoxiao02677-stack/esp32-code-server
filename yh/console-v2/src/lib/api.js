@@ -499,7 +499,8 @@ export const wallpaperApi = {
   upload: (formData) => api.upload('/wallpaperMag/upload', formData),
   // 删除壁纸：DELETE /wallpaperMag/{id}
   remove: (id) => api.del(`/wallpaperMag/${id}`),
-  // 下发：POST /wallpaperMag/dispatch，body = { wallpaperId,targetType,deviceIds,agentIds,applyMode } → { taskId }
+  // 下发：POST /wallpaperMag/dispatch，body = { wallpaperId,targetType,deviceIds,agentIds,applyMode,kind }
+  // kind: 'idle'=待机壁纸（主界面背景，缺省）/ 'boot'=开机壁纸（开机首屏底图），两槽独立下发
   dispatch: (payload) => api.post('/wallpaperMag/dispatch', payload),
   // 任务进度：GET /wallpaperMag/task/{taskId} → { status,total,sent,success,failed,devices[] }
   task: (taskId) => api.get(`/wallpaperMag/task/${taskId}`),

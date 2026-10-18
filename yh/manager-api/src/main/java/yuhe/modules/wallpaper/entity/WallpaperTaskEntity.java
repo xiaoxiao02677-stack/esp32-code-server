@@ -39,6 +39,9 @@ public class WallpaperTaskEntity {
     @Schema(description = "生效方式：immediate/next_boot")
     private String applyMode;
 
+    @Schema(description = "壁纸槽位：idle=待机壁纸/boot=开机壁纸")
+    private String kind;
+
     @Schema(description = "任务状态：pending/sent/partial/failed")
     private String status;
 

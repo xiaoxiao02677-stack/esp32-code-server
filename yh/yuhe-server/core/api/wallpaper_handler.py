@@ -57,14 +57,20 @@ class WallpaperHandler(BaseHandler):
         请求体：
             {
                 "device_ids": ["AA:BB:CC:DD:EE:FF"],
+                "kind": "idle",
                 "wallpaper": {
                     "version": "3",
                     "url": "https://...",
                     "md5": "...",
                     "size": 115200,
-                    "format": "rgb565"
+                    "format": "rgb565",
+                    "kind": "idle"
                 }
             }
+
+        kind（顶层或 wallpaper 内，二者取其一，顶层优先）标识槽位：
+        idle=待机壁纸（主界面背景）/ boot=开机壁纸（开机 splash 底图），
+        缺省 idle。两个槽位独立排队/独立回执（Redis key 分槽）。
 
         响应 data：
             {"sent": ["AA:BB:..."], "offline": ["..."]}
@@ -92,6 +98,14 @@ class WallpaperHandler(BaseHandler):
                 return _json_response(400, "wallpaper.size 必须为整数", status=400)
             if not wallpaper.get("version"):
                 return _json_response(400, "wallpaper.version 不能为空", status=400)
+
+            # 槽位归一：顶层 kind 优先，其次 wallpaper.kind，缺省 idle
+            kind = body.get("kind") or wallpaper.get("kind") or "idle"
+            kind = str(kind).strip().lower()
+            if kind not in ("idle", "boot"):
+                return _json_response(400, "kind 必须为 idle 或 boot", status=400)
+            wallpaper = dict(wallpaper)
+            wallpaper["kind"] = kind
 
             if self.wallpaper_service is None:
                 return _json_response(503, "WallpaperService 未初始化", status=503)

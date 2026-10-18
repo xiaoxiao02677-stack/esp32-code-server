@@ -262,15 +262,23 @@ class HeartbeatServer:
         return device_id or None
 
     def _handle_wallpaper_result(self, device_id: str, msg: dict) -> None:
-        """壁纸执行结果（TCP 通道）→ 落 Redis 回执，供 manager-api 任务详情汇总。"""
+        """壁纸执行结果（TCP 通道）→ 落 Redis 回执，供 manager-api 任务详情汇总。
+
+        kind 标识槽位（新固件回执带）：boot=开机壁纸 / idle=待机壁纸，
+        缺省按 idle（旧固件回执无该字段），sink 侧按槽位分键落 Redis。
+        """
+        kind = str(msg.get("kind") or "idle").strip().lower()
+        if kind not in ("idle", "boot"):
+            kind = "idle"
         payload = {
             "version": str(msg.get("version", "")),
             "status": str(msg.get("status", "")),
             "reason": str(msg.get("reason", "")),
+            "kind": kind,
             "ts": int(time.time() * 1000),
         }
         self.logger.bind(tag=TAG).info(
-            f"收到壁纸回执 [{device_id}] version={payload['version']} "
+            f"收到壁纸回执 [{device_id}] kind={kind} version={payload['version']} "
             f"status={payload['status']} reason={payload['reason']}"
         )
         sink = self.wallpaper_ack_sink
@@ -280,7 +288,7 @@ class HeartbeatServer:
             )
             return
         try:
-            result = sink(device_id, payload)
+            result = sink(device_id, payload, kind)
             if asyncio.iscoroutine(result):
                 asyncio.create_task(result)
         except Exception as e:

@@ -42,7 +42,11 @@ _redis_client = None
 _redis_unavailable = False
 
 
-def build_ack_key(device_id: str) -> str:
+def build_ack_key(device_id: str, kind: str = "idle") -> str:
+    """回执 Redis key。boot 槽独立前缀分键，idle 槽保持旧键（历史回执兼容）。"""
+    kind = str(kind or "idle").strip().lower()
+    if kind == "boot":
+        return f"{ACK_KEY_PREFIX}boot:{device_id}"
     return f"{ACK_KEY_PREFIX}{device_id}"
 
 
@@ -97,12 +101,21 @@ async def get_client(config: dict):
     return _redis_client
 
 
-async def save_ack(config: dict, device_id: str, ack: dict) -> bool:
-    """写入壁纸回执，成功返回 True；Redis 不可用/写入失败返回 False。"""
+async def save_ack(config: dict, device_id: str, ack: dict, kind: str = "idle") -> bool:
+    """写入壁纸回执，成功返回 True；Redis 不可用/写入失败返回 False。
+
+    kind（idle/boot）决定 Redis key：两个槽位分键存储，互不覆盖 ——
+    否则 boot 的回执会把 idle 的记录顶掉，manager-api 两个任务互相误读。
+    record 里也带 kind，便于排查。
+    """
+    kind = str(kind or "idle").strip().lower()
+    if kind not in ("idle", "boot"):
+        kind = "idle"
     record = {
         "version": str(ack.get("version", "")),
         "status": ack.get("status", ""),
         "reason": ack.get("reason", ""),
+        "kind": kind,
         "ts": int(time.time() * 1000),
     }
     if not device_id:
@@ -112,12 +125,13 @@ async def save_ack(config: dict, device_id: str, ack: dict) -> bool:
     value = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
     client = await get_client(config)
     if client is None:
-        logger.info(f"[{TAG}] 壁纸回执（未落 Redis）device={device_id} {value}")
+        logger.info(f"[{TAG}] 壁纸回执（未落 Redis）device={device_id} kind={kind} {value}")
         return False
 
     try:
-        await client.set(build_ack_key(device_id), value, ex=ACK_TTL_SECONDS)
-        logger.info(f"[{TAG}] 壁纸回执已写入 Redis: {build_ack_key(device_id)} {value}")
+        key = build_ack_key(device_id, kind)
+        await client.set(key, value, ex=ACK_TTL_SECONDS)
+        logger.info(f"[{TAG}] 壁纸回执已写入 Redis: {key} {value}")
         return True
     except Exception as e:
         logger.error(f"[{TAG}] 壁纸回执写入 Redis 失败: {e}")

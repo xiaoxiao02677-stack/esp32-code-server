@@ -73,6 +73,13 @@ public:
     // 开机画面取图用：当前用户壁纸（无则 nullptr → splash 回落品牌底纹）
     const lv_img_dsc_t* GetWallpaper() const override { return user_wallpaper_; }
 
+    // ---- 开机壁纸（boot 槽）：只影响 splash 底图，不动主界面背景 ----
+    // 回落链：boot 壁纸 > 待机壁纸 > 品牌底纹。未下发过 boot 壁纸的设备
+    // 开机行为与旧版完全一致（idle 壁纸打底），平滑兼容。
+    bool SetBootWallpaper(const lv_img_dsc_t* image) override;
+    bool ClearBootWallpaper() override;
+    const lv_img_dsc_t* GetBootWallpaper() const override { return boot_wallpaper_; }
+
     // ---- 开机画面：SetupUI 内部第一件事就是它，首帧即品牌画面 ----
     // 可见性唯一真源是 yh_skin::SplashVisible()（看 g_root 是否存在）。
     // 早期版本另存过一份 splash_visible_ 成员，淡出 300ms 内两者会不一致，
@@ -97,6 +104,9 @@ private:
     void SetBubbleText(const char* text);          // 已持锁调用
     bool ApplyBackground();                        // 已持锁调用：壁纸 > 主题背景 > good.jpg
                                                    // 返回 false = 没作用到显示层（UI 未建/拿不到锁）
+    // 已持锁调用：splash 底图（boot 壁纸 > idle 壁纸 > 品牌底纹）。
+    // splash 不存在时 lv_image_set_src 不会执行，如实返回 false。
+    bool ApplySplashBackground();
     void ApplyFonts();                             // 已持锁调用：把 skin 自建对象重绑到当前主题字体
     YhSkinFonts CurrentFonts() const;
     void DismissSplashIfNeeded();                  // 待机/连接成功时收起开机画面
@@ -111,7 +121,8 @@ private:
     lv_obj_t* battery_text_ = nullptr;  // 顶部电量（has_battery=false 时隐藏）
     lv_obj_t* hint_label_ = nullptr;    // 底部操作提示
 
-    const lv_img_dsc_t* user_wallpaper_ = nullptr;
+    const lv_img_dsc_t* user_wallpaper_ = nullptr;   // idle 槽：主界面背景
+    const lv_img_dsc_t* boot_wallpaper_ = nullptr;   // boot 槽：splash 底图
     bool subtitle_hidden_ = false;
 
     int egg_index_ = 0;

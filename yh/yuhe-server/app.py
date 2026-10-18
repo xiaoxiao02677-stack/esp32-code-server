@@ -112,12 +112,15 @@ async def main():
     ws_server.wake_word_service.set_heartbeat_server(heartbeat_server)
 
     # 壁纸：无 WS 时经心跳 TCP 通道兜底下发；固件经该通道回的 result 落 Redis 回执
+    # sink 第三参 kind 为槽位（idle/boot），按槽位分键落 Redis（互不覆盖）
     wallpaper_service.bind_wake_word_service(ws_server.wake_word_service)
     try:
         from core.utils.wallpaper_ack import save_ack as _save_wallpaper_ack
 
         heartbeat_server.wallpaper_ack_sink = (
-            lambda device_id, payload: _save_wallpaper_ack(config, device_id, payload)
+            lambda device_id, payload, kind="idle": _save_wallpaper_ack(
+                config, device_id, payload, kind
+            )
         )
     except Exception as e:  # 回执落库不可用不影响下发
         logger.bind(tag=TAG).warning(f"壁纸回执 sink 注入失败: {e}")

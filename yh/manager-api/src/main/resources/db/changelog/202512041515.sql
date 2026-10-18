@@ -1,6 +1,6 @@
 -- liquibase formatted sql
 
--- changeset yuhe:202512041515
+-- changeset xiaozhi:202512041515
 CREATE TABLE ai_agent_context_provider (
     id VARCHAR(32) NOT NULL COMMENT '主键',
     agent_id VARCHAR(32) NOT NULL COMMENT '智能体ID',

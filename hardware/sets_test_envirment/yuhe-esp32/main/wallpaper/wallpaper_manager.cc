@@ -106,12 +106,17 @@ void Md5ToHex(const uint8_t digest[ESP_ROM_MD5_DIGEST_LEN], char out[ESP_ROM_MD5
 }  // namespace
 
 // 内部状态与后台工作线程。图片缓冲与 lv_img_dsc_t 的所有权都在这里（FR-2.22）。
-struct WallpaperManager::Impl {
-    std::mutex mutex;              // 保护下方全部状态
-    SemaphoreHandle_t wake = nullptr;
-    bool worker_started = false;
+//
+// 双槽结构：idle（待机壁纸）与 boot（开机壁纸）各自独立持有
+// applied_version/buffer/dsc/NVS 恢复记账，互不覆盖。pending 队列同样按槽
+// 独立（单槽会让 boot 下发顶掉 idle 的回执，反之亦然）。
+struct WallpaperSlot {
+    // 本槽种类（idle/boot），由 Impl 构造时写入。分流必须信它而不是 pending_request.kind：
+    // clear 排队时 pending_request 是空请求（kind 恒 Idle），boot 槽的 clear 若按
+    // request.kind 分流会被错送进 idle 的显示接口与 NVS namespace。
+    WallpaperKind kind = WallpaperKind::Idle;
 
-    // 待处理请求（单槽，后到覆盖先到）
+    // 待处理请求（单槽，后到覆盖先到；两个壁纸槽各自一条）
     bool pending = false;
     bool pending_clear = false;
     WallpaperRequest pending_request;
@@ -130,25 +135,40 @@ struct WallpaperManager::Impl {
 
     // 本次开机已尝试过的 NVS 恢复版本（避免每次重连都重拉）
     std::string restore_version;
+};
+
+struct WallpaperManager::Impl {
+    std::mutex mutex;              // 保护下方全部状态
+    SemaphoreHandle_t wake = nullptr;
+    bool worker_started = false;
+
+    WallpaperSlot slots[2];        // [Idle] [Boot]，下标见 SlotIndexOf()
+
+    Impl() {
+        // 槽位种类在构造期写死：boot 槽的分流依据（见 WallpaperSlot::kind 注释）
+        slots[SlotIndexOf(WallpaperKind::Boot)].kind = WallpaperKind::Boot;
+    }
+
+    // 显式命令命中幂等时的三种结局（调用方据此决定回执，不能一概回 ok）
+    enum class RebindResult {
+        kOk,          // 已重新绑上并触发重绘
+        kNoState,     // 已经没有图可绑 → 调用方回落成重新下载
+        kRenderFail,  // 有图但显示层没接 → 回 fail:render，下次命令再试
+    };
+
+    static int SlotIndexOf(WallpaperKind kind) { return kind == WallpaperKind::Boot ? 1 : 0; }
+    static const char* KindName(WallpaperKind kind) { return kind == WallpaperKind::Boot ? "boot" : "idle"; }
 
     static void TaskEntry(void* arg) { static_cast<Impl*>(arg)->Run(); }
 
     bool EnsureWorker();
     void Run();
-    void ProcessSet(const WallpaperRequest& request, const WallpaperResultCallback& callback);
-    void ProcessClear(const WallpaperResultCallback& callback);
-    bool ApplyToDisplay(uint8_t* new_buffer, const WallpaperRequest& request);
-    // 显式命令命中幂等时的三种结局（调用方据此决定回执，不能一概回 ok）
-    enum class RebindResult {
-        kOk,          // 已重新绑上并触发重绘
-        kNoState,     // 已经没有图可绑 → 调用方回落成重新下载。三种触发：
-                      //   ① ProcessClear 已释放缓冲；
-                      //   ② 上一次 ApplyToDisplay 失败把 dsc_valid 置了 false；
-                      //   ③ applied_version != expected_version（版本被更晚的请求换掉）
-        kRenderFail,  // 有图但显示层没接 → 回 fail:render，下次命令再试
-    };
+    void ProcessSet(WallpaperSlot& slot, const WallpaperRequest& request,
+                    const WallpaperResultCallback& callback);
+    void ProcessClear(WallpaperSlot& slot, WallpaperKind kind, const WallpaperResultCallback& callback);
+    bool ApplyToDisplay(WallpaperSlot& slot, uint8_t* new_buffer, const WallpaperRequest& request);
     // 把当前已缓存的图重新绑到显示层（显式命令遇幂等命中时用，不重新下载）
-    RebindResult RebindCurrent(const std::string& expected_version);
+    RebindResult RebindCurrent(WallpaperSlot& slot, const std::string& expected_version);
 };
 
 bool WallpaperManager::Impl::EnsureWorker() {
@@ -181,70 +201,84 @@ void WallpaperManager::Impl::Run() {
     for (;;) {
         xSemaphoreTake(wake, portMAX_DELAY);
         for (;;) {
+            WallpaperSlot* slot = nullptr;
             bool clear = false;
             WallpaperRequest request;
             WallpaperResultCallback callback;
             {
                 std::lock_guard<std::mutex> lock(mutex);
-                if (!pending) {
+                // 轮询两个槽：谁有待处理就处理谁（同一轮两条都挂起时按 idle→boot 顺序）
+                for (auto& candidate : slots) {
+                    if (candidate.pending) {
+                        slot = &candidate;
+                        break;
+                    }
+                }
+                if (slot == nullptr) {
                     break;
                 }
-                clear = pending_clear;
-                request = pending_request;
-                callback = std::move(pending_callback);
-                pending = false;
-                pending_clear = false;
-                pending_request = WallpaperRequest{};
-                pending_callback = nullptr;
+                clear = slot->pending_clear;
+                request = slot->pending_request;
+                callback = std::move(slot->pending_callback);
+                slot->pending = false;
+                slot->pending_clear = false;
+                slot->pending_request = WallpaperRequest{};
+                slot->pending_callback = nullptr;
             }
             if (clear) {
-                ProcessClear(callback);
+                // clear 排队时 pending_request 是空请求（kind 恒 Idle），
+                // 分流必须信槽位自身的 kind
+                ProcessClear(*slot, slot->kind, callback);
             } else {
-                ProcessSet(request, callback);
+                ProcessSet(*slot, request, callback);
             }
         }
     }
 }
 
-void WallpaperManager::Impl::ProcessSet(const WallpaperRequest& request,
+void WallpaperManager::Impl::ProcessSet(WallpaperSlot& slot,
+                                        const WallpaperRequest& request,
                                         const WallpaperResultCallback& callback) {
     auto finish = [&callback](bool ok, const char* reason) {
         if (callback) {
             callback(ok, reason);
         }
     };
+    const char* kind_name = KindName(request.kind);
 
     // NFR-5：排队期间前一个请求可能已经应用了同一版本
     bool duplicate = false;
     {
         std::lock_guard<std::mutex> lock(mutex);
-        duplicate = dsc_valid && !request.version.empty() && request.version == applied_version;
+        duplicate = slot.dsc_valid && !request.version.empty() &&
+                    request.version == slot.applied_version;
     }
     if (duplicate) {
-        ESP_LOGI(TAG, "wallpaper: skip version=%s (already applied)", request.version.c_str());
+        ESP_LOGI(TAG, "wallpaper: skip kind=%s version=%s (already applied)", kind_name,
+                 request.version.c_str());
         finish(true, "");
         return;
     }
 
     // 校验链（不做任何屏幕改动，FR-2.14）
     if (!request.format.empty() && !EqualsIgnoreCase(request.format, "rgb565")) {
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s format=%s", request.version.c_str(),
-                 kReasonBadFormat, request.format.c_str());
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s format=%s", kind_name,
+                 request.version.c_str(), kReasonBadFormat, request.format.c_str());
         finish(false, kReasonBadFormat);
         return;
     }
     if ((request.width != 0 && request.width != kWidth) ||
         (request.height != 0 && request.height != kHeight) ||
         (request.size != 0 && request.size != static_cast<int>(kImageBytes))) {
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s size=%d %dx%d", request.version.c_str(),
-                 kReasonSize, request.size, request.width, request.height);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s size=%d %dx%d", kind_name,
+                 request.version.c_str(), kReasonSize, request.size, request.width, request.height);
         finish(false, kReasonSize);
         return;
     }
     uint8_t expected_md5[ESP_ROM_MD5_DIGEST_LEN];
     if (!ParseMd5(request.md5, expected_md5)) {
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s md5=%s", request.version.c_str(),
-                 kReasonBadFormat, request.md5.c_str());
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s md5=%s", kind_name,
+                 request.version.c_str(), kReasonBadFormat, request.md5.c_str());
         finish(false, kReasonBadFormat);
         return;
     }
@@ -272,8 +306,8 @@ void WallpaperManager::Impl::ProcessSet(const WallpaperRequest& request,
         return;
     }
 
-    ESP_LOGI(TAG, "wallpaper: download start version=%s url=%s bytes=%u", request.version.c_str(),
-             request.url.c_str(), static_cast<unsigned>(kImageBytes));
+    ESP_LOGI(TAG, "wallpaper: download start kind=%s version=%s url=%s bytes=%u", kind_name,
+             request.version.c_str(), request.url.c_str(), static_cast<unsigned>(kImageBytes));
 
     const char* fail_reason = nullptr;
     size_t received = 0;
@@ -357,26 +391,29 @@ void WallpaperManager::Impl::ProcessSet(const WallpaperRequest& request,
     esp_rom_md5_final(actual_md5, &md5_context);
     char actual_hex[ESP_ROM_MD5_DIGEST_LEN * 2 + 1];
     Md5ToHex(actual_md5, actual_hex);
-    ESP_LOGI(TAG, "wallpaper: verify version=%s md5=%s expect=%s", request.version.c_str(),
-             actual_hex, request.md5.c_str());
+    ESP_LOGI(TAG, "wallpaper: verify kind=%s version=%s md5=%s expect=%s", kind_name,
+             request.version.c_str(), actual_hex, request.md5.c_str());
     if (memcmp(actual_md5, expected_md5, ESP_ROM_MD5_DIGEST_LEN) != 0) {
         heap_caps_free(buffer);
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s", request.version.c_str(), kReasonMd5);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s", kind_name,
+                 request.version.c_str(), kReasonMd5);
         finish(false, kReasonMd5);
         return;
     }
 
-    ESP_LOGI(TAG, "wallpaper: apply version=%s source=%s", request.version.c_str(),
-             request.from_config ? "config" : "ws");
-    if (!ApplyToDisplay(buffer, request)) {
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s", request.version.c_str(),
-                 kReasonNoDisplay);
+    ESP_LOGI(TAG, "wallpaper: apply kind=%s version=%s source=%s", kind_name,
+             request.version.c_str(), request.from_config ? "config" : "ws");
+    if (!ApplyToDisplay(slot, buffer, request)) {
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s", kind_name,
+                 request.version.c_str(), kReasonNoDisplay);
         finish(false, kReasonNoDisplay);
         return;
     }
 
     {
-        Settings settings("wallpaper", true);
+        // boot 槽独立 NVS namespace，与 idle 槽互不覆盖
+        Settings settings(request.kind == WallpaperKind::Boot ? "wallpaper_boot" : "wallpaper",
+                          true);
         settings.SetString("version", request.version);
         settings.SetString("url", request.url);
         settings.SetString("md5", request.md5);
@@ -384,7 +421,7 @@ void WallpaperManager::Impl::ProcessSet(const WallpaperRequest& request,
     finish(true, "");
 }
 
-bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
+bool WallpaperManager::Impl::ApplyToDisplay(WallpaperSlot& slot, uint8_t* new_buffer,
                                             const WallpaperRequest& request) {
 #if !WALLPAPER_HAS_LVGL_DISPLAY
     // Emote 风格构建没有壁纸渲染能力：释放缓冲并回 fail:no_display，屏幕不动
@@ -399,6 +436,15 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
         heap_caps_free(new_buffer);
         return false;
     }
+    // 按槽位分流显示接口：idle → 主界面背景；boot → splash 底图。
+    // 两个接口共用同一套"先解绑旧引用、失败即放弃"的安全协议。
+    const bool is_boot = (request.kind == WallpaperKind::Boot);
+    auto unbind_old = [display, is_boot]() {
+        return is_boot ? display->ClearBootWallpaper() : display->ClearWallpaper();
+    };
+    auto bind_new = [display, is_boot](const lv_img_dsc_t* image) {
+        return is_boot ? display->SetBootWallpaper(image) : display->SetWallpaper(image);
+    };
 
     lv_img_dsc_t new_dsc{};
     new_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
@@ -410,17 +456,17 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
     new_dsc.data = new_buffer;
 
     // 持显示锁完成"解除旧引用 -> 换新图"的原子切换：
-    // 1) ClearWallpaper 先让 LVGL 不再引用旧缓冲（FR-2.22，防悬空）；
+    // 1) Clear*Wallpaper 先让 LVGL 不再引用旧缓冲（FR-2.22，防悬空）；
     // 2) 释放旧缓冲；
-    // 3) SetWallpaper 绑定新图。
+    // 3) Set*Wallpaper 绑定新图。
     // lvgl_port_lock 是递归锁，Display 内部再次加锁是安全的。
     DisplayLockGuard lock(display);
-    if (!display->ClearWallpaper()) {
+    if (!unbind_old()) {
         // 没能让 LVGL 松开旧图。此时若继续换缓冲并释放旧 buffer，渲染线程可能
         // 正拿着一块已释放的 PSRAM 画 —— 直接放弃这次应用，回 fail 让下次重试。
         heap_caps_free(new_buffer);
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s (cannot unbind old image)",
-                 request.version.c_str(), kReasonRender);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s (cannot unbind old image)",
+                 KindName(request.kind), request.version.c_str(), kReasonRender);
         return false;
     }
 
@@ -428,12 +474,12 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
     uint8_t* old_buffer = nullptr;
     {
         std::lock_guard<std::mutex> guard(mutex);
-        old_buffer = buffer;
-        old_dsc = dsc;
-        buffer = new_buffer;
-        dsc = new_dsc;
+        old_buffer = slot.buffer;
+        old_dsc = slot.dsc;
+        slot.buffer = new_buffer;
+        slot.dsc = new_dsc;
     }
-    if (!display->SetWallpaper(&dsc)) {
+    if (!bind_new(&slot.dsc)) {
         // ★ 显示层没接（拿不到锁 / bg_image_ 未建 / lv_image_set_src 被拒）。
         //   回滚到"换图之前"的完整状态：屏幕继续显示旧壁纸，applied_version 不动
         //   （它描述的正是屏幕上那张），新缓冲释放，dsc_valid 跟随旧图是否存在。
@@ -443,17 +489,17 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
         heap_caps_free(new_buffer);
         {
             std::lock_guard<std::mutex> guard(mutex);
-            buffer = old_buffer;
-            dsc = old_dsc;
-            dsc_valid = (old_buffer != nullptr);
+            slot.buffer = old_buffer;
+            slot.dsc = old_dsc;
+            slot.dsc_valid = (old_buffer != nullptr);
         }
         // 把旧图绑回去，避免"一次渲染失败把屏幕打回默认底纹"。
         // 回绑本身也可能失败，日志必须按实际结果写，否则排查时会被带偏
         // （dsc_valid 保持 true 是有意的：缓冲仍在，下次 duplicate 可直接重绑，
         //   比降级成 kNoState 重新下载 115KB 便宜）。
-        const bool restored = (old_buffer != nullptr) && display->SetWallpaper(&dsc);
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s (rolled back to %s)",
-                 request.version.c_str(), kReasonRender,
+        const bool restored = (old_buffer != nullptr) && bind_new(&slot.dsc);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s (rolled back to %s)",
+                 KindName(request.kind), request.version.c_str(), kReasonRender,
                  restored ? "previous wallpaper"
                           : (old_buffer != nullptr ? "default (restore failed)" : "default background"));
         return false;
@@ -463,13 +509,14 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
     }
     {
         std::lock_guard<std::mutex> guard(mutex);
-        dsc_valid = true;
-        applied_version = request.version;
-        applied_url = request.url;
-        applied_md5 = request.md5;
+        slot.dsc_valid = true;
+        slot.applied_version = request.version;
+        slot.applied_url = request.url;
+        slot.applied_md5 = request.md5;
     }
-    ESP_LOGI(TAG, "wallpaper: bound version=%s buf=%p to display", request.version.c_str(),
-             static_cast<void*>(buffer));
+    ESP_LOGI(TAG, "wallpaper: bound kind=%s version=%s buf=%p to display",
+             KindName(request.kind), request.version.c_str(),
+             static_cast<void*>(slot.buffer));
     return true;
 #endif  // WALLPAPER_HAS_LVGL_DISPLAY
 }
@@ -479,7 +526,7 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
 // 重建 / 上次 SetWallpaper 撞上锁超时而没真正显示出来。此时操作员点"下发"，
 // 旧行为只回一行 already applied + ok，屏幕毫无变化 —— 用户看到的就是"下发了没反应"。
 WallpaperManager::Impl::RebindResult WallpaperManager::Impl::RebindCurrent(
-    const std::string& expected_version) {
+    WallpaperSlot& slot, const std::string& expected_version) {
 #if !WALLPAPER_HAS_LVGL_DISPLAY
     // 防御性返回。注意这个分支实际不可达：无显示构建下 ApplyToDisplay 恒失败，
     // dsc_valid 恒为 false，HandleSet 的 duplicate 判定永远不会成立。
@@ -503,33 +550,39 @@ WallpaperManager::Impl::RebindResult WallpaperManager::Impl::RebindCurrent(
         std::lock_guard<std::mutex> guard(mutex);
         // 版本必须仍然对得上：并发下可能已被别的请求换掉，绑错版本比不绑更糟
         // （屏幕停在 A，回执却按 B 记成功）。
-        if (!dsc_valid || applied_version != expected_version) {
+        if (!slot.dsc_valid || slot.applied_version != expected_version) {
             return RebindResult::kNoState;
         }
-        version = applied_version;
+        version = slot.applied_version;
     }
-    ESP_LOGI(TAG, "wallpaper: rebind version=%s (idempotent hit -> force repaint)",
-             version.c_str());
-    if (!display->SetWallpaper(&dsc)) {
-        ESP_LOGW(TAG, "wallpaper: rebind version=%s failed (reason=%s)", version.c_str(),
-                 kReasonRender);
+    const bool is_boot = (slot.kind == WallpaperKind::Boot);
+    ESP_LOGI(TAG, "wallpaper: rebind kind=%s version=%s (idempotent hit -> force repaint)",
+             KindName(slot.kind), version.c_str());
+    const bool bound = is_boot ? display->SetBootWallpaper(&slot.dsc)
+                               : display->SetWallpaper(&slot.dsc);
+    if (!bound) {
+        ESP_LOGW(TAG, "wallpaper: rebind kind=%s version=%s failed (reason=%s)",
+                 KindName(slot.kind), version.c_str(), kReasonRender);
         return RebindResult::kRenderFail;
     }
     return RebindResult::kOk;
 #endif  // WALLPAPER_HAS_LVGL_DISPLAY
 }
 
-void WallpaperManager::Impl::ProcessClear(const WallpaperResultCallback& callback) {
-    ESP_LOGI(TAG, "wallpaper: apply clear");
+void WallpaperManager::Impl::ProcessClear(WallpaperSlot& slot, WallpaperKind kind,
+                                          const WallpaperResultCallback& callback) {
+    ESP_LOGI(TAG, "wallpaper: apply clear kind=%s", KindName(kind));
 
 #if WALLPAPER_HAS_LVGL_DISPLAY
     Display* display = Board::GetInstance().GetDisplay();
     if (display != nullptr) {
         // 先解除 LVGL 对缓冲的引用，再释放（FR-2.22）。
         // 解除失败就整个放弃：宁可留着壁纸，也不能 free 一块还在用的 PSRAM。
-        if (!display->ClearWallpaper()) {
-            ESP_LOGW(TAG, "wallpaper: fail reason=%s (cannot unbind image, keep it)",
-                     kReasonRender);
+        const bool unbound = (kind == WallpaperKind::Boot) ? display->ClearBootWallpaper()
+                                                           : display->ClearWallpaper();
+        if (!unbound) {
+            ESP_LOGW(TAG, "wallpaper: fail kind=%s reason=%s (cannot unbind image, keep it)",
+                     KindName(kind), kReasonRender);
             if (callback) {
                 callback(false, kReasonRender);
             }
@@ -541,21 +594,22 @@ void WallpaperManager::Impl::ProcessClear(const WallpaperResultCallback& callbac
     uint8_t* old_buffer = nullptr;
     {
         std::lock_guard<std::mutex> guard(mutex);
-        old_buffer = buffer;
-        buffer = nullptr;
-        dsc = lv_img_dsc_t{};
-        dsc_valid = false;
-        applied_version.clear();
-        applied_url.clear();
-        applied_md5.clear();
-        restore_version.clear();
+        old_buffer = slot.buffer;
+        slot.buffer = nullptr;
+        slot.dsc = lv_img_dsc_t{};
+        slot.dsc_valid = false;
+        slot.applied_version.clear();
+        slot.applied_url.clear();
+        slot.applied_md5.clear();
+        slot.restore_version.clear();
     }
     if (old_buffer != nullptr) {
         heap_caps_free(old_buffer);
     }
 
     {
-        Settings settings("wallpaper", true);
+        // boot 槽独立 NVS namespace（与写入侧 ProcessSet 对称）
+        Settings settings(kind == WallpaperKind::Boot ? "wallpaper_boot" : "wallpaper", true);
         settings.EraseKey("version");
         settings.EraseKey("url");
         settings.EraseKey("md5");
@@ -580,8 +634,8 @@ void WallpaperManager::HandleSet(const WallpaperRequest& request,
                                  WallpaperResultCallback on_result) {
     // 参数级快速失败（在调用者任务上下文里回执，省一次任务调度）
     if (request.url.empty() || request.md5.empty()) {
-        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s (missing url/md5)",
-                 request.version.c_str(), kReasonBadFormat);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s version=%s reason=%s (missing url/md5)",
+                 Impl::KindName(request.kind), request.version.c_str(), kReasonBadFormat);
         if (on_result) {
             on_result(false, kReasonBadFormat);
         }
@@ -594,16 +648,19 @@ void WallpaperManager::HandleSet(const WallpaperRequest& request,
         return;
     }
 
+    WallpaperSlot& slot = impl_->slots[Impl::SlotIndexOf(request.kind)];
+
     // 幂等判定先做一次快照：命中后要么重绑，要么（图已不在了）回落成重新下载
     bool duplicate = false;
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
-        duplicate = impl_->dsc_valid && !request.version.empty() &&
-                    request.version == impl_->applied_version;
+        duplicate = slot.dsc_valid && !request.version.empty() &&
+                    request.version == slot.applied_version;
     }
 
     if (duplicate) {
-        ESP_LOGI(TAG, "wallpaper: skip version=%s (already applied)", request.version.c_str());
+        ESP_LOGI(TAG, "wallpaper: skip kind=%s version=%s (already applied)",
+                 Impl::KindName(request.kind), request.version.c_str());
         // device_config / NVS 恢复（无回执）：纯幂等跳过，什么都不用做
         if (!on_result) {
             return;
@@ -612,7 +669,7 @@ void WallpaperManager::HandleSet(const WallpaperRequest& request,
         //   老行为只打一行日志就回 ok，于是「操作员点下发 → 设备回 ok → 屏幕没变」
         //   成了无法自救的死角（applied_version 一旦被写脏，之后全被这一支挡回）。
         //   现在先尝试把 PSRAM 里缓存的图重绑一次并标脏重绘，不重新下载。
-        const Impl::RebindResult rebind = impl_->RebindCurrent(request.version);
+        const Impl::RebindResult rebind = impl_->RebindCurrent(slot, request.version);
         if (rebind == Impl::RebindResult::kOk) {
             on_result(true, "");
             return;
@@ -633,82 +690,107 @@ void WallpaperManager::HandleSet(const WallpaperRequest& request,
         // 单槽 pending：后到覆盖先到。若前一条还挂着一个没人取走的回执回调，
         // 说明它根本不会被执行 —— 必须当场给它一个结论，否则那条 command_id
         // 的结果回执永远不发，服务端只能干等到超时（日志里表现为"下发了没反应"）。
-        if (impl_->pending && impl_->pending_callback) {
-            superseded = std::move(impl_->pending_callback);
-            impl_->pending_callback = nullptr;
+        // 双槽后"单槽"指本壁纸槽：boot 下发不再顶掉 idle 的回执（反之亦然）。
+        if (slot.pending && slot.pending_callback) {
+            superseded = std::move(slot.pending_callback);
+            slot.pending_callback = nullptr;
         }
-        impl_->pending = true;
-        impl_->pending_clear = false;
-        impl_->pending_request = request;
+        slot.pending = true;
+        slot.pending_clear = false;
+        slot.pending_request = request;
         // device_config（无回执）后到时不要覆盖 WS 请求的回执回调，
         // 否则 WS 侧永远等不到 result。
-        if (on_result || !impl_->pending_callback) {
-            impl_->pending_callback = std::move(on_result);
+        if (on_result || !slot.pending_callback) {
+            slot.pending_callback = std::move(on_result);
         }
     }
     if (superseded) {
-        ESP_LOGW(TAG, "wallpaper: fail reason=%s (previous request dropped by a newer one)",
-                 kReasonSuperseded);
+        ESP_LOGW(TAG, "wallpaper: fail kind=%s reason=%s (previous request dropped by a newer one)",
+                 Impl::KindName(request.kind), kReasonSuperseded);
         superseded(false, kReasonSuperseded);
     }
     xSemaphoreGive(impl_->wake);
 }
 
-void WallpaperManager::HandleClear(WallpaperResultCallback on_result) {
+void WallpaperManager::HandleClear(WallpaperKind kind, WallpaperResultCallback on_result) {
     if (!impl_->EnsureWorker()) {
         if (on_result) {
             on_result(false, kReasonNoMem);
         }
         return;
     }
+    WallpaperSlot& slot = impl_->slots[Impl::SlotIndexOf(kind)];
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
-        impl_->pending = true;
-        impl_->pending_clear = true;
-        impl_->pending_request = WallpaperRequest{};
-        impl_->pending_callback = std::move(on_result);
+        if (slot.pending && slot.pending_callback) {
+            // 与 HandleSet 同理：被顶掉的请求必须当场给结论
+            if (on_result) {
+                auto superseded = std::move(slot.pending_callback);
+                slot.pending_callback = nullptr;
+                superseded(false, kReasonSuperseded);
+            } else {
+                slot.pending_callback = nullptr;
+            }
+        }
+        slot.pending = true;
+        slot.pending_clear = true;
+        slot.pending_request = WallpaperRequest{};
+        slot.pending_request.kind = kind;
+        slot.pending_callback = std::move(on_result);
     }
     xSemaphoreGive(impl_->wake);
 }
 
-void WallpaperManager::RestoreFromNvsAsync() {
-    WallpaperRequest request;
-    {
-        Settings settings("wallpaper", false);
-        request.version = settings.GetString("version");
-        request.url = settings.GetString("url");
-        request.md5 = settings.GetString("md5");
-    }
-    request.from_config = true;
-    if (request.url.empty() || request.md5.empty()) {
-        return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(impl_->mutex);
-        if (impl_->dsc_valid && !request.version.empty() &&
-            request.version == impl_->applied_version) {
-            return;
-        }
-        // 本次开机已尝试过该版本（失败也不再反复重拉，避免重连风暴）
-        if (!request.version.empty() && impl_->restore_version == request.version) {
-            return;
-        }
-        if (impl_->pending && !impl_->pending_clear &&
-            impl_->pending_request.version == request.version) {
-            return;
-        }
-        if (!request.version.empty()) {
-            impl_->restore_version = request.version;
-        }
-    }
-
-    ESP_LOGI(TAG, "wallpaper: restore from nvs version=%s url=%s", request.version.c_str(),
-             request.url.c_str());
-    HandleSet(request, nullptr);
+void WallpaperManager::HandleClear(WallpaperResultCallback on_result) {
+    // 旧签名（无 kind）：待机壁纸清除，兼容存量调用方
+    HandleClear(WallpaperKind::Idle, std::move(on_result));
 }
 
-std::string WallpaperManager::applied_version() {
+void WallpaperManager::RestoreFromNvsAsync() {
+    // 双槽各自恢复：boot 槽读独立 namespace "wallpaper_boot"。
+    // 任一槽失败不影响另一槽（boot 图拉不到只是 splash 回落默认底纹）。
+    static const WallpaperKind kRestoreKinds[] = {WallpaperKind::Idle, WallpaperKind::Boot};
+    for (WallpaperKind kind : kRestoreKinds) {
+        WallpaperRequest request;
+        {
+            Settings settings(kind == WallpaperKind::Boot ? "wallpaper_boot" : "wallpaper", false);
+            request.version = settings.GetString("version");
+            request.url = settings.GetString("url");
+            request.md5 = settings.GetString("md5");
+        }
+        request.kind = kind;
+        request.from_config = true;
+        if (request.url.empty() || request.md5.empty()) {
+            continue;
+        }
+
+        WallpaperSlot& slot = impl_->slots[Impl::SlotIndexOf(kind)];
+        {
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            if (slot.dsc_valid && !request.version.empty() &&
+                request.version == slot.applied_version) {
+                continue;
+            }
+            // 本次开机已尝试过该版本（失败也不再反复重拉，避免重连风暴）
+            if (!request.version.empty() && slot.restore_version == request.version) {
+                continue;
+            }
+            if (slot.pending && !slot.pending_clear &&
+                slot.pending_request.version == request.version) {
+                continue;
+            }
+            if (!request.version.empty()) {
+                slot.restore_version = request.version;
+            }
+        }
+
+        ESP_LOGI(TAG, "wallpaper: restore from nvs kind=%s version=%s url=%s",
+                 Impl::KindName(kind), request.version.c_str(), request.url.c_str());
+        HandleSet(request, nullptr);
+    }
+}
+
+std::string WallpaperManager::applied_version(WallpaperKind kind) {
     std::lock_guard<std::mutex> lock(impl_->mutex);
-    return impl_->applied_version;
+    return impl_->slots[Impl::SlotIndexOf(kind)].applied_version;
 }

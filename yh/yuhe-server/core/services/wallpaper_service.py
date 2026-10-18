@@ -64,7 +64,11 @@ def _normalize_device_id(device_id: str) -> str:
 
 
 def build_wallpaper_message(wallpaper: dict) -> dict:
-    """构造下发给设备的壁纸 WS 文本消息（字段与固件约定一致）。"""
+    """构造下发给设备的壁纸 WS 文本消息（字段与固件约定一致）。
+
+    kind 标识槽位（idle=待机壁纸/boot=开机壁纸），缺省 idle——
+    旧固件不解析该字段，行为不变。
+    """
     try:
         size = int(wallpaper.get("size", 0) or 0)
     except (TypeError, ValueError):
@@ -77,6 +81,7 @@ def build_wallpaper_message(wallpaper: dict) -> dict:
         "md5": wallpaper.get("md5", ""),
         "size": size,
         "format": wallpaper.get("format", "rgb565"),
+        "kind": str(wallpaper.get("kind") or "idle"),
     }
 
 
@@ -128,11 +133,12 @@ class WallpaperService:
                 logger.warning(f"壁纸队列 Redis 不可用，降级为内存队列: {e}")
             return None
 
-    async def _persist(self, device_id: str, record: dict) -> None:
+    async def _persist(self, queue_key: str, record: dict) -> None:
+        """queue_key 已是 "{device_id}:{kind}" 复合格（_enqueue 传入）。"""
         client = await self._redis()
         if client is None:
             return
-        key = f"{QUEUE_KEY_PREFIX}{_normalize_device_id(device_id)}"
+        key = f"{QUEUE_KEY_PREFIX}{_normalize_device_id(queue_key)}"
         try:
             await client.set(
                 key,
@@ -140,16 +146,17 @@ class WallpaperService:
                 ex=QUEUE_TTL_SECONDS,
             )
         except Exception as e:
-            logger.warning(f"壁纸队列落 Redis 失败 device={device_id}: {e}")
+            logger.warning(f"壁纸队列落 Redis 失败 key={queue_key}: {e}")
 
-    async def _forget(self, device_id: str) -> None:
+    async def _forget(self, device_id: str, kind: str = "idle") -> None:
         client = await self._redis()
         if client is None:
             return
+        normalized = _normalize_device_id(f"{device_id}:{kind or 'idle'}")
         try:
-            await client.delete(f"{QUEUE_KEY_PREFIX}{_normalize_device_id(device_id)}")
+            await client.delete(f"{QUEUE_KEY_PREFIX}{normalized}")
         except Exception as e:
-            logger.warning(f"壁纸队列清理失败 device={device_id}: {e}")
+            logger.warning(f"壁纸队列清理失败 device={device_id} kind={kind}: {e}")
 
     async def hydrate(self) -> int:
         """启动时从 Redis 恢复待补投队列，返回恢复条数。"""
@@ -175,6 +182,11 @@ class WallpaperService:
                     device_id = msg.get("_device_id") or str(key).split(
                         QUEUE_KEY_PREFIX, 1
                     )[-1]
+                    # 队列键按槽位复合（"{device}:{kind}"）；Redis 里的旧键（升级前
+                    # 写入，无 :kind）与 record 内缺 kind 的消息都按 idle 恢复
+                    kind = str(msg.get("kind") or "idle")
+                    if ":" not in str(device_id):
+                        device_id = f"{device_id}:{kind}"
                     ts = float(record.get("ts") or 0)
                     if time.time() - ts > QUEUE_TTL_SECONDS:
                         await client.delete(key)
@@ -196,7 +208,10 @@ class WallpaperService:
         return restored
 
     async def _enqueue(self, device_id: str, msg: dict) -> bool:
-        """入队（last-write-wins）。同版本已在队列中则视为重复，不重复计数。
+        """入队（last-write-wins）。同 (设备,槽位,版本) 已在队列中则视为重复，不重复计数。
+
+        队列 key 为 "{device_id}:{kind}"：idle 与 boot 两个槽位各自一条，
+        互不顶掉（boot 下发不该清掉 idle 的排队，反之亦然）。
 
         Returns:
             True 表示这是一条新指令（版本变化），False 表示同版本重复下发。
@@ -204,51 +219,64 @@ class WallpaperService:
         payload = dict(msg)
         payload["_device_id"] = device_id
         normalized = _normalize_device_id(device_id)
+        kind = str(payload.get("kind") or "idle")
+        queue_key = f"{device_id}:{kind}"
         async with self._queue_lock:
             existing = None
             for key in list(self._offline_queue.keys()):
-                if _normalize_device_id(key) == normalized:
+                if key == queue_key or (
+                    ":" not in key  # 旧格式键（无 :kind 后缀），视为该设备的 idle 槽
+                    and _normalize_device_id(key) == normalized
+                    and kind == "idle"
+                ):
                     existing = self._offline_queue.pop(key)
                     break
             if existing is not None:
                 old_version = str((existing.get("msg") or {}).get("version", ""))
-                if old_version == payload.get("version"):
+                old_kind = str((existing.get("msg") or {}).get("kind") or "idle")
+                if old_version == payload.get("version") and old_kind == kind:
                     # 同版本重发：保留原入队时间，避免设备长期不在线时 TTL 被无限续期
-                    self._offline_queue[device_id] = existing
+                    self._offline_queue[queue_key] = existing
                     is_new = False
                 else:
-                    self._offline_queue[device_id] = {
+                    self._offline_queue[queue_key] = {
                         "msg": payload,
                         "ts": time.time(),
                         "attempts": 0,
                     }
                     is_new = True
             else:
-                self._offline_queue[device_id] = {
+                self._offline_queue[queue_key] = {
                     "msg": payload,
                     "ts": time.time(),
                     "attempts": 0,
                 }
                 is_new = True
-            record = self._offline_queue[device_id]
-        await self._persist(device_id, record)
+            record = self._offline_queue[queue_key]
+        await self._persist(queue_key, record)
         if not is_new:
             logger.info(
                 f"壁纸下发：设备 {device_id} 已有同版本排队指令，跳过重复入队 "
-                f"version={payload.get('version')}"
+                f"kind={kind} version={payload.get('version')}"
             )
         return is_new
 
-    async def _dequeue(self, device_id: str) -> None:
+    async def _dequeue(self, device_id: str, kind: str = "idle") -> None:
+        """出队：只清该设备指定槽位的排队记录（另一槽位不动）。"""
         normalized = _normalize_device_id(device_id)
+        kind = str(kind or "idle")
         async with self._queue_lock:
             for key in list(self._offline_queue.keys()):
-                if _normalize_device_id(key) == normalized:
+                dev, key_kind = self._split_queue_key(key)
+                if _normalize_device_id(dev) != normalized:
+                    continue
+                # 复合键精确匹配槽位；旧格式键（无 :kind 后缀）一律视为 idle
+                if key_kind == kind or (key_kind == "idle" and ":" not in key and kind == "idle"):
                     self._offline_queue.pop(key, None)
-        await self._forget(device_id)
+        await self._forget(device_id, kind)
 
     def queue_snapshot(self) -> dict:
-        """调试用：返回当前待补投队列的浅拷贝 {device_id: version}。"""
+        """调试用：返回当前待补投队列浅拷贝 {"{device_id}:{kind}": version}。"""
         return {
             k: str((v.get("msg") or {}).get("version", ""))
             for k, v in list(self._offline_queue.items())
@@ -294,12 +322,15 @@ class WallpaperService:
             "md5": msg.get("md5", ""),
             "size": msg.get("size", 0),
             "format": msg.get("format", "rgb565"),
+            # 固件 SET_WALLPAPER 已支持 kind（boot=开机壁纸，缺省 idle）；
+            # 不带的话 boot 壁纸经心跳通道会全部落 idle 槽
+            "kind": msg.get("kind", "idle"),
         }
         ok = await hb.send_to_device(hb_did, "SET_WALLPAPER", parameters)
         if ok:
             logger.info(
                 f"壁纸经心跳通道下发: device={device_id} hb={hb_did} "
-                f"version={msg.get('version')}"
+                f"kind={msg.get('kind', 'idle')} version={msg.get('version')}"
             )
         return ok
 
@@ -345,65 +376,93 @@ class WallpaperService:
 
     # ------------------------------------------------------------------ 触发点
 
+    @staticmethod
+    def _split_queue_key(key: str) -> tuple:
+        """拆复合队列键 "{device_id}:{kind}" → (device_id, kind)。
+
+        kind 只可能是 idle/boot（不含冒号），永远按最后一个冒号切；
+        切出来的尾段不是合法 kind（旧格式键 / 设备 ID 本身含冒号但无槽位后缀）
+        时整个键按 device_id、idle 处理。
+        """
+        if ":" in key:
+            device_id, _, tail = key.rpartition(":")
+            if tail in ("idle", "boot"):
+                return device_id, tail
+        return key, "idle"
+
     async def on_connection_registered(self, device_id: str, conn) -> None:
         """设备 WS 上线（hello 注册）钩子：补投该设备排队的壁纸指令。
 
         由 wake_word_service.register_connection 调用；失败则在巡检里重试。
+        双槽位各自独立排队，这里逐槽补投（idle 与 boot 可能同时挂着）。
         """
         normalized = _normalize_device_id(device_id)
-        record = None
+        records = []
         async with self._queue_lock:
             for key in list(self._offline_queue.keys()):
-                if _normalize_device_id(key) == normalized:
+                dev, _kind = self._split_queue_key(key)
+                if _normalize_device_id(dev) == normalized:
                     record = self._offline_queue.get(key)
-                    break
-        if not record:
+                    if record:
+                        records.append((key, record))
+        if not records:
             return
         if self._conn_undeliverable(conn):
-            logger.info(
-                f"壁纸补投放弃：设备 {device_id} 未绑定或来自MQTT网关，"
-                f"丢弃排队指令 version={record['msg'].get('version')}"
-            )
-            await self._dequeue(device_id)
+            for key, record in records:
+                _dev, kind = self._split_queue_key(key)
+                logger.info(
+                    f"壁纸补投放弃：设备 {device_id} 未绑定或来自MQTT网关，"
+                    f"丢弃排队指令 kind={kind} version={record['msg'].get('version')}"
+                )
+                await self._dequeue(device_id, kind)
             return
-        msg = record.get("msg") or {}
-        msg.pop("_device_id", None)
-        logger.info(
-            f"设备 {device_id} 文本通道上线，补投壁纸指令 version={msg.get('version')}"
-        )
-        payload = json.dumps(msg, ensure_ascii=False)
-        if await self._send_to_conn(device_id, conn, payload):
-            await self._dequeue(device_id)
-            logger.info(f"壁纸补投成功: device={device_id} version={msg.get('version')}")
+        for key, record in records:
+            _dev, kind = self._split_queue_key(key)
+            msg = dict(record.get("msg") or {})
+            msg.pop("_device_id", None)
+            logger.info(
+                f"设备 {device_id} 文本通道上线，补投壁纸指令 kind={kind} "
+                f"version={msg.get('version')}"
+            )
+            payload = json.dumps(msg, ensure_ascii=False)
+            if await self._send_to_conn(device_id, conn, payload):
+                await self._dequeue(device_id, kind)
+                logger.info(
+                    f"壁纸补投成功: device={device_id} kind={kind} version={msg.get('version')}"
+                )
 
     async def on_device_online(self, device_id: str) -> None:
         """设备心跳重连/恢复在线钩子：立即尝试补投（不必等巡检周期）。"""
         normalized = _normalize_device_id(device_id)
-        record = None
+        records = []
         async with self._queue_lock:
             for key in list(self._offline_queue.keys()):
-                if _normalize_device_id(key) == normalized:
+                dev, _kind = self._split_queue_key(key)
+                if _normalize_device_id(dev) == normalized:
                     record = self._offline_queue.get(key)
-                    break
-        if not record:
-            return
-        msg = dict(record.get("msg") or {})
-        msg.pop("_device_id", None)
-        if await self._dispatch_via_heartbeat(device_id, msg):
-            await self._dequeue(device_id)
-            logger.info(
-                f"壁纸补投成功（心跳通道）: device={device_id} version={msg.get('version')}"
-            )
+                    if record:
+                        records.append((key, record))
+        for key, record in records:
+            _dev, kind = self._split_queue_key(key)
+            msg = dict(record.get("msg") or {})
+            msg.pop("_device_id", None)
+            if await self._dispatch_via_heartbeat(device_id, msg):
+                await self._dequeue(device_id, kind)
+                logger.info(
+                    f"壁纸补投成功（心跳通道）: device={device_id} kind={kind} "
+                    f"version={msg.get('version')}"
+                )
 
     async def sweep_once(self) -> int:
         """巡检一轮：尝试投递所有排队指令，返回本轮成功条数。"""
         now = time.time()
         snapshot = list(self._offline_queue.items())
         delivered = 0
-        for device_id, record in snapshot:
+        for queue_key, record in snapshot:
+            device_id, kind = self._split_queue_key(queue_key)
             if now - float(record.get("ts") or 0) > QUEUE_TTL_SECONDS:
-                logger.info(f"壁纸排队超期丢弃: device={device_id}")
-                await self._dequeue(device_id)
+                logger.info(f"壁纸排队超期丢弃: device={device_id} kind={kind}")
+                await self._dequeue(device_id, kind)
                 continue
             msg = dict(record.get("msg") or {})
             msg.pop("_device_id", None)
@@ -411,17 +470,19 @@ class WallpaperService:
             try:
                 ok = await self._try_deliver(device_id, msg)
             except Exception as e:
-                logger.error(f"壁纸巡检投递异常 device={device_id}: {e}")
+                logger.error(
+                    f"壁纸巡检投递异常 device={device_id} kind={kind}: {e}"
+                )
                 ok = False
             if ok:
-                await self._dequeue(device_id)
+                await self._dequeue(device_id, kind)
                 delivered += 1
                 logger.info(
-                    f"壁纸巡检补投成功: device={device_id} "
+                    f"壁纸巡检补投成功: device={device_id} kind={kind} "
                     f"version={msg.get('version')} attempts={record['attempts']}"
                 )
             else:
-                await self._persist(device_id, record)
+                await self._persist(queue_key, record)
         return delivered
 
     async def _sweep_loop(self, interval: float) -> None:
@@ -471,8 +532,11 @@ class WallpaperService:
         """
         msg = build_wallpaper_message(wallpaper)
         payload = json.dumps(msg, ensure_ascii=False)
+        kind = str(msg.get("kind") or "idle")
         connections = self._snapshot_connections()
-        logger.info(f"壁纸下发开始: version={msg['version']} 目标设备数={len(device_ids)}")
+        logger.info(
+            f"壁纸下发开始: kind={kind} version={msg['version']} 目标设备数={len(device_ids)}"
+        )
 
         sent, queued, offline = [], [], []
         for device_id in device_ids:
@@ -501,7 +565,7 @@ class WallpaperService:
             queued.append(device_id)
 
         logger.info(
-            f"壁纸下发完成: version={msg['version']} sent={len(sent)} "
+            f"壁纸下发完成: kind={kind} version={msg['version']} sent={len(sent)} "
             f"queued={len(queued)} offline={len(offline)}"
         )
         # ★ 清掉这批设备的历史排队记录。
@@ -511,8 +575,9 @@ class WallpaperService:
         #   屏幕从新图**退回旧图**。用户看到的就是"我下发了新壁纸，设备却还是旧的/
         #   干脆没反应"。sent 表示本次已投递（新版本已经到达设备），offline 表示本机
         #   明确送不到（由 device_config 兜底），两种情况都不该再补投旧版本。
+        #   队列按 (device_id, kind) 分键：只清本槽位，另一槽位的排队不受影响。
         for device_id in sent + offline:
-            await self._dequeue(device_id)
+            await self._dequeue(device_id, kind)
         return {"sent": sent, "queued": queued, "offline": offline}
 
     async def _send_to_conn(self, device_id: str, conn, payload: str) -> bool:

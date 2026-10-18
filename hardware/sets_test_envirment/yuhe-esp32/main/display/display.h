@@ -102,6 +102,13 @@ public:
     // 供开机画面取图：splash 想直接以用户壁纸打底时，从这里拿指针——
     // 缓冲归 WallpaperManager 所有，调用方只读、不 free（FR-2.22 同一所有权约定）。
     virtual const lv_img_dsc_t* GetWallpaper() const { return nullptr; }
+
+    // ---- 开机壁纸（boot 槽）：只影响 splash 画面底图，不动主界面背景 ----
+    // 所有权约定与上面完全相同（缓冲归 WallpaperManager，这里只持只读指针）。
+    // 默认实现返回 true / 空转：不支持的历史驱动保持原语义。
+    virtual bool SetBootWallpaper(const lv_img_dsc_t* image) { (void)image; return true; }
+    virtual bool ClearBootWallpaper() { return true; }
+    virtual const lv_img_dsc_t* GetBootWallpaper() const { return nullptr; }
 #endif
 
     inline int width() const { return width_; }

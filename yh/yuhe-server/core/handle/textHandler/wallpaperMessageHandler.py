@@ -32,10 +32,19 @@ class WallpaperMessageHandler(TextMessageHandler):
         device_id = getattr(conn, "device_id", None) or ""
         status = msg_json.get("status", "")
         reason = msg_json.get("reason", "")
+        # 槽位（新固件回执带 kind）：boot=开机壁纸 / idle=待机壁纸。
+        # 旧固件不带该字段 → 按 idle 落旧键，与升级前行为一致。
+        kind = str(msg_json.get("kind") or "idle").strip().lower()
+        if kind not in ("idle", "boot"):
+            conn.logger.bind(tag=TAG).warning(
+                f"壁纸回执 kind 异常（{kind}），按 idle 处理: {msg_json}"
+            )
+            kind = "idle"
         ack = {
             "version": msg_json.get("version", ""),
             "status": status,
             "reason": reason,
+            "kind": kind,
             "ts": int(time.time() * 1000),
         }
         if status not in ("ok", "fail"):
@@ -44,12 +53,12 @@ class WallpaperMessageHandler(TextMessageHandler):
             )
 
         try:
-            saved = await save_ack(conn.config, device_id, ack)
+            saved = await save_ack(conn.config, device_id, ack, kind)
         except Exception as e:
             conn.logger.bind(tag=TAG).error(f"壁纸回执处理异常: {e}")
             return
 
         conn.logger.bind(tag=TAG).info(
-            f"壁纸回执: device={device_id} version={ack['version']} "
+            f"壁纸回执: device={device_id} kind={kind} version={ack['version']} "
             f"status={status} reason={reason} redis={saved}"
         )

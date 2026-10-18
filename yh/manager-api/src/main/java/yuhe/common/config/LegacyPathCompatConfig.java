@@ -16,13 +16,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LegacyPathCompatConfig {
 
+    private static final String REWRITE_RULES =
+        "RewriteCond %{REQUEST_URI} ^/xiaozhi/(.*)$\n" +
+        "RewriteRule ^/xiaozhi/(.*)$ /yuhe/$1 [L]\n";
+
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> legacyXiaozhiPathRewrite() {
-        return factory -> factory.addContextValves(new RewriteValve() {{
-            setConfiguration(
-                "RewriteCond %{REQUEST_URI} ^/xiaozhi/(.*)$\n" +
-                "RewriteRule ^/xiaozhi/(.*)$ /yuhe/$1 [L]\n"
-            );
-        }});
+        // 必须挂 Engine 级：Context 级 valve 只在请求映射进 /yuhe 后才执行，
+        // 而 /xiaozhi/* 按路径映射根本进不了该 Context，重写永远不会触发。
+        return factory -> factory.addEngineValves(new ConfiguredRewriteValve(REWRITE_RULES));
     }
 }

@@ -64,6 +64,16 @@ WallpaperRequest ParseWallpaperRequest(const cJSON* object, bool from_config) {
     if (cJSON_IsNumber(height)) {
         request.height = static_cast<int>(height->valuedouble);
     }
+    // 槽位（可选）："boot" = 开机壁纸（splash 底图），缺省/"idle" = 待机壁纸。
+    // 旧服务端不带此字段 → 恒 Idle，向后兼容。
+    auto kind = cJSON_GetObjectItem(object, "kind");
+    if (cJSON_IsString(kind)) {
+        if (strcmp(kind->valuestring, "boot") == 0) {
+            request.kind = WallpaperKind::Boot;
+        } else {
+            request.kind = WallpaperKind::Idle;
+        }
+    }
     return request;
 }
 
@@ -843,24 +853,30 @@ void Application::InitializeProtocol() {
                 return;
             }
             if (strcmp(action->valuestring, "clear") == 0) {
+                // kind 可选：{"kind":"boot"} 清开机壁纸，缺省/“idle" 清待机壁纸
+                WallpaperRequest probe = ParseWallpaperRequest(root, false);
+                const WallpaperKind clear_kind = probe.kind;
                 WallpaperManager::GetInstance().HandleClear(
-                    [this](bool ok, const std::string& reason) {
-                        Schedule([this, ok, reason]() { SendWallpaperAck("", ok, reason); });
+                    clear_kind, [this, clear_kind](bool ok, const std::string& reason) {
+                        Schedule([this, clear_kind, ok, reason]() {
+                            SendWallpaperAck("", ok, reason, clear_kind);
+                        });
                     });
             } else if (strcmp(action->valuestring, "set") == 0) {
                 WallpaperRequest request = ParseWallpaperRequest(root, false);
                 const std::string version = request.version;
+                const WallpaperKind set_kind = request.kind;
                 if (request.url.empty() || request.md5.empty()) {
                     ESP_LOGW(TAG, "Wallpaper set requires url and md5");
-                    Schedule([this, version]() {
-                        SendWallpaperAck(version, false, "bad_format");
+                    Schedule([this, version, set_kind]() {
+                        SendWallpaperAck(version, false, "bad_format", set_kind);
                     });
                     return;
                 }
                 WallpaperManager::GetInstance().HandleSet(
-                    request, [this, version](bool ok, const std::string& reason) {
-                        Schedule([this, version, ok, reason]() {
-                            SendWallpaperAck(version, ok, reason);
+                    request, [this, version, set_kind](bool ok, const std::string& reason) {
+                        Schedule([this, version, set_kind, ok, reason]() {
+                            SendWallpaperAck(version, ok, reason, set_kind);
                         });
                     });
             } else {
@@ -989,6 +1005,20 @@ void Application::InitializeProtocol() {
                                                                            nullptr);
                             } else {
                                 ESP_LOGW(TAG, "Ignore device_config wallpaper without url/md5");
+                            }
+                        }
+                        // 开机壁纸（boot 槽）：与 wallpaper 同一条 device_config 路径，
+                        // 只是键名不同。kind 在这里写死为 Boot，不依赖服务端字段。
+                        auto boot_wallpaper = cJSON_GetObjectItem(payload.get(), "boot_wallpaper");
+                        if (cJSON_IsObject(boot_wallpaper)) {
+                            WallpaperRequest boot_request =
+                                ParseWallpaperRequest(boot_wallpaper, true);
+                            boot_request.kind = WallpaperKind::Boot;
+                            if (!boot_request.url.empty() && !boot_request.md5.empty()) {
+                                WallpaperManager::GetInstance().HandleSet(boot_request, nullptr);
+                            } else {
+                                ESP_LOGW(TAG,
+                                         "Ignore device_config boot_wallpaper without url/md5");
                             }
                         }
                         // 首次云端配置处理完毕（含唤醒词）：仅在日志输出，屏幕直接显示待机
@@ -1845,7 +1875,7 @@ void Application::SendMcpMessage(const std::string& payload) {
 }
 
 void Application::SendWallpaperAck(const std::string& version, bool ok,
-                                   const std::string& reason) {
+                                   const std::string& reason, WallpaperKind kind) {
     // 运行在主任务（调用方已 Schedule），protocol_ 生命周期安全
     if (protocol_ == nullptr) {
         ESP_LOGW(TAG, "Drop wallpaper ack: protocol is not ready");
@@ -1855,6 +1885,10 @@ void Application::SendWallpaperAck(const std::string& version, bool ok,
     message += EscapeJson(version);
     message += "\",\"status\":\"";
     message += ok ? "ok" : "fail";
+    message += "\",\"kind\":\"";
+    // boot 槽才带 kind 字段；idle 保持最小字段集，与旧服务端完全兼容
+    // （旧版 Python 端解析不认识的字段会被忽略，但省字段更稳妥）
+    message += (kind == WallpaperKind::Boot) ? "boot" : "idle";
     message += "\"";
     if (!ok) {
         // reason 只在失败回执里出现（成功回执保持最小字段集）
@@ -1864,7 +1898,8 @@ void Application::SendWallpaperAck(const std::string& version, bool ok,
     }
     message += "}";
     protocol_->SendJsonText(message);
-    ESP_LOGI(TAG, "wallpaper ack: version=%s status=%s reason=%s", version.c_str(),
+    ESP_LOGI(TAG, "wallpaper ack: kind=%s version=%s status=%s reason=%s",
+             kind == WallpaperKind::Boot ? "boot" : "idle", version.c_str(),
              ok ? "ok" : "fail", reason.c_str());
 }
 

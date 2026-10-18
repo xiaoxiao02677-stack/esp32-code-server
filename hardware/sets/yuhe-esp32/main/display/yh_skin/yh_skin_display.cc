@@ -342,11 +342,11 @@ void YhSkinDisplay::SetupUI() {
     info.subtitle = "AI 陪伴助手";
     const std::string version(esp_app_get_description()->version);
     info.version = version.c_str();
-    // 开机首帧底图：若壁纸已在 SetupUI 前应用（本次运行早段 device_config /
-    // NVS 恢复竞速成功），直接以用户壁纸打底；否则 nullptr 回落品牌底纹。
-    // 注意 user_wallpaper_ 此时通常为空——重启后壁纸需从服务器重拉，
-    // 真正的"开机即壁纸"由拉取完成后的 RebindCurrent/重建路径兑现。
-    info.background = user_wallpaper_;
+    // 开机首帧底图回落链：boot 壁纸 > idle 壁纸（本次运行早段 device_config /
+    // NVS 恢复竞速成功时非空）。全空 nullptr 回落品牌底纹。注意两个槽此时
+    // 通常都为空——重启后壁纸需从服务器重拉，真正的"开机即壁纸"由拉取完成
+    // 后的 RebindCurrent/UpdateSplashBackground 路径兑现。
+    info.background = boot_wallpaper_ != nullptr ? boot_wallpaper_ : user_wallpaper_;
     yh_skin::BuildSplash(lv_screen_active(), profile_, CurrentFonts(), info);
 }
 
@@ -528,9 +528,9 @@ void YhSkinDisplay::ShowBootSplash() {
     info.brand = "小柚";
     info.subtitle = "AI 陪伴助手";
     info.version = esp_app_get_description()->version;
-    // 开机底图优先用户壁纸（需 WallpaperManager 已应用过，指针只读不接管）。
-    // 无壁纸时 SplashInfo::background 为 nullptr，splash 内部回落 yh_skin_bg。
-    info.background = user_wallpaper_;
+    // 开机底图回落链：boot 壁纸 > idle 壁纸（指针只读不接管）。
+    // 全空时 SplashInfo::background 为 nullptr，splash 内部回落 yh_skin_bg。
+    info.background = boot_wallpaper_ != nullptr ? boot_wallpaper_ : user_wallpaper_;
     yh_skin::BuildSplash(lv_screen_active(), profile_, CurrentFonts(), info);
 }
 
@@ -827,8 +827,69 @@ bool YhSkinDisplay::ApplyBackground() {
     // splash 还盖在屏上时同步换它的底图：壁纸通常在开机阶段（splash 亮着、
     // 还没进待机）被下发，SetWallpaper 成功走完这里，让用户壁纸立刻上屏，
     // 而不是只换掉被盖住的背景、等下次开机才看到。ShowBootSplash 重建场景
-    // 传的 background 也是 user_wallpaper_，两条路殊途同归。
-    yh_skin::UpdateSplashBackground(user_wallpaper_);
+    // 传的 background 也是同一条回落链，两条路殊途同归。
+    ApplySplashBackground();
+    return true;
+}
+
+bool YhSkinDisplay::ApplySplashBackground() {
+    // splash 底图回落链：boot 壁纸 > idle 壁纸 > 品牌底纹（nullptr 由
+    // UpdateSplashBackground 内部回落 yh_skin_bg）。
+    // 未设 boot 壁纸的设备沿用 idle 壁纸打底 —— 与旧版开机行为一致。
+    const lv_img_dsc_t* splash_bg = boot_wallpaper_ != nullptr ? boot_wallpaper_
+                                                               : user_wallpaper_;
+    // splash 不存在时 UpdateSplashBackground 静默空转（无法上屏）。
+    // 这里没法直接探测 g_root（模块内部状态），用 SplashVisible() 判断；
+    // splash 已淡出时换底图无意义，直接算成功（屏幕上已没有它）。
+    if (!yh_skin::SplashVisible()) {
+        return true;
+    }
+    yh_skin::UpdateSplashBackground(splash_bg);
+    return true;
+}
+
+bool YhSkinDisplay::SetBootWallpaper(const lv_img_dsc_t* image) {
+    // 镜像 SetWallpaper 的"零残留失败"协议：所有 return false 路径不改任何成员。
+    // boot 槽只影响 splash 底图，UI 未建时 splash 同样不存在，只需记下指针？
+    // 不 —— 记指针而 splash 不存在同样会造成"假成功"，让 applied_version 记账
+    // 之后同版本被 already applied 挡回。但与 idle 槽不同：splash 是 SetupUI
+    // 最后一个建的（BuildMainScreen 之后），UI 未建 ⇒ splash 必不存在 ⇒ 拒收。
+    if (image == nullptr) {
+        // 等价于"恢复开机默认底图"
+        if (!setup_ui_called_) {
+            boot_wallpaper_ = nullptr;
+            return false;
+        }
+        DisplayLockGuard lock(this);
+        if (!lock) { return false; }
+        boot_wallpaper_ = nullptr;
+        ApplySplashBackground();
+        return true;
+    }
+    if (!setup_ui_called_) {
+        ESP_LOGW(TAG, "SetBootWallpaper called before SetupUI, rejected");
+        return false;
+    }
+    DisplayLockGuard lock(this);
+    if (!lock) { return false; }
+    // splash 已淡出后再设 boot 壁纸：图缓存进 boot_wallpaper_（下次 ShowBootSplash
+    // 重建时用），屏幕上没有 splash 可换，直接算成功。仅 splash 可见时才要求
+    // UpdateSplashBackground 真正换图 —— 后者无返回值，无法逐次验证，
+    // 但 SplashVisible()==true 已保证 g_root/g_bg 有效，set_src 不会被拒。
+    boot_wallpaper_ = image;
+    ApplySplashBackground();
+    return true;
+}
+
+bool YhSkinDisplay::ClearBootWallpaper() {
+    if (!setup_ui_called_) {
+        boot_wallpaper_ = nullptr;  // 还没有 UI 可重绘，只清状态
+        return true;
+    }
+    DisplayLockGuard lock(this);
+    if (!lock) { return false; }
+    boot_wallpaper_ = nullptr;
+    ApplySplashBackground();
     return true;
 }
 

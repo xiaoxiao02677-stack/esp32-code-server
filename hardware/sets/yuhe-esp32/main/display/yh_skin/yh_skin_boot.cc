@@ -4,6 +4,14 @@
 
 #include <cstring>
 
+// splash 专用小字体（约 130 个常用中文 + ASCII，~30KB 编译后）：
+// 开机首帧在 assets 分区加载之前渲染，主题字体只有 basic 档（890 字），
+// 「柚/陪/伴/助/初/始/稍/候…」都不在其中，开 LV_USE_FONT_PLACEHOLDER 时
+// 渲染成方框（即用户看到的"开机乱码"）。本字体覆盖 splash 全部文案
+// （品牌名/副标题/lang_config.h 状态串），BuildSplash 首建时直接用它。
+// assets 的 common 档到位后 SetSplashFont 仍会重绑——那是双保险，不是依赖。
+extern const lv_font_t font_splash_20_4;
+
 // 开机画面：上电后屏幕亮起的第一帧就是品牌画面。
 //
 // 为什么用文件级静态状态而不是类：
@@ -177,7 +185,9 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
     //   CONFIG_LV_USE_FONT_PLACEHOLDER=y，于是"小柚"稳定渲染成两个方框 ——
     //   这属于 100% 必现，只是容易被误当成"字体加载失败"。
     //   字号想要更大就用 text 字体本身，别借图标字体。
-    SetFontIfAvailable(brand, fonts.text);
+    // ★★ splash 建于 assets 加载之前，fonts.text（basic 890 字）缺「柚」等字。
+    //    首建一律用 splash 专用字体；common 到位后 SetSplashFont 会重绑接管。
+    SetFontIfAvailable(brand, &font_splash_20_4);
     g_brand = brand;
     lv_obj_set_style_text_color(brand, lv_color_hex(kTextMain), 0);
     lv_obj_align(brand, LV_ALIGN_CENTER, 0, profile.round ? -profile.scaled(26)
@@ -187,7 +197,7 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
     if (info.subtitle != nullptr && info.subtitle[0] != '\0') {
         lv_obj_t* sub = lv_label_create(g_root);
         lv_label_set_text(sub, info.subtitle);
-        SetFontIfAvailable(sub, fonts.text);
+        SetFontIfAvailable(sub, &font_splash_20_4);
         g_sub = sub;
         lv_obj_set_style_text_color(sub, lv_color_hex(kTextSub), 0);
         lv_obj_align(sub, LV_ALIGN_CENTER, 0, profile.round ? profile.scaled(6)
@@ -202,7 +212,7 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
     // 状态文案（连接中/激活中…），默认空
     g_status_label = lv_label_create(g_root);
     lv_label_set_text(g_status_label, "");
-    SetFontIfAvailable(g_status_label, fonts.text);
+    SetFontIfAvailable(g_status_label, &font_splash_20_4);
     lv_obj_set_style_text_color(g_status_label, lv_color_hex(kTextSub), 0);
     lv_obj_set_style_text_align(g_status_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(g_status_label, LV_ALIGN_BOTTOM_MID, 0, -profile.scaled(34));
@@ -223,7 +233,7 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
     if (info.version != nullptr && info.version[0] != '\0') {
         lv_obj_t* ver = lv_label_create(g_root);
         lv_label_set_text(ver, info.version);
-        SetFontIfAvailable(ver, fonts.text);
+        SetFontIfAvailable(ver, &font_splash_20_4);
         lv_obj_set_style_text_color(ver, lv_color_hex(kTextHint), 0);
         lv_obj_align(ver, LV_ALIGN_BOTTOM_RIGHT, -profile.scaled(8), -profile.scaled(8));
     }

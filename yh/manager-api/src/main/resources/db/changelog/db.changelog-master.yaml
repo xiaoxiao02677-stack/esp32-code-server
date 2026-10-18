@@ -865,3 +865,12 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610171030.sql
+  - changeSet:
+      id: 202610181930
+      author: server-java
+      # 开机壁纸（boot 槽）：ai_wallpaper_task 加 kind 列（idle/boot）。
+      # ALTER 单独成 changeset，重放由 Liquibase changeset id 保证幂等。
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610181930.sql

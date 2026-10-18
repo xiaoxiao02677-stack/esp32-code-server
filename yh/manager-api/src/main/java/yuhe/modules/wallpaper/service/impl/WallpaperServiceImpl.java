@@ -108,6 +108,10 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
     private static final String APPLY_IMMEDIATE = "immediate";
     private static final String APPLY_NEXT_BOOT = "next_boot";
 
+    /** 壁纸槽位：idle=待机壁纸（主界面背景）；boot=开机壁纸（splash 底图） */
+    private static final String KIND_IDLE = "idle";
+    private static final String KIND_BOOT = "boot";
+
     private static final String STATUS_PENDING = "pending";
     private static final String STATUS_SENT = "sent";
     private static final String STATUS_FAILED = "failed";
@@ -248,12 +252,14 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
         String applyMode = APPLY_NEXT_BOOT.equalsIgnoreCase(StringUtils.trimToEmpty(dto.getApplyMode()))
                 ? APPLY_NEXT_BOOT
                 : APPLY_IMMEDIATE;
+        String kind = normalizeKind(dto.getKind());
 
         WallpaperTaskEntity task = new WallpaperTaskEntity();
         task.setWallpaperId(wallpaper.getId());
         task.setTargetType(targetType);
         task.setTargetIds(targetIdsJson(targetType, dto));
         task.setApplyMode(applyMode);
+        task.setKind(kind);
         task.setStatus(STATUS_PENDING);
         task.setTotal(devices.size());
         task.setSent(0);
@@ -264,7 +270,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
         Map<String, Object> configWallpaper = configWallpaper(wallpaper);
         for (DeviceEntity device : devices) {
             insertTaskDevice(task.getId(), device.getId(), STATUS_PENDING, null);
-            writeDeviceConfig(device, configWallpaper);
+            writeDeviceConfig(device, configWallpaper, kind);
         }
 
         if (APPLY_IMMEDIATE.equals(applyMode)) {
@@ -343,7 +349,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
             log.warn("[wallpaper] 无可推送设备（MAC 为空） task={}", task.getId());
         } else {
             result = wallpaperDispatchClient.dispatch(
-                    macById.values().stream().distinct().toList(), pythonWallpaper(wallpaper));
+                    macById.values().stream().distinct().toList(), pythonWallpaper(wallpaper, task.getKind()));
         }
 
         List<WallpaperTaskDeviceEntity> rows = wallpaperTaskDeviceDao.selectList(
@@ -378,12 +384,14 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
     }
 
     /**
-     * 把 wallpaper 对象增量写入设备云端配置（保留 volume/brightness 等既有键）
+     * 把 wallpaper 对象增量写入设备云端配置（保留 volume/brightness 等既有键）。
+     * 槽位决定键名（固件契约）：idle → wallpaper；boot → boot_wallpaper。
+     * 两键并存互不覆盖，同一台设备可同时配置待机壁纸与开机壁纸。
      */
-    private void writeDeviceConfig(DeviceEntity device, Map<String, Object> configWallpaper) {
+    private void writeDeviceConfig(DeviceEntity device, Map<String, Object> configWallpaper, String kind) {
         try {
             Map<String, Object> delta = new LinkedHashMap<>();
-            delta.put("wallpaper", configWallpaper);
+            delta.put(KIND_BOOT.equals(kind) ? "boot_wallpaper" : "wallpaper", configWallpaper);
             Date now = new Date();
             deviceConfigDao.upsertMergePatch(device.getId(), JsonUtils.toJsonString(delta), null, null, null, now);
         } catch (Exception e) {
@@ -442,7 +450,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
             String status = row.getStatus();
             String error = row.getError();
 
-            Ack ack = readAck(mac);
+            Ack ack = readAck(mac, task.getKind());
             if (ack != null && !isStale(ack, task)) {
                 if (ack.success) {
                     status = STATUS_APPLIED;
@@ -473,6 +481,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
 
         WallpaperTaskDetailVO vo = new WallpaperTaskDetailVO();
         vo.setTaskId(task.getId());
+        vo.setKind(task.getKind());
         vo.setTotal(rows.size());
         vo.setSent(sent);
         vo.setSuccess(success);
@@ -484,8 +493,7 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
 
     /**
      * 任务状态：有成功也有失败为 partial；全失败为 failed；有推送/成功为 sent；否则 pending
-     */
-    private String overallStatus(int total, int sent, int success, int failed) {
+     */    private String overallStatus(int total, int sent, int success, int failed) {
         if (total == 0) {
             return STATUS_PENDING;
         }
@@ -511,14 +519,22 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
         return devices.stream().collect(Collectors.toMap(DeviceEntity::getId, d -> d, (a, b) -> a));
     }
 
+    /** 槽位归一化：trim→lower；空或非法值回落 idle（历史任务无 kind 列值即 idle） */
+    private String normalizeKind(String kind) {
+        String value = StringUtils.trimToEmpty(kind).toLowerCase(Locale.ROOT);
+        return KIND_BOOT.equals(value) ? KIND_BOOT : KIND_IDLE;
+    }
+
     /**
-     * 读取 Python 写回的回执：key=wallpaper:ack:{device_id}，value=JSON{version,status,reason,ts}
+     * 读取 Python 写回的回执：idle 槽 key=wallpaper:ack:{device_id}，
+     * boot 槽 key=wallpaper:ack:boot:{device_id}（分键，互不覆盖）。
+     * value=JSON{version,status,reason,ts}
      */
-    private Ack readAck(String macAddress) {
+    private Ack readAck(String macAddress, String kind) {
         if (StringUtils.isBlank(macAddress)) {
             return null;
         }
-        String raw = readAckRaw(macAddress);
+        String raw = readAckRaw(macAddress, KIND_BOOT.equals(normalizeKind(kind)));
         if (StringUtils.isBlank(raw)) {
             return null;
         }
@@ -545,8 +561,9 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
      * 逐个别名尝试读取回执 key。
      * Python 侧回执用设备 WS 上报的 device-id 原值（hello 头），而库里的 mac_address
      * 可能是冒号/无冒号、大小写、yuhe- 前缀等不同写法，逐个兜底避免漏读。
+     * boot 槽用独立前缀 wallpaper:ack:boot:（与 Python 分键方案对齐）。
      */
-    private String readAckRaw(String macAddress) {
+    private String readAckRaw(String macAddress, boolean boot) {
         Set<String> candidates = new LinkedHashSet<>();
         String lower = macAddress.toLowerCase(Locale.ROOT);
         String compact = lower.replace(":", "");
@@ -556,7 +573,9 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
         candidates.add("yuhe-" + lower);
         candidates.add("yuhe-" + compact);
         for (String candidate : candidates) {
-            String raw = stringRedisTemplate.opsForValue().get(RedisKeys.getWallpaperAckKey(candidate));
+            String key = boot ? RedisKeys.getWallpaperBootAckKey(candidate)
+                              : RedisKeys.getWallpaperAckKey(candidate);
+            String raw = stringRedisTemplate.opsForValue().get(key);
             if (StringUtils.isNotBlank(raw)) {
                 return raw;
             }
@@ -821,14 +840,15 @@ public class WallpaperServiceImpl extends BaseServiceImpl<WallpaperDao, Wallpape
         return value;
     }
 
-    /** Python 即时通道契约对象（字段与 §4.9 契约严格一致） */
-    private Map<String, Object> pythonWallpaper(WallpaperEntity wallpaper) {
+    /** Python 即时通道契约对象（字段与 §4.9 契约严格一致；kind 标识槽位，缺省 idle 兼容旧 Python） */
+    private Map<String, Object> pythonWallpaper(WallpaperEntity wallpaper, String kind) {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("version", wallpaperVersion(wallpaper));
         value.put("url", wallpaper.getUrl());
         value.put("md5", wallpaper.getMd5());
         value.put("size", wallpaper.getSize());
         value.put("format", wallpaper.getFormat());
+        value.put("kind", normalizeKind(kind));
         return value;
     }
 

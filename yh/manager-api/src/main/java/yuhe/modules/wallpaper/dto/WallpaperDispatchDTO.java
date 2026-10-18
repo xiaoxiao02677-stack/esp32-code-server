@@ -29,4 +29,7 @@ public class WallpaperDispatchDTO {
 
     @Schema(description = "生效方式：immediate/next_boot")
     private String applyMode;
+
+    @Schema(description = "壁纸槽位：idle=待机壁纸（主界面背景）/ boot=开机壁纸（开机首屏底图），缺省 idle")
+    private String kind;
 }

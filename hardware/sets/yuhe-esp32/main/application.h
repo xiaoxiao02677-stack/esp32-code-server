@@ -22,6 +22,10 @@
 #include "device_state_machine.h"
 #include "notify/notify_player.h"
 
+// 壁纸槽位种类（wallpaper/wallpaper_manager.h）。enum class 可前向声明，
+// 这里只需要它做 SendWallpaperAck 的默认参数类型，不必引入整个头。
+enum class WallpaperKind;
+
 // Main event bits
 #define MAIN_EVENT_SCHEDULE             (1 << 0)
 #define MAIN_EVENT_SEND_AUDIO           (1 << 1)
@@ -209,8 +213,10 @@ private:
                            NotifyPriority priority = NotifyPriority::kNotifyPriorityNormal);
     void StopNotification();
     void HandleNotificationFinished(uint32_t playback_id, bool success);
-    // 壁纸回执（FR-2.11）：WS/MQTT 文本帧回到服务端
-    void SendWallpaperAck(const std::string& version, bool ok, const std::string& reason);
+    // 壁纸回执（FR-2.11）：WS/MQTT 文本帧回到服务端。kind 默认 idle，
+    // boot 槽回执额外带 "kind":"boot" 字段，服务端按槽位分别记账。
+    void SendWallpaperAck(const std::string& version, bool ok, const std::string& reason,
+                          WallpaperKind kind = WallpaperKind::Idle);
 public:
     /**
      * 定时触发一次 notify 播报。设备不空闲时丢弃并记录日志。

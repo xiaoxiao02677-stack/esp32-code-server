@@ -38,6 +38,10 @@
                 <span class="v">{{ targetSummary }}</span>
               </div>
               <div class="sum-row">
+                <span class="k">槽位</span>
+                <span class="v">{{ wpKind === 'boot' ? '开机壁纸' : '待机壁纸' }}</span>
+              </div>
+              <div class="sum-row">
                 <span class="k">壁纸</span>
                 <span class="v">{{ selectedWallpaper ? selectedWallpaper.name : '未选择' }}</span>
               </div>
@@ -166,6 +170,24 @@
 
             <!-- ========== 步骤 2：选择壁纸 ========== -->
             <div v-else-if="state === 'wallpaper'" class="pane">
+              <!-- 槽位切换：待机壁纸（主界面背景）/ 开机壁纸（开机首屏底图），两槽独立下发 -->
+              <div class="kind-tab">
+                <button type="button" class="kind-btn" :class="{ on: wpKind === 'idle' }" @click="wpKind = 'idle'">
+                  <span class="ki">🖼️</span>
+                  <span class="kt">
+                    <strong>待机壁纸</strong>
+                    <small>设备待机时主界面的背景图</small>
+                  </span>
+                </button>
+                <button type="button" class="kind-btn" :class="{ on: wpKind === 'boot' }" @click="wpKind = 'boot'">
+                  <span class="ki">🚀</span>
+                  <span class="kt">
+                    <strong>开机壁纸</strong>
+                    <small>设备开机第一屏的画面底图</small>
+                  </span>
+                </button>
+              </div>
+
               <div class="seg">
                 <button type="button" :class="{ on: wpMode === 'library' }" @click="wpMode = 'library'">服务器库</button>
                 <button type="button" :class="{ on: wpMode === 'upload' }" @click="wpMode = 'upload'">上传新图</button>
@@ -257,6 +279,10 @@
             <div v-else-if="state === 'review'" class="pane">
               <div class="confirm-card">
                 <h4>确认下发</h4>
+                <div class="kv">
+                  <span class="k">槽位</span>
+                  <span class="v">{{ wpKind === 'boot' ? '开机壁纸（开机第一屏底图）' : '待机壁纸（主界面背景）' }}</span>
+                </div>
                 <div class="kv">
                   <span class="k">目标</span>
                   <span class="v">{{ targetSummary }}</span>
@@ -590,6 +616,10 @@ const targetSummary = computed(() => {
 
 // ---------------- 壁纸选择 ----------------
 const wpMode = ref('library') // library | upload
+// 壁纸槽位：idle=待机壁纸（主界面背景，原有行为）/ boot=开机壁纸（开机 splash 底图）。
+// 两槽独立下发、独立回执，切换 tab 不清空已选目标与壁纸（同一张图可分别下发到两槽）。
+const wpKind = ref('idle') // idle | boot
+const kindLabel = computed(() => (wpKind.value === 'boot' ? '开机壁纸' : '待机壁纸'))
 const wallpapers = ref([])
 const wpTotal = ref(0)
 const wpPage = ref(1)
@@ -777,14 +807,19 @@ const resultDevices = computed(() => {
   })
 })
 const resultTone = computed(() => (state.value === 'dispatching' ? 'run' : (allSuccess.value ? 'ok' : 'bad')))
+// 槽位回显优先用任务返回的 kind（服务端已部署新版时带出），回落当前 tab 选择
+const resultKindLabel = computed(() => {
+  const k = String((task.value && task.value.kind) || wpKind.value || 'idle').toLowerCase()
+  return k === 'boot' ? '开机壁纸' : '待机壁纸'
+})
 const resultTitle = computed(() => {
-  if (state.value === 'dispatching') return '下发中…'
-  if (allSuccess.value) return '全部成功'
-  return failedCount.value > 0 ? '部分失败' : '任务结束'
+  if (state.value === 'dispatching') return `${resultKindLabel.value}下发中…`
+  if (allSuccess.value) return `${resultKindLabel.value}全部成功`
+  return failedCount.value > 0 ? `${resultKindLabel.value}部分失败` : '任务结束'
 })
 const resultSub = computed(() => {
   if (state.value === 'dispatching') return `任务 ${taskId.value} 正在执行，关闭浮层不影响后台下发`
-  if (allSuccess.value) return `任务 ${taskId.value} 已完成，在线设备应已切换壁纸`
+  if (allSuccess.value) return `任务 ${taskId.value} 已完成，在线设备应已切换${resultKindLabel.value}`
   return `任务 ${taskId.value} 结束，失败设备可单条或批量重试`
 })
 const taskStatusText = computed(() => {
@@ -887,7 +922,8 @@ async function doDispatch() {
       targetType: targetMode.value === 'all' ? 'all' : (targetMode.value === 'group' ? 'group' : 'devices'),
       deviceIds: targetMode.value === 'devices' ? selectedDeviceIds.value.slice() : [],
       agentIds: targetMode.value === 'group' ? selectedAgentIds.value.slice() : [],
-      applyMode: applyMode.value
+      applyMode: applyMode.value,
+      kind: wpKind.value
     }
     const res = await wallpaperApi.dispatch(payload)
     const data = unwrap(res) || {}
@@ -1096,6 +1132,19 @@ onUnmounted(() => {
 
 /* 通用控件 */
 .seg { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: rgba(127, 140, 160, .12); margin-bottom: 14px; }
+/* 槽位切换 tab（待机壁纸 / 开机壁纸）：两块横向卡片按钮，选中态高亮 */
+.kind-tab { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.kind-btn {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(127, 140, 160, .25);
+  border-radius: 12px; background: transparent; cursor: pointer; text-align: left; transition: border-color .15s, background .15s;
+}
+.kind-btn:hover { border-color: var(--primary); }
+.kind-btn.on { border-color: var(--primary); background: var(--primary-soft); }
+.kind-btn .ki { font-size: 20px; line-height: 1; }
+.kind-btn .kt { display: flex; flex-direction: column; gap: 2px; }
+.kind-btn .kt strong { font-size: 13px; color: var(--text-main, inherit); }
+.kind-btn .kt small { font-size: 11px; color: var(--text-sub, #8892a4); }
+.kind-btn.on .kt strong { color: var(--primary); }
 .seg button {
   border: none; background: transparent; cursor: pointer; padding: 6px 14px;
   border-radius: 8px; font-size: 13px; color: var(--text-sub); font-family: var(--font);
