@@ -127,14 +127,25 @@
         </div>
 
         <div class="form-row">
-          <label>实时打断阈值（0~100，拉选调节）</label>
-          <div class="slider-row">
+          <div class="label-with-switch">
+            <label>实时打断阈值（0~100，拉选调节）</label>
+            <label class="switch-wrap" title="关闭后服务端不再打断播报（设备本地打断不受影响）">
+              <input v-model="editor.interruptEnabled" type="checkbox" class="switch-input" />
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span class="switch-text">{{ editor.interruptEnabled === false ? '已关闭' : '已开启' }}</span>
+            </label>
+          </div>
+          <div class="slider-row" :class="{ disabled: editor.interruptEnabled === false }">
             <input v-model.number="editor.interruptThreshold" type="range" min="0" max="100" step="1"
-                   class="slider" :style="{ '--pct': editor.interruptThreshold + '%' }" />
+                   class="slider" :style="{ '--pct': editor.interruptThreshold + '%' }"
+                   :disabled="editor.interruptEnabled === false" />
             <span class="slider-value">{{ editor.interruptThreshold }}</span>
           </div>
           <p class="field-hint">
-            播放时用户说话打断的灵敏度：0 最灵敏（立即打断）· 100 最难打断（连续 2 秒人声才打断）· 默认 15 ≈ 300ms
+            播放时用户说话打断的灵敏度：0 最灵敏（立即打断）· 100 最难打断（连续 2 秒人声才打断）· 默认 15 ≈ 300ms。
+            <span v-if="editor.interruptEnabled === false" style="color:#B45309;font-weight:600">
+              ⚠️ 实时打断已关闭：播报期间用户说话不会打断（保存后立即生效）
+            </span>
           </p>
         </div>
 
@@ -204,8 +215,9 @@ const sessions = reactive({ show: false, agentName: '', agentId: null, list: [] 
 
 // 编辑弹窗状态（契约字段与 cc-console editForm 一致；wakeWords 分号分隔，空=默认「你好」；
 // wakeWordThreshold 唤醒词阈值 0~100（0=最灵敏），interruptThreshold 实时打断阈值
-// 0~100（0=最容易打断）；两者 未设置时显示设备默认）
-const editor = reactive({ show: false, id: '', wakeWords: '', wakeWordThreshold: '', interruptThreshold: 15 })
+// 0~100（0=最容易打断）；两者 未设置时显示设备默认；
+// interruptEnabled 实时打断一键开关（null=未设置走默认开启，false=关闭服务端打断）
+const editor = reactive({ show: false, id: '', wakeWords: '', wakeWordThreshold: '', interruptThreshold: 15, interruptEnabled: null })
 const form = reactive({
   agentName: '', llmModelId: '', ttsModelId: '', ttsVoiceId: '',
   memModelId: '', intentModelId: '', asrModelId: '',
@@ -291,6 +303,7 @@ async function openCreate() {
   editor.wakeWords = ''
   editor.wakeWordThreshold = ''
   editor.interruptThreshold = 15
+  editor.interruptEnabled = null
   boundDevices.value = []
   bindCode.value = ''
   editor.show = true
@@ -319,6 +332,8 @@ async function openEdit(a) {
   editor.wakeWordThreshold = d.wakeWordThreshold ?? ''
   // 打断阈值进度条：未设置时回落默认 15（≈300ms，与固件出厂一致）
   editor.interruptThreshold = d.interruptThreshold ?? 15
+  // 打断开关回显：null/undefined = 未设置（默认开启）；false = 已关闭
+  editor.interruptEnabled = d.interruptEnabled ?? null
   bindCode.value = ''
   manual.board = ''; manual.appVersion = ''; manual.macAddress = ''
   editor.show = true
@@ -357,6 +372,8 @@ async function persist() {
     return false
   }
   payload.interruptThreshold = it
+  // 实时打断一键开关：checkbox 双态（true/false 总是发送，null 不可能——模板开关只有两态）
+  payload.interruptEnabled = editor.interruptEnabled === false ? false : true
   if (editor.id) {
     await adminApi.updateAgent(editor.id, payload)
   } else {
@@ -471,6 +488,23 @@ onMounted(load)
 }
 .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
+/* 实时打断一键开关：label 行右对齐布局 */
+.label-with-switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.switch-wrap { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; flex: 0 0 auto; }
+.switch-input { display: none; }
+.switch-track {
+  width: 40px; height: 22px; border-radius: 999px; background: #CBD5E1;
+  position: relative; transition: background .18s; flex: 0 0 auto;
+}
+.switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s;
+}
+.switch-input:checked + .switch-track { background: var(--primary); }
+.switch-input:checked + .switch-track .switch-thumb { transform: translateX(18px); }
+.switch-text { font-size: 12px; color: var(--text-sub); font-weight: 600; }
+/* 开关关闭时滑条整体降透明度并禁用交互 */
+.slider-row.disabled { opacity: .45; pointer-events: none; }
 /* 实时打断阈值进度条：--pct 由 v-bind 传入，用于渐变填充宽度 */
 .slider-row { display: flex; align-items: center; gap: 12px; }
 .slider {

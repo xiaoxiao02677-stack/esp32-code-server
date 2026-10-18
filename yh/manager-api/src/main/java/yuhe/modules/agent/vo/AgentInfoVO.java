@@ -34,4 +34,7 @@ public class AgentInfoVO extends AgentEntity
 
     @Schema(description = "实时打断灵敏度（0~100，0=最灵敏/最容易打断）；取自绑定设备的 ai_device_config，未设置时为 null")
     private Integer interruptThreshold;
+
+    @Schema(description = "实时打断一键开关（true=开启服务端打断，false=关闭）；取自绑定设备的 ai_device_config，未设置时为 null（默认开启）")
+    private Boolean interruptEnabled;
 }

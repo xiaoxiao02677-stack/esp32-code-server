@@ -38,10 +38,11 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
     /** 配置键白名单（design §5.1 schema：volume/brightness；wake_word 动态唤醒词；
      *  wake_word_display 唤醒词展示原文；wake_word_threshold 唤醒词灵敏度 0~100
      *  （0=最灵敏，固件夹取到 esp-sr 最低有效值）；interrupt_threshold 实时打断灵敏度
-     *  0~100（0=最容易打断）；theme P1 预留不收） */
+     *  0~100（0=最容易打断）；interrupt_enabled 实时打断一键开关（bool，False=关闭
+     *  服务端打断，固件不消费此键仅透传存储）；theme P1 预留不收） */
     private static final Set<String> CONFIG_KEYS = Set.of(
             "volume", "brightness", "wake_word", "wake_word_display",
-            "wake_word_threshold", "interrupt_threshold");
+            "wake_word_threshold", "interrupt_threshold", "interrupt_enabled");
 
     /** 数值型配置键的合法范围（闭区间） */
     private static final int VALUE_MIN = 0;
@@ -100,6 +101,15 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
                 Object sanitizedWake = sanitizeWakeWord(macAddress, key, value);
                 if (sanitizedWake != null) {
                     delta.put(key, sanitizedWake);
+                }
+                continue;
+            }
+            // 实时打断一键开关：布尔键，不走 0~100 数值校验（固件不消费、透传存储）
+            if ("interrupt_enabled".equals(key)) {
+                if (value instanceof Boolean b) {
+                    delta.put(key, b);
+                } else {
+                    log.warn("[device-config] 忽略非法打断开关值: mac={}, value={}", macAddress, value);
                 }
                 continue;
             }

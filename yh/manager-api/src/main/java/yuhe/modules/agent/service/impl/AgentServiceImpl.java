@@ -247,6 +247,33 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
     }
 
+    /**
+     * 读取智能体绑定设备上的某个 device_config 布尔键（如 interrupt_enabled）。
+     * 语义同 {@link #readDeviceConfigInt}：任取一台绑定设备，未设置返回 null。
+     */
+    private Boolean readDeviceConfigBool(String agentId, String key) {
+        try {
+            List<DeviceEntity> devices = deviceService.getDevicesByAgentId(agentId);
+            if (devices == null || devices.isEmpty()) {
+                return null;
+            }
+            yuhe.modules.device.entity.DeviceConfigEntity deviceConfig =
+                    deviceConfigService.getByDeviceId(devices.get(0).getId());
+            if (deviceConfig == null || StringUtils.isBlank(deviceConfig.getConfigJson())) {
+                return null;
+            }
+            Map<String, Object> configMap = JsonUtils.parseMap(deviceConfig.getConfigJson());
+            if (configMap != null && configMap.get(key) instanceof Boolean value) {
+                return value;
+            }
+            return null;
+        } catch (Exception e) {
+            System.err.println("[AgentService] 读取设备配置 " + key + " 异常 agentId=" + agentId
+                    + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     @Override
     public PageData<AgentEntity> adminAgentList(Map<String, Object> params) {
         IPage<AgentEntity> page = agentDao.selectPage(
@@ -287,6 +314,7 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         // 无绑定设备或未设置时为 null（前端显示空 = 使用固件默认）
         agent.setWakeWordThreshold(readDeviceConfigInt(id, "wake_word_threshold"));
         agent.setInterruptThreshold(readDeviceConfigInt(id, "interrupt_threshold"));
+        agent.setInterruptEnabled(readDeviceConfigBool(id, "interrupt_enabled"));
 
         // 无需额外查询插件列表，已通过SQL查询出来
         return agent;
@@ -643,6 +671,11 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             } else {
                 System.err.println("[AgentService] 忽略越界实时打断阈值 agentId=" + agentId + " threshold=" + interrupt);
             }
+        }
+        if (dto.getInterruptEnabled() != null) {
+            // 实时打断一键开关：落 ai_device_config 并推 Python 服务端热更新
+            // （False 时 _maybe_server_interrupt 短路，服务端 VAD 不再触发 abort）
+            applyDeviceConfigToDevices(agentId, Map.of("interrupt_enabled", dto.getInterruptEnabled()), "实时打断开关");
         }
         if (dto.getChatHistoryConf() != null) {
             existingEntity.setChatHistoryConf(dto.getChatHistoryConf());

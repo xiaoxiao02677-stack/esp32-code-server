@@ -14,6 +14,7 @@ DEVICE_CONFIG_ALLOWED_KEYS = {
     "wake_word_display",    # 唤醒词显示文本（汉字），屏幕显示用，与 wake_word 索引对齐
     "wake_word_threshold",  # 唤醒词灵敏度 0~100（0=最灵敏）
     "interrupt_threshold",  # 实时打断灵敏度 0~100（0=最灵敏）
+    "interrupt_enabled",    # 实时打断一键开关（bool，False=关闭服务端打断）
     "volume",               # 音量 0~100
     "brightness",           # 亮度 0~100
 }
@@ -207,6 +208,13 @@ class WakeWordService:
                 if cleaned is not None:
                     clean[key] = cleaned
                 continue
+            if key == "interrupt_enabled":
+                # 打断开关是唯一的布尔键：不进 0~100 数值校验
+                if isinstance(value, bool):
+                    clean[key] = value
+                else:
+                    logger.warning(f"忽略非法打断开关值: {key}={value!r}")
+                continue
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 logger.warning(f"忽略非数值配置: {key}={value!r}")
                 continue
@@ -295,6 +303,22 @@ class WakeWordService:
                     pass
 
             on_sent = _on_sent_sync
+
+        # interrupt_enabled 的服务端热同步：同理自动挂钩子，conn.interrupt_enabled
+        # 是服务端打断链路的总开关（False 时 _maybe_server_interrupt 直接短路）。
+        if "interrupt_enabled" in clean and on_sent is None:
+            _en_val = bool(clean["interrupt_enabled"])
+
+            def _on_sent_en(conn) -> None:
+                conn.interrupt_enabled = _en_val
+                try:
+                    conn.logger.bind(tag="WakeWordService").info(
+                        f"服务端打断开关已更新: {'开启' if _en_val else '关闭'}"
+                    )
+                except Exception:
+                    pass
+
+            on_sent = _on_sent_en
 
         return await self._push_device_config(agent_id, device_id, clean, log_tag, on_sent=on_sent)
 

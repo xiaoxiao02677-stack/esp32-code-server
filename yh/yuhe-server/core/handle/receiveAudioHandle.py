@@ -72,6 +72,13 @@ async def _maybe_server_interrupt(conn: "ConnectionHandler"):
     """
     now = time.time() * 1000
 
+    # 一键开关：interrupt_enabled=False 时完全关闭服务端打断（VAD 判定链路
+    # 整体短路，播报期间任何人声都不触发 abort）。固件本地打断不受影响。
+    # 语义：SERVER_AEC 板（打断判定权在服务端）OFF 即"永不打断"；非 AEC 板
+    # 打断本来就发生在固件本地，本开关对它们无感知。默认 None/True = 开启。
+    if getattr(conn, "interrupt_enabled", None) is False:
+        return
+
     # 起播保护窗：client_is_speaking 置位（tts start 下发）后的保护期内不判打断
     started_at = getattr(conn, "client_speaking_since_ms", 0)
     if started_at and now - started_at < SERVER_INTERRUPT_GUARD_MS:

@@ -299,6 +299,11 @@ public class ConfigServiceImpl implements ConfigService {
                 if (configMap.get("interrupt_threshold") instanceof Integer it && it >= 0 && it <= 100) {
                     sanitized.put("interrupt_threshold", it);
                 }
+                // 实时打断一键开关（Python 服务端消费：False 时服务端打断短路；
+                // 固件不识别此键，cJSON 遍历会自然跳过未知键，透传无害）
+                if (configMap.get("interrupt_enabled") instanceof Boolean en) {
+                    sanitized.put("interrupt_enabled", en);
+                }
                 if (!sanitized.isEmpty()) {
                     result.put("device_config", sanitized);
                 }

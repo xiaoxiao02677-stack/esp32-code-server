@@ -85,6 +85,9 @@ public class AgentUpdateDTO implements Serializable {
     @Schema(description = "实时打断灵敏度（0~100，0=最灵敏/最容易打断、100=最难打断）；下发设备热生效并持久化到 ai_device_config，不传保持不变", example = "15", nullable = true)
     private Integer interruptThreshold;
 
+    @Schema(description = "实时打断一键开关（true=开启服务端打断，false=关闭）；持久化到 ai_device_config 并热更新 Python 服务端，不传保持不变", example = "true", nullable = true)
+    private Boolean interruptEnabled;
+
     @Schema(description = "聊天记录配置（0不记录 1仅记录文本 2记录文本和语音）", example = "3", nullable = true)
     private Integer chatHistoryConf;
 

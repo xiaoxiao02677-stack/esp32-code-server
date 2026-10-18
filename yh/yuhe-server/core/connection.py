@@ -129,6 +129,9 @@ class ConnectionHandler:
         # 服务端打断灵敏度（与固件 interrupt_threshold 同语义：0~100，×20ms=人声确认窗）。
         # 握手时从云端 device_config 恢复，管理端保存后经 wake_word_service.on_sent 热更新。
         self.interrupt_confirm_ms = 300  # 默认 300ms ≈ 固件出厂 15 档
+        # 服务端打断一键开关（管理端 interrupt_enabled，None/True=开启、False=关闭）。
+        # False 时 receiveAudioHandle._maybe_server_interrupt 直接短路，VAD 不再触发 abort。
+        self.interrupt_enabled = None
         self.client_speaking_since_ms = 0.0  # tts start 下发时刻（起播保护窗计时基准）
         self.interrupt_voice_since_ms = 0.0  # 播报期首次检出人声时刻（确认窗计时基准）
 
@@ -1002,6 +1005,13 @@ class ConnectionHandler:
                         self.logger.bind(tag=TAG).info(
                             f"服务端打断灵敏度已恢复: threshold={_thr} (confirm {_thr * 20}ms)"
                         )
+                # 恢复打断开关：False 时服务端打断链路短路（重连不回退，同阈值语义）
+                _en = device_config.get("interrupt_enabled")
+                if isinstance(_en, bool):
+                    self.interrupt_enabled = _en
+                    self.logger.bind(tag=TAG).info(
+                        f"服务端打断开关已恢复: {'开启' if _en else '关闭'}"
+                    )
                 try:
                     await self.websocket.send(
                         json.dumps(
