@@ -79,6 +79,16 @@
 - **测试环境设备侧**：OTA/WS 走 **8144**（明文 nginx），8101 TLS 明文连不上是坏配置；
   YH 心跳 TCP **8199**；OTA 须带 `Device-Id` 头（冒号 MAC）+ board 对象 + version Integer
 
+## ★ 测试环境（22223）已部署改名版（2026-10-19 详录 2026-10-19.md）
+- 全部切 /yuhe/：Java jar `yuhe-esp32-api.jar`（RewriteValve 旧 /xiaozhi/ 兼容）、
+  Python 全量 222 文件、前端 dist、nginx /yuhe/ 路由；sys_params 三项已修（8144 新路径）
+- **RewriteValve 必须 Engine 级**（addEngineValves）：Context 级在 /xiaozhi/* 映射不到 /yuhe 永不触发；
+  setConfiguration 必须延迟到子类 startInternal（customizer 阶段 container 未挂载 NPE）
+- **Liquibase 红线**：改名提交误改 7 个已执行 changeset → 校验和漂移启动失败；已还原 faaafaaf 版
+- **壁纸 URL 幂等陷阱**：队列去重只比 version 不比 URL；改壁纸 URL 须清 Redis 队列键+重启 Python（内存队列同旧）
+- 壁纸下载 URL 由 `sys_params.server.ota` 推导（buildDownloadUrl 把 /ota/ 换成下载路径），非 fronted_url
+- 测试登录程序化：uuid→captcha→Redis 读值(JSON parse)→sm2 加密→`Authorization: Bearer`；token 直接 UPDATE sys_user_token
+
 ## ★★ Git Bash(MSYS) 改写 / 开头参数
 `sftp_push.py /root/a.py` → 收到 `D:/.../PortableGit/root/a.py`。解法 `MSYS_NO_PATHCONV=1`。
 **所有 `code/.workbuddy/*.py` 远端路径参数受此影响。**
