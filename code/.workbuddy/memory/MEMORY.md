@@ -1,17 +1,26 @@
-# xiaozhi-esp32 / console-v2 项目记忆（长期 · 索引）
+# yuhe（原 xiaozhi-esp32）/ console-v2 项目记忆（长期 · 索引）
+
+> **2026-10-18 全仓改名 xiaozhi→yuhe（a146e080）**：服务器+固件+前端+文档全量已改；
+> 目录：`yh/yuhe-server`、`hardware/sets/yuhe-esp32`、Java 包 `src/main/java/yuhe`；
+> 接口：WS `/yuhe/v1/`、OTA `/yuhe/ota/`、context-path `/yuhe`、产物 `yuhe.bin`。
+> **豁免勿改**：`78/xiaozhi-fonts`、`wn9_nihaoxiaozhi`、上游 GitHub URL、库名
+> `xiaozhi_esp32_server`、`/root/xiaozhi-server`、`/opt/xiaozhi`、`21_xiaozhi` 仓根路径。
+> **旧路径双兼容**：Java RewriteValve + Python 旧 OTA 路由 + config 段回退 + 设备 ID 前缀双归一。
+> 生产迁移清单见 `2026-10-18.md` 22:0x 节。
 
 > 细节分库：服务端/前端/OTA/壁纸/鉴权 → `topics/server-side.md`；
 > **固件崩溃排查（event_head 悬垂、字体悬垂、乱码、烧写没生效）→ `topics/firmware-crash-cookbook.md`**；
 > 固件命令与引脚表 → `hardware/sets/README.md`；皮肤设计 → `hardware/sets/UI_SKIN.md`；逐日过程 → `2026-*.md`。
 
 ## 仓 / git
-- 仓根 `G:/demo/21_xiaozhi`：`docs/ hardware/ yh/ third_party/ tools/ code/`；`hardware/camera/` 是**嵌套独立仓**、
-  `hardware/sets/` 是多版型中心；`yh/_archive-order-module` 与现行 order **不可混用**
+- 仓根 `G:/demo/21_xiaozhi`（物理目录名保留，勿改）：`docs/ hardware/ yh/ third_party/ tools/ code/`；
+  `hardware/camera/` 是**嵌套独立仓**、`hardware/sets/` 是多版型中心；`yh/_archive-order-module` 与现行 order **不可混用**
 - **在用分支 `master`**（`test_environment` 落后）；提交前 `git branch --show-current`；
   远端 `git@gitee.com:mm-Super-Nices/esp32-code-server.git`；`baseline.json` 保持追踪，`.workbuddy`/`.trash/` 永不提交
 - `.trash/` 可回滚、归档 `G:/demo/archive-20261015/`；**.gitignore 随移动同步**；嵌套仓父仓必须 ignore；
   **构建产物一律不入库**（曾误提交 1718 文件致 .git 膨胀 468M）
 - **`main/display/yh_skin/` 至今未被 git 跟踪** ⇒ 不能用 `git show HEAD:` / `git diff` 判断它的历史状态（会得到假 0）
+- **固件树改名后 `build/` 里 compile_commands.json 固化旧绝对路径，必须删 build 全量重编**（改名同"切版型"处理）
 
 ## ★ ESP-IDF 环境
 - `IDF_PATH=D:\INSTALL\esp\v6.1\esp-idf`、`IDF_TOOLS_PATH=D:\INSTALL\esp`、
@@ -23,11 +32,12 @@
 - PATH 里的 `python` 常是 `Python310-32`（无 rich_click）；`scripts/build.py:70` 用 `sys.executable` 起 idf.py
   → **必须用 IDF venv python 启动编译**；`ESP_IDF_VERSION` 必补（`idf_extensions.py:388`），`IDF_VERSION` **绝不能代设**
 - 切版型后**必须删 `<FW>/build` 全量重编**；半成品 build 偶发 `component_requires.temp.cmake` 报错，重跑即好
-- `tools/yh_syntax_check.py` 参数是**相对 `hardware/sets/xiaozhi-esp32/` 的路径**（传全路径会重复拼接报「文件不存在」）；
+- `tools/yh_syntax_check.py` 参数是**相对 `hardware/sets/yuhe-esp32/` 的路径**（传全路径会重复拼接报「文件不存在」）；
   `.h` 单文件校验会因 `#pragma once in main file` 报假错，看包含它的 `.cc` 通过即可；改完 `tools/sets_diff_audit.py` 必须 PASS
+  （注：3 项存量 DIFF——settings.cc/board.cc/custom_wake_word.cc 的 NVS 容错增强是 B 侧领先功能，2026-10-18 确认非回归）
 
 ## ★ sets 多版型中心 + 烧录
-- 架构：`hardware/sets/xiaozhi-esp32/` = 自带固件副本（已入库）；`build.py` 选版型/注册/编译（**零串口**）、
+- 架构：`hardware/sets/yuhe-esp32/` = 自带固件副本（已入库）；`build.py` 选版型/注册/编译（**零串口**）、
   `flash.py` 探测+烧录+三道闸（**不编译**）、`diag.py` 只读比对（**不写盘**）
 - **★ 背光脚不同 → 选错版型必黑屏**：`yh-154tft-wifi` 背光 **BL20**（征辰 1.54 寸，有电池）；
   `yh-n16r8-st7789` 背光 **42**、仅 BOOT 键、无电池；`yh-cam` **唯一有 AEC 回采**；`yh-big-ili9341` 引脚未验证
@@ -66,7 +76,7 @@
 - 内置字体无 ⚡（用「充电85%」）；圆屏底部提示 18；无电池板隐藏电量；背景用 `lv_image`+`lv_image_set_scale`
   （`bg_image_src` 不能缩放），符号 `yh_skin_bg` 由 `tools/gen_yh_skin_assets.py` 生成、四版型共用
 - **改共享层必须同步两份**：`hardware/sets/boards/<board>/` 是源副本，`build.py` 会用它覆盖
-  `hardware/sets/xiaozhi-esp32/main/boards/yuhe/<board>/`；只改固件树下次编译会被冲掉
+  `hardware/sets/yuhe-esp32/main/boards/yuhe/<board>/`；只改固件树下次编译会被冲掉
 - **字体不是"设一次就完"**：`LvglBuiltInFont` 按值持 `lv_font_t`、样式只存裸指针 ⇒ 换字体时必须
   ①旧对象进退休池 ②全树改绑。详见 `topics/firmware-crash-cookbook.md` 现场 ②
 
@@ -97,7 +107,7 @@
 - 固件侧配套：播报期关本地唤醒检测（c1d36a52）+ tts stop 挂起等 Playback drained（6c6a6458）
 
 ## ★ 崩溃排查（速查，全文见 `topics/firmware-crash-cookbook.md`）
-- **先校验 elf 同源**：日志 `ELF file SHA256` 前 9 位 == `sha256sum build/xiaozhi.elf`；不一致时 addr2line 解出的符号是跨模块幻觉
+- **先校验 elf 同源**：日志 `ELF file SHA256` 前 9 位 == `sha256sum build/yuhe.elf`；不一致时 addr2line 解出的符号是跨模块幻觉
 - `EXCVADDR=0x14` + `lv_event_mark_deleted(lv_event.c:323)` → `event_head` 并发悬垂/自环（现场 ①）
 - `PC=0x0` / `EXCVADDR=0x0` + `InstrFetchProhibited` + 紧跟 `Refreshing display theme...` → **字体对象已释放**
   （`get_glyph_dsc` 在 `lv_font_t` 偏移 0，free 后成 NULL）；寄存器里能看到正在渲染的 Unicode 码点（现场 ②）
