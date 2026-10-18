@@ -189,20 +189,24 @@
                   壁纸库为空，切到「上传新图」上传第一张（PNG / JPG / WebP，240×240 最佳）
                 </div>
                 <div v-else class="wp-grid">
-                  <button
-                    v-for="w in wallpapers" :key="w.id" type="button"
+                  <div
+                    v-for="w in wallpapers" :key="w.id"
                     class="wp-card" :class="{ on: selectedWallpaperId === w.id }"
-                    :title="w.name" @click="selectWallpaper(w)"
+                    :title="w.name"
                   >
-                    <div class="thumb" :style="w.thumbUrl ? { backgroundImage: 'url(' + w.thumbUrl + ')' } : null">
-                      <span v-if="!w.thumbUrl" class="thumb-ph">无预览</span>
-                    </div>
-                    <div class="meta">
-                      <span class="name">{{ w.name }}</span>
-                      <span class="sub">{{ w.width }}×{{ w.height }} · {{ fmtSize(w.size) }}</span>
-                    </div>
+                    <button type="button" class="card-hit" @click="selectWallpaper(w)">
+                      <div class="thumb" :style="w.thumbUrl ? { backgroundImage: 'url(' + w.thumbUrl + ')' } : null">
+                        <span v-if="!w.thumbUrl" class="thumb-ph">无预览</span>
+                      </div>
+                      <div class="meta">
+                        <span class="name">{{ w.name }}</span>
+                        <span class="sub">{{ w.width }}×{{ w.height }} · {{ fmtSize(w.size) }}</span>
+                      </div>
+                    </button>
                     <span v-if="selectedWallpaperId === w.id" class="tick">✓</span>
-                  </button>
+                    <button type="button" class="card-preview" title="放大预览" aria-label="放大预览" @click.stop="previewWallpaper = w">🔍</button>
+                    <button type="button" class="card-del" title="删除壁纸" aria-label="删除壁纸" :disabled="deletingId === w.id" @click.stop="removeWallpaper(w)">{{ deletingId === w.id ? '…' : '🗑' }}</button>
+                  </div>
                 </div>
 
                 <div v-if="wpPages > 1" class="pager">
@@ -279,7 +283,7 @@
                 </div>
               </div>
               <p class="hint">
-                点击「开始下发」后任务提交到后台，浮层可关闭，轮询在后台继续；90 秒未完成会提示超时。
+                点击「开始下发」后任务提交到后台，浮层可关闭，轮询在后台继续；30 秒未完成会提示超时。
               </p>
             </div>
 
@@ -311,9 +315,9 @@
               </div>
               <div class="bar-meta">
                 <span>已处理 {{ processedCount }} / {{ totalCount || '—' }} 台</span>
-                <span v-if="state === 'dispatching'" class="muted">每 2 秒刷新，最长 90 秒</span>
+                <span v-if="state === 'dispatching'" class="muted">每 2 秒刷新，最长 30 秒</span>
                 <span v-else-if="timedOut" class="warn">
-                  轮询超时（90 秒），后台可能仍在执行
+                  轮询超时（30 秒），后台可能仍在执行
                   <button type="button" class="link" @click="pollOnce">刷新状态</button>
                 </span>
                 <span v-else-if="pollError" class="warn">{{ pollError }}</span>
@@ -385,6 +389,25 @@
         </footer>
       </div>
     </div>
+
+    <!-- 大图预览（与壁纸浮层同级 Teleport，z-index 更高） -->
+    <div v-if="previewWallpaper" class="lb-overlay" @click.self="previewWallpaper = null">
+      <div class="lb-card">
+        <div class="lb-head">
+          <strong>{{ previewWallpaper.name }}</strong>
+          <span class="muted">{{ previewWallpaper.width }}×{{ previewWallpaper.height }} · {{ fmtSize(previewWallpaper.size) }}</span>
+          <button type="button" class="wp-close" aria-label="关闭预览" @click="previewWallpaper = null">×</button>
+        </div>
+        <img
+          v-if="previewWallpaper.thumbUrl"
+          class="lb-img" :src="previewWallpaper.thumbUrl" :alt="previewWallpaper.name"
+          @click.stop="selectWallpaper(previewWallpaper); previewWallpaper = null"
+          title="点击选用这张壁纸"
+        />
+        <div v-else class="lb-empty">暂无缩略图</div>
+        <p class="lb-tip">点击图片可直接选用该壁纸</p>
+      </div>
+    </div>
   </Teleport>
 </template>
 
@@ -398,6 +421,7 @@ const props = defineProps({
 const emit = defineEmits(['update:open'])
 
 const toast = inject('toast', () => {})
+const askConfirm = inject('askConfirm', null)
 
 // ---------------- 状态机 ----------------
 // 关闭（open=false）即 idle；打开后 target → wallpaper → review → dispatching → done。
@@ -443,7 +467,26 @@ function normalizeDevice(d) {
     id: d.id != null ? d.id : mac,
     name: d.alias || d.name || d.deviceName || (mac ? '设备 ' + String(mac).slice(-5) : '未命名'),
     mac,
-    online: d.status === 1 || d.online === true || !!d.lastConnectedAtTimestamp
+    online: false // 真实在线状态由 loadOnlineDevices 的结果回填
+  }
+}
+
+// 归一化 MAC：14:c1:9f:d1:33:48 / 14-C1-9F-D1-33-48 / xiaozhi-14c19fd13348 → 14c19fd13348
+// （与 Python 侧 _normalize_device_id 对齐；心跳设备表按归一化 ID 匹配）
+function normMac(s) {
+  let v = String(s || '').trim().toLowerCase()
+  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  return v.replace(/[:\-]/g, '')
+}
+
+async function loadOnlineDevices() {
+  // 真实在线源：Python /api/wake-word/devices（WS 连接 ∪ 心跳在线），经 Java 代理
+  try {
+    const res = await adminApi.wakeWordDevices()
+    const list = res?.data?.devices || []
+    return new Set(list.map(normMac).filter(Boolean))
+  } catch {
+    return null // 通道异常时不猜（全部显示离线会误导，保持未知不显示在线）
   }
 }
 
@@ -452,13 +495,20 @@ async function loadDevices() {
   devicesError.value = ''
   try {
     // 与 Devices.vue 同源：GET /admin/device/all（api.js:349 adminApi.devicePage）
-    const res = await adminApi.devicePage({
-      page: 1,
-      limit: 500,
-      keyword: deviceKeyword.value.trim() || undefined
-    })
+    const [res, onlineSet] = await Promise.all([
+      adminApi.devicePage({
+        page: 1,
+        limit: 500,
+        keyword: deviceKeyword.value.trim() || undefined
+      }),
+      loadOnlineDevices()
+    ])
     const data = res.data || {}
     let list = (data.list || (Array.isArray(data) ? data : [])).map(normalizeDevice)
+    // 回填真实在线状态（在线集合里的设备才算在线；接口失败则保持离线）
+    if (onlineSet) {
+      list = list.map(d => ({ ...d, online: onlineSet.has(normMac(d.mac || d.id)) }))
+    }
     // 后端若忽略 keyword，则前端兜底过滤（保证搜索框有反馈）
     const kw = deviceKeyword.value.trim().toLowerCase()
     if (kw) {
@@ -634,11 +684,9 @@ async function onFilePicked(e) {
     if (!wp.id) throw { msg: '上传响应缺少 id' }
     uploadedWallpaper.value = wp
     selectedWallpaperId.value = wp.id
-    // 切到服务端 URL 前释放本地 blob，避免对象 URL 泄漏
-    if (wp.url) {
-      revokePreview()
-      previewUrl.value = wp.url
-    }
+    // 切到服务端缩略图（PNG）前释放本地 blob：url 指向 RGB565 .bin，浏览器无法直接渲染
+    revokePreview()
+    previewUrl.value = wp.thumbUrl || ''
     // 库里同步插入，切回「服务器库」立即可见（去重）
     if (!wallpapers.value.some(w => String(w.id) === String(wp.id))) {
       wallpapers.value = [wp, ...wallpapers.value]
@@ -653,6 +701,47 @@ async function onFilePicked(e) {
   }
 }
 
+// ---------------- 删除壁纸 / 大图预览 ----------------
+const deletingId = ref('')
+const previewWallpaper = ref(null)
+
+function removeWallpaper(w) {
+  const doDelete = async () => {
+    deletingId.value = w.id
+    try {
+      await wallpaperApi.remove(w.id)
+      // 本地列表联动：移除条目、修正计数
+      wallpapers.value = wallpapers.value.filter(x => String(x.id) !== String(w.id))
+      wpTotal.value = Math.max(0, wpTotal.value - 1)
+      // 若删的是当前选中/上传项：清选中态
+      if (String(selectedWallpaperId.value) === String(w.id)) {
+        selectedWallpaperId.value = ''
+        if (uploadedWallpaper.value && String(uploadedWallpaper.value.id) === String(w.id)) {
+          uploadedWallpaper.value = null
+        }
+      }
+      if (previewWallpaper.value && String(previewWallpaper.value.id) === String(w.id)) {
+        previewWallpaper.value = null
+      }
+      toast(`壁纸「${w.name}」已删除`, 'success')
+    } catch (e) {
+      toast(e.msg || '删除失败', 'error')
+    } finally {
+      deletingId.value = ''
+    }
+  }
+  if (askConfirm) {
+    askConfirm({
+      title: '删除壁纸',
+      message: `确定删除「${w.name}」吗？已下发到设备的壁纸不受影响，但该壁纸不能再用于新任务。`,
+      danger: true,
+      onOk: doDelete
+    })
+  } else {
+    doDelete()
+  }
+}
+
 // ---------------- 下发与轮询 ----------------
 const applyMode = ref('immediate')
 const submitting = ref(false)
@@ -662,7 +751,7 @@ const pollError = ref('')
 const timedOut = ref(false)
 const retrying = ref(false)
 const POLL_INTERVAL = 2000
-const POLL_TIMEOUT = 90000
+const POLL_TIMEOUT = 30000
 
 let pollTimer = null
 let pollStartedAt = 0
@@ -877,6 +966,10 @@ function confirmClose() {
 function onKeydown(e) {
   if (!props.open) return
   if (e.key === 'Escape' || e.key === 'Esc') {
+    if (previewWallpaper.value) {
+      previewWallpaper.value = null
+      return
+    }
     if (closeConfirm.value) {
       closeConfirm.value = false
       return
@@ -891,10 +984,12 @@ watch(
   (v) => {
     if (v) {
       window.addEventListener('keydown', onKeydown)
-      if (!devicesLoadedOnce) loadDevices()
+      // 每次打开都刷新设备与在线状态（在线情况实时变化，旧数据会误导选择）
+      loadDevices()
     } else {
       window.removeEventListener('keydown', onKeydown)
       closeConfirm.value = false
+      previewWallpaper.value = null
     }
   },
   { immediate: true }
@@ -1078,6 +1173,21 @@ onUnmounted(() => {
 }
 .wp-card:hover { border-color: var(--primary); transform: translateY(-1px); }
 .wp-card.on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.card-hit {
+  display: block; width: 100%; padding: 0; border: none; background: none;
+  cursor: pointer; text-align: left; color: inherit; font-family: inherit;
+}
+.card-preview, .card-del {
+  position: absolute; top: 6px; width: 24px; height: 24px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 7px; cursor: pointer; font-size: 12px; line-height: 1;
+  background: rgba(15, 23, 42, .5); color: #fff; opacity: 0; transition: opacity .12s;
+}
+.wp-card:hover .card-preview, .wp-card:hover .card-del { opacity: 1; }
+.card-preview { right: 32px; }
+.card-del { right: 6px; }
+.card-preview:hover, .card-del:hover { background: rgba(15, 23, 42, .75); }
+.card-del:disabled { cursor: wait; opacity: .6; }
 .wp-card .thumb {
   aspect-ratio: 1 / 1; background-color: rgba(127, 140, 160, .12);
   background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center;
@@ -1090,7 +1200,33 @@ onUnmounted(() => {
   position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%;
   background: var(--primary); color: #fff; font-size: 12px; line-height: 20px; text-align: center;
 }
+/* 选中态悬停时勾选标让位给操作按钮（位置重叠） */
+.wp-card.on:hover .tick { opacity: 0; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+
+/* 大图预览 lightbox */
+.lb-overlay {
+  position: fixed; inset: 0; z-index: 180; /* 压过壁纸浮层(140)，低于 Toasts */
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(15, 23, 42, .62); box-sizing: border-box;
+}
+.lb-card {
+  max-width: min(420px, 92vw); background: var(--surface); border-radius: 14px;
+  padding: 14px; box-shadow: 0 24px 64px rgba(15, 23, 42, .4);
+}
+.lb-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.lb-head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.lb-img {
+  display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain;
+  border-radius: 10px; background: rgba(127, 140, 160, .12); cursor: pointer;
+}
+.lb-img:hover { box-shadow: 0 0 0 2px var(--primary); }
+.lb-empty {
+  width: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
+  color: var(--text-sub); font-size: 13px; border-radius: 10px;
+  background: rgba(127, 140, 160, .12);
+}
+.lb-tip { margin: 10px 0 0; font-size: 12px; color: var(--text-sub); text-align: center; }
 
 /* 上传页 */
 .up-grid { display: grid; grid-template-columns: 1fr 240px; gap: 16px; align-items: start; }

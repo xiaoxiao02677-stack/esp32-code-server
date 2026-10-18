@@ -113,6 +113,13 @@ const loading = ref(false)
 
 const onlineText = computed(() => `${devices.value.filter(d => d.online).length} 在线`)
 
+// 归一化 MAC：与 Python 侧 _normalize_device_id 对齐（在线表按归一化 ID 匹配）
+function normMac(s) {
+  let v = String(s || '').trim().toLowerCase()
+  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  return v.replace(/[:\-]/g, '')
+}
+
 // 契约对齐 cc-console loadSessions/loadTtsModels（原 1282-1306）
 async function loadFirstAgentSessions(agents) {
   const first = agents[0]
@@ -136,16 +143,22 @@ async function load() {
       users.value = data.list || []
       userTotal.value = data.total ?? 0
     }).catch(() => {}),
-    adminApi.devicePage({ page: 1, limit: 20 }).then(res => {
+    adminApi.devicePage({ page: 1, limit: 20 }).then(async res => {
       const data = res.data || {}
       const list = data.list || []
+      // 真实在线源：Python /api/wake-word/devices（WS ∪ 心跳），经 Java 代理
+      let onlineSet = null
+      try {
+        const r = await adminApi.wakeWordDevices()
+        onlineSet = new Set((r?.data?.devices || []).map(normMac).filter(Boolean))
+      } catch { onlineSet = null }
       devices.value = list.map(d => ({
         id: d.id, macAddress: d.macAddress,
         name: d.deviceName || d.name || d.macAddress || '未命名设备',
         board: d.board || d.model || '—',
         appVersion: d.appVersion || '—',
         bindUser: d.bindUsername || d.bindUser || null,
-        online: d.online ?? (d.status === 1),
+        online: onlineSet ? onlineSet.has(normMac(d.macAddress)) : false,
         lastActive: d.lastActiveTime ? String(d.lastActiveTime).slice(5, 16) : '—'
       }))
       deviceTotal.value = data.total ?? list.length

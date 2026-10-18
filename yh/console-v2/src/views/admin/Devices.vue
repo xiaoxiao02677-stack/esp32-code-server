@@ -111,10 +111,13 @@ const manual = reactive({ show: false, mac: '', name: '' })
 async function load() {
   loading.value = true
   try {
-    // 管理员视角全量设备列表（分页）：GET /admin/device/all
-    const res = await adminApi.devicePage({ page: page.value, limit: pageSize.value })
+    // 管理员视角全量设备列表（分页）+ 真实在线设备并行拉取
+    const [res, onlineSet] = await Promise.all([
+      adminApi.devicePage({ page: page.value, limit: pageSize.value }),
+      loadOnlineSet()
+    ])
     const data = res.data || {}
-    devices.value = (data.list || data || []).map(normalize)
+    devices.value = (data.list || data || []).map(d => normalize(d, onlineSet))
     total.value = data.total ?? devices.value.length
   } catch (e) {
     // 降级：绑定视角 —— 取第一个智能体再查其绑定设备（原控制台 loadDevices 思路）
@@ -123,8 +126,11 @@ async function load() {
       const agentId = (agentRes.data || [])[0] && (agentRes.data || [])[0].id
       if (!agentId) { devices.value = []; total.value = 0 }
       else {
-        const res = await adminApi.boundDevices(agentId)
-        devices.value = ((res.data || {}).list || res.data || []).map(normalize)
+        const [res, onlineSet] = await Promise.all([
+          adminApi.boundDevices(agentId),
+          loadOnlineSet()
+        ])
+        devices.value = (((res.data || {}).list || res.data || [])).map(d => normalize(d, onlineSet))
         total.value = devices.value.length
       }
       page.value = 1
@@ -138,15 +144,35 @@ async function load() {
   }
 }
 
-function normalize(d) {
+// 归一化 MAC：与 Python 侧 _normalize_device_id 对齐（心跳/WS 在线表按归一化 ID 匹配）
+function normMac(s) {
+  let v = String(s || '').trim().toLowerCase()
+  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  return v.replace(/[:\-]/g, '')
+}
+
+// 真实在线源：Python /api/wake-word/devices（WS 连接 ∪ 心跳在线），经 Java 代理。
+// 原先用 !!lastConnectedAtTimestamp 兜底会把「曾经连过」的设备全判在线（误报）
+async function loadOnlineSet() {
+  try {
+    const res = await adminApi.wakeWordDevices()
+    const list = res?.data?.devices || []
+    return new Set(list.map(normMac).filter(Boolean))
+  } catch {
+    return null // 通道失败时返回 null，normalize 保持不显示在线
+  }
+}
+
+function normalize(d, onlineSet) {
+  const mac = d.macAddress || d.mac || d.id
   return {
     id: d.id || d.macAddress,
     name: d.alias || d.name || d.deviceName || (d.macAddress ? '设备 ' + d.macAddress.slice(-5) : '未命名'),
-    mac: d.macAddress || d.mac || d.id,
+    mac,
     ip: d.ip || '',
     agentId: d.agentId,
     agentName: d.agentName || d.bindUserName,
-    online: d.status === 1 || d.online || !!d.lastConnectedAtTimestamp,
+    online: onlineSet ? onlineSet.has(normMac(mac)) : false,
     lastSeen: d.recentChatTime || d.lastSeen || d.updateDate
   }
 }
