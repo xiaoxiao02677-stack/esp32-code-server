@@ -25,6 +25,27 @@
       <StatCard icon="device" label="在线设备" :value="onlineDevices.length" note="实时状态" />
     </div>
 
+    <!-- 实时打断阈值（常驻卡片，不用进编辑弹窗）：
+         链路：PUT /agent/{id} interruptThreshold → 落 ai_device_config +
+         推 Python 热更新 + WS 下发固件人声确认窗（与智能体页同一入口） -->
+    <div class="threshold-card">
+      <div class="guide-title">🎚️ 实时打断灵敏度</div>
+      <div class="threshold-body">
+        <div class="threshold-controls">
+          <span class="thr-label">灵敏</span>
+          <input v-model.number="thr.value" type="range" min="0" max="100" step="1"
+                 class="slider" :style="{ '--pct': thr.value + '%' }" :disabled="thr.saving" />
+          <span class="thr-label">迟钝</span>
+          <span class="slider-value">{{ thr.value }}</span>
+        </div>
+        <button class="btn btn-primary" :disabled="thr.saving || thr.agents.length === 0"
+                @click="saveAllThresholds">{{ thr.saving ? '保存中…' : '保存' }}</button>
+      </div>
+      <p class="field-hint">
+        播放中用户说话多快能打断播报：数值越小越容易打断，越大越难打断（0=立即打断，15≈默认 300ms，100=需连续 2 秒人声）。<b>设备自言自语/误打断时可调大</b>。保存后立即下发全部智能体的在线设备，热生效。
+      </p>
+    </div>
+
     <DataTable title="智能体唤醒词配置" :loading="loading">
       <table class="data-table">
         <thead><tr><th>智能体</th><th>唤醒词列表</th><th>操作</th></tr></thead>
@@ -194,10 +215,46 @@ async function load() {
       const devRes = await adminApi.wakeWordDevices()
       onlineDevices.value = devRes.data?.devices || []
     } catch {}
+    // 常驻阈值卡：回显当前值。取首个智能体的详情（阈值按智能体下发，
+    // 但通常只有一两个智能体且期望一致；单滑块全局语义更直观）
+    thr.agents = agents.value.map(a => a.id)
+    if (thr.agents.length && !thr.loaded) {
+      try {
+        const d = await adminApi.agentDetail(thr.agents[0])
+        thr.value = d?.data?.interruptThreshold ?? 15
+        thr.loaded = true
+      } catch {}
+    }
   } catch (e) {
     toast(e.msg || '加载失败', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+// 常驻阈值卡状态：value 是滑块当前值，agents 是待下发的智能体 id 列表
+const thr = reactive({ value: 15, saving: false, loaded: false, agents: [] })
+
+async function saveAllThresholds() {
+  if (!Number.isInteger(thr.value) || thr.value < 0 || thr.value > 100) {
+    toast('阈值需为 0~100 的整数', 'error')
+    return
+  }
+  if (!thr.agents.length) {
+    toast('没有可下发的智能体', 'error')
+    return
+  }
+  thr.saving = true
+  try {
+    // 逐智能体 updateAgent（每个智能体独立落库 + 推设备）
+    await Promise.all(thr.agents.map(id =>
+      adminApi.updateAgent(id, { interruptThreshold: thr.value })
+    ))
+    toast(`已保存并下发全部 ${thr.agents.length} 个智能体的绑定设备（在线设备立即生效）`, 'success', 4000)
+  } catch (e) {
+    toast(e.msg || '保存失败', 'error')
+  } finally {
+    thr.saving = false
   }
 }
 
@@ -444,6 +501,20 @@ async function pushToDevice(agent) {
 .btn-success:hover:not(:disabled) { opacity: 0.88; }
 .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
 /* 实时打断阈值进度条（与 Agents.vue 同款）：--pct 由 v-bind 传入渐变填充宽度 */
+.threshold-card {
+  border: 1.5px solid var(--primary, #0066cc);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--primary-light, #e8f4ff);
+}
+.threshold-body {
+  display: flex; align-items: center; gap: 14px; margin: 10px 0 6px;
+}
+.threshold-controls {
+  display: flex; align-items: center; gap: 10px; flex: 1;
+}
+.thr-label { font-size: 12px; color: var(--text-sub); flex: 0 0 auto; }
 .slider-row { display: flex; align-items: center; gap: 12px; }
 .slider {
   -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 999px;
