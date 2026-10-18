@@ -180,6 +180,11 @@ private:
     bool pending_notify_active_ = false;
     bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
     bool pending_listening_start_ = false;  // Waiting for playback to drain before starting listening (auto mode)
+    // TTS stop 已到但播放队列未排空：挂起等 PLAYBACK_DRAINED 再切 Listening，
+    // 避免 ResetDecoder 清队列把播报尾巴掐掉
+    bool pending_tts_stop_ = false;
+    // pending_tts_stop_ 挂起时刻（clock_ticks_），超时 3s 强制收割兜底
+    int tts_stop_tick_ = 0;
     int clock_ticks_ = 0;
     TaskHandle_t activation_task_handle_ = nullptr;
     std::chrono::time_point<std::chrono::steady_clock> tts_start_time_{};

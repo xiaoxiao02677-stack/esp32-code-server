@@ -336,6 +336,17 @@ void Application::Run() {
                 ESP_LOGI(TAG, "Playback drained");
                 notify_player_.OnPlaybackDrained();
             }
+            // TTS stop 挂起收割：音频已真正放完，现在才切 Listening
+            // （tts stop 到达时队列未排空被挂起，见 stop 分支注释）
+            if (pending_tts_stop_ && GetDeviceState() == kDeviceStateSpeaking &&
+                audio_service_.IsPlaybackIdle()) {
+                pending_tts_stop_ = false;
+                if (listening_mode_ == kListeningModeManualStop) {
+                    SetDeviceState(kDeviceStateIdle);
+                } else {
+                    SetDeviceState(kDeviceStateListening);
+                }
+            }
             // Deferred listening start (auto mode): the playback queue has
             // drained, so it is now safe to enable voice processing.
             if (pending_listening_start_ && GetDeviceState() == kDeviceStateListening &&
@@ -427,6 +438,24 @@ void Application::Run() {
             clock_ticks_++;
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
+
+            // TTS stop 挂起兜底：正常情况下缓冲音频数百毫秒内放完即触发
+            // PLAYBACK_DRAINED 收割；若 drained 事件因音频任务异常永远不来，
+            // 设备会卡死在 Speaking——3 秒后强制按 stop 语义切状态。
+            if (pending_tts_stop_ && GetDeviceState() == kDeviceStateSpeaking) {
+                if (audio_service_.IsPlaybackIdle()) {
+                    // 队列已空但 drained 事件丢失（错过窗口）：直接收割
+                    pending_tts_stop_ = false;
+                    if (listening_mode_ == kListeningModeManualStop) {
+                        SetDeviceState(kDeviceStateIdle);
+                    } else {
+                        SetDeviceState(kDeviceStateListening);
+                    }
+                } else if (clock_ticks_ - tts_stop_tick_ >= 3) {
+                    ESP_LOGW(TAG, "TTS stop deferred too long, forcing state change");
+                    audio_service_.ResetDecoder();  // 清掉卡住的队列（会触发 drained）
+                }
+            }
 
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
@@ -848,6 +877,8 @@ void Application::InitializeProtocol() {
                 ESP_LOGI(TAG, "TTS start");
                 Schedule([this]() {
                     aborted_ = false;
+                    // 新一轮播报开始，上一轮挂起的 stop（若有残留）作废
+                    pending_tts_stop_ = false;
                     SetDeviceState(kDeviceStateSpeaking);
                 });
             } else if (strcmp(state->valuestring, "stop") == 0) {
@@ -861,7 +892,20 @@ void Application::InitializeProtocol() {
                         if (listening_mode_ == kListeningModeManualStop) {
                             SetDeviceState(kDeviceStateIdle);
                         } else {
-                            SetDeviceState(kDeviceStateListening);
+                            // 播放队列还有未放完的音频时（服务端在最后一包音频
+                            // 发出后立即下发 stop，解码/播放缓冲里通常还压着
+                            // 数百毫秒），立即切 Listening 会经 StartListeningAudio
+                            // → EnableVoiceProcessing → ResetDecoder 清空播放
+                            // 队列，把播报尾巴掐掉（用户听到"还没说完就断了"）。
+                            // 挂起等 PLAYBACK_DRAINED（音频真正放完）再切状态；
+                            // 队列已空则直接切。
+                            if (!audio_service_.IsPlaybackIdle()) {
+                                ESP_LOGI(TAG, "TTS stop deferred: waiting for playback to drain");
+                                pending_tts_stop_ = true;
+                                tts_stop_tick_ = clock_ticks_;
+                            } else {
+                                SetDeviceState(kDeviceStateListening);
+                            }
                         }
                     }
                 });
@@ -1359,6 +1403,12 @@ void Application::HandleStateChangedEvent() {
     clock_ticks_ = 0;
     // Any state change invalidates a pending deferred listening start;
     // the Listening case below re-arms it when needed.
+    // pending_tts_stop_ 只在 Speaking 态有意义（等 drained 切 Listening），
+    // 任何其他状态切换都意味着它已过期（打断/新会话/空闲），一并失效。
+    // 若本次切换正是 drained 收割触发的，标志已在切换前清掉，不受影响。
+    if (new_state != kDeviceStateSpeaking) {
+        pending_tts_stop_ = false;
+    }
     pending_listening_start_ = false;
 
     auto& board = Board::GetInstance();
