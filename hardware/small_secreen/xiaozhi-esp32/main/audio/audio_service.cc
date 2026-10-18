@@ -667,6 +667,7 @@ bool AudioService::PushPacketToDecodeQueue(std::unique_ptr<AudioStreamPacket> pa
         return false;
     }
     playback_drained_notified_ = false;
+    MarkPlaybackStartedLocked();
     audio_decode_queue_.push_back(std::move(packet));
     audio_queue_cv_.notify_all();
     return true;
@@ -787,6 +788,7 @@ void AudioService::EnableAudioTesting(bool enable) {
         audio_decode_queue_.swap(audio_testing_queue_);
         if (!audio_decode_queue_.empty()) {
             playback_drained_notified_ = false;
+            MarkPlaybackStartedLocked();
         }
         audio_queue_cv_.notify_all();
     }
@@ -839,6 +841,25 @@ bool AudioService::IsPlaybackIdle() {
     return IsPlaybackDrainedLocked();
 }
 
+int32_t AudioService::GetPlaybackElapsedMs() {
+    std::lock_guard<std::mutex> lock(audio_queue_mutex_);
+    if (IsPlaybackDrainedLocked() || playback_start_us_ == 0) {
+        return -1;
+    }
+    return static_cast<int32_t>((esp_timer_get_time() - playback_start_us_) / 1000);
+}
+
+bool AudioService::IsDeviceAecEffective() const {
+    return audio_engine_initialized_ && device_aec_enabled_ && audio_engine_ != nullptr &&
+           audio_engine_->IsAecEffective();
+}
+
+void AudioService::MarkPlaybackStartedLocked() {
+    if (playback_start_us_ == 0) {
+        playback_start_us_ = esp_timer_get_time();
+    }
+}
+
 void AudioService::ResetDecoder() {
     bool notify_drained = false;
     {
@@ -871,6 +892,7 @@ bool AudioService::MarkPlaybackDrainedLocked() {
         return false;
     }
     playback_drained_notified_ = true;
+    playback_start_us_ = 0;  // 播放已排空，下一段播放重新计时
     return true;
 }
 
@@ -967,6 +989,14 @@ void AudioService::SetWakeWordDuration(int duration) {
     }
 }
 
+void AudioService::SetInterruptThreshold(int threshold) {
+    // 引擎未就绪时也要落到引擎对象上：SetInterruptThreshold 只写原子成员
+    // （人声确认窗），不依赖 AFE 已创建，Initialize 后立即生效
+    if (audio_engine_) {
+        audio_engine_->SetInterruptThreshold(threshold);
+    }
+}
+
 bool AudioService::InitializeAudioEngine() {
     if (!audio_engine_) {
         return false;
@@ -980,6 +1010,11 @@ bool AudioService::InitializeAudioEngine() {
     }
     audio_engine_initialized_ = true;
     audio_engine_->EnableDeviceAec(device_aec_enabled_);
+    // 诊断：设备侧 AEC 不生效时，"边播边听"会把设备自己的播报声判成用户说话，
+    // 表现为 TTS 播到一半被自己打断。这条日志用于确认回采参考通道是否可用。
+    ESP_LOGI(TAG, "Device AEC %s (reference=%d, enabled=%d)",
+             IsDeviceAecEffective() ? "effective" : "NOT effective",
+             codec_ != nullptr && codec_->input_reference() ? 1 : 0, device_aec_enabled_ ? 1 : 0);
     // 引擎就绪后应用缓存的动态唤醒词（device_config 可能先于引擎初始化到达）；
     // "清空"与"更新"不会同时生效，后到的请求覆盖先到的
     if (pending_wake_word_clear_) {

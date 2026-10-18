@@ -12,19 +12,19 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🌐" label="当前作用域" :value="SCOPES.find(s => s.value === scopeType)?.label || '—'" />
-      <StatCard icon="🎯" label="目标对象" :value="scopeName" note="角色 / 用户" />
-      <StatCard icon="👁" label="可见字段" :value="rows.filter(r => r.visible).length" :note="'共 ' + rows.length + ' 个字段'" />
-      <StatCard icon="✏️" label="可编辑字段" :value="rows.filter(r => r.editable).length" />
+      <StatCard icon="globe" label="当前作用域" :value="SCOPES.find(s => s.value === scopeType)?.label || '—'" />
+      <StatCard icon="target" label="目标对象" :value="scopeName" note="角色 / 用户" />
+      <StatCard icon="eye" label="可见字段" :value="rows.filter(r => r.visible).length" :note="'共 ' + rows.length + ' 个字段'" />
+      <StatCard icon="edit" label="可编辑字段" :value="rows.filter(r => r.editable).length" />
     </div>
 
     <!-- ① 作用域选择器：系统(0)/角色(1)/用户(2) -->
-    <DataTable title="字段权限编辑" hint="缺省字段=可见+可编辑；作用域继承：用户>角色>系统">
+    <DataTable title="字段权限编辑" hint="缺省字段=可见+可编辑；作用域继承：用户>角色>系统" :loading="loading">
       <template #actions>
         <div class="scope-bar">
-          <div v-for="s in SCOPES" :key="s.value" class="chip" :class="{ active: scopeType === s.value }" @click="pickScope(s.value)">
+          <button type="button" v-for="s in SCOPES" :key="s.value" class="chip" :class="{ active: scopeType === s.value }" @click="pickScope(s.value)">
             {{ s.label }}
-          </div>
+          </button>
           <select v-if="scopeType === 1" v-model="roleId" class="scope-select">
             <option :value="''" disabled>选择角色</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.roleName }}</option>
@@ -65,7 +65,7 @@
         </tbody>
       </table>
       <div v-if="rows.length === 0" class="empty-state">
-        <div class="empty-icon">🖼</div><strong>当前作用域尚无配置</strong><p>保存后按缺省规则生效（全部可见+可编辑）</p>
+        <div class="empty-icon"><YhIcon name="image" /></div><strong>当前作用域尚无配置</strong><p>保存后按缺省规则生效（全部可见+可编辑）</p>
       </div>
 
       <!-- ＋ 添加字段：追加自定义 key -->
@@ -78,12 +78,14 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
+const askConfirm = inject('askConfirm')
 
 // 预置字段（SPEC 任务清单），label 仅作展示提示
 const PREDEFINED_KEYS = ['llm_model', 'tts_voice', 'asr_model', 'system_prompt', 'temperature', 'top_p', 'tts_volume', 'tts_rate', 'wake_words']
@@ -178,7 +180,13 @@ function addRow() {
 }
 
 function removeRow(i) {
-  rows.value.splice(i, 1)
+  const row = rows.value[i]
+  askConfirm({
+    title: '移除字段',
+    message: `确定移除字段「${row?.key || i}」吗？点击「保存」后该字段的显示/编辑配置才会真正删除。`,
+    danger: true,
+    onOk: () => { rows.value.splice(i, 1) }
+  })
 }
 
 async function save() {
@@ -222,8 +230,10 @@ onMounted(() => {
 
 <style scoped>
 .scope-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .scope-select {
   border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 12px;
   font-size: 13px; outline: none; background: #fff; color: var(--text); min-width: 170px;

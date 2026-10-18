@@ -17,7 +17,9 @@
         <label>密码</label>
         <div class="pw-row">
           <input :type="showPw ? 'text' : 'password'" v-model="form.password" placeholder="请输入密码" @keyup.enter="doLogin" />
-          <button class="eye" @click="showPw = !showPw">{{ showPw ? '🙈' : '👁' }}</button>
+          <button class="eye" type="button" :aria-label="showPw ? '隐藏密码' : '显示密码'" @click="showPw = !showPw">
+            <YhIcon :name="showPw ? 'eye-off' : 'eye'" :size="19" />
+          </button>
         </div>
       </div>
       <div class="field">
@@ -42,6 +44,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import YhIcon from '../components/YhIcon.vue'
 import { authApi, refreshUserInfo, defaultRouteAfterLogin } from '../lib/api'
 
 const router = useRouter()
@@ -132,7 +135,12 @@ onMounted(refreshCaptcha)
 .field input:focus { border-color: var(--primary); }
 .pw-row, .cap-row { display: flex; gap: 10px; }
 .pw-row input { flex: 1; }
-.eye { border: none; background: none; cursor: pointer; font-size: 17px; }
+.eye {
+  border: none; background: none; cursor: pointer; font-size: 17px;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0 4px;
+  color: var(--text-sub); border-radius: 8px;
+}
+.eye:hover { color: var(--primary); }
 .cap-row input { flex: 1; }
 .cap-img { height: 44px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border); }
 .err { color: var(--danger); font-size: 12.5px; margin-bottom: 10px; }

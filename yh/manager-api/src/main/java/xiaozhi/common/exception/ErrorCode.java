@@ -267,7 +267,7 @@ public interface ErrorCode {
     int WAKE_WORD_AGENT_NOT_FOUND = 10214; // 智能体不存在
     int WAKE_WORD_SAVE_FAILED = 10215; // 保存唤醒词失败
     int WAKE_WORD_EMPTY = 10216; // 唤醒词不能为空
-    int WAKE_WORD_TOO_LONG = 10217; // 唤醒词长度超限（最多30字符）
+    int WAKE_WORD_TOO_LONG = 10217; // 唤醒词过长（真实上限：8 个汉字 ≈ 拼音 60 字符，见 WakeWordPinyinUtils.MAX_PINYIN_LENGTH）
     int WAKE_WORD_TOO_MANY = 10218; // 唤醒词数量超限（最多10个）
     int WAKE_WORD_INVALID_CHAR = 10219; // 唤醒词包含非法字符
 

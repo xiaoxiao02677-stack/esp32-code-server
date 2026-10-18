@@ -53,9 +53,9 @@ def main():
     import paramiko
 
     print("== 1. 打包 ==")
-    make_tar(r"G:\demo\21_xiaozhi\console-v2\dist", LOCAL_TMP)
+    make_tar(r"G:\demo\21_xiaozhi\yh\console-v2\dist", LOCAL_TMP)
     app_tar = LOCAL_TMP
-    make_tar(r"G:\demo\21_xiaozhi\console-v2\dist-admin", LOCAL_TMP)
+    make_tar(r"G:\demo\21_xiaozhi\yh\console-v2\dist-admin", LOCAL_TMP)
     admin_tar = LOCAL_TMP
     print("打包完成")
 
@@ -68,11 +68,11 @@ def main():
 
     try:
         print("\n== 3. 上传 app（客户端 /）==")
-        make_tar(r"G:\demo\21_xiaozhi\console-v2\dist", LOCAL_TMP)
+        make_tar(r"G:\demo\21_xiaozhi\yh\console-v2\dist", LOCAL_TMP)
         upload_and_extract(client, LOCAL_TMP, "/var/www/console-v2/app", "app")
 
         print("\n== 4. 上传 admin（/admincc/）==")
-        make_tar(r"G:\demo\21_xiaozhi\console-v2\dist-admin", LOCAL_TMP)
+        make_tar(r"G:\demo\21_xiaozhi\yh\console-v2\dist-admin", LOCAL_TMP)
         upload_and_extract(client, LOCAL_TMP, "/var/www/console-v2/admin", "admin")
 
         print("\n== 5. nginx 配置 ==")

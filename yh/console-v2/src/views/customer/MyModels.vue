@@ -18,11 +18,11 @@
 
     <!-- chip tab：自定义模型 / 自定义音色 -->
     <div class="chips">
-      <div class="chip" :class="{ active: activeTab === 'models' }" @click="switchTab('models')">🧩 自定义模型</div>
-      <div class="chip" :class="{ active: activeTab === 'voices' }" @click="switchTab('voices')">🎙 自定义音色</div>
+      <button type="button" class="chip" :class="{ active: activeTab === 'models' }" @click="switchTab('models')">🧩 自定义模型</button>
+      <button type="button" class="chip" :class="{ active: activeTab === 'voices' }" @click="switchTab('voices')">🎙 自定义音色</button>
     </div>
 
-    <DataTable v-if="activeTab === 'models'" title="模型清单" :total="models.length" :page="1" :pages="1">
+    <DataTable v-if="activeTab === 'models'" title="模型清单" :total="models.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead>
           <tr><th>类型</th><th>名称</th><th>Base URL</th><th>密钥</th><th>审核</th><th>用量</th><th>状态</th><th>操作</th></tr>
@@ -50,13 +50,13 @@
         </tbody>
       </table>
       <div v-if="models.length === 0" class="empty-state">
-        <div class="empty-icon">🧩</div>
+        <div class="empty-icon"><YhIcon name="grid" /></div>
         <strong>暂无自定义模型</strong>
         <p>点击右上角「＋ 新增模型」接入自己的 LLM / ASR / TTS 服务</p>
       </div>
     </DataTable>
 
-    <DataTable v-if="activeTab === 'voices'" title="音色清单" :total="voices.length" :page="1" :pages="1">
+    <DataTable v-if="activeTab === 'voices'" title="音色清单" :total="voices.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead>
           <tr><th>名称</th><th>TTS 模型</th><th>音色编码</th><th>语言</th><th>参考音频</th><th>审核</th><th>操作</th></tr>
@@ -82,7 +82,7 @@
         </tbody>
       </table>
       <div v-if="voices.length === 0" class="empty-state">
-        <div class="empty-icon">🎙</div>
+        <div class="empty-icon"><YhIcon name="mic" /></div>
         <strong>暂无自定义音色</strong>
         <p>点击右上角「＋ 新增音色」创建你的专属声音</p>
       </div>
@@ -133,6 +133,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, reactive, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import { api } from '../../lib/api'
@@ -349,7 +350,8 @@ onMounted(load)
   background: var(--bg-card, var(--surface)); border: 1.5px solid var(--border);
   color: var(--text-sub); user-select: none;
 }
-.chip.active { border-color: var(--primary); color: var(--primary); background: var(--primary-soft, #EAF2FF); font-weight: 700; }
+/* .chip 已收敛到 global.css */
+
 
 .badge-danger { background: var(--danger-soft, #FDECEC); color: var(--danger); border: 1px solid var(--danger); }
 .modal-mask { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: grid; place-items: center; z-index: 100; }

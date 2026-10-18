@@ -21,8 +21,8 @@
         <div class="blob-3d">🧩</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🧩" label="模板" :value="total" />
-        <StatCard icon="✅" label="已配置" :value="total" />
+        <StatCard icon="grid" label="模板" :value="total" />
+        <StatCard icon="check-circle" label="已配置" :value="total" />
         <StatCard icon="🏷" label="分类" value="4" note="角色/教学/陪伴/工具" />
         <StatCard icon="🔥" label="最热门" value="英语老师" note="历史模板" />
       </div>
@@ -34,9 +34,9 @@
       v-model:page="page"
       v-model:pageSize="pageSize"
       :pages="pages"
-    >
+     :loading="loading">
       <template #actions>
-        <input v-model="keyword" placeholder="搜索模板" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none" />
+        <input v-model="keyword" placeholder="搜索模板" class="filter-input" />
       </template>
       <table class="data-table">
         <thead>
@@ -72,7 +72,7 @@
         </tbody>
       </table>
       <div v-if="templates.length === 0" class="empty-state">
-        <div class="empty-icon">🧩</div>
+        <div class="empty-icon"><YhIcon name="grid" /></div>
         <strong>暂无模板</strong>
         <p>点击「新建模板」创建第一个智能体模板</p>
       </div>
@@ -109,6 +109,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

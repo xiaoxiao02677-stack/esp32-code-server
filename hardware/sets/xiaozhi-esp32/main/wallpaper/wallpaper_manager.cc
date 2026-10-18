@@ -51,6 +51,12 @@ constexpr char kReasonMd5[] = "md5_mismatch";
 constexpr char kReasonDownload[] = "download_failed";
 constexpr char kReasonNoMem[] = "no_mem";
 constexpr char kReasonNoDisplay[] = "no_display";
+// 显示层拒收（UI 未就绪 / 拿不到 LVGL 锁 / lv_image_set_src 被 LVGL 拒）。
+// 以前这种情况被吞成"成功"，现在如实回 fail，服务端才会重试。
+constexpr char kReasonRender[] = "render_failed";
+// 单槽 pending 被后到的请求顶掉：前一条根本没执行，必须给它的调用方一个明确结论，
+// 否则那条 command_id 的结果回执永远不发（服务端只能等超时）。
+constexpr char kReasonSuperseded[] = "superseded";
 
 bool EqualsIgnoreCase(const std::string& value, const char* expected) {
     const size_t expected_len = strlen(expected);
@@ -117,6 +123,9 @@ struct WallpaperManager::Impl {
     std::string applied_md5;
     uint8_t* buffer = nullptr;     // PSRAM，kImageBytes
     lv_img_dsc_t dsc{};
+    // dsc_valid 只表示"buffer/dsc 指向一张可用的图"，**不代表屏上正显示它**：
+    // rebind 若被 lv_image_set_src 拒绝，bg_image_ 的 src 会退回兜底图，
+    // 而 dsc_valid 仍为 true。看到这个组合不要顺手去清 dsc_valid/applied_version。
     bool dsc_valid = false;
 
     // 本次开机已尝试过的 NVS 恢复版本（避免每次重连都重拉）
@@ -129,6 +138,17 @@ struct WallpaperManager::Impl {
     void ProcessSet(const WallpaperRequest& request, const WallpaperResultCallback& callback);
     void ProcessClear(const WallpaperResultCallback& callback);
     bool ApplyToDisplay(uint8_t* new_buffer, const WallpaperRequest& request);
+    // 显式命令命中幂等时的三种结局（调用方据此决定回执，不能一概回 ok）
+    enum class RebindResult {
+        kOk,          // 已重新绑上并触发重绘
+        kNoState,     // 已经没有图可绑 → 调用方回落成重新下载。三种触发：
+                      //   ① ProcessClear 已释放缓冲；
+                      //   ② 上一次 ApplyToDisplay 失败把 dsc_valid 置了 false；
+                      //   ③ applied_version != expected_version（版本被更晚的请求换掉）
+        kRenderFail,  // 有图但显示层没接 → 回 fail:render，下次命令再试
+    };
+    // 把当前已缓存的图重新绑到显示层（显式命令遇幂等命中时用，不重新下载）
+    RebindResult RebindCurrent(const std::string& expected_version);
 };
 
 bool WallpaperManager::Impl::EnsureWorker() {
@@ -228,6 +248,19 @@ void WallpaperManager::Impl::ProcessSet(const WallpaperRequest& request,
         finish(false, kReasonBadFormat);
         return;
     }
+
+#if !WALLPAPER_HAS_LVGL_DISPLAY
+    // ★ 止损点放在校验链**之后**、下载之前。
+    //   这个构建（emote 风格）没有壁纸渲染能力，原顺序是
+    //   「判重 → 校验 → 下载整块 115KB → ApplyToDisplay 才发现 no_display」，
+    //   每次下发都白下 115KB。既然注定显示不了，一个字节都不该下。
+    //   放在校验链之后是为了让 format/size/md5 错误继续报它们自己的 reason
+    //   （放到最前面会用 no_display 盖掉 bad_format，反而更难查）。
+    ESP_LOGW(TAG, "wallpaper: display unsupported, skip download version=%s",
+             request.version.c_str());
+    finish(false, kReasonNoDisplay);
+    return;
+#endif
 
     uint8_t* buffer = static_cast<uint8_t*>(
         heap_caps_malloc(kImageBytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
@@ -382,24 +415,107 @@ bool WallpaperManager::Impl::ApplyToDisplay(uint8_t* new_buffer,
     // 3) SetWallpaper 绑定新图。
     // lvgl_port_lock 是递归锁，Display 内部再次加锁是安全的。
     DisplayLockGuard lock(display);
-    display->ClearWallpaper();
+    if (!display->ClearWallpaper()) {
+        // 没能让 LVGL 松开旧图。此时若继续换缓冲并释放旧 buffer，渲染线程可能
+        // 正拿着一块已释放的 PSRAM 画 —— 直接放弃这次应用，回 fail 让下次重试。
+        heap_caps_free(new_buffer);
+        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s (cannot unbind old image)",
+                 request.version.c_str(), kReasonRender);
+        return false;
+    }
 
+    lv_img_dsc_t old_dsc{};
     uint8_t* old_buffer = nullptr;
     {
         std::lock_guard<std::mutex> guard(mutex);
         old_buffer = buffer;
+        old_dsc = dsc;
         buffer = new_buffer;
         dsc = new_dsc;
+    }
+    if (!display->SetWallpaper(&dsc)) {
+        // ★ 显示层没接（拿不到锁 / bg_image_ 未建 / lv_image_set_src 被拒）。
+        //   回滚到"换图之前"的完整状态：屏幕继续显示旧壁纸，applied_version 不动
+        //   （它描述的正是屏幕上那张），新缓冲释放，dsc_valid 跟随旧图是否存在。
+        //   —— 关键是绝不把这次失败记成"已应用"：以前无条件 return true，
+        //   于是这次没画上去被记成成功，之后每次同版本下发都被 already applied
+        //   挡回去，再也没有重试机会。
+        heap_caps_free(new_buffer);
+        {
+            std::lock_guard<std::mutex> guard(mutex);
+            buffer = old_buffer;
+            dsc = old_dsc;
+            dsc_valid = (old_buffer != nullptr);
+        }
+        // 把旧图绑回去，避免"一次渲染失败把屏幕打回默认底纹"。
+        // 回绑本身也可能失败，日志必须按实际结果写，否则排查时会被带偏
+        // （dsc_valid 保持 true 是有意的：缓冲仍在，下次 duplicate 可直接重绑，
+        //   比降级成 kNoState 重新下载 115KB 便宜）。
+        const bool restored = (old_buffer != nullptr) && display->SetWallpaper(&dsc);
+        ESP_LOGW(TAG, "wallpaper: fail version=%s reason=%s (rolled back to %s)",
+                 request.version.c_str(), kReasonRender,
+                 restored ? "previous wallpaper"
+                          : (old_buffer != nullptr ? "default (restore failed)" : "default background"));
+        return false;
+    }
+    if (old_buffer != nullptr) {
+        heap_caps_free(old_buffer);
+    }
+    {
+        std::lock_guard<std::mutex> guard(mutex);
         dsc_valid = true;
         applied_version = request.version;
         applied_url = request.url;
         applied_md5 = request.md5;
     }
-    if (old_buffer != nullptr) {
-        heap_caps_free(old_buffer);
-    }
-    display->SetWallpaper(&dsc);
+    ESP_LOGI(TAG, "wallpaper: bound version=%s buf=%p to display", request.version.c_str(),
+             static_cast<void*>(buffer));
     return true;
+#endif  // WALLPAPER_HAS_LVGL_DISPLAY
+}
+
+// 显式命令命中幂等时把已缓存的图重新绑一次并触发重绘（不重新下载）。
+// 场景：开机时 device_config 已经把这张图应用过，屏幕上却因为 splash 还盖着 / 主题
+// 重建 / 上次 SetWallpaper 撞上锁超时而没真正显示出来。此时操作员点"下发"，
+// 旧行为只回一行 already applied + ok，屏幕毫无变化 —— 用户看到的就是"下发了没反应"。
+WallpaperManager::Impl::RebindResult WallpaperManager::Impl::RebindCurrent(
+    const std::string& expected_version) {
+#if !WALLPAPER_HAS_LVGL_DISPLAY
+    // 防御性返回。注意这个分支实际不可达：无显示构建下 ApplyToDisplay 恒失败，
+    // dsc_valid 恒为 false，HandleSet 的 duplicate 判定永远不会成立。
+    // 真正的止损在 ProcessSet 开头（不下载直接回 no_display）。
+    return RebindResult::kRenderFail;
+#else
+    Display* display = Board::GetInstance().GetDisplay();
+    if (display == nullptr) {
+        // 图在、显示不在：回落重新下载只会再撞一次 no_display，如实报渲染失败
+        return RebindResult::kRenderFail;
+    }
+    // ★ 锁序：display → mutex，与 ApplyToDisplay 一致（那里也是先 DisplayLockGuard
+    //   再 lock(mutex)）。反过来写就是 ABBA。
+    //   而且版本校验必须落在显示锁**之内**：若在锁外校验，从"校验通过 A"到"取显示锁"
+    //   之间，另一条 ApplyToDisplay 可能已经把 B 应用完，你再重绑 &dsc（内容已是 B）
+    //   却按 A 回 ok —— 窗口只是变小，并没有消除。
+    DisplayLockGuard lock(display);
+    if (!lock) { return RebindResult::kRenderFail; }  // 拿不到 LVGL 锁，别碰对象树
+    std::string version;
+    {
+        std::lock_guard<std::mutex> guard(mutex);
+        // 版本必须仍然对得上：并发下可能已被别的请求换掉，绑错版本比不绑更糟
+        // （屏幕停在 A，回执却按 B 记成功）。
+        if (!dsc_valid || applied_version != expected_version) {
+            return RebindResult::kNoState;
+        }
+        version = applied_version;
+    }
+    ESP_LOGI(TAG, "wallpaper: rebind version=%s (idempotent hit -> force repaint)",
+             version.c_str());
+    if (!display->SetWallpaper(&dsc)) {
+        ESP_LOGW(TAG, "wallpaper: rebind version=%s failed (reason=%s)", version.c_str(),
+                 kReasonRender);
+        return RebindResult::kRenderFail;
+    }
+    return RebindResult::kOk;
 #endif  // WALLPAPER_HAS_LVGL_DISPLAY
 }
 
@@ -409,8 +525,16 @@ void WallpaperManager::Impl::ProcessClear(const WallpaperResultCallback& callbac
 #if WALLPAPER_HAS_LVGL_DISPLAY
     Display* display = Board::GetInstance().GetDisplay();
     if (display != nullptr) {
-        // 先解除 LVGL 对缓冲的引用，再释放（FR-2.22）
-        display->ClearWallpaper();
+        // 先解除 LVGL 对缓冲的引用，再释放（FR-2.22）。
+        // 解除失败就整个放弃：宁可留着壁纸，也不能 free 一块还在用的 PSRAM。
+        if (!display->ClearWallpaper()) {
+            ESP_LOGW(TAG, "wallpaper: fail reason=%s (cannot unbind image, keep it)",
+                     kReasonRender);
+            if (callback) {
+                callback(false, kReasonRender);
+            }
+            return;
+        }
     }
 #endif
 
@@ -470,28 +594,62 @@ void WallpaperManager::HandleSet(const WallpaperRequest& request,
         return;
     }
 
+    // 幂等判定先做一次快照：命中后要么重绑，要么（图已不在了）回落成重新下载
     bool duplicate = false;
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
         duplicate = impl_->dsc_valid && !request.version.empty() &&
                     request.version == impl_->applied_version;
-        if (!duplicate) {
-            impl_->pending = true;
-            impl_->pending_clear = false;
-            impl_->pending_request = request;
-            // device_config（无回执）后到时不要覆盖 WS 请求的回执回调，
-            // 否则 WS 侧永远等不到 result。
-            if (on_result || !impl_->pending_callback) {
-                impl_->pending_callback = std::move(on_result);
-            }
-        }
     }
+
     if (duplicate) {
         ESP_LOGI(TAG, "wallpaper: skip version=%s (already applied)", request.version.c_str());
-        if (on_result) {
-            on_result(true, "");
+        // device_config / NVS 恢复（无回执）：纯幂等跳过，什么都不用做
+        if (!on_result) {
+            return;
         }
-        return;
+        // ★ 显式命令（WS / 常连通道下发，带回执）不静默丢弃：
+        //   老行为只打一行日志就回 ok，于是「操作员点下发 → 设备回 ok → 屏幕没变」
+        //   成了无法自救的死角（applied_version 一旦被写脏，之后全被这一支挡回）。
+        //   现在先尝试把 PSRAM 里缓存的图重绑一次并标脏重绘，不重新下载。
+        const Impl::RebindResult rebind = impl_->RebindCurrent(request.version);
+        if (rebind == Impl::RebindResult::kOk) {
+            on_result(true, "");
+            return;
+        }
+        if (rebind == Impl::RebindResult::kRenderFail) {
+            // 重绑失败绝不回 ok：否则服务端认为成功、后台显示已生效，屏幕却没变
+            on_result(false, kReasonRender);
+            return;
+        }
+        // kNoState：缓存的图已经被别的路径释放了。回 ok 是撒谎，回 render_failed
+        // 又会诱导重试拿到同样结果 —— 正确答案是当普通请求重新下载一次。
+        ESP_LOGW(TAG, "wallpaper: idempotent hit but no cached image, fall back to re-download");
+    }
+
+    WallpaperResultCallback superseded;
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        // 单槽 pending：后到覆盖先到。若前一条还挂着一个没人取走的回执回调，
+        // 说明它根本不会被执行 —— 必须当场给它一个结论，否则那条 command_id
+        // 的结果回执永远不发，服务端只能干等到超时（日志里表现为"下发了没反应"）。
+        if (impl_->pending && impl_->pending_callback) {
+            superseded = std::move(impl_->pending_callback);
+            impl_->pending_callback = nullptr;
+        }
+        impl_->pending = true;
+        impl_->pending_clear = false;
+        impl_->pending_request = request;
+        // device_config（无回执）后到时不要覆盖 WS 请求的回执回调，
+        // 否则 WS 侧永远等不到 result。
+        if (on_result || !impl_->pending_callback) {
+            impl_->pending_callback = std::move(on_result);
+        }
+    }
+    if (superseded) {
+        ESP_LOGW(TAG, "wallpaper: fail reason=%s (previous request dropped by a newer one)",
+                 kReasonSuperseded);
+        superseded(false, kReasonSuperseded);
     }
     xSemaphoreGive(impl_->wake);
 }

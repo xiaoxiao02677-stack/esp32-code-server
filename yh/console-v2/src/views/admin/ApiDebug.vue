@@ -3,10 +3,10 @@
     <div class="page-head">
       <div>
         <h1>API <span style="color:var(--primary)">调试</span></h1>
-        <p class="sub">迁移自 /cc/ API 调试页：142 接口目录，任意原始请求</p>
+        <p class="sub">浏览接口目录，构造参数并发起调试请求</p>
       </div>
       <div class="head-actions">
-        <input v-model="search" placeholder="搜索接口路径/说明…" style="border:1.5px solid var(--border);border-radius:999px;padding:8px 16px;font-size:13px;outline:none;width:220px" />
+        <input v-model="search" placeholder="搜索接口路径/说明…" class="filter-input" style="width:220px;font-size:13px;padding:8px 16px" />
       </div>
     </div>
 
@@ -34,11 +34,11 @@
             <div class="form-row"><label>Body（JSON，可选，POST/PUT 请求体）</label><textarea v-model="reqBody" rows="3" placeholder='{"name":"示例"}'></textarea></div>
             <div style="display:flex;gap:10px;align-items:center">
               <button class="btn btn-primary" :disabled="sending" @click="send">{{ sending ? '请求中…' : '发送请求' }}</button>
-              <span v-if="statusText" style="font-size:13px;font-weight:600" :style="{color: statusOk ? '#16a34a' : '#dc2626'}">{{ statusText }}</span>
+              <span v-if="statusText" style="font-size:13px;font-weight:600" :style="{color: statusOk ? 'var(--success)' : 'var(--danger)'}">{{ statusText }}</span>
             </div>
             <pre v-if="respText" class="resp-box">{{ respText }}</pre>
           </template>
-          <div v-else class="empty-state"><div class="empty-icon">🧪</div><strong>左侧选择接口开始调试</strong></div>
+          <div v-else class="empty-state"><div class="empty-icon"><YhIcon name="flask" /></div><strong>左侧选择接口开始调试</strong></div>
         </DataTable>
       </div>
     </div>
@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import API_CATALOG from '../../lib/apiCatalog'
@@ -154,5 +155,5 @@ async function send() {
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input, .form-row textarea { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; outline: none; font-family: ui-monospace, monospace; }
 .form-row textarea:focus { border-color: var(--primary); }
-.resp-box { background: #0F172A; color: #7DD3FC; border-radius: 12px; padding: 14px; font-size: 12px; overflow: auto; max-height: 320px; font-family: ui-monospace, monospace; }
+.resp-box { background: #0F172A; color: #7DD3FC; border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-size: 12px; overflow: auto; max-height: 320px; font-family: ui-monospace, monospace; }
 </style>

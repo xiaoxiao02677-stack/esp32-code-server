@@ -20,6 +20,13 @@
   --radius-pill: 999px;
   --shadow-dock: 0 8px 32px rgba(27, 44, 80, 0.14);
   --shadow-card: 0 2px 12px rgba(27, 44, 80, 0.05);
+  /* 层级体系：全站 z-index 收敛到 token（禁止散落魔数） */
+  --z-dock: 50;
+  --z-dropdown: 90;
+  --z-modal: 150;
+  --z-toast: 200;
+  --z-force: 300;
+  --z-boot: 400;
   /* 导航自适应文字：dock 本体宽度随最长文字项自适应（max-content，72~140px 夹取，见 .dock）；
      --dock-w 不再控制 dock 宽度，只作 .app-shell 左侧预留宽联动（展开=内容最大宽 140px，收起 56px 由 .dock-collapsed 覆盖） */
   --dock-w: 140px;
@@ -35,8 +42,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 键盘可达性：全局焦点环（鼠标点击不出现，Tab 聚焦才出现） */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+html { scroll-behavior: smooth; }
+
+/* 跳转主内容（键盘用户可达） */
+.skip-link {
+  position: fixed; left: 10px; top: -52px; z-index: calc(var(--z-boot) + 10);
+  background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; text-decoration: none; transition: top .15s;
+}
+.skip-link:focus { top: 10px; }
+
+/* 数字等宽：表格 / 统计大数字 / 分页数字变化时不抖动、列对齐 */
+.data-table, .stat-card .stat-value, .pager { font-variant-numeric: tabular-nums; }
+
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   background:
@@ -110,14 +133,13 @@ body {
 .role-switch:hover { border-color: var(--primary); background: var(--primary-soft); }
 .avatar {
   width: 40px; height: 40px; border-radius: 50%;
-  background: linear-gradient(135deg, #FFB199, #FF7A45);
-  display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px;
-  cursor: pointer; box-shadow: 0 2px 8px rgba(255,122,69,.35);
+  background: var(--primary-soft); color: var(--primary);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px;
 }
 
 /* ============ Hero 区（左插画 + 右统计） ============ */
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
-.page-head h1 { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+.page-head h1 { font-size: 26px; font-weight: 800; letter-spacing: .5px; }
 .page-head .sub { color: var(--text-sub); font-size: 13px; margin-top: 2px; }
 .head-actions { display: flex; gap: 10px; }
 
@@ -132,6 +154,30 @@ body {
 .btn-ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
 .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+/* 危险操作按钮：全站统一（此前 Chat/Mcp 等页引用却无定义，渲染成无色按钮） */
+.btn-danger { background: var(--danger); color: #fff; box-shadow: 0 4px 14px rgba(240,83,77,.35); }
+.btn-danger:hover { background: #D9433E; transform: translateY(-1px); }
+.btn-danger:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* 筛选输入：替代散落在 7+ 个页面头部的内联样式 */
+.filter-input, .filter-select {
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+  font-family: var(--font); font-size: 12.5px; padding: 6px 12px; outline: none;
+  transition: border-color .15s;
+}
+.filter-input { border-radius: 999px; }
+.filter-select { border-radius: 10px; padding: 6px 10px; }
+.filter-input:focus, .filter-select:focus { border-color: var(--primary); }
+
+/* 筛选 chip（tab 切换）：必须是 button 才可键盘聚焦 */
+.chip {
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; font-family: var(--font);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.chip:hover { border-color: var(--primary); color: var(--primary); }
+.chip.active { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); font-weight: 600; }
+.chip.sm { padding: 4px 12px; font-size: 12px; }
 
 .hero-row {
   display: grid; grid-template-columns: 300px 1fr; gap: 20px;
@@ -247,6 +293,7 @@ body {
   width: 74px; height: 74px; border-radius: 50%;
   border: 2.5px dashed #C9D4E3; display: grid; place-items: center; font-size: 30px;
 }
+.empty-icon svg { width: 28px; height: 28px; }
 .empty-state strong { color: var(--text); font-size: 14.5px; }
 .empty-state p { font-size: 12.5px; }
 
@@ -276,7 +323,7 @@ body {
    收起态类 .dock-collapsed 由 DockNav 挂在 <html> 上：dock 固定 56px 仅图标，--dock-w 只联动 .app-shell 左 padding 预留 */
 html.dock-collapsed { --dock-w: 56px; }
 .dock-wrap {
-  position: fixed; left: 0; top: 0; bottom: auto; height: 100vh; transform: none; z-index: 50;
+  position: fixed; left: 0; top: 0; bottom: auto; height: 100vh; height: 100dvh; transform: none; z-index: var(--z-dock);
   width: max-content; min-width: 72px; max-width: 140px;
   transition: min-width .25s ease, max-width .25s ease;
 }
@@ -289,7 +336,7 @@ html.dock-collapsed { --dock-w: 56px; }
   background: rgba(255,255,255,.92); backdrop-filter: blur(18px);
   border-radius: 0 22px 22px 0; padding: 12px 8px;
   box-shadow: var(--shadow-dock); border: 1px solid rgba(255,255,255,.6);
-  width: max-content; min-width: 72px; max-width: 140px; height: 100vh;
+  width: max-content; min-width: 72px; max-width: 140px; height: 100vh; height: 100dvh;
   overflow-x: visible; overflow-y: auto;
   scrollbar-width: thin;
   transition: min-width .25s ease, max-width .25s ease;

@@ -20,14 +20,14 @@
         <div class="blob-3d">🎙</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🎙" label="音色" :value="voices.length" />
+        <StatCard icon="mic" label="音色" :value="voices.length" />
         <StatCard icon="🌍" label="语言" :value="languageCount" note="去重" />
         <StatCard icon="▶" label="可试听" :value="previewable" note="含模型信息" />
         <StatCard icon="🔇" label="不可试听" :value="voices.length - previewable" note="到管理端试听" />
       </div>
     </div>
 
-    <DataTable title="音色清单" :total="voices.length" :page="1" :pages="1">
+    <DataTable title="音色清单" :total="voices.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead>
           <tr><th>试听</th><th>音色信息</th><th>语言</th><th>备注</th><th>创建时间</th></tr>
@@ -59,7 +59,7 @@
         </tbody>
       </table>
       <div v-if="voices.length === 0" class="empty-state">
-        <div class="empty-icon">🎙</div>
+        <div class="empty-icon"><YhIcon name="mic" /></div>
         <strong>暂无可用音色</strong>
         <p>请联系管理员开通平台音色，或前往「我的模型」添加自定义音色（审核通过后可用）</p>
         <button class="btn btn-ghost" style="margin-top:6px" @click="$router.push('/customer/my-models')">前往我的模型</button>
@@ -69,6 +69,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

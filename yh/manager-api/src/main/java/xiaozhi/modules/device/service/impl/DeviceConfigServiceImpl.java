@@ -19,6 +19,7 @@ import xiaozhi.common.exception.RenException;
 import xiaozhi.common.utils.JsonUtils;
 import xiaozhi.modules.device.dao.DeviceConfigDao;
 import xiaozhi.modules.device.entity.DeviceConfigEntity;
+import xiaozhi.common.utils.WakeWordPinyinUtils;
 import xiaozhi.modules.device.entity.DeviceEntity;
 import xiaozhi.modules.device.service.DeviceConfigService;
 import xiaozhi.modules.device.service.DeviceService;
@@ -34,15 +35,19 @@ import xiaozhi.modules.device.service.DeviceService;
 @AllArgsConstructor
 public class DeviceConfigServiceImpl implements DeviceConfigService {
 
-    /** 配置键白名单（design §5.1 schema：volume/brightness；wake_word 动态唤醒词；theme P1 预留不收） */
-    private static final Set<String> CONFIG_KEYS = Set.of("volume", "brightness", "wake_word");
+    /** 配置键白名单（design §5.1 schema：volume/brightness；wake_word 动态唤醒词；
+     *  wake_word_display 唤醒词展示原文；wake_word_threshold 唤醒词灵敏度 0~100
+     *  （0=最灵敏，固件夹取到 esp-sr 最低有效值）；interrupt_threshold 实时打断灵敏度
+     *  0~100（0=最容易打断）；theme P1 预留不收） */
+    private static final Set<String> CONFIG_KEYS = Set.of(
+            "volume", "brightness", "wake_word", "wake_word_display",
+            "wake_word_threshold", "interrupt_threshold");
 
     /** 数值型配置键的合法范围（闭区间） */
     private static final int VALUE_MIN = 0;
     private static final int VALUE_MAX = 100;
 
-    /** 唤醒词长度上限（字符）；数组形式最多词数 */
-    private static final int WAKE_WORD_MAX_LEN = 32;
+    /** 唤醒词条数上限（设备 MultiNet 契约） */
     private static final int WAKE_WORD_MAX_COUNT = 5;
 
     private final DeviceConfigDao deviceConfigDao;
@@ -90,9 +95,9 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
                 log.warn("[device-config] 忽略非法配置键: mac={}, key={}", macAddress, key);
                 continue;
             }
-            // wake_word：字符串或字符串数组（长度/数量上限校验），不走数值校验
-            if ("wake_word".equals(key)) {
-                Object sanitizedWake = sanitizeWakeWord(macAddress, value);
+            // 唤醒词命令 / 展示文本：字符串或字符串数组，按下标配对，不走数值校验
+            if ("wake_word".equals(key) || "wake_word_display".equals(key)) {
+                Object sanitizedWake = sanitizeWakeWord(macAddress, key, value);
                 if (sanitizedWake != null) {
                     delta.put(key, sanitizedWake);
                 }
@@ -109,38 +114,49 @@ public class DeviceConfigServiceImpl implements DeviceConfigService {
     }
 
     /**
-     * 唤醒词值校验：单串 ≤32 字符 trim 后返回；数组 ≤5 项×每项 ≤32 字符返回 List；
-     * 非法（空/超限/类型不符）返回 null 并告警
+     * 唤醒词值校验：单串 trim 后返回；数组 ≤5 项返回 List。
+     * 长度上限按键区分：wake_word（拼音）{@link WakeWordPinyinUtils#MAX_PINYIN_LENGTH}、
+     * wake_word_display（汉字）{@link WakeWordPinyinUtils#MAX_DISPLAY_LENGTH}。
+     * <p><b>数组保留位置</b>：非法项留空串占位，绝不压缩——wake_word 与
+     * wake_word_display 按下标配对，压缩会让"第 2 个词"配上"第 3 个词"的展示文案。
+     * 空占位由下发侧成对剔除。全空视为非法整体返回 null。
      */
-    private Object sanitizeWakeWord(String macAddress, Object value) {
+    private Object sanitizeWakeWord(String macAddress, String key, Object value) {
+        final int maxLen = "wake_word_display".equals(key)
+                ? WakeWordPinyinUtils.MAX_DISPLAY_LENGTH
+                : WakeWordPinyinUtils.MAX_PINYIN_LENGTH;
         if (value instanceof String s) {
             String t = s.trim();
-            if (t.isEmpty() || t.length() > WAKE_WORD_MAX_LEN) {
-                log.warn("[device-config] 忽略非法唤醒词: mac={}, len={}", macAddress, t.length());
+            if (t.isEmpty() || t.length() > maxLen) {
+                log.warn("[device-config] 忽略非法{}: mac={}, len={}", key, macAddress, t.length());
                 return null;
             }
             return t;
         }
         if (value instanceof List<?> list) {
             if (list.isEmpty() || list.size() > WAKE_WORD_MAX_COUNT) {
-                log.warn("[device-config] 忽略非法唤醒词数组: mac={}, count={}", macAddress, list.size());
+                log.warn("[device-config] 忽略非法{}数组: mac={}, count={}", key, macAddress, list.size());
                 return null;
             }
-            List<String> words = new ArrayList<>();
+            List<String> words = new ArrayList<>(list.size());
+            boolean anyValid = false;
             for (Object w : list) {
                 if (w instanceof String s) {
                     String t = s.trim();
-                    if (!t.isEmpty() && t.length() <= WAKE_WORD_MAX_LEN) {
+                    if (!t.isEmpty() && t.length() <= maxLen) {
                         words.add(t);
+                        anyValid = true;
+                        continue;
                     }
                 }
+                words.add("");  // 保留位置占位
             }
-            if (words.isEmpty()) {
+            if (!anyValid) {
                 return null;
             }
             return words;
         }
-        log.warn("[device-config] 忽略非法唤醒词类型: mac={}, type={}", macAddress,
+        log.warn("[device-config] 忽略非法{}类型: mac={}, type={}", key, macAddress,
                 value == null ? "null" : value.getClass().getSimpleName());
         return null;
     }

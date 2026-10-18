@@ -11,6 +11,7 @@
 #include <esp_vadn_models.h>
 
 #include "audio_service.h"
+#include "settings.h"
 #include "wake_words/custom_wake_word.h"
 
 #define TAG "AfeAudioEngine"
@@ -62,6 +63,18 @@ bool AfeAudioEngine::Initialize(AudioCodec* codec, int frame_duration_ms,
     codec_ = codec;
     frame_samples_ = frame_duration_ms * 16000 / 1000;
     output_buffer_.reserve(frame_samples_);
+
+    // 恢复云端下发的实时打断灵敏度（board.cc 收到 device_config.interrupt_threshold
+    // 时写入 NVS "interrupt_config"）；无缓存则保持 CONFIG_YH_VAD_SPEECH_CONFIRM_MS。
+    // 设备重启后不回退，网页上拉过的进度条才"一直有效"。
+    {
+        Settings settings("interrupt_config", true);
+        int saved_threshold = settings.GetInt("threshold", -1);
+        if (saved_threshold >= 0 && saved_threshold <= 100) {
+            SetInterruptThreshold(saved_threshold);
+            ESP_LOGI(TAG, "Restored interrupt threshold %d from NVS", saved_threshold);
+        }
+    }
 
     if (models_list == nullptr) {
         models_ = esp_srmodel_init("model");
@@ -152,8 +165,11 @@ bool AfeAudioEngine::Initialize(AudioCodec* codec, int frame_duration_ms,
     afe_config->aec_nlp_level = AEC_NLP_LEVEL_VERYAGGR;
     afe_config->ns_init = false;
     afe_config->vad_init = kUseAfeForVoiceProcessing;
-    afe_config->vad_mode = VAD_MODE_0;
-    afe_config->vad_min_noise_ms = 100;
+    // 打断灵敏度：全部改由 CONFIG_YH_VAD_* 控制（见 Kconfig.projbuild
+    // "YH Voice Interrupt Tuning"）。数值越大/越长越迟钝。
+    afe_config->vad_mode = static_cast<vad_mode_t>(CONFIG_YH_VAD_MODE);
+    afe_config->vad_min_speech_ms = CONFIG_YH_VAD_MIN_SPEECH_MS;
+    afe_config->vad_min_noise_ms = CONFIG_YH_VAD_MIN_NOISE_MS;
     if (vad_model_name != nullptr) {
         afe_config->vad_model_name = vad_model_name;
     }
@@ -291,14 +307,59 @@ void AfeAudioEngine::EnableWakeWordDetection(bool enable) {
     UpdateActiveState();
 }
 
+void AfeAudioEngine::SetInterruptThreshold(int threshold) {
+    if (threshold < 0 || threshold > 100) {
+        ESP_LOGW(TAG, "Invalid interrupt threshold: %d (range 0-100)", threshold);
+        return;
+    }
+    // 0~100 → 人声确认窗 0~2000ms 线性映射（与 CONFIG_YH_VAD_SPEECH_CONFIRM_MS
+    // 的 Kconfig range 0~2000 对齐）。0=立即确认（最灵敏，任何 VAD 抬升都打断），
+    // 100=连续 2s 人声才打断（最难被打断）。15 ≈ 出厂默认 300ms。
+    const int confirm_ms = threshold * 20;
+    vad_speech_confirm_ms_.store(confirm_ms);
+    ESP_LOGI(TAG, "Interrupt threshold set: %d -> speech confirm %d ms", threshold, confirm_ms);
+}
+
 void AfeAudioEngine::EnableVoiceProcessing(bool enable) {
     if (enable) {
+        ResetVadState();
         xEventGroupSetBits(event_group_, kVoiceProcessingEnabled);
     } else {
         xEventGroupClearBits(event_group_, kVoiceProcessingEnabled);
-        is_speaking_ = false;
+        ResetVadState();
     }
     UpdateActiveState();
+}
+
+void AfeAudioEngine::ResetVadState() {
+    is_speaking_ = false;
+    vad_candidate_ = false;
+    vad_candidate_since_us_ = esp_timer_get_time();
+}
+
+void AfeAudioEngine::UpdateVadState(bool speech) {
+    const int64_t now_us = esp_timer_get_time();
+
+    if (speech != vad_candidate_) {
+        // 状态刚翻转，重新开始计时
+        vad_candidate_ = speech;
+        vad_candidate_since_us_ = now_us;
+        return;
+    }
+
+    if (vad_candidate_ == is_speaking_) {
+        return;  // 还没到需要翻转的方向，或已经上报过
+    }
+
+    const int confirm_ms = speech ? vad_speech_confirm_ms_.load() : kVadSilenceConfirmMs;
+    if ((now_us - vad_candidate_since_us_) / 1000 < confirm_ms) {
+        return;  // 持续时间不够，暂不上报（滤除瞬时回声尖峰）
+    }
+
+    is_speaking_ = speech;
+    if (vad_state_change_callback_) {
+        vad_state_change_callback_(speech);
+    }
 }
 
 void AfeAudioEngine::EnableDeviceAec(bool enable) {
@@ -318,6 +379,11 @@ bool AfeAudioEngine::IsWakeWordDetectionEnabled() const {
 bool AfeAudioEngine::IsVoiceProcessingEnabled() const {
     return event_group_ != nullptr &&
            (xEventGroupGetBits(event_group_) & kVoiceProcessingEnabled) != 0;
+}
+
+bool AfeAudioEngine::IsAecEffective() const {
+    return afe_data_ != nullptr && device_aec_enabled_.load() && codec_ != nullptr &&
+           codec_->input_reference();
 }
 
 size_t AfeAudioEngine::GetFeedSize() const {
@@ -474,15 +540,8 @@ void AfeAudioEngine::HandleVoiceResult(const afe_fetch_result_t* result) {
     if (output_reset_pending_.exchange(false)) {
         output_buffer_.clear();
     }
-    if (vad_state_change_callback_) {
-        if (result->vad_state == VAD_SPEECH && !is_speaking_) {
-            is_speaking_ = true;
-            vad_state_change_callback_(true);
-        } else if (result->vad_state == VAD_SILENCE && is_speaking_) {
-            is_speaking_ = false;
-            vad_state_change_callback_(false);
-        }
-    }
+    // 去抖后上报：残留回声导致的单帧 VAD_SPEECH 不会立刻触发打断
+    UpdateVadState(result->vad_state == VAD_SPEECH);
     if (!output_callback_) {
         return;
     }

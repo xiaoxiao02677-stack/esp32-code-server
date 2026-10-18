@@ -28,4 +28,10 @@ public class AgentInfoVO extends AgentEntity
 
     @Schema(description = "当前配置版本号")
     private Integer currentVersionNo;
+
+    @Schema(description = "唤醒词阈值（0~100，0=最灵敏）；取自绑定设备的 ai_device_config，无绑定设备/未设置时为 null")
+    private Integer wakeWordThreshold;
+
+    @Schema(description = "实时打断灵敏度（0~100，0=最灵敏/最容易打断）；取自绑定设备的 ai_device_config，未设置时为 null")
+    private Integer interruptThreshold;
 }

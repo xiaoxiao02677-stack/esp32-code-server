@@ -2,57 +2,41 @@
   <div>
     <div class="page-head">
       <div>
-        <h1>积分中心</h1>
+        <h1>积分 <span style="color:var(--primary)">中心</span></h1>
         <p class="sub">充值、兑换与用量扣费</p>
       </div>
-      <div class="head-actions">
-        <button class="btn btn-primary" disabled title="功能即将上线">🎁 积分商城兑换</button>
-        <button class="btn btn-ghost" disabled title="功能即将上线">🎟 兑换码兑换</button>
-      </div>
     </div>
 
-    <div class="hero-row">
-      <div class="hero-blob" style="min-height:170px">
-        <div>
-          <div class="en">POINTS / BILLING</div>
-          <h2>积分动态</h2>
-          <p>按量计费 · 透明消费</p>
-        </div>
-        <div class="blob-3d">💎</div>
-      </div>
-      <div class="stats-grid">
-        <StatCard icon="📈" label="累计获得" value="—" note="敬请期待" />
-        <StatCard icon="📉" label="累计消耗" value="—" note="敬请期待" />
-        <StatCard icon="💎" label="可用积分" value="—" note="敬请期待" />
-        <StatCard icon="⚙️" label="计费模式" value="—" note="敬请期待" />
-      </div>
-    </div>
-
-    <DataTable title="积分动态" hint="全部记录 / 获得 / 消耗" :total="0" :page="1" :pages="1">
-      <table class="data-table">
-        <thead>
-          <tr><th>类型</th><th>说明</th><th>积分变动</th><th>余额</th><th>时间</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <div class="panel wip-panel">
       <div class="empty-state">
-        <div class="empty-icon">💎</div>
-        <strong>积分功能即将上线，敬请期待</strong>
-        <p>当前版本暂未开通积分服务，充值、兑换与用量扣费记录将在功能上线后展示</p>
-        <button class="btn btn-ghost" style="margin-top:6px" @click="comingSoon">充值积分</button>
+        <div class="empty-icon"><YhIcon name="gem" /></div>
+        <strong>积分功能即将上线</strong>
+        <p>当前版本暂未开通积分服务。上线后，充值、兑换与按量计费的完整记录都会在这里展示。</p>
+        <span class="badge badge-orange"><span class="dot"></span>排期中</span>
       </div>
-    </DataTable>
+    </div>
+
+    <div class="panel wip-panel" style="margin-top:16px">
+      <div class="panel-head"><h3>上线后将支持</h3></div>
+      <ul class="wip-list">
+        <li>积分充值与兑换码兑换</li>
+        <li>按量计费明细：每次调用的扣费记录</li>
+        <li>积分动态：获得、消耗与余额一目了然</li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { inject } from 'vue'
-import StatCard from '../../components/StatCard.vue'
-import DataTable from '../../components/DataTable.vue'
-
-const toast = inject('toast')
-
-function comingSoon() {
-  toast('功能即将上线', 'info')
-}
+import YhIcon from '../../components/YhIcon.vue'
+// 说明：原页面为空壳（假统计卡、空表格、disabled 死按钮），
+// 已改为规范占位页；积分服务契约就绪后再接入真实数据。
 </script>
+
+<style scoped>
+.wip-panel { max-width: 640px; }
+.wip-list {
+  margin: 0; padding: 14px 24px 20px 40px; color: var(--text-sub);
+  font-size: 13.5px; line-height: 1.9;
+}
+</style>

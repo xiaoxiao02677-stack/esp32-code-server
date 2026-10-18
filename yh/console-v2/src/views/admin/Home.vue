@@ -28,16 +28,14 @@
         <div class="blob-3d">📊</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="👥" label="用户" :value="userTotal" :note="`本页 ${users.length}`" />
-        <StatCard icon="🤖" label="模板" :value="templateCount" note="智能体模板" />
-        <StatCard icon="📡" label="设备" :value="deviceTotal" :note="onlineText" />
-        <StatCard icon="🧠" label="记忆智能体" :value="memoryAgentCount" note="有记忆数据" />
-        <StatCard icon="💬" label="会话数" :value="sessionTotal" note="首个智能体" />
-        <StatCard icon="🔊" label="TTS 引擎数" :value="ttsModelCount" note="已接入" />
+        <StatCard icon="users" label="用户" :value="userTotal" :note="`本页 ${users.length}`" />
+        <StatCard icon="bot" label="模板" :value="templateCount" note="智能体模板" />
+        <StatCard icon="device" label="设备" :value="deviceTotal" :note="onlineText" />
+        <StatCard icon="chat" label="会话数" :value="sessionTotal" note="首个智能体" />
       </div>
     </div>
 
-    <DataTable title="设备清单" hint="全平台设备（GET /admin/device/all）" :total="deviceTotal" :page="1" :pages="1">
+    <DataTable title="设备清单" hint="全平台设备（GET /admin/device/all）" :total="deviceTotal" :page="1" :pages="1" :loading="loading">
       <template #actions>
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="load" :disabled="loading">↻ 刷新</button>
       </template>
@@ -66,7 +64,7 @@
         </tbody>
       </table>
       <div v-if="devices.length === 0" class="empty-state">
-        <div class="empty-icon">📡</div>
+        <div class="empty-icon"><YhIcon name="device" /></div>
         <strong>暂无设备</strong>
       </div>
     </DataTable>
@@ -77,13 +75,13 @@
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="router.push('/admin/chat')">查看全部</button>
       </div>
       <div v-if="recentSessions.length" class="sess-list">
-        <div v-for="s in recentSessions" :key="s.id" class="sess-item" @click="router.push('/admin/chat')">
+        <button v-for="s in recentSessions" :key="s.id" class="sess-item" type="button" @click="router.push('/admin/chat')">
           <div class="cell-main">{{ s.title }}</div>
           <div class="cell-sub">{{ s.createdAt }} · {{ s.chatCount }} 条</div>
-        </div>
+        </button>
       </div>
       <div v-else class="empty-state">
-        <div class="empty-icon">💬</div>
+        <div class="empty-icon"><YhIcon name="chat" /></div>
         <strong>暂无会话，去跟设备说句话吧</strong>
       </div>
     </div>
@@ -91,6 +89,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import StatCard from '../../components/StatCard.vue'
@@ -105,9 +104,7 @@ const userTotal = ref(0)
 const devices = ref([])
 const deviceTotal = ref(0)
 const templateCount = ref(0)
-const memoryAgentCount = ref(0)
 const sessionTotal = ref(0)
-const ttsModelCount = ref(0)
 const recentSessions = ref([])
 const loading = ref(false)
 
@@ -156,7 +153,7 @@ async function load() {
         id: d.id, macAddress: d.macAddress,
         name: d.deviceName || d.name || d.macAddress || '未命名设备',
         board: d.board || d.model || '—',
-        appVersion: d.appVersion || '—',
+        appVersion: String(d.appVersion || '').replace(/^v/, '') || '—',
         bindUser: d.bindUsername || d.bindUser || null,
         online: onlineSet ? onlineSet.has(normMac(d.macAddress)) : false,
         lastActive: d.lastActiveTime ? String(d.lastActiveTime).slice(5, 16) : '—'
@@ -167,17 +164,9 @@ async function load() {
       const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
       templateCount.value = list.length
     }).catch(() => {}),
-    adminApi.memoryAgents().then(res => {
-      const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
-      memoryAgentCount.value = list.length
-    }).catch(() => {}),
     adminApi.agentList().then(async res => {
       const agents = Array.isArray(res.data) ? res.data : (res.data?.list || [])
       await loadFirstAgentSessions(agents)
-    }).catch(() => {}),
-    adminApi.modelList('TTS').then(res => {
-      const list = Array.isArray(res.data) ? res.data : (res.data?.list || [])
-      ttsModelCount.value = list.length
     }).catch(() => {})
   ]
   await Promise.all(jobs)
@@ -192,9 +181,7 @@ function exportReport() {
     ['设备总数', deviceTotal.value],
     ['在线设备', devices.value.filter(d => d.online).length],
     ['模板数', templateCount.value],
-    ['记忆智能体', memoryAgentCount.value],
-    ['会话总数', sessionTotal.value],
-    ['TTS 引擎数', ttsModelCount.value]
+    ['会话总数', sessionTotal.value]
   ]
   const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
@@ -210,13 +197,12 @@ onMounted(load)
 </script>
 
 <style scoped>
-/* 6 张统计卡：仅本页覆盖全局 4 列布局为 3 列两行 */
-.stats-grid { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 900px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
 .sessions-panel { margin-top: 20px; }
 .sess-list { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 16px; }
-.sess-item { padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.sess-item {
+  padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: background .15s;
+  border: none; background: none; font-family: var(--font); text-align: left; width: 100%;
+}
 .sess-item:hover { background: #F5F8FD; }
+.sess-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 </style>

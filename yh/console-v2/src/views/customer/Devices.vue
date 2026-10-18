@@ -23,14 +23,14 @@
         <div class="blob-3d">📡</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="📡" label="设备总数" :value="devices.length" />
-        <StatCard icon="🔌" label="型号" :value="boardCount" note="设备板型" />
-        <StatCard icon="🤖" label="绑定智能体" :value="agentCount" />
-        <StatCard icon="🕓" label="最近连接" :value="lastConnected" note="最新活动" />
+        <StatCard icon="device" label="设备总数" :value="devices.length" />
+        <StatCard icon="plug" label="型号" :value="boardCount" note="设备板型" />
+        <StatCard icon="bot" label="绑定智能体" :value="agentCount" />
+        <StatCard icon="clock" label="最近连接" :value="lastConnected" note="最新活动" />
       </div>
     </div>
 
-    <DataTable title="设备清单" :total="devices.length" :page="1" :pages="1">
+    <DataTable title="设备清单" :total="devices.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead>
           <tr><th>设备信息</th><th>型号 / MAC</th><th>固件</th><th>绑定智能体</th><th>最近连接</th><th>操作</th></tr>
@@ -60,7 +60,7 @@
         </tbody>
       </table>
       <div v-if="devices.length === 0" class="empty-state">
-        <div class="empty-icon">📡</div>
+        <div class="empty-icon"><YhIcon name="device" /></div>
         <strong>暂无设备</strong>
         <p>还没有绑定任何设备，去创建智能体并绑定设备吧</p>
       </div>
@@ -86,6 +86,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

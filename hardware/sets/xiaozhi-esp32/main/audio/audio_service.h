@@ -172,6 +172,8 @@ public:
     // 服务器动态调整唤醒词参数
     void SetWakeWordThreshold(float threshold);
     void SetWakeWordDuration(int duration);
+    // 服务器动态调整实时打断灵敏度（0~100，0=最灵敏）：映射 VAD 人声确认窗
+    void SetInterruptThreshold(int threshold);
 
 private:
     AudioCodec* codec_ = nullptr;

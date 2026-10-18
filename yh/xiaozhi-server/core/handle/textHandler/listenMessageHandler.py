@@ -103,6 +103,8 @@ class ListenTextMessageHandler(TextMessageHandler):
                     await send_stt_message(conn, original_text)
                     await send_tts_message(conn, "stop", None)
                     conn.client_is_speaking = False
+                    conn.client_speaking_since_ms = 0.0
+                    conn.interrupt_voice_since_ms = 0.0
                 elif is_wakeup_words:
                     conn.just_woken_up = True
                     # 上报纯文字数据（复用ASR上报功能，但不提供音频数据）

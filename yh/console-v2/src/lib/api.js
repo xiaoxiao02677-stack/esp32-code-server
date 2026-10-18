@@ -461,8 +461,10 @@ export const adminApi = {
   // ===== 唤醒词管理 =====
   getAgentWakeWords: (agentId) => api.get(`/agent/wake-word/${agentId}`),
   setAgentWakeWords: (agentId, wakeWords) => api.post(`/agent/wake-word/${agentId}`, { wakeWords }),
+  // 唤醒词下发统一走 setAgentWakeWords（manager-api 侧转拼音 + 落库 + 转发推送）。
+  // 原 wakeWordPush（直连 Python /api/wake-word/push，发 camelCase agentId）已删除：
+  // 零调用点，且实现上必然 400 / 下发汉字被固件静默丢弃，留着只会被后续代码误用。
   wakeWordDevices: () => api.get('/api/wake-word/devices'),
-  wakeWordPush: (agentId, config) => api.post('/api/wake-word/push', { agentId, ...config }),
   // ===== 记忆扩展API =====
   memoryTimelineChart: (agentId, days) => api.get(`/memory/timeline/${agentId}/chart?days=${days || 30}`),
   // ===== 推送调度 API（Python /api/push/*，Bearer auth_key 鉴权） =====

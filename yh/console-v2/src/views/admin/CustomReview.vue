@@ -11,25 +11,25 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🧩" label="待审核模型" :value="tab === 'model' ? pendingCount : '—'" note="当前筛选下" />
-      <StatCard icon="🎙" label="待审核音色" :value="tab === 'voice' ? pendingCount : '—'" note="当前筛选下" />
-      <StatCard icon="✅" label="已通过" :value="passedCount" note="当前筛选下" />
+      <StatCard icon="grid" label="待审核模型" :value="tab === 'model' ? pendingCount : '—'" note="当前筛选下" />
+      <StatCard icon="mic" label="待审核音色" :value="tab === 'voice' ? pendingCount : '—'" note="当前筛选下" />
+      <StatCard icon="check-circle" label="已通过" :value="passedCount" note="当前筛选下" />
       <StatCard icon="⛔" label="已驳回" :value="rejectedCount" note="当前筛选下" />
     </div>
 
     <!-- ① 模型 / 音色 tab -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <div class="chip" :class="{ active: tab === 'model' }" @click="pickTab('model')">🧩 模型</div>
-      <div class="chip" :class="{ active: tab === 'voice' }" @click="pickTab('voice')">🎙 音色</div>
+      <button type="button" class="chip" :class="{ active: tab === 'model' }" @click="pickTab('model')">🧩 模型</button>
+      <button type="button" class="chip" :class="{ active: tab === 'voice' }" @click="pickTab('voice')">🎙 音色</button>
     </div>
 
-    <DataTable :title="tab === 'model' ? '自定义模型审核' : '自定义音色审核'" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
+    <DataTable :title="tab === 'model' ? '自定义模型审核' : '自定义音色审核'" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <template #actions>
         <!-- ② auditStatus chip：全部 / 待审核0 / 已通过1 / 已驳回2 -->
         <div class="status-chips">
-          <div v-for="s in STATUS_FILTERS" :key="s.value" class="chip sm" :class="{ active: auditStatus === s.value }" @click="pickStatus(s.value)">
+          <button type="button" v-for="s in STATUS_FILTERS" :key="s.value" class="chip sm" :class="{ active: auditStatus === s.value }" @click="pickStatus(s.value)">
             {{ s.label }}
-          </div>
+          </button>
         </div>
         <!-- keyword 搜索 -->
         <div class="search-bar">
@@ -338,9 +338,12 @@ onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
-.chip.sm { padding: 5px 12px; font-size: 12px; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .status-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .search-bar { display: flex; gap: 8px; align-items: center; }
 .search-bar input {
@@ -360,5 +363,5 @@ onMounted(load)
 }
 .modal .form-row input:focus, .modal .form-row textarea:focus { border-color: var(--primary); }
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
-.btn-danger { background: var(--danger); color: #fff; box-shadow: 0 4px 14px rgba(240,83,77,.35); }
+/* .btn-danger 已收敛到 global.css */
 </style>

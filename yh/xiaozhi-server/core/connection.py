@@ -126,6 +126,11 @@ class ConnectionHandler:
         self.client_is_speaking = False
         self.client_listen_mode = "auto"
         self.client_aec = False  # 是否启用了服务端AEC
+        # 服务端打断灵敏度（与固件 interrupt_threshold 同语义：0~100，×20ms=人声确认窗）。
+        # 握手时从云端 device_config 恢复，管理端保存后经 wake_word_service.on_sent 热更新。
+        self.interrupt_confirm_ms = 300  # 默认 300ms ≈ 固件出厂 15 档
+        self.client_speaking_since_ms = 0.0  # tts start 下发时刻（起播保护窗计时基准）
+        self.interrupt_voice_since_ms = 0.0  # 播报期首次检出人声时刻（确认窗计时基准）
 
         # 线程任务相关
         self.loop = None  # 在 handle_connection 中获取运行中的事件循环
@@ -983,6 +988,16 @@ class ConnectionHandler:
             device_config = private_config.get("device_config")
             if isinstance(device_config, dict) and device_config:
                 self.device_config = device_config
+                # 恢复服务端打断灵敏度（与下发给设备的 interrupt_threshold 同值）：
+                # 连接每次建立都走这里，管理端保存过的值在断线重连后不回退
+                _thr = device_config.get("interrupt_threshold")
+                if isinstance(_thr, (int, float)) and not isinstance(_thr, bool):
+                    _thr = int(_thr)
+                    if 0 <= _thr <= 100:
+                        self.interrupt_confirm_ms = _thr * 20
+                        self.logger.bind(tag=TAG).info(
+                            f"服务端打断灵敏度已恢复: threshold={_thr} (confirm {_thr * 20}ms)"
+                        )
                 try:
                     await self.websocket.send(
                         json.dumps(
@@ -1859,6 +1874,10 @@ class ConnectionHandler:
 
     def clearSpeakStatus(self):
         self.client_is_speaking = False
+        # 播报结束（正常收尾或被打断）：两段计窗一并复位，
+        # 下一轮播报从起播保护窗重新开始
+        self.client_speaking_since_ms = 0.0
+        self.interrupt_voice_since_ms = 0.0
         self.logger.bind(tag=TAG).debug(f"清除服务端讲话状态")
 
     async def close(self, ws=None):

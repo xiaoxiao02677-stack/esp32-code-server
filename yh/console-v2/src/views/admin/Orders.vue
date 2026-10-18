@@ -22,19 +22,19 @@
         <div class="blob-3d">📦</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="📦" label="订单总数" :value="stats.total" note="有效订单" />
-        <StatCard icon="⏳" label="待发货" :value="stats.pending" note="待处理" />
+        <StatCard icon="package" label="订单总数" :value="stats.total" note="有效订单" />
+        <StatCard icon="clock" label="待发货" :value="stats.pending" note="待处理" />
         <StatCard icon="🚚" label="已发货" :value="stats.shipped" note="在途" />
-        <StatCard icon="✅" label="已完成" :value="stats.done" note="已签收" />
+        <StatCard icon="check-circle" label="已完成" :value="stats.done" note="已签收" />
       </div>
     </div>
 
-    <DataTable title="订单清单" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
+    <DataTable title="订单清单" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <template #actions>
         <input
           v-model="keyword"
           placeholder="搜索姓名 / 联系方式 / 商品"
-          style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none"
+          class="filter-input"
           @keyup.enter="doSearch"
         />
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="doSearch">搜索</button>

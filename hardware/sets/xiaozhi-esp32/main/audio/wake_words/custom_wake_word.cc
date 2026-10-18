@@ -128,6 +128,27 @@ bool CustomWakeWord::Initialize(AudioCodec* codec, srmodel_list_t* models_list) 
     // 供 ClearWakeWordCommands() 清空云端唤醒词后恢复默认
     default_commands_ = commands_;
 
+    // 服务器下发阈值/时长的 NVS 恢复：优先用上次云端下发的值
+    // （board.cc ApplyDeviceConfig 收到 device_config 时写入 "wake_word_cfg"），
+    // 无缓存时保持 index.json/Kconfig 默认。没有这段，重启后阈值会静默回退到
+    // 编译期默认，用户在网页上改过的灵敏度"过一夜就失效"。
+    // 恢复顺序：先 threshold 后 duration——SetDuration 重建模型时会以当前
+    // threshold_ 重设阈值，顺序不会互相覆盖。
+    // （曾用名 "wake_word_config" 16 字符超 NVS 命名空间上限 15，nvs_open 永远失败。）
+    {
+        Settings settings("wake_word_cfg", true);
+        int saved_threshold = settings.GetInt("threshold", -1);
+        if (saved_threshold >= 0 && saved_threshold <= 100) {
+            SetThreshold(saved_threshold / 100.0f);
+            ESP_LOGI(TAG, "Restored wake word threshold %d%% from NVS", saved_threshold);
+        }
+        int saved_duration = settings.GetInt("duration", -1);
+        if (saved_duration >= 500 && saved_duration <= 5000) {
+            SetDuration(saved_duration);
+            ESP_LOGI(TAG, "Restored wake word duration %dms from NVS", saved_duration);
+        }
+    }
+
     // 服务器下发唤醒词的 NVS 恢复：优先用上次云端下发的命令表（脱机也可唤醒），
     // 没有缓存时才用本地默认命令（index.json 或 Kconfig CONFIG_CUSTOM_WAKE_WORD）。
     // NVS 格式：pinyin1|pinyin2|... 与 display1|display2|...（'|' 不会出现在拼音里）
@@ -245,11 +266,15 @@ bool CustomWakeWord::UpdateCommands(const std::vector<std::string>& pinyin_texts
     {
         // 与 Feed() 互斥：命令表替换与检测循环不会交错执行
         std::lock_guard<std::mutex> lock(input_buffer_mutex_);
-        // 比对当前命令表，完全一致则跳过（避免无谓的模型重建）
+        // 比对当前命令表，完全一致则跳过（避免无谓的模型重建）。
+        // 必须同时比 command 和 text：服务端拼音化后常见"拼音不变、只改展示文案"
+        // （例如把"你好小禾"改成"你好小柚子"但拼音恰好相同），只比 command
+        // 会把这种更新静默吞掉，导致唤醒后上报的还是旧词。
         bool same = new_commands.size() == commands_.size();
         if (same) {
             for (size_t i = 0; i < new_commands.size(); ++i) {
-                if (new_commands[i].command != commands_[i].command) {
+                if (new_commands[i].command != commands_[i].command ||
+                    new_commands[i].text != commands_[i].text) {
                     same = false;
                     break;
                 }
@@ -310,11 +335,14 @@ bool CustomWakeWord::ClearWakeWordCommands() {
     {
         // 与 Feed()/UpdateCommands() 互斥：命令表替换与检测循环不会交错执行
         std::lock_guard<std::mutex> lock(input_buffer_mutex_);
-        // 已是默认表则仅清理 NVS 缓存（避免无谓的模型重建）
+        // 已是默认表则仅清理 NVS 缓存（避免无谓的模型重建）。
+        // 同 UpdateCommands：必须同时比 command 和 text，否则"拼音相同、文案不同"
+        // 的云端表会被误判成默认表，清空后展示文案错误
         bool already_default = default_commands_.size() == commands_.size();
         if (already_default) {
             for (size_t i = 0; i < default_commands_.size(); ++i) {
-                if (default_commands_[i].command != commands_[i].command) {
+                if (default_commands_[i].command != commands_[i].command ||
+                    default_commands_[i].text != commands_[i].text) {
                     already_default = false;
                     break;
                 }
@@ -353,11 +381,13 @@ bool CustomWakeWord::ClearWakeWordCommands() {
 }
 
 void CustomWakeWord::SetThreshold(float threshold) {
-    if (threshold < 0.01f || threshold > 1.0f) {
-        ESP_LOGW(TAG, "Invalid threshold value: %.2f (range 0.01-1.0)", threshold);
+    if (threshold < 0.0f || threshold > 1.0f) {
+        ESP_LOGW(TAG, "Invalid threshold value: %.2f (range 0.0-1.0)", threshold);
         return;
     }
-    threshold_ = threshold;
+    // 云端语义：0=最灵敏、100=最不灵敏（下发值 t/100）。esp-sr 可用的最低有效
+    // 阈值为 0.01，故 0 夹取到 0.01（最灵敏端点），其余值原样生效
+    threshold_ = threshold < 0.01f ? 0.01f : threshold;
     if (multinet_model_data_) {
         multinet_->set_det_threshold(multinet_model_data_, threshold_);
         ESP_LOGI(TAG, "Wake word threshold updated: %.2f", threshold);

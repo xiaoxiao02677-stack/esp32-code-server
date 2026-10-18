@@ -1,14 +1,14 @@
 <template>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-logo">⚡</div>
+      <div class="brand-logo"><YhIcon name="zap" :size="18" /></div>
       <div>
         <span class="brand-name">屿禾工坊</span>
         <span class="brand-sub">{{ role === 'admin' ? '管理端' : '体验端' }}</span>
       </div>
     </div>
     <div class="searchbox">
-      <span>🔍</span>
+      <span class="search-ic"><YhIcon name="search" :size="14" /></span>
       <input
         ref="searchInput"
         v-model="keyword"
@@ -18,7 +18,7 @@
         @keydown.enter="onEnter"
         @keydown.esc="onEsc"
       />
-      <span class="kbd">Ctrl K</span>
+      <button type="button" class="kbd kbd-btn" title="点击聚焦搜索" @click="focusSearch">Ctrl K</button>
       <div v-if="showPanel" class="search-drop">
         <button
           v-for="m in matches"
@@ -27,7 +27,7 @@
           @mousedown.prevent
           @click="go(m.path)"
         >
-          <span class="drop-ic">{{ m.icon }}</span>
+          <span class="drop-ic"><YhIcon :name="m.icon" :size="15" /></span>
           <span class="drop-label">{{ m.label }}</span>
           <span class="drop-path">{{ m.path }}</span>
         </button>
@@ -51,6 +51,7 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { clearToken, hasAdminRole, userState } from '../lib/api'
+import YhIcon from './YhIcon.vue'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
 defineEmits(['switch-role'])
@@ -59,44 +60,44 @@ const route = useRoute()
 const router = useRouter()
 const askConfirm = inject('askConfirm')
 
-// ===== A20b 快速跳转：导航映射（路径与 DockNav.vue 完全一致） =====
+// ===== A20b 快速跳转：导航映射（路径与 DockNav.vue 完全一致；图标名对应 yh-icons.js） =====
 const adminNav = [
-  { label: '概览', path: '/admin', icon: '🏠' },
-  { label: '智能体', path: '/admin/agents', icon: '🤖' },
-  { label: '聊天', path: '/admin/chat', icon: '💬' },
-  { label: '记忆', path: '/admin/memory', icon: '🧠' },
-  { label: '音色', path: '/admin/voices', icon: '🎙' },
-  { label: '模板', path: '/admin/templates', icon: '🧩' },
-  { label: '知识库', path: '/admin/knowledge', icon: '📚' },
-  { label: '模型', path: '/admin/models', icon: '🧩' },
-  { label: '设备', path: '/admin/devices', icon: '📡' },
-  { label: '参数', path: '/admin/params', icon: '⚙️' },
-  { label: '用户', path: '/admin/users', icon: '👥' },
-  { label: '角色', path: '/admin/roles', icon: '🎭' },
-  { label: '审计', path: '/admin/audit', icon: '📜' },
-  { label: '展示配置', path: '/admin/display', icon: '🖼' },
-  { label: '默认配置', path: '/admin/defaults', icon: '🎯' },
-  { label: '自定义审核', path: '/admin/custom-review', icon: '✅' },
-  { label: 'OTA', path: '/admin/ota', icon: '📦' },
-  { label: '字典', path: '/admin/dicts', icon: '📖' },
-  { label: '服务器', path: '/admin/servers', icon: '🖥' },
-  { label: 'MCP', path: '/admin/mcp', icon: '🔗' },
-  { label: '链路模拟', path: '/admin/linksim', icon: '🧪' },
-  { label: 'API调试', path: '/admin/apis', icon: '🛠' },
-  { label: '实体图谱', path: '/admin/entity-graph', icon: '🕸' },
-  { label: '时间线', path: '/admin/timeline-chart', icon: '📊' },
-  { label: '推送调度', path: '/admin/push-scheduler', icon: '📤' },
-  { label: '微信绑定', path: '/admin/wechat-openclaw', icon: '💬' },
-  { label: '微信Claw', path: '/admin/wechat-claw', icon: '📱' },
-  { label: '唤醒词', path: '/admin/wake-word', icon: '🔊' }
+  { label: '概览', path: '/admin', icon: 'home' },
+  { label: '智能体', path: '/admin/agents', icon: 'bot' },
+  { label: '聊天', path: '/admin/chat', icon: 'chat' },
+  { label: '记忆', path: '/admin/memory', icon: 'memory' },
+  { label: '音色', path: '/admin/voices', icon: 'mic' },
+  { label: '模板', path: '/admin/templates', icon: 'layout' },
+  { label: '知识库', path: '/admin/knowledge', icon: 'book' },
+  { label: '模型', path: '/admin/models', icon: 'cpu' },
+  { label: '设备', path: '/admin/devices', icon: 'device' },
+  { label: '参数', path: '/admin/params', icon: 'sliders' },
+  { label: '用户', path: '/admin/users', icon: 'users' },
+  { label: '角色', path: '/admin/roles', icon: 'badge' },
+  { label: '审计', path: '/admin/audit', icon: 'scroll' },
+  { label: '展示配置', path: '/admin/display', icon: 'eye' },
+  { label: '默认配置', path: '/admin/defaults', icon: 'target' },
+  { label: '自定义审核', path: '/admin/custom-review', icon: 'check-circle' },
+  { label: 'OTA', path: '/admin/ota', icon: 'upload' },
+  { label: '字典', path: '/admin/dicts', icon: 'book-open' },
+  { label: '服务器', path: '/admin/servers', icon: 'server' },
+  { label: 'MCP', path: '/admin/mcp', icon: 'link' },
+  { label: '链路模拟', path: '/admin/linksim', icon: 'flask' },
+  { label: 'API调试', path: '/admin/apis', icon: 'terminal' },
+  { label: '实体图谱', path: '/admin/entity-graph', icon: 'share' },
+  { label: '时间线', path: '/admin/timeline-chart', icon: 'chart' },
+  { label: '推送调度', path: '/admin/push-scheduler', icon: 'send' },
+  // 「微信绑定」页当前为开发中占位（无可用功能），不出现在搜索入口，直达路由保留
+  { label: '微信Claw', path: '/admin/wechat-claw', icon: 'phone' },
+  { label: '唤醒词', path: '/admin/wake-word', icon: 'volume' }
 ]
 const customerNav = [
-  { label: '首页', path: '/customer', icon: '🏠' },
-  { label: '我的设备', path: '/customer/devices', icon: '📡' },
-  { label: '音色', path: '/customer/voices', icon: '🎙' },
-  { label: '积分', path: '/customer/points', icon: '💎' },
-  { label: '个人中心', path: '/customer/profile', icon: '👤' },
-  { label: '我的模型', path: '/customer/my-models', icon: '🧩' }
+  { label: '首页', path: '/customer', icon: 'home' },
+  { label: '我的设备', path: '/customer/devices', icon: 'device' },
+  { label: '音色', path: '/customer/voices', icon: 'mic' },
+  { label: '积分', path: '/customer/points', icon: 'gem' },
+  { label: '个人中心', path: '/customer/profile', icon: 'user' },
+  { label: '我的模型', path: '/customer/my-models', icon: 'grid' }
 ]
 
 const searchInput = ref(null)
@@ -125,6 +126,9 @@ function onEsc() {
   keyword.value = ''
   focused.value = false
   searchInput.value?.blur()
+}
+function focusSearch() {
+  searchInput.value?.focus()
 }
 function onBlur() {
   // 延迟关闭，给下拉项的 click 留出时间
@@ -177,6 +181,9 @@ function confirmLogout() {
 
 <style scoped>
 .searchbox { position: relative; }
+.search-ic { display: inline-flex; align-items: center; }
+.kbd-btn { font-family: var(--font); cursor: pointer; }
+.kbd-btn:hover { border-color: var(--primary); color: var(--primary); }
 .logout-btn { padding: 7px 16px; font-size: 13px; }
 .logout-btn:hover { border-color: var(--danger); color: var(--danger); background: #FDEDEC; }
 .search-drop {

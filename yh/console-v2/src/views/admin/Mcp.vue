@@ -3,21 +3,21 @@
     <div class="page-head">
       <div>
         <h1>MCP <span style="color:var(--primary)">接入点</span></h1>
-        <p class="sub">迁移自 /cc/ MCP 页：接入地址 / 工具列表 / 连通测试</p>
+        <p class="sub">管理 MCP 接入地址、工具列表与连通性</p>
       </div>
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🤖" label="智能体" :value="agents.length" />
-      <StatCard icon="🔗" label="MCP 地址" :value="mcpUrl ? '已获取' : '—'" :note="mcpUrl.slice(0, 24)" />
-      <StatCard icon="🛠" label="工具数" :value="tools.length" />
-      <StatCard icon="📡" label="连通测试" :value="testResult" />
+      <StatCard icon="bot" label="智能体" :value="agents.length" />
+      <StatCard icon="link" label="MCP 地址" :value="mcpUrl ? '已获取' : '—'" :note="mcpUrl.slice(0, 24)" />
+      <StatCard icon="wrench" label="工具数" :value="tools.length" />
+      <StatCard icon="device" label="连通测试" :value="testResult" />
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      <div v-for="a in agents" :key="a.id" class="chip" :class="{ active: agentId === a.id }" @click="pick(a)">
+      <button type="button" v-for="a in agents" :key="a.id" class="chip" :class="{ active: agentId === a.id }" @click="pick(a)">
         {{ a.name }}
-      </div>
+      </button>
     </div>
 
     <div v-if="agentId" style="display:flex;gap:10px;margin-bottom:16px">
@@ -40,7 +40,7 @@
       </div>
     </div>
 
-    <DataTable title="工具列表">
+    <DataTable title="工具列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>工具</th><th>描述</th></tr></thead>
         <tbody>
@@ -50,7 +50,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="agentId && tools.length === 0" class="empty-state"><div class="empty-icon">🛠</div><strong>点击「列出工具」查看</strong></div>
+      <div v-if="agentId && tools.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="wrench" /></div><strong>点击「列出工具」查看</strong></div>
     </DataTable>
 
     <!-- ===== MCP Server 配置面板 ===== -->
@@ -95,12 +95,14 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
+const askConfirm = inject('askConfirm')
 const agents = ref([])
 const agentId = ref('')
 const mcpUrl = ref('')
@@ -205,9 +207,18 @@ async function handleSave() {
   }
 }
 
-async function handleDelete() {
+function handleDelete() {
   if (!agentId.value) { toast('请先选择一个智能体', 'error'); return }
-  if (!confirm('确认删除该智能体的 MCP Server 配置？此操作不可撤销。')) return
+  askConfirm({
+    title: '删除 MCP Server 配置',
+    message: '确认删除该智能体的 MCP Server 配置？此操作不可撤销。',
+    danger: true,
+    okText: '删除',
+    onOk: doDeleteConfig
+  })
+}
+
+async function doDeleteConfig() {
   configLoading.value = true
   try {
     await adminApi.deleteMcpConfig(agentId.value)
@@ -309,8 +320,10 @@ watch(agentId, () => { loadConfig() })
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 
 /* ===== A3 接入点地址 + 复制按钮 ===== */
 .mcp-panel { margin-bottom: 16px; padding: 16px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }

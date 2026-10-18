@@ -504,6 +504,15 @@ class WallpaperService:
             f"壁纸下发完成: version={msg['version']} sent={len(sent)} "
             f"queued={len(queued)} offline={len(offline)}"
         )
+        # ★ 清掉这批设备的历史排队记录。
+        #   以前只有 queued 的设备留在队列里，sent/offline 的旧记录没人清：设备离线时
+        #   排过旧版本 A，之后上线收到新版本 B 并应用成功，队列里的 A 仍然在，
+        #   30s 巡检会把 A 重新投下去 —— 设备发现 A≠当前版本，于是下载并应用 A，
+        #   屏幕从新图**退回旧图**。用户看到的就是"我下发了新壁纸，设备却还是旧的/
+        #   干脆没反应"。sent 表示本次已投递（新版本已经到达设备），offline 表示本机
+        #   明确送不到（由 device_config 兜底），两种情况都不该再补投旧版本。
+        for device_id in sent + offline:
+            await self._dequeue(device_id)
         return {"sent": sent, "queued": queued, "offline": offline}
 
     async def _send_to_conn(self, device_id: str, conn, payload: str) -> bool:

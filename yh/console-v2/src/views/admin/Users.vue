@@ -24,23 +24,23 @@
         <div class="blob-3d">👥</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="👥" label="用户总数" :value="total" :note="deleted === 1 ? '已删除列表' : '正常用户'" />
+        <StatCard icon="users" label="用户总数" :value="total" :note="deleted === 1 ? '已删除列表' : '正常用户'" />
         <StatCard icon="📋" label="本页" :value="users.length" note="当前页" />
         <StatCard icon="⚠️" label="异常账号" :value="abnormalCount" note="本页停用/锁定" />
-        <StatCard icon="📄" label="页码" :value="page + '/' + pages" note="page 从 1 开始" />
+        <StatCard icon="file" label="页码" :value="page + '/' + pages" note="page 从 1 开始" />
       </div>
     </div>
 
     <!-- chip 筛选：正常用户 / 已删除（回收站） -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <div class="chip" :class="{ active: deleted === 0 }" @click="pickDeleted(0)">👤 正常用户</div>
-      <div class="chip" :class="{ active: deleted === 1 }" @click="pickDeleted(1)">🗑 已删除（回收站）</div>
+      <button type="button" class="chip" :class="{ active: deleted === 0 }" @click="pickDeleted(0)">👤 正常用户</button>
+      <button type="button" class="chip" :class="{ active: deleted === 1 }" @click="pickDeleted(1)">🗑 已删除（回收站）</button>
     </div>
 
     <DataTable :title="deleted === 1 ? '已删除用户' : '用户清单'" :total="total" :pages="pages"
-               v-model:page="page" v-model:pageSize="pageSize">
+               v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <template #actions>
-        <input v-model="keyword" placeholder="搜索用户名" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none" @keyup.enter="search" />
+        <input v-model="keyword" placeholder="搜索用户名" class="filter-input" @keyup.enter="search" />
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="search">搜索</button>
       </template>
 
@@ -665,8 +665,10 @@ onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 14px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 12.5px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input, .form-row select, .form-row textarea {

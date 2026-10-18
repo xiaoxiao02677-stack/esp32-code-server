@@ -1,0 +1,190 @@
+--- a/managed_components/lvgl__lvgl/src/misc/lv_event.c
++++ b/managed_components/lvgl__lvgl/src/misc/lv_event.c
+@@ -12,6 +12,77 @@
+ #include "lv_assert.h"
+ #include "lv_types.h"
+ 
++/* ===== EVDBG event-stack probe (diagnostic build only) =====
++ * 默认关；诊断构建时把下面这行改成 #define YH_LVGL_EVDBG 1 后手动应用本补丁。
++ * 说明与判读见 patches/README-lv-event-probe.md。本补丁不修任何问题。 */
++#define YH_LVGL_EVDBG 0
++
++/* 坏指针拦截开关：
++ *   1 = 拦住（small 命中后 return），可继续观察"后续还崩不崩 / BAD PREV 出不出"；
++ *   0 = 放行，让它在原处崩，保留一份新的 panic dump。
++ * 需要重新取证时改成 0；默认 1。 */
++#define EVDBG_CONTAIN 1
++
++#if defined(YH_LVGL_EVDBG) && YH_LVGL_EVDBG && defined(ESP_PLATFORM)
++    #define EVDBG_ENABLED 1
++#else
++    #define EVDBG_ENABLED 0
++#endif
++
++#if EVDBG_ENABLED
++    #include <esp_log.h>
++    #include <freertos/FreeRTOS.h>
++    #include <freertos/task.h>
++
++    #define EVDBG_LOG(...) ESP_DRAM_LOGE("EVDBG", __VA_ARGS__)
++
++    /* 淡出来源标记由 main/display/yh_skin 以 extern "C" 定义（符号未 mangle）。
++     * weak：符号不存在时解析为 NULL，非 yh 板型不影响链接。 */
++    __attribute__((weak)) extern volatile int g_yh_fade_src;
++    #define EVDBG_SRC() ((&g_yh_fade_src) ? (int)g_yh_fade_src : -1)
++
++    /* LVGL 任务栈大小（字节）。来源：esp_lvgl_port.h:68 .task_stack = 7168。
++     * ★ 单位是字节，不要乘 sizeof(StackType_t)；若 lcd_display.cc 里改大，这里必须同步改。 */
++    #define EVDBG_LVGL_STACK_BYTES 7168
++
++    /* 各通道打印上限；超限后只打一行 SUPPRESSED 再静音，避免刷屏拖慢现场。 */
++    #define EVDBG_MAX_NONEMPTY 32
++    #define EVDBG_MAX_POP      8
++    #define EVDBG_MAX_DRIFT    8
++    #define EVDBG_MAX_CONTAIN  8
++    #define EVDBG_MAX_BADPREV  8
++
++    static int32_t evdbg_depth = 0;
++    static lv_event_t * evdbg_last_push = NULL;  /* 当前栈顶 */
++    static int evdbg_lifo_broken = 0;            /* sticky：一旦 POP MISMATCH 就再不复位 */
++    static uint32_t evdbg_n_nonempty = 0;
++    static uint32_t evdbg_n_pop = 0;
++    static uint32_t evdbg_n_drift = 0;
++    static uint32_t evdbg_n_contain = 0;
++    static uint32_t evdbg_n_badprev = 0;
++
++    #define EVDBG_EMIT(counter, limit, kind, ...)                             \
++        do {                                                                  \
++            (counter)++;                                                      \
++            if((counter) <= (uint32_t)(limit)) { EVDBG_LOG(__VA_ARGS__); }    \
++            else if((counter) == (uint32_t)(limit) + 1u) {                    \
++                EVDBG_LOG("SUPPRESSED kind=%s first_suppressed=%lu", (kind),  \
++                          (unsigned long)(counter));                          \
++            }                                                                 \
++        } while(0)
++
++    /* push/pop 埋点的顺序必须**成对**，否则抢占窗口会制造假信号：
++     *   push: depth++ 先于写 e->prev / event_head  -> 窗口内 head 是旧值，被 mark_deleted 的 if(e) 滤掉；
++     *   pop : head 回退先于 depth--                -> 窗口内 head 已回退、depth 偏大，同样被滤掉。
++     * 效果是**只可能少报、不会误报**。反过来（先 depth-- 再写 head）会出现 head!=NULL && depth==0 的假信号。 */
++    #define EVDBG_PUSH_HOOK(ev) do { evdbg_depth++; evdbg_last_push = (ev); } while(0)
++#else
++    #define EVDBG_LOG(...)
++    #define EVDBG_SRC() (-1)
++    #define EVDBG_EMIT(counter, limit, kind, ...) do { } while(0)
++    #define EVDBG_PUSH_HOOK(ev) do { (void)(ev); } while(0)
++#endif
++
+ /*********************
+  *      DEFINES
+  *********************/
+@@ -72,14 +143,35 @@
+     /*Build a simple linked list from the objects used in the events
+      *It's important to know if this object was deleted by a nested event
+      *called from this `event_cb`.*/
++    EVDBG_PUSH_HOOK(e);         /* 先计数再改 head，避免出现 head 非空而 depth==0 的假窗口 */
+     e->prev = event_head;
+     event_head = e;
+-
+ }
+ 
+ void lv_event_pop(lv_event_t * e)
+ {
++#if EVDBG_ENABLED
++    /* LIFO + 计数不变式：
++     *   head != e  -> 乱序 pop / pop 了别人的节点；
++     *   depth <= 0 -> pop 多于 push。
++     * 一旦触发，event_head 已经歪了，后续删除就可能崩在 lv_event_mark_deleted。
++     * ★ 这里**不能**再加 if(event_head != NULL) 闸门：最常见的现场恰恰是
++     *   head == NULL && e != NULL（漏 push / 多 pop），加闸门会把最该抓的一类静默掉。
++     * ★ 顺序：先写 head、后 depth--（与 push 侧配对，窗口内只会少报）。
++     *   sticky 置位后，后面 NONEMPTY 行的 lifo_broken=1 表示"LIFO 早已坏"，别再当成独立的外部写。 */
++    if(event_head != e || evdbg_depth <= 0) {
++        evdbg_lifo_broken = 1;
++        EVDBG_EMIT(evdbg_n_pop, EVDBG_MAX_POP, "POP",
++                   "POP MISMATCH head=%p e=%p depth=%ld task=%s src=%d",
++                   (void *)event_head, (void *)e, (long)evdbg_depth,
++                   pcTaskGetName(NULL), EVDBG_SRC());
++    }
++#endif
+     event_head = e->prev;
++#if EVDBG_ENABLED
++    if(evdbg_depth > 0) evdbg_depth--;
++    evdbg_last_push = event_head;   /* pop 后新的栈顶 */
++#endif
+ }
+ 
+ lv_result_t lv_event_push_and_send(lv_event_list_t * event_list, lv_event_code_t code, void * original_target,
+@@ -319,9 +411,72 @@
+ {
+     lv_event_t * e = event_head;
+ 
++#if EVDBG_ENABLED
++    /* 入口探针，四条硬约束：
++     *   1) 只读 event_head 的值，**绝不沿 e->prev 遍历**：链已损坏时每走一步都是
++     *      野指针解引用，会把崩点从本函数漂到日志里、丢掉原始 backtrace。
++     *   2) 不做 configASSERT(event_head == NULL)：在事件回调里删对象是 LVGL 合法范式。
++     *   3) 只做数值比较（指针关系比较在 C 标准下是 UB），全程不解引用。
++     *   4) small（小整数 head）命中后是否 return 由 EVDBG_CONTAIN 决定（默认 1）：
++     *      不拦就会进 while(e)，第一句 e->original_target 立刻解引用 e=0x10，同一个 crash 原样复发。
++     * 判读见 README 第 5 节；in_lvgl_stack=1 只有在 depth==0 时才等于"悬垂栈帧"。 */
++    if(e != NULL) {
++        unsigned long lo = (unsigned long)pxTaskGetStackStart(NULL);
++        unsigned long hi = lo + (unsigned long)EVDBG_LVGL_STACK_BYTES;
++        unsigned long h = (unsigned long)e;
++        int small = (h < 0x10000ul) ? 1 : 0;
++        int in_lvgl_stack = (h >= lo && h < hi) ? 1 : 0;
++        /* drift 不依赖 depth：pop 末尾已把 last_push 同步成 head，静默时刻两者必须相等。
++         * 本案正是 depth==0 && head!=NULL —— 加 depth>0 条件会把最关键的一格关掉。 */
++        int drift = (e != evdbg_last_push) ? 1 : 0;
++
++        EVDBG_EMIT(evdbg_n_nonempty, EVDBG_MAX_NONEMPTY, "NONEMPTY",
++                   "NONEMPTY #%lu head=%p target=%p depth=%ld drift=%d small=%d "
++                   "in_lvgl_stack=%d lifo_broken=%d stack=[%08lx,%08lx) hwm=%uB task=%s src=%d",
++                   (unsigned long)evdbg_n_nonempty, (void *)e, target,
++                   (long)evdbg_depth, drift, small, in_lvgl_stack, evdbg_lifo_broken, lo, hi,
++                   (unsigned)uxTaskGetStackHighWaterMark(NULL),
++                   pcTaskGetName(NULL), EVDBG_SRC());
++        if(drift) {
++            EVDBG_EMIT(evdbg_n_drift, EVDBG_MAX_DRIFT, "DRIFT",
++                       "HEAD DRIFT expected=%p actual=%p depth=%ld lifo_broken=%d",
++                       (void *)evdbg_last_push, (void *)e, (long)evdbg_depth, evdbg_lifo_broken);
++        }
++        if(small) {
++            /* 坏链拦截（开关在文件顶部 EVDBG_CONTAIN）：
++             *   1 -> 打一行即 return，让系统继续跑，后续行为还能观察；
++             *   0 -> 放行，在原处崩，保留一份新的 panic dump。 */
++            EVDBG_EMIT(evdbg_n_contain, EVDBG_MAX_CONTAIN, "CONTAIN",
++                       "CONTAINED small=%d head=%p target=%p depth=%ld task=%s src=%d",
++                       small, (void *)e, target, (long)evdbg_depth,
++                       pcTaskGetName(NULL), EVDBG_SRC());
++#if EVDBG_CONTAIN
++            return;
++#endif
++        }
++    }
++#endif
++
+     while(e) {
+         if(e->original_target == target || e->current_target == target) e->deleted = 1;
++#if EVDBG_ENABLED
++        {
++            /* 这次 e->prev 本来就要读，只拿读出的值做数值比较：不新增解引用、不额外汇遍历。
++             * owner = 持有坏 prev 的那个节点地址 —— pop 侧永远拿不到这个信息，能直接钉死谁被写坏。 */
++            lv_event_t * prev = e->prev;
++            if(prev != NULL && (unsigned long)prev < 0x10000ul) {
++                EVDBG_EMIT(evdbg_n_badprev, EVDBG_MAX_BADPREV, "BADPREV",
++                           "BAD PREV prev=%p owner=%p depth=%ld task=%s src=%d",
++                           (void *)prev, (void *)e, (long)evdbg_depth,
++                           pcTaskGetName(NULL), EVDBG_SRC());
++                break;
++            }
++            if(prev == NULL) break;
++            e = prev;
++        }
++#else
+         e = e->prev;
++#endif
+     }
+ }
+ 

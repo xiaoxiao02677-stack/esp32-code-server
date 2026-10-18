@@ -130,6 +130,13 @@ public:
     bool IsVoiceDetected() const { return voice_detected_; }
     bool IsIdle();
     bool IsPlaybackIdle();
+    // 当前这段连续播放已经持续的毫秒数；当前没有在播放时返回 -1。
+    // 用于给"人声打断"加起始保护窗：播放刚开始时 AEC 尚未收敛，残留回声
+    // 会被 VAD 误判成用户说话，必须在开头一段时间内忽略打断。
+    int32_t GetPlaybackElapsedMs();
+    // 设备侧 AEC 是否真正生效（引擎已初始化 + 已启用 + codec 提供回采通道）。
+    // 只有 AEC 生效时"边播边听"（Realtime 打断）才成立，否则必然自打断。
+    bool IsDeviceAecEffective() const;
     bool IsWakeWordRunning() const {
         return xEventGroupGetBits(event_group_) & AS_EVENT_WAKE_WORD_RUNNING;
     }
@@ -165,6 +172,8 @@ public:
     // 服务器动态调整唤醒词参数
     void SetWakeWordThreshold(float threshold);
     void SetWakeWordDuration(int duration);
+    // 服务器动态调整实时打断灵敏度（0~100，0=最灵敏）：映射 VAD 人声确认窗
+    void SetInterruptThreshold(int threshold);
 
 private:
     AudioCodec* codec_ = nullptr;
@@ -218,6 +227,9 @@ private:
     bool output_in_flight_ = false;
     bool playback_drained_notified_ = true;
     uint32_t playback_generation_ = 0;
+    // 一段连续播放的起始时刻（微秒）。由 PushPacketToDecodeQueue 在"从排空变为
+    // 有数据"时置位，由 MarkPlaybackDrainedLocked 在排空时清零。
+    int64_t playback_start_us_ = 0;
     // For server AEC
     FixedQueue<uint32_t, MAX_TIMESTAMPS_IN_QUEUE> timestamp_queue_;
 
@@ -246,6 +258,7 @@ private:
     void LogDebugStatistics();
     bool IsPlaybackDrainedLocked() const;
     bool MarkPlaybackDrainedLocked();
+    void MarkPlaybackStartedLocked();
 };
 
 #endif

@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>服务器 <span style="color:var(--primary)">节点</span></h1>
-        <p class="sub">迁移自 /cc/ 服务器节点页：WS 接入节点列表</p>
+        <p class="sub">查看 WebSocket 接入节点状态</p>
       </div>
       <div class="head-actions">
         <button
@@ -21,11 +21,11 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🖥" label="节点总数" :value="servers.length" />
-      <StatCard icon="🟢" label="启用" :value="servers.filter(s => s.enable).length" />
+      <StatCard icon="server" label="节点总数" :value="servers.length" />
+      <StatCard icon="dot" label="启用" :value="servers.filter(s => s.enable).length" />
     </div>
 
-    <DataTable title="节点列表">
+    <DataTable title="节点列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>名称</th><th>地址</th><th>状态</th><th>说明</th></tr></thead>
         <tbody>
@@ -41,12 +41,13 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="servers.length === 0" class="empty-state"><div class="empty-icon">🖥</div><strong>暂无节点</strong></div>
+      <div v-if="servers.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="server" /></div><strong>暂无节点</strong></div>
     </DataTable>
   </div>
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

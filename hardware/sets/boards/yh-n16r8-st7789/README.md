@@ -70,15 +70,23 @@
 保留：SPI 总线初始化（SPI3_HOST）、ST7789 面板初始化（spi_mode 3 / 80MHz / RGB565 / 反色）、`PowerSaveTimer`（-1 / 60s 息屏 / 300s）、`PwmBacklight` 背光、`SetPowerSaveLevel()` 覆盖。
 BOOT 键与显示皮肤已升级为圆屏版（见下节）。
 
-## 圆屏皮肤（RoundScreenDisplay）
+## 圆屏皮肤（共享层 YhSkinDisplay）
 
-显示类由 `SpiLcdDisplay` 换成 `RoundScreenDisplay`，源码全部在本目录内，随 `build.py` 同步：
+> 2026-10-17 起皮肤**不再放在本目录**：已提升为四个 `yh-*` 版型共用的
+> `main/display/yh_skin/`（`YhSkinDisplay` + `YhSkinProfile::Round240(false)`）。
+> 视觉基准仍是 A 板 `my-s3-tft` 的 `round_screen_display.*`，布局逐项对齐。
+> 本目录原来的 `round_screen_display.h/.cc` 与 `good_bg.c` 已归档到
+> `.trash/2026-10-17-yh-skin/`，背景图合并为共享符号 `yh_skin_bg`（只存一份像素）。
 
-| 文件 | 作用 |
+| 位置 | 作用 |
 | --- | --- |
-| `round_screen_display.h` | 皮肤类声明（类名与 A 板 `my-s3-tft` 一致） |
-| `round_screen_display.cc` | 圆屏布局 / 协议钩子 / 按键反馈 / 1 秒节拍 |
-| `good_bg.c` | 240×240 RGB565 背景图（`yh_round_bg_good`，为防同名冲突加了前缀） |
+| `main/display/yh_skin/yh_skin_display.cc` | 圆屏布局 / 协议钩子 / 按键反馈 / 1 秒节拍（四版型共用） |
+| `main/display/yh_skin/yh_skin_boot.cc` | 开机首帧品牌画面（呼吸点 + 版本号） |
+| `main/display/yh_skin/yh_skin_cards.cc` | 配网 / 激活码 / 升级 / 错误 四类卡片 |
+| `main/display/yh_skin/yh_skin_assets.c` | 240×240 RGB565 背景图（`yh_skin_bg`，脚本生成） |
+| 本目录 `yh_set_n16r8_st7789.cc` | 只负责硬件初始化 + `YhSkinProfile::Round240(false)` 传参 + 按键/节拍接线 |
+
+规格与踩坑详见 [`../../UI_SKIN.md`](../../UI_SKIN.md)。
 
 布局：顶部 y=10 时间、y=28 电量（无电池时隐藏）、中心 y=-15 表情、底部 y=-55 气泡（200×50 / 文字宽 180 / 圆角 16 / 粉边框）、y=-18 操作提示；背景为 `good.jpg` 全屏图 + 深紫渐变兜底。
 

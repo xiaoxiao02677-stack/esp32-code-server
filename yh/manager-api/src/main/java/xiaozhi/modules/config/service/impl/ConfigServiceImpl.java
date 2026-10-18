@@ -21,6 +21,7 @@ import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.redis.RedisKeys;
 import xiaozhi.common.redis.RedisUtils;
+import xiaozhi.common.utils.WakeWordPinyinUtils;
 import xiaozhi.common.utils.ConvertUtils;
 import xiaozhi.common.utils.JsonUtils;
 import xiaozhi.modules.agent.dao.AgentVoicePrintDao;
@@ -240,21 +241,63 @@ public class ConfigServiceImpl implements ConfigService {
                 if (configMap.get("brightness") instanceof Integer b && b >= 0 && b <= 100) {
                     sanitized.put("brightness", b);
                 }
-                // 动态待机唤醒词（固件 MultiNet 引擎消费）：字符串或字符串数组，
-                // 单串 ≤32 字符 / 数组 ≤5 项×每项 ≤32 字符，超限静默丢弃防滥用
-                Object wakeWord = configMap.get("wake_word");
-                if (wakeWord instanceof String ws && !ws.isBlank() && ws.length() <= 32) {
-                    sanitized.put("wake_word", ws.trim());
-                } else if (wakeWord instanceof List<?> wl && wl.size() > 0 && wl.size() <= 5) {
-                    List<String> words = new ArrayList<>();
-                    for (Object w : wl) {
-                        if (w instanceof String s && !s.isBlank() && s.length() <= 32) {
-                            words.add(s.trim());
+                // 动态待机唤醒词（固件 MultiNet 引擎消费）。
+                // 设备契约：wake_word = 无调拼音（固件按 ASCII 直通，任意中文词可用），
+                // wake_word_display = 展示原文（汉字），两者同下标等长。
+                // 存量兼容：老库里 wake_word 存的是汉字（固件内置字表覆盖不足，生僻字
+                // 整词丢弃），这里下发前现场转拼音；转换失败才保留原值（等于旧行为）。
+                List<String> wakeWords = asStringList(configMap.get("wake_word"),
+                        WakeWordPinyinUtils.MAX_PINYIN_LENGTH);
+                List<String> wakeDisplays = asStringList(configMap.get("wake_word_display"),
+                        WakeWordPinyinUtils.MAX_DISPLAY_LENGTH);
+                if (wakeWords != null && !wakeWords.isEmpty()) {
+                    List<String> pinyins = new ArrayList<>();
+                    List<String> displays = new ArrayList<>();
+                    for (int i = 0; i < wakeWords.size(); i++) {
+                        String word = wakeWords.get(i);
+                        if (word.isEmpty()) {
+                            continue;  // 空占位（写入口标记的非法项），成对剔除
                         }
+                        String display = wakeDisplays != null && i < wakeDisplays.size()
+                                ? wakeDisplays.get(i) : "";
+                        boolean hanzi = WakeWordPinyinUtils.containsHanzi(word);
+                        String pinyin = hanzi
+                                ? WakeWordPinyinUtils.toPinyin(word)
+                                : WakeWordPinyinUtils.normalizePinyin(word);
+                        // toPinyin 失败返回 null（绝不返回空串）。这里必须判 null：
+                        // 本方法在设备握手 getAgentConfig 路径上，NPE 会 500 导致设备连不上。
+                        if (pinyin == null || pinyin.isEmpty()) {
+                            // 无法转换（汉字与英文字母混排、表外字、出表音节）：
+                            // 保留原值下发，等同修复前行为，退化为"旧版能做的仍能做"
+                            pinyins.add(word);
+                            displays.add(display.isEmpty() ? word : display);
+                            continue;
+                        }
+                        // 转换成功但不符合固件契约（超长 / 残留非 [a-z ]）：
+                        // 成对丢弃，不截断——截断会变成另一个词，用户更难理解为何不生效
+                        if (!WakeWordPinyinUtils.isFirmwareSafe(pinyin)) {
+                            System.err.println("[Config] 唤醒词转换后不符合固件契约，已跳过: "
+                                    + word + " -> " + pinyin + " (len=" + pinyin.length() + ")");
+                            continue;
+                        }
+                        pinyins.add(pinyin);
+                        // 展示文案优先级：显式 display > 原汉字 > 拼音
+                        displays.add(display.isEmpty() ? (hanzi ? word : pinyin) : display);
                     }
-                    if (!words.isEmpty()) {
-                        sanitized.put("wake_word", words);
+                    if (!pinyins.isEmpty()) {
+                        sanitized.put("wake_word", pinyins);
+                        sanitized.put("wake_word_display", displays);
                     }
+                }
+                // 唤醒词阈值（固件 board.cc 消费，0~100，0=最灵敏、100=最不灵敏）：
+                // 越界/非整数静默丢弃防滥用；固件侧 0 夹取到 esp-sr 最低有效值 0.01
+                if (configMap.get("wake_word_threshold") instanceof Integer wt && wt >= 0 && wt <= 100) {
+                    sanitized.put("wake_word_threshold", wt);
+                }
+                // 实时打断灵敏度（固件 board.cc 消费，0~100，0=最容易打断）：
+                // 映射设备 VAD 人声确认窗 0~2000ms
+                if (configMap.get("interrupt_threshold") instanceof Integer it && it >= 0 && it <= 100) {
+                    sanitized.put("interrupt_threshold", it);
                 }
                 if (!sanitized.isEmpty()) {
                     result.put("device_config", sanitized);
@@ -513,6 +556,48 @@ public class ConfigServiceImpl implements ConfigService {
      * @param intentModelId  意图模型ID
      * @param result         结果Map
      */
+    /**
+     * 把 device_config 里的字符串/字符串数组统一成 List&lt;String&gt;。
+     * <p><b>保留位置</b>：非法项（非字符串/空串/超长）留空串占位，绝不压缩——
+     * wake_word 与 wake_word_display 按下标配对，各自 filter 会让"第 2 个词"配上
+     * "第 3 个词"的展示文案。空占位由调用方成对剔除。
+     *
+     * @param maxLen 单条长度上限（拼音与展示文本不同）
+     * @return 列表；整体非法（类型不符/超 5 项/全空）返回 null
+     */
+    private List<String> asStringList(Object value, int maxLen) {
+        if (value instanceof String s) {
+            String t = s.trim();
+            if (t.isEmpty() || t.length() > maxLen) {
+                return null;
+            }
+            List<String> single = new ArrayList<>(1);
+            single.add(t);
+            return single;
+        }
+        if (value instanceof List<?> list) {
+            if (list.isEmpty() || list.size() > WakeWordPinyinUtils.MAX_WORD_COUNT) {
+                return null;
+            }
+            List<String> words = new ArrayList<>(list.size());
+            boolean anyValid = false;
+            for (Object w : list) {
+                if (w instanceof String s) {
+                    String t = s.trim();
+                    if (!t.isEmpty() && t.length() <= maxLen) {
+                        // NVS 用 '|' 作列表分隔符，混进来会把一条命令拆成两条
+                        words.add(t.replace('|', ' '));
+                        anyValid = true;
+                        continue;
+                    }
+                }
+                words.add("");
+            }
+            return anyValid ? words : null;
+        }
+        return null;
+    }
+
     private ModelConfigEntity resolveUsableModel(ModelConfigEntity model, String modelType, String requestedId) {
         if (model == null) {
             return null;

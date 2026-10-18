@@ -2,8 +2,11 @@
   <div class="dock-wrap">
     <nav class="dock">
       <!-- 导航自适应展开：单击在 展开(自适应文字宽度 72~140px) ↔ 收起(仅图标 56px) 间切换，状态存 localStorage 'cc_dock_collapsed' -->
-      <button class="dock-toggle" :title="collapsed ? '展开导航栏' : '收起导航栏'" @click="toggleDock">
-        <span class="ic">{{ collapsed ? '☰' : '«' }}</span>
+      <button
+        class="dock-toggle" :title="collapsed ? '展开导航栏' : '收起导航栏'"
+        :aria-expanded="!collapsed" @click="toggleDock"
+      >
+        <span class="ic"><YhIcon :name="collapsed ? 'menu' : 'chevrons-left'" :size="18" /></span>
         <span class="dock-label">{{ collapsed ? '展开' : '收起' }}</span>
       </button>
       <router-link
@@ -12,11 +15,11 @@
         :class="{ active: isActive(item.to) }"
         :title="item.label"
       >
-        <span class="ic">{{ item.icon }}</span>
+        <span class="ic"><YhIcon :name="item.icon" :size="18" /></span>
         <span class="dock-label">{{ item.label }}</span>
       </router-link>
-      <a class="dock-item" href="/firmware-flash/" title="固件烧录">
-        <span class="ic">⚡</span>
+      <a class="dock-item" href="/firmware-flash/" target="_blank" rel="noopener" title="固件烧录（新窗口）">
+        <span class="ic"><YhIcon name="zap" :size="18" /></span>
         <span class="dock-label">固件烧录</span>
       </a>
       <!-- 壁纸下发：就地浮层（不新增路由/不 router.push），仅管理端且具备 admin 角色时显示 -->
@@ -25,27 +28,31 @@
         type="button" class="dock-item" :class="{ active: wallpaperOpen }" title="壁纸下发"
         @click="wallpaperOpen = true"
       >
-        <span class="ic">🎨</span>
+        <span class="ic"><YhIcon name="image" :size="18" /></span>
         <span class="dock-label">壁纸下发</span>
       </button>
       <div class="dock-foot">
         <div class="theme-row">
           <button
             v-for="t in THEMES" :key="t.id"
+            type="button"
             class="theme-swatch" :class="{ 'is-active': currentTheme === t.id }"
-            :title="t.name" :style="{ background: t.dot }"
+            :title="t.name" :aria-label="`切换主题：${t.name}`" :style="{ background: t.dot }"
             @click="setTheme(t.id)"
           ></button>
         </div>
         <button
-          class="compact-btn" :title="compact ? '切换宽松' : '切换紧凑'"
+          type="button"
+          class="compact-btn" :title="compact ? '切换宽松' : '切换紧凑'" :aria-label="compact ? '切换宽松布局' : '切换紧凑布局'"
           :class="{ on: compact }" @click="toggleCompact"
-        >⚅</button>
+        ><YhIcon name="rows-compact" :size="14" /></button>
         <button
           v-if="role === 'admin' || canSwitchToAdmin"
-          class="dock-more" :title="role === 'admin' ? '切换到顾客端' : '切换到管理端'" @click="toggle"
+          type="button"
+          class="dock-more" :title="role === 'admin' ? '切换到顾客端' : '切换到管理端'"
+          :aria-label="role === 'admin' ? '切换到顾客端' : '切换到管理端'" @click="toggle"
         >
-          {{ role === 'admin' ? '⇄' : '→' }}
+          <YhIcon :name="role === 'admin' ? 'swap' : 'arrow-right'" :size="16" />
         </button>
       </div>
     </nav>
@@ -59,6 +66,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasAdminRole, userState } from '../lib/api'
 import WallpaperDispatch from './WallpaperDispatch.vue'
+import YhIcon from './YhIcon.vue'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
 const emit = defineEmits(['toggle-compact'])
@@ -114,39 +122,39 @@ function restore() {
 onMounted(restore)
 
 const customerItems = [
-  { to: '/customer', icon: '🏠', label: '首页' },
-  { to: '/customer/devices', icon: '📡', label: '我的设备' },
-  { to: '/customer/voices', icon: '🎙', label: '音色' },
-  { to: '/customer/points', icon: '💎', label: '积分' },
-  { to: '/customer/profile', icon: '👤', label: '个人中心' },
-  { to: '/customer/my-models', icon: '🧩', label: '我的模型' }
+  { to: '/customer', icon: 'home', label: '首页' },
+  { to: '/customer/devices', icon: 'device', label: '我的设备' },
+  { to: '/customer/voices', icon: 'mic', label: '音色' },
+  { to: '/customer/points', icon: 'gem', label: '积分' },
+  { to: '/customer/profile', icon: 'user', label: '个人中心' },
+  { to: '/customer/my-models', icon: 'grid', label: '我的模型' }
 ]
 const adminItems = [
-  { to: '/admin', icon: '🏠', label: '概览' },
-  { to: '/admin/orders', icon: '📦', label: '订单管理' },
-  { to: '/admin/agents', icon: '🤖', label: '智能体' },
-  { to: '/admin/chat', icon: '💬', label: '聊天' },
-  { to: '/admin/memory', icon: '🧠', label: '记忆' },
-  { to: '/admin/voices', icon: '🎙', label: '音色' },
-  { to: '/admin/templates', icon: '🧩', label: '模板' },
-  { to: '/admin/knowledge', icon: '📚', label: '知识库' },
-  { to: '/admin/models', icon: '🧩', label: '模型' },
-  { to: '/admin/devices', icon: '📡', label: '设备' },
-  { to: '/admin/params', icon: '⚙️', label: '参数' },
-  { to: '/admin/users', icon: '👥', label: '用户' },
-  { to: '/admin/roles', icon: '🎭', label: '角色' },
-  { to: '/admin/audit', icon: '📜', label: '审计' },
-  { to: '/admin/display', icon: '🖼', label: '展示配置' },
-  { to: '/admin/defaults', icon: '🎯', label: '默认配置' },
-  { to: '/admin/custom-review', icon: '✅', label: '自定义审核' },
-  { to: '/admin/ota', icon: '📦', label: 'OTA' },
-  { to: '/admin/dicts', icon: '📖', label: '字典' },
-  { to: '/admin/servers', icon: '🖥', label: '服务器' },
-  { to: '/admin/mcp', icon: '🔗', label: 'MCP' },
-  { to: '/admin/linksim', icon: '🧪', label: '链路模拟' },
-  { to: '/admin/wake-word', icon: '🔊', label: '唤醒词' },
-  { to: '/admin/push-scheduler', icon: '📮', label: '推送调度' },
-  { to: '/admin/apis', icon: '🛠', label: 'API调试' }
+  { to: '/admin', icon: 'home', label: '概览' },
+  { to: '/admin/orders', icon: 'package', label: '订单管理' },
+  { to: '/admin/agents', icon: 'bot', label: '智能体' },
+  { to: '/admin/chat', icon: 'chat', label: '聊天' },
+  { to: '/admin/memory', icon: 'memory', label: '记忆' },
+  { to: '/admin/voices', icon: 'mic', label: '音色' },
+  { to: '/admin/templates', icon: 'layout', label: '模板' },
+  { to: '/admin/knowledge', icon: 'book', label: '知识库' },
+  { to: '/admin/models', icon: 'cpu', label: '模型' },
+  { to: '/admin/devices', icon: 'device', label: '设备' },
+  { to: '/admin/params', icon: 'sliders', label: '参数' },
+  { to: '/admin/users', icon: 'users', label: '用户' },
+  { to: '/admin/roles', icon: 'badge', label: '角色' },
+  { to: '/admin/audit', icon: 'scroll', label: '审计' },
+  { to: '/admin/display', icon: 'eye', label: '展示配置' },
+  { to: '/admin/defaults', icon: 'target', label: '默认配置' },
+  { to: '/admin/custom-review', icon: 'check-circle', label: '自定义审核' },
+  { to: '/admin/ota', icon: 'upload', label: 'OTA' },
+  { to: '/admin/dicts', icon: 'book-open', label: '字典' },
+  { to: '/admin/servers', icon: 'server', label: '服务器' },
+  { to: '/admin/mcp', icon: 'link', label: 'MCP' },
+  { to: '/admin/linksim', icon: 'flask', label: '链路模拟' },
+  { to: '/admin/wake-word', icon: 'volume', label: '唤醒词' },
+  { to: '/admin/push-scheduler', icon: 'send', label: '推送调度' },
+  { to: '/admin/apis', icon: 'terminal', label: 'API调试' }
 ]
 const items = computed(() => (props.role === 'admin' ? adminItems : customerItems))
 
@@ -195,7 +203,7 @@ function toggle() {
 }
 .theme-row { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; max-width: 72px; }
 .theme-swatch {
-  width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent;
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent;
   cursor: pointer; padding: 0; transition: transform .15s, border-color .15s;
 }
 .theme-swatch:hover { transform: scale(1.2); }

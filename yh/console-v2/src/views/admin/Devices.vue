@@ -12,18 +12,18 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="📡" label="设备总数" :value="total" />
-      <StatCard icon="🟢" label="在线" :value="devices.filter(d => d.online).length" />
-      <StatCard icon="🔗" label="已绑定智能体" :value="devices.filter(d => d.agentId).length" />
+      <StatCard icon="device" label="设备总数" :value="total" />
+      <StatCard icon="dot" label="在线" :value="devices.filter(d => d.online).length" />
+      <StatCard icon="link" label="已绑定智能体" :value="devices.filter(d => d.agentId).length" />
     </div>
 
-    <DataTable title="设备列表" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
+    <DataTable title="设备列表" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <table class="data-table">
         <thead><tr><th>设备</th><th>MAC / IP</th><th>智能体</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="d in devices" :key="d.id">
             <td><div class="cell-main">{{ d.name }}</div><div class="cell-sub">{{ d.lastSeen || d.updateDate || '' }}</div></td>
-            <td style="font-size:12px">{{ d.mac || '—' }}<br />{{ d.ip || '' }}</td>
+            <td style="font-size:12px">{{ d.mac || '—' }}<template v-if="d.ip"><br />{{ d.ip }}</template></td>
             <td>{{ d.agentName || d.agentId || '—' }}</td>
             <td>
               <span class="badge" :class="d.online ? 'badge-green' : 'badge-gray'">
@@ -40,7 +40,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="devices.length === 0" class="empty-state"><div class="empty-icon">📡</div><strong>暂无设备</strong></div>
+      <div v-if="devices.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="device" /></div><strong>暂无设备</strong></div>
     </DataTable>
 
     <!-- 改名弹窗 -->
@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
