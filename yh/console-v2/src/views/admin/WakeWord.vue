@@ -85,6 +85,22 @@
              0~100，真正下发到固件并持久 NVS）。 -->
         <div class="config-row" v-if="false"></div>
 
+        <!-- 实时打断阈值：与「智能体」编辑页同一入口（updateAgent →
+             applyDeviceConfigToDevices 落 ai_device_config + 推 Python 热更新
+             conn.interrupt_confirm_ms + WS 下发固件人声确认窗）。在此直接暴露，
+             免得用户在智能体页找不到。 -->
+        <div class="form-row">
+          <label>实时打断阈值（0~100，拉选调节）</label>
+          <div class="slider-row">
+            <input v-model.number="editor.interruptThreshold" type="range" min="0" max="100" step="1"
+                   class="slider" :style="{ '--pct': editor.interruptThreshold + '%' }" />
+            <span class="slider-value">{{ editor.interruptThreshold }}</span>
+          </div>
+          <p class="field-hint">
+            播放时用户说话打断的灵敏度：0 最灵敏（立即打断）· 100 最难打断（连续 2 秒人声才打断）· 默认 15 ≈ 300ms。调大可缓解"设备自言自语/误打断"。保存后立即下发绑定设备热生效。
+          </p>
+        </div>
+
         <!-- 下发范围：恒为该智能体绑定的全部在线设备。
              原「设备列表 + 勾选」整块删除，因为它是双重失效：
                ① 数据源 /api/wake-word/devices 返回的是 deviceId 字符串数组，
@@ -138,6 +154,7 @@ const editor = reactive({
   agentName: '',
   rawInput: '',
   preview: [],
+  interruptThreshold: 15,   // 实时打断阈值（0~100）：openEdit 时从 agentDetail 回显
   error: ''
 })
 
@@ -191,8 +208,16 @@ function openEdit(agent) {
     agentName: agent.name,
     rawInput: (agent.wakeWords || []).join('\n'),
     preview: agent.wakeWords || [],
+    interruptThreshold: 15,
     error: ''
   })
+  // 阈值回显：列表接口（/agent/list）不带 interruptThreshold，详情接口才有
+  // （getAgentById → readDeviceConfigInt("interrupt_threshold")，无绑定设备为 null = 固件默认 15）
+  adminApi.agentDetail(agent.id).then(res => {
+    if (editor.show && editor.agentId === agent.id) {
+      editor.interruptThreshold = res?.data?.interruptThreshold ?? 15
+    }
+  }).catch(() => {})
 }
 
 async function save() {
@@ -214,6 +239,11 @@ async function save() {
       return
     }
     await adminApi.setAgentWakeWords(editor.agentId, words)
+    // 实时打断阈值与唤醒词一起保存（updateAgent → 落库 + 推设备热生效）。
+    // setAgentWakeWords 走专用唤醒词链路不含阈值键，单独 PUT /agent/{id}。
+    if (Number.isInteger(editor.interruptThreshold) && editor.interruptThreshold >= 0 && editor.interruptThreshold <= 100) {
+      await adminApi.updateAgent(editor.agentId, { interruptThreshold: editor.interruptThreshold })
+    }
     // 长文案给足阅读时间；说明生效条件：在线设备实时、离线设备下次连接
     const overLimit = words.length > 5
     toast(overLimit
@@ -251,6 +281,10 @@ async function pushToDevice(agent) {
     //   ② deviceIds / threshold / duration 三个键 Python handler 根本不读，
     //      所以"选设备下发"从来就是空操作（device_id 为 None 反而是全部设备）。
     await adminApi.setAgentWakeWords(agent.id, words)
+    // 打断阈值同样随「保存并下发」生效（与 save() 一致的双链路）
+    if (Number.isInteger(editor.interruptThreshold) && editor.interruptThreshold >= 0 && editor.interruptThreshold <= 100) {
+      await adminApi.updateAgent(agent.id, { interruptThreshold: editor.interruptThreshold })
+    }
     toast('已保存并下发至该智能体的全部在线设备', 'success', 3000)
     editor.show = false
     load()
@@ -409,4 +443,27 @@ async function pushToDevice(agent) {
 }
 .btn-success:hover:not(:disabled) { opacity: 0.88; }
 .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 实时打断阈值进度条（与 Agents.vue 同款）：--pct 由 v-bind 传入渐变填充宽度 */
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider {
+  -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 999px;
+  background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--pct, 15%),
+              #E6EAF2 var(--pct, 15%), #E6EAF2 100%);
+  outline: none; cursor: pointer; padding: 0; border: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  cursor: grab;
+}
+.slider::-webkit-slider-thumb:active { cursor: grabbing; }
+.slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  border: 2.5px solid var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.18); cursor: grab;
+}
+.slider-value {
+  flex: 0 0 44px; text-align: center; font-size: 13px; font-weight: 700;
+  color: var(--primary); background: #fff; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 4px 0; font-variant-numeric: tabular-nums;
+}
 </style>

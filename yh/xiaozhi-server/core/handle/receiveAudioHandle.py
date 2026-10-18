@@ -9,6 +9,7 @@ from core.utils.util import audio_to_data
 from core.handle.abortHandle import handleAbortMessage
 from core.handle.intentHandler import handle_user_intent
 from core.utils.output_counter import check_device_output_limit
+from core.utils.echo_guard import check_echo
 from core.handle.sendAudioHandle import send_stt_message, SentenceType
 
 TAG = __name__
@@ -95,6 +96,11 @@ async def resume_vad_detection(conn: "ConnectionHandler"):
 
 
 async def startToChat(conn: "ConnectionHandler", text):
+    # 回声防护：非 AEC 设备播报期的回声会被 ASR 转成"用户说话"回传（自言自语
+    # 循环的根因）。与最近播报句相似即丢弃，不进对话流。
+    if check_echo(conn, text):
+        return
+
     # 检查输入是否是JSON格式（包含说话人信息）
     speaker_name = None
     actual_text = text

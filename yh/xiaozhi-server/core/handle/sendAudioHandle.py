@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 from core.utils import textUtils
 from core.utils.util import audio_to_data
 from core.utils.glyph_push import attach_glyph_push
+from core.utils.echo_guard import register_spoken_sentence
 from core.providers.tts.dto.dto import SentenceType
 from core.utils.audioRateController import AudioRateController
 
@@ -291,6 +292,10 @@ async def send_tts_message(conn: "ConnectionHandler", state, text=None):
         message["text"] = textUtils.check_emoji(text)
         # 设备声明了 glyph_push 能力时，把设备缺字字形挂到本条消息上
         attach_glyph_push(conn, message, message["text"])
+        # 回声防护登记：本句即将播报给设备，进 ASR 比对窗口
+        # （非 AEC 设备的回声会被自己的麦克风拾取并回传成"用户说话"）
+        if state == "sentence_start":
+            register_spoken_sentence(conn, message["text"])
 
     # TTS播放结束
     if state == "stop":
