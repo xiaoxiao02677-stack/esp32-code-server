@@ -169,6 +169,52 @@ def test_asr_cover_channel():
     print("  OK 拦截覆盖率通道回声")
 
 
+def test_pinyin_homophone_truncation():
+    """拼音通道（截断+同音字）：17:51:41 打断探测漏网实录——
+    ASR"被你这么夸玲玲心里还美滋"vs 播报"…琳琳…美滋滋的"，
+    字符 ratio=0.77 漏网，拼音归一后 0.94 过线。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "被你这么夸，琳琳心里还美滋滋的。")
+    echo = "被你这么夸玲玲心里还美滋"
+    assert check_echo(conn, echo), "拼音通道未拦截同音字+截断回声"
+    print("  OK 拦截拼音同音截断回声")
+
+
+def test_pinyin_cross_sentence_boundary():
+    """跨句拼音子串通道：18:03:30 漏网实录——播报"老人摇摇头，说 /
+    我补的每一张网…"回传"摇摇头说我不"（横跨句边界 + 补→不同音），
+    与任何单句 0.67/0.11、拼接整体 0.49 全漏；拼音是相邻两句拼接
+    拼音串的连续子串（跨边界），必拦。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "有个老人住在海边，天天替人修渔网，补了一辈子。")
+    register_spoken_sentence(conn, "有天有人问他，您这一辈子没出过海，不觉得亏吗？")
+    register_spoken_sentence(conn, "老人摇摇头，说")
+    register_spoken_sentence(conn, "我补的每一张网，都替我出了海")
+    echo = "摇摇头说我不"
+    assert check_echo(conn, echo), "跨句拼音通道未拦截句边界回声"
+    print("  OK 拦截跨句边界回声")
+
+
+def test_pinyin_short_confirmation_not_killed():
+    """拼音通道不误杀确认式短应答："今天天气怎么样"拼音层 0.95，
+    若拼音通道对短句开放会误杀——v3 设计为仅 ≥8 字长句开放拼音放宽。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "今天天气怎么样呀")
+    assert not check_echo(conn, "今天天气怎么样"), "拼音通道误杀短应答"
+    print("  OK 放行短应答（拼音层不对短句开放）")
+
+
+def test_cross_boundary_human_speech_passes():
+    """跨句通道零误杀验证：真人常见插话都不是相邻句拼接拼音的
+    连续子串（对照矩阵实测全放行）。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "老人摇摇头，说")
+    register_spoken_sentence(conn, "我补的每一张网，都替我出了海")
+    for human in ["别讲了", "停一下", "后来呢", "老人后来怎么样了", "我喜欢这个故事"]:
+        assert not check_echo(conn, human), f"跨句通道误杀真人插话: {human!r}"
+    print("  OK 放行真人插话（跨句通道）")
+
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         print(f"== {name}")
