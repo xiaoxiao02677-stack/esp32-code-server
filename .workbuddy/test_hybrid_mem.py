@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 
-sys.path.insert(0, "/root/xiaozhi-server/main/xiaozhi-server")
+sys.path.insert(0, "/root/xiaozhi-server/main/yuhe-server")
 
 # 从 DB 拿真实 LLM_DeepSeek 配置（含真 key）
 llm_row = subprocess.run(

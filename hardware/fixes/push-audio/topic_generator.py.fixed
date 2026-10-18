@@ -211,7 +211,7 @@ class TopicGenerator:
         return None
 
     async def _normalize_agent(self, agent_id: str) -> str:
-        """规范化 agent 标识：MAC（含 xiaozhi- 前缀格式）→ agent UUID。
+        """规范化 agent 标识：MAC（含 yuhe- 前缀格式）→ agent UUID。
 
         push_scheduler 传来的可能是 agent UUID 或设备 MAC（反查失败时的
         兜底值）。manager-api /config/agent-models 接受 macAddress，
@@ -221,7 +221,7 @@ class TopicGenerator:
             return agent_id
         # 已经是 UUID 形态（32hex 或带连字符），直接返回
         aid = agent_id.replace(":", "").replace("-", "")
-        if aid.startswith("xiaozhi"):
+        if aid.startswith("yuhe"):
             aid = aid[7:]
         if len(aid) == 32 and all(c in "0123456789abcdef" for c in aid):
             return agent_id if "-" in agent_id else agent_id
@@ -237,7 +237,7 @@ class TopicGenerator:
     @staticmethod
     def _mac_from_plain(plain: str) -> Optional[str]:
         """无分隔符 hex（12 位）转 MAC 冒号格式。"""
-        p = plain.replace("xiaozhi", "")
+        p = plain.replace("yuhe", "")
         if len(p) == 12 and all(c in "0123456789abcdef" for c in p):
             return ":".join(p[i:i + 2] for i in range(0, 12, 2))
         return None

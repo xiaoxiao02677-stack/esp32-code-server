@@ -26,11 +26,11 @@ mkdir -p /root/backup/2026-10-07
 md5sum /opt/xiaozhi/xiaozhi-esp32-api.jar | tee /root/backup/2026-10-07/jar-md5-before.txt
 ls -la /opt/xiaozhi/xiaozhi-esp32-api.jar
 # git rev（源码仓）
-(cd /root/xiaozhi-server/main/xiaozhi-server && git rev-parse HEAD 2>/dev/null; git status --short | wc -l)
+(cd /root/xiaozhi-server/main/yuhe-server && git rev-parse HEAD 2>/dev/null; git status --short | wc -l)
 # Liquibase 现状（部署前应无 202610060030 / 202610070010 两行）
 mysql -uroot -p123456 -N -e "select id from xiaozhi_esp32_server.DATABASECHANGELOG where id in ('202610060030','202610070010');"   # 预期 0 行
 # 三服务基线
-systemctl is-active xiaozhi-server xiaozhi-manager-api && curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/
+systemctl is-active yuhe-server xiaozhi-manager-api && curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/
 ```
 
 ### 0.2 全量备份（幂等，可重跑）
@@ -38,7 +38,7 @@ systemctl is-active xiaozhi-server xiaozhi-manager-api && curl -s -o /dev/null -
 ```bash
 cp -a /opt/xiaozhi/xiaozhi-esp32-api.jar /root/backup/2026-10-07/
 rsync -a --exclude=.venv/ --exclude=data/ --exclude=__pycache__/ --exclude=*.log \
-  /root/xiaozhi-server/main/xiaozhi-server/ /root/backup/2026-10-07/xiaozhi-server-src/
+  /root/xiaozhi-server/main/yuhe-server/ /root/backup/2026-10-07/yuhe-server-src/
 rsync -a /var/www/xiaozhi-manager/ /root/backup/2026-10-07/xiaozhi-manager-web/
 mysqldump -uroot -p123456 --single-transaction --routines --triggers \
   xiaozhi_esp32_server | gzip > /root/backup/2026-10-07/xiaozhi_esp32_server.sql.gz
@@ -109,7 +109,7 @@ ls -la /root/xiaozhi-server/main/manager-api/target/xiaozhi-esp32-api.jar   # �
 
 ```bash
 # 本地
-cd "G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server" && tar czf /tmp/kawaii-python.tar.gz .
+cd "G:/demo/21_xiaozhi/code-server-mirror/yuhe-server" && tar czf /tmp/kawaii-python.tar.gz .
 python "G:/demo/21_xiaozhi/code/.workbuddy/sftp_push.py" /tmp/kawaii-python.tar.gz /tmp/kawaii-python.tar.gz
 
 # 服务器（经 ssh_run.py，注意 MSYS_NO_PATHCONV=1；本条含括号/斜杠 → base64 传入）
@@ -118,24 +118,24 @@ rsync -rltgoD --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log --exclude=.workbuddy/ --exclude=tmp/ \
   --exclude=models/ --exclude=music/ --exclude=tts_notify.mp3 \
-  /tmp/kawaii-python/ /root/xiaozhi-server/main/xiaozhi-server/
+  /tmp/kawaii-python/ /root/xiaozhi-server/main/yuhe-server/
 rm -rf /tmp/kawaii-python /tmp/kawaii-python.tar.gz
 ```
 
 **验收（同步后、重启前）**：
 ```bash
-ls /root/xiaozhi-server/main/xiaozhi-server/core/providers/tools/device_config_sync.py
-grep -c "report_device_config" /root/xiaozhi-server/main/xiaozhi-server/config/manage_api_client.py   # >= 1
-grep -c "device_config" /root/xiaozhi-server/main/xiaozhi-server/core/connection.py                  # >= 1
+ls /root/xiaozhi-server/main/yuhe-server/core/providers/tools/device_config_sync.py
+grep -c "report_device_config" /root/xiaozhi-server/main/yuhe-server/config/manage_api_client.py   # >= 1
+grep -c "device_config" /root/xiaozhi-server/main/yuhe-server/core/connection.py                  # >= 1
 # 逐项 md5 对照（本地打同一套文件的 md5，比对本行 4 文件）
-/root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python -m py_compile \
-  /root/xiaozhi-server/main/xiaozhi-server/core/providers/tools/device_config_sync.py \
-  /root/xiaozhi-server/main/xiaozhi-server/core/providers/tools/device_mcp/mcp_executor.py \
-  /root/xiaozhi-server/main/xiaozhi-server/config/manage_api_client.py \
-  /root/xiaozhi-server/main/xiaozhi-server/core/connection.py && echo PY_COMPILE_OK
+/root/xiaozhi-server/main/yuhe-server/.venv/bin/python -m py_compile \
+  /root/xiaozhi-server/main/yuhe-server/core/providers/tools/device_config_sync.py \
+  /root/xiaozhi-server/main/yuhe-server/core/providers/tools/device_mcp/mcp_executor.py \
+  /root/xiaozhi-server/main/yuhe-server/config/manage_api_client.py \
+  /root/xiaozhi-server/main/yuhe-server/core/connection.py && echo PY_COMPILE_OK
 # 排除项存活自检（防误删）
-du -sh /root/xiaozhi-server/main/xiaozhi-server/models/ /root/xiaozhi-server/main/xiaozhi-server/music/ 2>/dev/null
-ls /root/xiaozhi-server/main/xiaozhi-server/tts_notify.mp3 /root/xiaozhi-server/main/xiaozhi-server/config.yaml
+du -sh /root/xiaozhi-server/main/yuhe-server/models/ /root/xiaozhi-server/main/yuhe-server/music/ 2>/dev/null
+ls /root/xiaozhi-server/main/yuhe-server/tts_notify.mp3 /root/xiaozhi-server/main/yuhe-server/config.yaml
 ```
 
 **FAIL 判据（停）**：py_compile 失败 / 4 文件 md5 与本地不一致 / 排除项（models、music、tts_notify.mp3、config.yaml）缺失 → 立即执行阶段 2-Py 回滚（下方），并查 rsync 输出。
@@ -145,7 +145,7 @@ ls /root/xiaozhi-server/main/xiaozhi-server/tts_notify.mp3 /root/xiaozhi-server/
 rsync -a --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log --exclude=models/ --exclude=music/ --exclude=tts_notify.mp3 \
-  /root/backup/2026-10-07/xiaozhi-server-src/ /root/xiaozhi-server/main/xiaozhi-server/
+  /root/backup/2026-10-07/yuhe-server-src/ /root/xiaozhi-server/main/yuhe-server/
 ```
 
 ### 2.2 Vue 前端 dist → /var/www/xiaozhi-manager（nginx 静态，零重启）
@@ -190,8 +190,8 @@ mysql -uroot -p123456 -N -e "select id from xiaozhi_esp32_server.DATABASECHANGEL
 mysql -uroot -p123456 -N -e "select count(*) from xiaozhi_esp32_server.ai_device_config;"   # =0（空表正常）
 tail -30 /opt/xiaozhi/logs/manager-api.log                   # 无 ERROR/exception/Liquibase 报错
 # 健康面
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/xiaozhi/actuator/health 2>/dev/null || \
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/xiaozhi/login   # 200（业务码模式）
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/yuhe/actuator/health 2>/dev/null || \
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/yuhe/login   # 200（业务码模式）
 ```
 
 **验收**：is-active=active；DATABASECHANGELOG 两行齐全；ai_device_config 表可查；日志无异常。
@@ -207,14 +207,14 @@ systemctl restart xiaozhi-manager-api
 sleep 15 && systemctl is-active xiaozhi-manager-api
 ```
 
-### 3.2 Python（systemd xiaozhi-server）
+### 3.2 Python（systemd yuhe-server）
 
 ```bash
-systemctl restart xiaozhi-server
-sleep 5 && systemctl is-active xiaozhi-server                  # 预期 active
+systemctl restart yuhe-server
+sleep 5 && systemctl is-active yuhe-server                  # 预期 active
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/                        # 200/404（端口活着）
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8003/api/memory/agents       # 401（旧契约仍在，防回归）
-tail -30 /root/xiaozhi-server/main/xiaozhi-server/data/app.log                       # 无 traceback
+tail -30 /root/xiaozhi-server/main/yuhe-server/data/app.log                       # 无 traceback
 ```
 
 **FAIL 判据（停）**：非 active / 日志 traceback / 既有 API 契约（8003 401）异常 → 执行阶段 3.2 回滚（与 2-Py 回滚同命令）+ 视情况保留 3.1（Java 新 jar 与 Python 回滚兼容：Java 下发 device_config 白名单纵深，Python 旧代码收不到上报，无害）。
@@ -224,8 +224,8 @@ tail -30 /root/xiaozhi-server/main/xiaozhi-server/data/app.log                  
 rsync -a --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log --exclude=models/ --exclude=music/ --exclude=tts_notify.mp3 \
-  /root/backup/2026-10-07/xiaozhi-server-src/ /root/xiaozhi-server/main/xiaozhi-server/
-systemctl restart xiaozhi-server && sleep 5 && systemctl is-active xiaozhi-server
+  /root/backup/2026-10-07/yuhe-server-src/ /root/xiaozhi-server/main/yuhe-server/
+systemctl restart yuhe-server && sleep 5 && systemctl is-active yuhe-server
 ```
 
 ---
@@ -236,7 +236,7 @@ systemctl restart xiaozhi-server && sleep 5 && systemctl is-active xiaozhi-serve
 
 1. **移交前自检**（阶段 3 全绿后才移交）：
 ```bash
-systemctl is-active xiaozhi-server xiaozhi-manager-api     # 双 active
+systemctl is-active yuhe-server xiaozhi-manager-api     # 双 active
 curl -sI http://127.0.0.1:8001/ | head -3                  # 200 + 新 index.html
 mysql -uroot -p123456 -N -e "select id from xiaozhi_esp32_server.DATABASECHANGELOG where id in ('202610060030','202610070010');"   # 两行
 ```
@@ -246,7 +246,7 @@ mysql -uroot -p123456 -N -e "select id from xiaozhi_esp32_server.DATABASECHANGEL
 
 ### S-REF · secret 轮换「引用」步骤（本任务不执行，仅登记）
 
-全部冒烟 PASS 后，team-lead 另行下令时才执行：**引用 `G:/demo/21_xiaozhi/code/.workbuddy/secret-rotation/rotate-secret.sh`（任务 #13，e-secret-ops 负责）**，完成 `server.secret` 两端轮换 + 清除 `xiaozhi-server/data/.config.yaml` 版本历史 + .gitignore 模板化。本清单中**不包含其执行命令**；执行与验证由 e-secret-ops 回报，e-deploy 在 runlog 追加一行「S-REF 完成时间 + 执行人」。
+全部冒烟 PASS 后，team-lead 另行下令时才执行：**引用 `G:/demo/21_xiaozhi/code/.workbuddy/secret-rotation/rotate-secret.sh`（任务 #13，e-secret-ops 负责）**，完成 `server.secret` 两端轮换 + 清除 `yuhe-server/data/.config.yaml` 版本历史 + .gitignore 模板化。本清单中**不包含其执行命令**；执行与验证由 e-secret-ops 回报，e-deploy 在 runlog 追加一行「S-REF 完成时间 + 执行人」。
 
 ---
 

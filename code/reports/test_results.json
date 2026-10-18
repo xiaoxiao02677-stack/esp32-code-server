@@ -521,7 +521,7 @@
           {
             "id": "106",
             "paramCode": "server.websocket",
-            "paramValue": "ws://sandyun.top:8001/xiaozhi/v1/",
+            "paramValue": "ws://sandyun.top:8001/yuhe/v1/",
             "valueType": "string",
             "remark": "websocket地址，多个用;分隔",
             "createDate": null,
@@ -530,7 +530,7 @@
           {
             "id": "107",
             "paramCode": "server.ota",
-            "paramValue": "http://sandyun.top:8002/xiaozhi/ota/",
+            "paramValue": "http://sandyun.top:8002/yuhe/ota/",
             "valueType": "string",
             "remark": "ota地址",
             "createDate": null,
@@ -539,7 +539,7 @@
           {
             "id": "108",
             "paramCode": "server.name",
-            "paramValue": "xiaozhi-esp32-server",
+            "paramValue": "yuhe-esp32-server",
             "valueType": "string",
             "remark": "系统名称",
             "createDate": null,

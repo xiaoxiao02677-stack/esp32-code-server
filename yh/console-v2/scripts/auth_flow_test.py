@@ -8,7 +8,7 @@ import urllib.request
 import ssl
 import uuid as uuidlib
 
-BASE = "https://sandyun.top:8001/xiaozhi"
+BASE = "https://sandyun.top:8001/yuhe"
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE

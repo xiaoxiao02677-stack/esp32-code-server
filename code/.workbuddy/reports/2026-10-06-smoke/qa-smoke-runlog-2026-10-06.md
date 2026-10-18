@@ -15,7 +15,7 @@
 | A5 | chunk 无 404 | ✅ | dist-new 230/230 文件全 200；线上 index.html md5=`9c4b286e2d82f7f399732c7391473463` = 部署基线 |
 | A6 | service-worker | ✅（附发现 F1） | service-worker.js HTTP 200；F1：站点纯 HTTP 非安全上下文，`navigator.serviceWorker` 为 undefined，**SW 无法注册**（详见发现） |
 | B1 | nginx 日志抽样 | ✅ | access.log 无 404/5xx（含 xiaozhi-manager 0 条 404）；error.log tail 无新错误 |
-| B2 | Java /xiaozhi/ 探活 | ✅ | 三服务 active；8002 与 8001 pub-config 均 200；manager-api.log 尾部无 ERROR；journalctl since 13:33 error/exception 计数 0 |
+| B2 | Java /yuhe/ 探活 | ✅ | 三服务 active；8002 与 8001 pub-config 均 200；manager-api.log 尾部无 ERROR；journalctl since 13:33 error/exception 计数 0 |
 | B3 | ai_device_config + changelog | ✅ | 表存在；DATABASECHANGELOG 含 202610060030、202610070010 两条；ai_device_config count=0（部署时点空表，符合预期） |
 
 ## 基线核对（e-deploy 移交值）
@@ -26,12 +26,12 @@
 
 ## 浏览器层验证（agent-browser，HTTP 上下文）
 
-- 登录页渲染 ✅：title=智控台；#app 挂载（1 child，18.7KB DOM）；含输入框；正文文本"登录 / WELCOME TO LOGIN / ©2026 xiaozhi-esp32-server 0.9.7"
+- 登录页渲染 ✅：title=智控台；#app 挂载（1 child，18.7KB DOM）；含输入框；正文文本"登录 / WELCOME TO LOGIN / ©2026 yuhe-esp32-server 0.9.7"
 - 路由守卫 ✅：直访 /#/device-config-management → 重定向 login 带 redirect 参数
 - console 错误 0、page errors 0
 - 截图归档：`reports/2026-10-06-smoke/`（S1-login-final.png、S2-route-guard.png、S1b-login-retry.png；本会话模型不支持读图，以 DOM 断言替代视觉核验）
-- 管理端新端点鉴权 ✅：`GET /xiaozhi/deviceConfigMag` 无 token → HTTP 200 + 业务码 401"未授权"（符合全局异常模式）
-- 设备侧新端点鉴权 ✅：`POST /xiaozhi/config/device-config` 空密钥 → 200 + 业务码 401"服务器密钥不能为空"（Bearer server.secret 契约生效）
+- 管理端新端点鉴权 ✅：`GET /yuhe/deviceConfigMag` 无 token → HTTP 200 + 业务码 401"未授权"（符合全局异常模式）
+- 设备侧新端点鉴权 ✅：`POST /yuhe/config/device-config` 空密钥 → 200 + 业务码 401"服务器密钥不能为空"（Bearer server.secret 契约生效）
 
 ## 发现（非阻塞）
 

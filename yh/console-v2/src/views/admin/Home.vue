@@ -113,7 +113,7 @@ const onlineText = computed(() => `${devices.value.filter(d => d.online).length}
 // 归一化 MAC：与 Python 侧 _normalize_device_id 对齐（在线表按归一化 ID 匹配）
 function normMac(s) {
   let v = String(s || '').trim().toLowerCase()
-  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  if (v.startsWith('yuhe-') || v.startsWith('xiaozhi-')) v = v.replace(/^(yuhe|xiaozhi)-/, '')
   return v.replace(/[:\-]/g, '')
 }
 

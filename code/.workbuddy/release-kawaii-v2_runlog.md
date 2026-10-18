@@ -11,8 +11,8 @@
 - jar 基线：md5 `b20af27bff438d83df1618f1b2e4198e`，85327377 字节，10-05 21:41 ✅
 - git rev：服务器两仓均无 .git（NO_GIT，预期外无影响，基线以 md5 清单为准）⚠️记录
 - Liquibase 现状：202610060030/202610070010 均 0 行（未执行，符合预期）✅
-- 三服务基线：xiaozhi-server=active，xiaozhi-manager-api=active，8001=200 ✅
-- 备份：jar cp ✅；xiaozhi-server-src 916M ✅；xiaozhi-manager-web 15M ✅；mysqldump sql.gz 46.4M（rc=0）✅；合计 1.1G
+- 三服务基线：yuhe-server=active，xiaozhi-manager-api=active，8001=200 ✅
+- 备份：jar cp ✅；yuhe-server-src 916M ✅；xiaozhi-manager-web 15M ✅；mysqldump sql.gz 46.4M（rc=0）✅；合计 1.1G
 - **verdict：阶段 0 PASS**
 
 ## 阶段 1：构建
@@ -44,7 +44,7 @@
 - 13:33 cp jar（md5=3c6ffb4f… 与构建产物一致）→ restart → active ✅
 - Liquibase：202610060030 + 202610070010 均 DATEEXECUTED=2026-10-06 13:33:18 ✅；ai_device_config 表可查（count=0 空表正常）✅
 - journalctl 无 ERROR/exception/Liquibase 报错（旧进程 143 退出为正常 stop 信号）✅
-- HTTP 面：8001/xiaozhi/sys/login=200、8001 静态=200 ✅
+- HTTP 面：8001/yuhe/sys/login=200、8001 静态=200 ✅
 - 备注：systemd 提示 unit 文件 on-disk 变更过（daemon-reload 提示，非本次操作所致，服务正常，不动）
 
 ### 3.2 Python
@@ -56,7 +56,7 @@
 ## 阶段 4：冒烟移交
 
 - 13:35 移交前自检三连：双服务 active ✅、8001 HTTP 200 ✅、DATABASECHANGELOG 两行在库 ✅
-- 13:36 已 SendMessage 移交 e-qa-smoke（GO 冒烟）：附 runlog 路径、service-worker 强刷坑、业务码模式坑、新改动面清单（Kawaii 布局/双主题/设备配置管理页 + /xiaozhi/config/device-config + ai_device_config）、现网基线 md5、回滚物料位置 /root/backup/2026-10-07/、FAIL 处置路由
+- 13:36 已 SendMessage 移交 e-qa-smoke（GO 冒烟）：附 runlog 路径、service-worker 强刷坑、业务码模式坑、新改动面清单（Kawaii 布局/双主题/设备配置管理页 + /yuhe/config/device-config + ai_device_config）、现网基线 md5、回滚物料位置 /root/backup/2026-10-07/、FAIL 处置路由
 - 服务器 /tmp 部署残留已清理（CLEANUP_DONE）
 - **verdict：阶段 4（移交）PASS —— 上线动作全部完成，冒烟结论待 e-qa-smoke 回报**
 

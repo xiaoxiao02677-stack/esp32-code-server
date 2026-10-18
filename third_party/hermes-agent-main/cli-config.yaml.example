@@ -1112,7 +1112,7 @@ group_sessions_per_user: true
 #       extra:
 #         key: "your-api-server-secret"
 #         model_routes:
-#           # Xiaozhi clients send model="minimax-m2" → routed to MiniMax via OpenRouter
+#           # Yuhe clients send model="minimax-m2" → routed to MiniMax via OpenRouter
 #           minimax-m2:
 #             model: "minimax/minimax-m1"
 #             provider: "openrouter"          # optional — overrides global provider

@@ -5,16 +5,16 @@
 
 ## 一、背景事实（已核实）
 
-- secret 当前值 `2d7b6bde-…` 明文存在于两处：Python `xiaozhi-server/data/.config.yaml:9` 与 MySQL `xiaozhi_esp32_server.sys_params`（param_code='server.secret'）。
-- 该 secret 是 **Python↔Java 服务端互调密钥**（manage_api_client Bearer / ServerSecretFilter）。设备固件不持有（已核实：`xiaozhi-esp32/main` 全量 grep `secret`/`SERVER_SECRET` 零命中），轮换不影响设备连接。
+- secret 当前值 `2d7b6bde-…` 明文存在于两处：Python `yuhe-server/data/.config.yaml:9` 与 MySQL `xiaozhi_esp32_server.sys_params`（param_code='server.secret'）。
+- 该 secret 是 **Python↔Java 服务端互调密钥**（manage_api_client Bearer / ServerSecretFilter）。设备固件不持有（已核实：`yuhe-esp32/main` 全量 grep `secret`/`SERVER_SECRET` 零命中），轮换不影响设备连接。
 - 镜像 git 仓（code-server-mirror，单提交 31c20d1，无 remote）init 提交已含明文 secret → 需清史。
 
 ## 二、镜像侧已完成（本轮）
 
 | 动作 | 文件 |
 |---|---|
-| .gitignore 入库兜底 | `xiaozhi-server/.gitignore`（新增，含 `data/.config.yaml`） |
-| 配置模板（secret 占位符） | `xiaozhi-server/data/.config.yaml.example`（新增） |
+| .gitignore 入库兜底 | `yuhe-server/.gitignore`（新增，含 `data/.config.yaml`） |
+| 配置模板（secret 占位符） | `yuhe-server/data/.config.yaml.example`（新增） |
 
 ## 三、部署日人工执行（按序）
 
@@ -26,5 +26,5 @@
 ## 四、风险提示
 
 - ServerSecretFilter 走 `fromCache=true`（Redis 优先）：脚本已含清缓存步骤；无 redis-cli 时以「旧 secret 冒烟 401」为兜底判据。
-- 轮换窗口避开 QA e2e 时段（该套件会重启 xiaozhi-server 两次）。
+- 轮换窗口避开 QA e2e 时段（该套件会重启 yuhe-server 两次）。
 - 备份目录含明文新旧 secret（已 chmod 600），建议加密离线留底。

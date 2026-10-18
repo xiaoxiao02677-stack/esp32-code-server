@@ -19,7 +19,7 @@ kernel32.SetFileInformationByHandle.argtypes = [
 kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
 
 # \\?\ prefix + BACKSLASHES bypasses DOS device parsing so "nul" is a real file.
-src = r"\\?\G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32\nul"
+src = r"\\?\G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32\nul"
 dst_dir = r"G:\demo\21_xiaozhi\.trash"
 dst = r"\\?\G:\demo\21_xiaozhi\.trash\nul_quarantine.bin"
 

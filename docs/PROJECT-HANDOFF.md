@@ -20,18 +20,18 @@
 
 | 端口 | 服务 | systemd 单元 | 说明 |
 |---|---|---|---|
-| 8000 | Python WebSocket | `xiaozhi-server` | 设备语音通道 `/xiaozhi/v1/` |
-| 8001 | nginx | `nginx` | 静态站 + 反代：`/xiaozhi/`→8002、`/xiaozhi/v1/`→8000、`/cc/`→新控制台 |
+| 8000 | Python WebSocket | `yuhe-server` | 设备语音通道 `/yuhe/v1/` |
+| 8001 | nginx | `nginx` | 静态站 + 反代：`/yuhe/`→8002、`/yuhe/v1/`→8000、`/cc/`→新控制台 |
 | 8002 | Java manager-api | `xiaozhi-manager-api` | jar 在 `/opt/xiaozhi/xiaozhi-esp32-api.jar`，`--spring.profiles.active=dev` |
-| 8003 | Python HTTP | （随 xiaozhi-server） | OTA/vision/记忆内部API/TTS试听；`/api/**` 仅回环+Bearer secret |
+| 8003 | Python HTTP | （随 yuhe-server） | OTA/vision/记忆内部API/TTS试听；`/api/**` 仅回环+Bearer secret |
 
 **关键路径（服务器）**：
-- Python 源码：`/root/xiaozhi-server/main/xiaozhi-server/`（venv 在 `.venv`，带点）
+- Python 源码：`/root/xiaozhi-server/main/yuhe-server/`（venv 在 `.venv`，带点）
 - Java 源码：`/root/xiaozhi-server/main/manager-api/`（mvn 3.8.7 + JDK 21，m2 缓存热）
 - 原控制台（renren 系，**有版权纠纷待停用**）：`/var/www/xiaozhi-manager/`
 - 新控制台（cc-console）：`/var/www/cc-console/`，访问 `http://sandyun.top:8001/cc/`
 - 备份目录：`/root/backup/2026-10-08-doubao-v3/`（jar/DB表/nginx配置/web js 全套）
-- Python 日志：`/root/xiaozhi-server/main/xiaozhi-server/data/app.log`
+- Python 日志：`/root/xiaozhi-server/main/yuhe-server/data/app.log`
 - 服务密钥 `server.secret`：`sys_params` 表 param_code=`server.secret`（Java↔Python 互调 Bearer）
 
 **操作坑（必读）**：
@@ -50,11 +50,11 @@ G:/demo/21_xiaozhi/
 ├── code-server-mirror/     ← ★生产服务器三仓的本地镜像（Java/Python/Web 源码与服务器逐字节对齐）
 │   ├── manager-api/           Java 后端（Spring Boot + Shiro + MyBatis-Plus + Liquibase）
 │   ├── manager-web/           原控制台前端（Vue2 + element-ui，renren 脚手架，待停用）
-│   └── xiaozhi-server/        Python 语音服务（连接调度/TTS/ASR/LLM/记忆 provider）
+│   └── yuhe-server/        Python 语音服务（连接调度/TTS/ASR/LLM/记忆 provider）
 ├── cc-console/             ← ★全新独立控制台（Vue3+Vite+sm-crypto，无版权问题，部署在 /cc/）
 ├── code/                   工作区（.workbuddy 工具与 runlog 都在这里）
 │   ├── .workbuddy/            ★所有部署工具、runlog、memory、生成脚本
-│   ├── xiaozhi-esp32/         固件仓镜像（见 §3）
+│   ├── yuhe-esp32/         固件仓镜像（见 §3）
 │   └── hermes-agent-main/     hermes 项目源码（mem_holographic 的上游）
 └── stylekit/               动画主题库克隆（github.com/AnxForever/stylekit，MIT，/cc/ 动效来源）
 ```
@@ -70,10 +70,10 @@ G:/demo/21_xiaozhi/
 
 | 项 | 值 |
 |---|---|
-| 固件仓 | `G:/demo/21_xiaozhi/code/xiaozhi-esp32/`（ESP-IDF 工程） |
+| 固件仓 | `G:/demo/21_xiaozhi/code/yuhe-esp32/`（ESP-IDF 工程） |
 | 真机设备 | MAC `14:c1:9f:d1:33:48`，板型 `my-s3-tft`，固件版本 2.5.1 |
-| 构建 | `idf.py build` EXIT=0（约19分钟，产物 `xiaozhi.bin` ~2.7MB），构建日志 `.workbuddy/fw_build.log` |
-| 连接 | 设备经 `ws://sandyun.top:8001/xiaozhi/v1/`（nginx 转 8000）接入 |
+| 构建 | `idf.py build` EXIT=0（约19分钟，产物 `yuhe.bin` ~2.7MB），构建日志 `.workbuddy/fw_build.log` |
+| 连接 | 设备经 `ws://sandyun.top:8001/yuhe/v1/`（nginx 转 8000）接入 |
 | 配置下发 | 设备每次连接从 Java 拉差异化配置（agent 音色/模型/记忆在改库+重连后生效，无 agent 级缓存残留） |
 | 设备云端配置 | `ai_device_config` 表（一设备一行 JSON_MERGE_PATCH 原子 upsert，键白名单 volume/brightness） |
 | 真机联调手册 | `.workbuddy/firmware-build-verify.md` §2 + `mqtt-gateway-verify.md`（烧录/透传验证待人工执行） |
@@ -135,7 +135,7 @@ G:/demo/21_xiaozhi/
 
 | 改动 | 流程 |
 |---|---|
-| Python（provider/api） | 改 mirror → sftp_push 单文件 → 服务器 py_compile → `systemctl restart xiaozhi-server`（provider 动态加载，非 provider 改动才需重启） |
+| Python（provider/api） | 改 mirror → sftp_push 单文件 → 服务器 py_compile → `systemctl restart yuhe-server`（provider 动态加载，非 provider 改动才需重启） |
 | Java | 改 mirror → tar 上传源文件到服务器源码树 → 服务器 `mvn package -Dmaven.test.skip=true` → 备份旧 jar → cp 到 /opt → `systemctl restart xiaozhi-manager-api`（Liquibase 随启动执行） |
 | Web 原控制台 | mirror `npm run build` → tar → rsync `/var/www/xiaozhi-manager/`（注意 service-worker，验收需强刷） |
 | 新控制台 | cc-console `vite build` → tar → 解包 `/var/www/cc-console/` |

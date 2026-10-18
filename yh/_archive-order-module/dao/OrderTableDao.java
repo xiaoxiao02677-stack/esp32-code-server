@@ -1,9 +1,9 @@
-package xiaozhi.modules.order.dao;
+package yuhe.modules.order.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import xiaozhi.modules.order.entity.OrderTableEntity;
+import yuhe.modules.order.entity.OrderTableEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

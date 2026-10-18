@@ -73,7 +73,7 @@
     <thead><tr><th style="width:16%">层</th><th style="width:34%">同步前差异</th><th style="width:30%">处理</th><th style="width:20%">结果</th></tr></thead>
     <tbody>
       <tr>
-        <td><b>Python</b><br><span class="mono" style="color:#6b7688">xiaozhi-server</span></td>
+        <td><b>Python</b><br><span class="mono" style="color:#6b7688">yuhe-server</span></td>
         <td>5 文件不同：<code>app.py</code>(仅注释)、<code>config_loader.py</code>(心跳透传+TTS本地优先)、<code>settings.py</code>(注释冲突检测)、<code>llm_preview_handler.py</code>(加 GET)、<code>http_server.py</code>(/tmp 路由等)</td>
         <td>scp 测试 5 文件 → 生产，语法校验，重启</td>
         <td><span class="pill g">100% 一致</span><br><span class="mono" style="font-size:11.5px">230/230 文件</span></td>
@@ -105,7 +105,7 @@
       <tr>
         <td><b>前端</b><br><span class="mono" style="color:#6b7688">firmware-flash</span></td>
         <td>生产<b>完全缺失</b>，且 nginx 无 <code>/firmware-flash/</code> 路由</td>
-        <td>部署页面到生产 + 给 <span class="mono">snippets/xiaozhi-common.conf</span> 补 location，nginx reload</td>
+        <td>部署页面到生产 + 给 <span class="mono">snippets/yuhe-common.conf</span> 补 location，nginx reload</td>
         <td><span class="pill g">已补齐</span></td>
       </tr>
       <tr>
@@ -132,10 +132,10 @@
 
   <h2>三、备份与回滚点</h2>
   <ul>
-    <li><span class="mono">/root/xiaozhi-db-prod-20261014T091718Z.sql.gz</span> — 生产整库备份（255MB）</li>
+    <li><span class="mono">/root/yuhe-db-prod-20261014T091718Z.sql.gz</span> — 生产整库备份（255MB）</li>
     <li><span class="mono">/opt/xiaozhi/xiaozhi-esp32-api.jar.bak-prejava-20261014T091718Z</span> — 生产旧 jar（85.4MB）</li>
     <li><span class="mono">/root/console-v2.bak-20261014T090157Z.tgz</span> · <span class="mono">/root/cc-console.bak-20261014T090535Z.tgz</span> — 前端</li>
-    <li><span class="mono">/etc/nginx/snippets/xiaozhi-common.conf.bak-20261014T090424Z</span> — nginx</li>
+    <li><span class="mono">/etc/nginx/snippets/yuhe-common.conf.bak-20261014T090424Z</span> — nginx</li>
     <li><span class="mono">.bak-sync-20261014T085307Z/</span> — 生产 Python 原 5 文件</li>
   </ul>
 

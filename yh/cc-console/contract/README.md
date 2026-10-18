@@ -1,6 +1,6 @@
 # 前后端 API 契约（Contract）
 
-**唯一事实来源（FR-01）**：`openapi.json` —— 由后端 springdoc（`/xiaozhi/v3/api-docs`）导出，
+**唯一事实来源（FR-01）**：`openapi.json` —— 由后端 springdoc（`/yuhe/v3/api-docs`）导出，
 覆盖 **141 端点 / 173 方法**。前端所有请求必须能在此文件中找到匹配定义。
 
 ## 文件说明
@@ -27,7 +27,7 @@ python scripts/check_contract.py --report contract/check-report.json
 1. **先改契约**：后端加/改端点后，重新导出：
    ```bash
    # 生产 jar 运行时
-   curl http://127.0.0.1:8002/xiaozhi/v3/api-docs -o contract/openapi.json
+   curl http://127.0.0.1:8002/yuhe/v3/api-docs -o contract/openapi.json
    ```
 2. 跑 `python scripts/check_contract.py` —— 新契约下前端旧调用若失效立即暴露
 3. 前端同步修改 → 再跑校验 → PASS 后提交
@@ -46,10 +46,10 @@ python scripts/check_contract.py --report contract/check-report.json
 
 ## baseURL（FR-09）
 
-`API_BASE = '/xiaozhi'`（src/App.vue 顶部常量）。本地 dev 用 vite proxy，
-生产走 nginx `/xiaozhi/ → 127.0.0.1:8002`。**前后端零路径硬编码**。
+`API_BASE = '/yuhe'`（src/App.vue 顶部常量）。本地 dev 用 vite proxy，
+生产走 nginx `/yuhe/ → 127.0.0.1:8002`。**前后端零路径硬编码**。
 
 ## 版本策略（FR-10）
 
 当前无 URL 版本前缀（契约即当前版本）。未来引入版本时统一在 API_BASE 增加
-（如 `/xiaozhi/v2`），契约 servers 字段同步。
+（如 `/yuhe/v2`），契约 servers 字段同步。

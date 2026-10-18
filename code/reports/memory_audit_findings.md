@@ -1,7 +1,7 @@
 # 记忆模块不足点总清单（统一版）
 
 > 本轮记忆系统专项审计交付物。由审计A（数据链路与存储层，14项）与审计B（接口与面板契约，13项）交叉合并去重而成。
-> 审计范围：xiaozhi-server/core/api/memory_handler.py + core/providers/memory/（全部引擎）、manager-api modules/memory、console-v2 Memory.vue、服务器 /root/xiaozhi-server 实况（9 个 SQLite 库逐一核验）。
+> 审计范围：yuhe-server/core/api/memory_handler.py + core/providers/memory/（全部引擎）、manager-api modules/memory、console-v2 Memory.vue、服务器 /root/xiaozhi-server 实况（9 个 SQLite 库逐一核验）。
 > 状态口径：已修（含部署验证）/ 修复中（有人认领实施或验证）/ 待排期。
 
 ## 零、核心结论："面板已有数据但不同步"三因叠加

@@ -79,7 +79,7 @@ ESP32 真机硬件 TTS 不播放声音，无法在设备上验证"识别→理�
 - **FR-R2.2（智能体选择）**：下拉选智能体（决定 LLM/TTS/ASR 配置）。
 - **FR-R2.3（ASR 阶段）**，二选一，推荐 MVP 用 (a)：
   - **(a) 浏览器 ASR（MVP）**：用 Web Speech API（`webkitSpeechRecognition`）采集麦克风→文本，标注"浏览器识别（模拟 ASR）"，支持手动改文本。
-  - **(b) 真实 ASR 端点（增强）**：新增 `xiaozhi-server` 端点 `POST /api/asr`（上传 wav/pcm → 走 `core.providers.asr` → 返回文本）。**当前无此端点，需后端新增**（见 §7）。
+  - **(b) 真实 ASR 端点（增强）**：新增 `yuhe-server` 端点 `POST /api/asr`（上传 wav/pcm → 走 `core.providers.asr` → 返回文本）。**当前无此端点，需后端新增**（见 §7）。
 - **FR-R2.4（LLM 阶段）**：将 ASR 文本作为用户输入，调用智能体对话接口（复用聊天链路 `/agent/{id}/chat` 或等效），展示流式/完整回复文本；记录耗时。
 - **FR-R2.5（TTS 阶段）**：将 LLM 回复文本送往 TTS 试听端点 `GET /api/tts/preview?voice={voice}&text={text}`（POST body 带完整 TTS config_json，由 manager-api 代理转发），拿到音频二进制后用 `<audio>` 在**浏览器播放**。
 - **FR-R2.6（播放）**：TTS 音频必须在浏览器内可播放（这是本需求核心——替代硬件出声）；提供播放/下载按钮。

@@ -16,11 +16,11 @@
 | 真实登录 E2E | **PASS**（浏览器 OCR 验证码 + SM2 登录成功）|
 | 数据接口 E2E（6 接口带 token） | **6/6 code=0** |
 | 后端代码 diff | **空**（符合 C1/C2/C3）|
-| 跨域 | 同源代理方案（/xiaozhi/ → 8002），零 CORS 问题 |
+| 跨域 | 同源代理方案（/yuhe/ → 8002），零 CORS 问题 |
 
 ## 二、跨域与鉴权工程方案（文档 §7.2）
 
-- **同源反向代理**：nginx `location /xiaozhi/ { proxy_pass http://127.0.0.1:8002/xiaozhi/; }`，前端请求保持同源，无预检、无 Cookie SameSite 问题。
+- **同源反向代理**：nginx `location /yuhe/ { proxy_pass http://127.0.0.1:8002/yuhe/; }`，前端请求保持同源，无预检、无 Cookie SameSite 问题。
 - **鉴权沿用原控制台机制**（逐行对齐 cc-console App.vue）：
   1. `GET /user/pub-config` 取 SM2 公钥
   2. 密码 = `'04' + sm2.doEncrypt(验证码 + 密码, pubKey, 1)`

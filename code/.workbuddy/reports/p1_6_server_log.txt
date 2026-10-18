@@ -1,7 +1,7 @@
 
-$ awk -v s="261005 04:34:11" -v e="261005 04:40:19" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -cE 'ERROR|Traceback|Exception'
+$ awk -v s="261005 04:34:11" -v e="261005 04:40:19" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/yuhe-server/data/app.log | grep -cE 'ERROR|Traceback|Exception'
 0
 [rc=1]
 
-$ awk -v s="261005 04:34:11" -v e="261005 04:40:19" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -E 'ERROR|Traceback|Exception' | head -10
+$ awk -v s="261005 04:34:11" -v e="261005 04:40:19" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/yuhe-server/data/app.log | grep -E 'ERROR|Traceback|Exception' | head -10
 [rc=0]

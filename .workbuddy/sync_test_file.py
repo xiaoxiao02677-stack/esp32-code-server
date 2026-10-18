@@ -7,8 +7,8 @@ HOST = "sandyun.top"
 PORT = 22222
 USER = "root"
 
-LOCAL = "G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/test/java/xiaozhi/modules/config/service/impl/ConfigServiceImplTest.java".replace("/", "\\")
-REMOTE = "/root/xiaozhi-server/main/manager-api/src/test/java/xiaozhi/modules/config/service/impl/ConfigServiceImplTest.java"
+LOCAL = "G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/test/java/yuhe/modules/config/service/impl/ConfigServiceImplTest.java".replace("/", "\\")
+REMOTE = "/root/xiaozhi-server/main/manager-api/src/test/java/yuhe/modules/config/service/impl/ConfigServiceImplTest.java"
 STAMP = "20261010T2030"
 
 client = paramiko.SSHClient()

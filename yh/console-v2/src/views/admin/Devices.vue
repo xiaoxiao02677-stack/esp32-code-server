@@ -148,7 +148,7 @@ async function load() {
 // 归一化 MAC：与 Python 侧 _normalize_device_id 对齐（心跳/WS 在线表按归一化 ID 匹配）
 function normMac(s) {
   let v = String(s || '').trim().toLowerCase()
-  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  if (v.startsWith('yuhe-')) v = v.slice(8)
   return v.replace(/[:\-]/g, '')
 }
 

@@ -65,7 +65,7 @@ def main():
 
         # 4. endpoint check
         rc, out, _ = run(client,
-            "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8002/xiaozhi/user/pub-config",
+            "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8002/yuhe/user/pub-config",
             timeout=30)
         print(f"pub-config HTTP status: {out} (rc={rc})")
 
@@ -73,8 +73,8 @@ def main():
         rc, out, _ = run(client,
             "cd /tmp && rm -rf jarcheck && mkdir jarcheck && cd jarcheck && "
             "unzip -o -q /opt/xiaozhi/xiaozhi-esp32-api.jar "
-            "'BOOT-INF/classes/xiaozhi/modules/config/service/impl/ConfigServiceImpl.class' && "
-            "strings BOOT-INF/classes/xiaozhi/modules/config/service/impl/ConfigServiceImpl.class | grep -i wake")
+            "'BOOT-INF/classes/yuhe/modules/config/service/impl/ConfigServiceImpl.class' && "
+            "strings BOOT-INF/classes/yuhe/modules/config/service/impl/ConfigServiceImpl.class | grep -i wake")
         if "wake_words" in out and "wakeup_words" in out:
             print("PASS: new jar contains wake_words + wakeup_words")
         else:

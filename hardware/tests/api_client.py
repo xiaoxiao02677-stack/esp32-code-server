@@ -14,7 +14,7 @@ from sm2_helper import login, get_sm2_helper
 class AdminAPIClient:
     """管理后台 API 客户端"""
 
-    BASE_URL = "https://sandyun.top:8001/xiaozhi"
+    BASE_URL = "https://sandyun.top:8001/yuhe"
     VERIFY_SSL = False
 
     def __init__(self, username: str = "demo", password: str = "P@ssword123"):

@@ -163,7 +163,7 @@ class TTSProvider(TTSProviderBase):
                 from config import config as global_config
                 from core.utils.util import get_path
                 api_key = global_config.get("manager_api_key")
-                base = global_config.get("manager_api_url", "http://127.0.0.1:8002/xiaozhi")
+                base = global_config.get("manager_api_url", "http://127.0.0.1:8002/yuhe")
                 resp = requests.get(
                     f"{base}/models/{self.instruction_llm_id}",
                     headers={"Authorization": f"Bearer {api_key}"},

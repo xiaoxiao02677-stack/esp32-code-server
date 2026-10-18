@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""QA multi-turn session simulator for xiaozhi WS server.
+"""QA multi-turn session simulator for yuhe WS server.
 
 Simulates an ordinary user device: multi-turn dialogue inside ONE websocket
 connection, plus repeated sessions (separate connections). Collects per-turn
@@ -20,7 +20,7 @@ import time
 import websockets
 
 DEVICE_ID = "14:c1:9f:d1:33:48"
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 
 # 验收标准第3节：失败标志话术关键词（任一命中即计入）
 FAIL_PHRASES = [

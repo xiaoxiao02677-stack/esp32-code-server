@@ -15,7 +15,7 @@ A10：验证引擎切回 mem_local_short 的"回退安全"语义：
     本地用"模拟切换"：同时实例化两个 provider，各自 init 后对比文件系统状态。
 
 用法：
-  cd code-server-mirror/xiaozhi-server && python <此脚本路径>/qa_perf_rollback.py [--facts 500] [--rounds 50]
+  cd code-server-mirror/yuhe-server && python <此脚本路径>/qa_perf_rollback.py [--facts 500] [--rounds 50]
 退出码：0=通过；1=存在失败项（性能阈值或回退安全断言）
 """
 import argparse
@@ -29,7 +29,7 @@ import types
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _CANDIDATES = [
-    os.path.normpath(os.path.join(_HERE, "..", "..", "..", "code-server-mirror", "xiaozhi-server")),
+    os.path.normpath(os.path.join(_HERE, "..", "..", "..", "code-server-mirror", "yuhe-server")),
     os.getcwd(),
 ]
 _ROOT = next((c for c in _CANDIDATES if os.path.isdir(os.path.join(c, "core"))), _CANDIDATES[0])

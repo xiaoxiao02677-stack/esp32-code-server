@@ -8,9 +8,9 @@ LOCAL_BASE = "G:/demo/21_xiaozhi/code-server-mirror"
 REMOTE_BASE = "/root/xiaozhi-server/main"
 
 FILES = [
-    "manager-api/src/main/java/xiaozhi/modules/agent/controller/WakeWordController.java",
-    "manager-api/src/main/java/xiaozhi/modules/device/service/DeviceService.java",
-    "manager-api/src/main/java/xiaozhi/modules/device/service/impl/DeviceServiceImpl.java",
+    "manager-api/src/main/java/yuhe/modules/agent/controller/WakeWordController.java",
+    "manager-api/src/main/java/yuhe/modules/device/service/DeviceService.java",
+    "manager-api/src/main/java/yuhe/modules/device/service/impl/DeviceServiceImpl.java",
 ]
 
 

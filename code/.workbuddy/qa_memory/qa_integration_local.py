@@ -18,8 +18,8 @@
   T9 管理端 search_facts 筛选（A3 数据侧）：keyword/category/trust 区间/status
 
 用法：
-  cd code-server-mirror/xiaozhi-server && python <此脚本路径>/qa_integration_local.py [--keep-db]
-     # --keep-db 保留临时库路径供人工核验；脚本必须从 xiaozhi-server 根目录运行（或用 --root 指定）
+  cd code-server-mirror/yuhe-server && python <此脚本路径>/qa_integration_local.py [--keep-db]
+     # --keep-db 保留临时库路径供人工核验；脚本必须从 yuhe-server 根目录运行（或用 --root 指定）
 退出码：0=全部通过；1=存在失败项
 """
 import argparse
@@ -29,11 +29,11 @@ import tempfile
 import traceback
 import types
 
-# xiaozhi-server 根目录：默认取脚本相对位置 ../../../code-server-mirror/xiaozhi-server-server，
+# yuhe-server 根目录：默认取脚本相对位置 ../../../code-server-mirror/yuhe-server-server，
 # 也支持 --root 显式指定或从 CWD 推断
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _CANDIDATES = [
-    os.path.normpath(os.path.join(_HERE, "..", "..", "..", "code-server-mirror", "xiaozhi-server")),
+    os.path.normpath(os.path.join(_HERE, "..", "..", "..", "code-server-mirror", "yuhe-server")),
     os.getcwd(),
 ]
 _ROOT = next((c for c in _CANDIDATES if os.path.isdir(os.path.join(c, "core"))), _CANDIDATES[0])

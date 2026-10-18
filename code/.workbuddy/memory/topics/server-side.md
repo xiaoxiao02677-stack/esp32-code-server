@@ -4,7 +4,9 @@
 
 ## 拓扑（同机双 VM）
 - **生产** `ssh -p 22222 root@sandyun.top`(.10)：Java `/opt/xiaozhi/xiaozhi-esp32-api.jar`（systemd `xiaozhi-manager-api`、JDK21、日志 `/opt/xiaozhi/logs/`、配置 `/opt/xiaozhi/application-dev.yml`）；Python `/root/xiaozhi-server/main/xiaozhi-server/`（systemd `xiaozhi-server`）；MySQL root/123456 `xiaozhi_esp32_server`；Redis 127.0.0.1:6379 无密码；nginx 9001 / 8443+9443 TLS / public 8001（分流 9002/9444）/ 8002→Java；前端 `/var/www/console-v2/`、`/var/www/cc-console/`
-- **测试** `ssh -p 22223`(.20)：根 `/root/yh/`，Java `app/manager-api/`、jar `deploy/opt-xiaozhi/`，Python `app/xiaozhi-server/`，nginx 8101/8144
+- **测试** `ssh -p 22223`(.20)：根 `/root/yh/`，Java `app/manager-api/`、jar `deploy/opt-xiaozhi/`，Python `app/xiaozhi-server/`，nginx **8101=TLS（浏览器）/ 8144=明文（设备）**；前端单端点 `root /var/www/console-v2/admin`，dist-admin→admin、dist→app、另有 `/admincc/` alias
+- **测试推送任务已 1:1 对齐生产**（2026-10-15）：`topic_generator.py`(841行)/`push_scheduler.py`(576行) md5 与生产一致；`http_server.py` 补 `/audio/` 受限路由；**音频出口走 nginx 8103 站点 `xiaozhi-push-audio` 全路径反代 127.0.0.1:8003**（8101 的 /audio/ 是 SPA 假 200）；`data/.config.yaml` 的 `vision_explain=http://sandyun.top:8103/mcp/vision/explain`（config_loader server 段白名单只有 7 键，`public_audio_base_url` 会被丢，vision_explain 是唯一生效抓手）；测试无在线设备、`sys_user_token` 会过期（401 先查过期）
+- **测试环境设备侧入口（2026-10-18 实证）**：OTA/WS 走 **8144**（明文；8101 是 TLS 口明文连不上，sys_params `server.websocket` 指向 8101 是**坏配置**）；YH 心跳 TCP **8199**（.config.yaml heartbeat_port，非生产 12399）；OTA 接口须带 `Device-Id` 头（冒号 MAC）+ board 为对象 + version 为 Integer；build.py 已支持 `--server test/prod` 选环境（test 产物归档 `out/<id>-test/`）
 - 一个崩另一个报 8002/8003 连不上 → 先查根因再重启
 
 ## 前端 / 服务端

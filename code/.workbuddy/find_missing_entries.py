@@ -1,8 +1,8 @@
 import json, re, os
 
 REPOS = {
-    "BIG": r"G:/demo/21_xiaozhi/code/big_secreen/xiaozhi-esp32",
-    "SMALL": r"G:/demo/21_xiaozhi/code/small_secreen/xiaozhi-esp32",
+    "BIG": r"G:/demo/21_xiaozhi/code/big_secreen/yuhe-esp32",
+    "SMALL": r"G:/demo/21_xiaozhi/code/small_secreen/yuhe-esp32",
 }
 SRC_EXT = (".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh")
 

@@ -23,8 +23,8 @@ import types
 import unittest.mock as mock
 
 MIRROR = os.environ.get(
-    "XIAOZHI_MIRROR",
-    r"G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server")
+    "YUHE_MIRROR",
+    r"G:/demo/21_xiaozhi/code-server-mirror/yuhe-server")
 sys.path.insert(0, MIRROR)
 
 # 打桩 1：config.config_loader（mem_holographic._resolve_db_dir 的惰性 import）
@@ -80,7 +80,7 @@ def make_provider() -> MemoryProvider:
     return p
 
 
-class _Msg:  # 模拟 xiaozhi 对话消息对象（connection.dialogue 的元素形态）
+class _Msg:  # 模拟 yuhe 对话消息对象（connection.dialogue 的元素形态）
     def __init__(self, role, content):
         self.role = role
         self.content = content

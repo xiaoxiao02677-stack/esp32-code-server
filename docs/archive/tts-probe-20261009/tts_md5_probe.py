@@ -47,7 +47,7 @@ def build(ctx=False, emo=None, model=False, enable_emo=False, scale=None):
            "additions": json.dumps(additions, ensure_ascii=False)}
     if model:
         req["model"] = "seed-tts-2.0-expressive"
-    return {"user": {"uid": "xiaozhi-esp32-server"},
+    return {"user": {"uid": "yuhe-esp32-server"},
             "namespace": "BidirectionalTTS", "req_params": req}
 
 

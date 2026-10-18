@@ -97,7 +97,7 @@ async function download(o) {
   } catch (e) { /* 回退直连 */ }
   window.open(API_BASE_FALLBACK + '/otaMag/download/' + (o.uuid || o.id), '_blank')
 }
-const API_BASE_FALLBACK = '/xiaozhi'
+const API_BASE_FALLBACK = '/yuhe'
 
 function remove(o) {
   askConfirm({

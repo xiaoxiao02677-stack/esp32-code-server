@@ -13,7 +13,7 @@
 - `application.cc` / `application.h`：cloud_config_synced_ 状态提示 + esp_timer 回落（00:48-00:52）
 - `board.cc`："云端唤醒词已生效" 日志（00:53:40）
 
-二进制抽查证据：00:22 的 `xiaozhi.bin` 中 `灵/琳/早/上/已丢弃该词/Discarded legacy` 均 FOUND，但 `云端唤醒词已生效/cloud_config_synced/配置同步` 均 MISSING。**直接烧现存 bin 会缺少状态提示和新日志，请务必按下面流程重新构建。**
+二进制抽查证据：00:22 的 `yuhe.bin` 中 `灵/琳/早/上/已丢弃该词/Discarded legacy` 均 FOUND，但 `云端唤醒词已生效/cloud_config_synced/配置同步` 均 MISSING。**直接烧现存 bin 会缺少状态提示和新日志，请务必按下面流程重新构建。**
 
 ---
 
@@ -22,7 +22,7 @@
 ### 方式 A：一键脚本（推荐，与历史构建完全一致）
 
 ```bat
-cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32
+cd /d G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32
 build_my_s3_tft.bat
 ```
 
@@ -39,7 +39,7 @@ $env:IDF_PYTHON_ENV_PATH="D:\INSTALL\esp\tools\python\v6.1\venv"
 $env:IDF_GITHUB_ASSETS="dl.espressif.com/github_assets"
 $env:TEMP="D:\INSTALL\esp\tmp"; $env:TMP="D:\INSTALL\esp\tmp"
 & D:\INSTALL\esp\v6.1\esp-idf\export.ps1   # 若 export.ps1 报错就用 cmd: cmd /c "D:\INSTALL\esp\v6.1\esp-idf\export.bat && python scripts\build.py my-s3-tft --name my-s3-tft"
-cd G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32
+cd G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32
 python scripts\build.py my-s3-tft --name my-s3-tft
 ```
 
@@ -48,7 +48,7 @@ python scripts\build.py my-s3-tft --name my-s3-tft
 - **构建中途被杀/断电/中断**：直接**重跑同一命令**即可。ninja 增量编译会续编，不会从头开始（约省 80% 时间）。
 - 若重跑时报 **CMake 配置错误**（如 `CMakeCache.txt` 损坏、`build directory is invalid`）：
   ```bat
-  cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32\build
+  cd /d G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32\build
   del CMakeCache.txt
   cd ..
   python scripts\build.py my-s3-tft --name my-s3-tft
@@ -61,9 +61,9 @@ python scripts\build.py my-s3-tft --name my-s3-tft
 
 | 文件 | 应满足 |
 |------|--------|
-| `build/xiaozhi.bin` | 时间戳 = 本次构建时间（> 01:00） |
+| `build/yuhe.bin` | 时间戳 = 本次构建时间（> 01:00） |
 | `build/generated_assets.bin` | 同上（assets 一般不变，时间可能不刷新，属正常） |
-| `build/merged-binary.bin` | 时间戳 ≥ xiaozhi.bin（merge 是最后一步） |
+| `build/merged-binary.bin` | 时间戳 ≥ yuhe.bin（merge 是最后一步） |
 
 ---
 
@@ -75,15 +75,15 @@ python scripts\build.py my-s3-tft --name my-s3-tft
 ### 方式 A：一键脚本（自动探测 COM 口）
 
 ```bat
-cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32
+cd /d G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32
 yh_flash.bat            :: 或显式指定：yh_flash.bat COM5
 ```
 
 ### 方式 B：手动 esptool（COM 口按实际改）
 
 ```bat
-cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32\build
-python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 bootloader/bootloader.bin 0x8000 partition_table/partition-table.bin 0xd000 ota_data_initial.bin 0x20000 xiaozhi.bin 0x800000 generated_assets.bin
+cd /d G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32\build
+python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 bootloader/bootloader.bin 0x8000 partition_table/partition-table.bin 0xd000 ota_data_initial.bin 0x20000 yuhe.bin 0x800000 generated_assets.bin
 ```
 
 | 偏移 | 文件 | 说明 |
@@ -91,7 +91,7 @@ python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --afte
 | `0x0` | `bootloader/bootloader.bin` | 引导器 |
 | `0x8000` | `partition_table/partition-table.bin` | 分区表 |
 | `0xd000` | `ota_data_initial.bin` | OTA 引导数据（保证从 ota_0 启动） |
-| `0x20000` | `xiaozhi.bin` | 应用固件（本轮改动全在这） |
+| `0x20000` | `yuhe.bin` | 应用固件（本轮改动全在这） |
 | `0x800000` | `generated_assets.bin` | **资产分区（MN7 模型+默认命令表，勿漏刷）** |
 
 烧完自动复位重启。**烧录失败排查**：换数据线（部分线只供电）→ 按住 BOOT 上电进下载模式 → 关掉占用串口的监视器。
@@ -176,7 +176,7 @@ python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --afte
 说明 device_config 没到达。查服务器连通（`sandyun.top:12399`）、看串口有无 `Received device_config`。超 60 秒可重启设备重试。
 
 **Q4：OTA 提示升级，要不要点？**
-本轮是本地构建版本，OTA 会拉 `http://sandyun.top:8002/xiaozhi/ota/` 的服务器版本覆盖本地改动。**验证阶段请勿 OTA**。
+本轮是本地构建版本，OTA 会拉 `http://sandyun.top:8002/yuhe/ota/` 的服务器版本覆盖本地改动。**验证阶段请勿 OTA**。
 
 ---
 

@@ -2,7 +2,7 @@
 
 > 版本：v1.0 · 生成日期：2026-10-08
 > 配套：前序 `PROJECT-REQUIREMENTS.md`（CC 控制台 4 项诉求 PRD）、`PROJECT-HANDOFF.md`
-> 范围：两类工作项 —— **A.** `/cc/` 音色「语气指令」增强 + 已知缺陷；**B.** ESP32 固件去除可观测的 `xiaozhi` 品牌特征。
+> 范围：两类工作项 —— **A.** `/cc/` 音色「语气指令」增强 + 已知缺陷；**B.** ESP32 固件去除可观测的 `yuhe` 品牌特征。
 > 所有结论均锚定真实代码证据（附 `文件:行号`）。
 
 ---
@@ -14,18 +14,18 @@
 - 保存链路：前端 `saveVoice()` **已携带** `voiceInstruction`（App.vue:1333 `voiceInstruction: ev.voiceInstruction || ''`）。
 - **缺陷根因假设**：前端已传值，但用户反馈「填入音色提示词没有更新」。结合代码，根因大概率落在**后端落库**环节——`PUT /models/{ttsModelId}/voices` 的 DB 表 `tts_voice` 可能无 `voice_instruction` 列，或 Mapper/Entity 未映射该字段，或编辑回填时未读取。需在实现前用 DB schema + Mapper 核实（见 FR-A.0）。
 
-### 1.2 ESP32 固件中可观测的 `xiaozhi` 特征清单
-逐项来自 `xiaozhi-esp32/main/` 实测：
+### 1.2 ESP32 固件中可观测的 `yuhe` 特征清单
+逐项来自 `yuhe-esp32/main/` 实测：
 
 | 类别 | 证据 | 可观测性 |
 |---|---|---|
 | 唤醒词音频 | `wake_word="你好小智"` 硬编码于 `boards/bread-compact-esp32/esp32_bread_board.cc:116`、`boards/bread-compact-esp32-lcd/esp32_bread_board_lcd.cc:148`；模型二进制 `wakenet9l_tts1h8_你好小智_3_0.631_0.635`（用户监听输出直接证据）| ** audible（被听到）** |
-| WS 接入路径 | `ws://sandyun.top:8001/xiaozhi/v1/` —— `main/application.cc:863`；服务端同路径硬编码 `app.py:110`、`config.yaml:20`、`core/http_server.py:124`、`core/api/ota_handler.py:141` | 网络可嗅探 |
-| 设备 ID 前缀 | `device_id_ = "xiaozhi-" + compact;` —— `main/yh/yh_protocol.cc:77` | 网络可嗅探 |
-| 内容过滤域名 | `std::strstr(content, "xiaozhi.me")` —— `main/display/emote_display.cc:148` | 服务端/日志可见 |
+| WS 接入路径 | `ws://sandyun.top:8001/yuhe/v1/` —— `main/application.cc:863`；服务端同路径硬编码 `app.py:110`、`config.yaml:20`、`core/http_server.py:124`、`core/api/ota_handler.py:141` | 网络可嗅探 |
+| 设备 ID 前缀 | `device_id_ = "yuhe-" + compact;` —— `main/yh/yh_protocol.cc:77` | 网络可嗅探 |
+| 内容过滤域名 | `std::strstr(content, "yuhe.me")` —— `main/display/emote_display.cc:148` | 服务端/日志可见 |
 | 品牌注释 | `main/yh/yh_protocol.h:9-11`「小智固件」「小智原有 AI/ASR/TTS…」等 | 源码/审计可见 |
 
-> 注：内部标识符 `CONFIG_XIAOZHI_*`、`xiaozhi-fonts` 组件、`XIAOZHI_I2S_PORT` 宏（`main/audio/audio_codec.h:22-24` 等）属**编译期符号**，不在"监听时看到"的可观测范畴，且移除会破坏构建——**不列入本次去品牌范围**（见 §3.4 边界）。
+> 注：内部标识符 `CONFIG_YUHE_*`、`xiaozhi-fonts` 组件、`YUHE_I2S_PORT` 宏（`main/audio/audio_codec.h:22-24` 等）属**编译期符号**，不在"监听时看到"的可观测范畴，且移除会破坏构建——**不列入本次去品牌范围**（见 §3.4 边界）。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ### A.2 后端依赖（需新增/确认）
 - 端点需聚合：短期会话拉取 + 长期记忆拉取 + LLM 调用（可复用 `llmPreview` 同类通道）。
-- 若服务端无现成聚合接口，需在 `manager-api` 或 `xiaozhi-server` 新增，并纳入 API 调试目录（§2 现状已含 `llmPreview` 先例）。
+- 若服务端无现成聚合接口，需在 `manager-api` 或 `yuhe-server` 新增，并纳入 API 调试目录（§2 现状已含 `llmPreview` 先例）。
 
 ### A.3 验收
 - [ ] 填固定语气指令并保存 → 重开仍在（FR-A.0）。
@@ -65,21 +65,21 @@
 - **FR-B.1.3** 验收：监听设备唤醒，不再出现「你好小智」音频；`make` 加载的 wakenet 模型名不含「你好小智」。
 
 ### B.2 网络标识去品牌
-- **FR-B.2.1** 设备侧 WS 路径 `/xiaozhi/v1/`（`application.cc:863`）改为自定义路径（如 `/yh/v1/`）；**必须同步**服务端四处硬编码：`app.py:110`、`config.yaml:20`、`core/http_server.py:124`、`core/api/ota_handler.py:141`（否则设备无法连接）。
-- **FR-B.2.2** 设备 ID 前缀 `"xiaozhi-"`（`yh_protocol.cc:77`）改为自定义前缀（如 `"yh-"`）。
-- **FR-B.2.3** 内容过滤中对 `"xiaozhi.me"` 的硬编码引用（`emote_display.cc:148`）移除或替换为自定义域名判断。
+- **FR-B.2.1** 设备侧 WS 路径 `/yuhe/v1/`（`application.cc:863`）改为自定义路径（如 `/yh/v1/`）；**必须同步**服务端四处硬编码：`app.py:110`、`config.yaml:20`、`core/http_server.py:124`、`core/api/ota_handler.py:141`（否则设备无法连接）。
+- **FR-B.2.2** 设备 ID 前缀 `"yuhe-"`（`yh_protocol.cc:77`）改为自定义前缀（如 `"yh-"`）。
+- **FR-B.2.3** 内容过滤中对 `"yuhe.me"` 的硬编码引用（`emote_display.cc:148`）移除或替换为自定义域名判断。
 
 ### B.3 品牌注释清理
 - **FR-B.3.1** 删除源码注释中明确「小智」品牌表述（如 `yh_protocol.h:9-11` 的「小智固件」「小智原有 AI/ASR/TTS…」），改为中性/自研描述。
 
 ### B.4 范围边界（重要）
-- **FR-B.4.1** 内部编译符号 `CONFIG_XIAOZHI_*`、`xiaozhi-fonts`、`XIAOZHI_I2S_PORT` 等**不在本次去品牌范围**——它们不可观测且移除会导致编译失败。
+- **FR-B.4.1** 内部编译符号 `CONFIG_YUHE_*`、`xiaozhi-fonts`、`YUHE_I2S_PORT` 等**不在本次去品牌范围**——它们不可观测且移除会导致编译失败。
 - **FR-B.4.2** 若用户后续要求"全量重命名"（含内部符号），须单独评估：涉及 Kconfig、组件名、宏、sdkconfig 重命名脚本（`main/sdkconfig.rename`），工作量与回归风险显著，需另立变更。
 
 ### B.5 验收
 - [ ] 监听唤醒：无「你好小智」音频，模型名无该词。
-- [ ] 网络抓包：WS 路径、设备 ID 前缀均不含 `xiaozhi`/`小智`。
-- [ ] 源码 grep `小智`/`xiaozhi`（排除内部符号与文档目录）零命中。
+- [ ] 网络抓包：WS 路径、设备 ID 前缀均不含 `yuhe`/`小智`。
+- [ ] 源码 grep `小智`/`yuhe`（排除内部符号与文档目录）零命中。
 - [ ] 固件正常编译、设备正常联调（OTA/对话不受影响）。
 
 ---
@@ -102,7 +102,7 @@
 | A.1 | 动态更新勾选 + LLM 生成口语化语气指令 | ☐ |
 | A.2 | 未勾选时语气指令不自动变 | ☐ |
 | B.1 | 唤醒词无「你好小智」 | ☐ |
-| B.2 | WS 路径/设备ID 无 xiaozhi（含服务端同步）| ☐ |
+| B.2 | WS 路径/设备ID 无 yuhe（含服务端同步）| ☐ |
 | B.3 | 源码品牌注释清理 | ☐ |
 | B.4 | 固件编译+联调正常 | ☐ |
 

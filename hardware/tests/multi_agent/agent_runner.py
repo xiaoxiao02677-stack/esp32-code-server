@@ -47,12 +47,12 @@ def login_and_get_token(log) -> dict:
     for attempt in range(3):
         try:
             # 1. 获取 SM2 公钥
-            resp = requests.get(f"{S.BASE_URL}/xiaozhi/user/pub-config",
+            resp = requests.get(f"{S.BASE_URL}/yuhe/user/pub-config",
                                 verify=False, timeout=20)
             pub_key_b64 = resp.json()["data"]["sm2PublicKey"]
             # 2. 验证码
             uuid = f"agent-{int(time.time()*1000)}"
-            cap_resp = requests.get(f"{S.BASE_URL}/xiaozhi/user/captcha?uuid={uuid}",
+            cap_resp = requests.get(f"{S.BASE_URL}/yuhe/user/captcha?uuid={uuid}",
                                     verify=False, timeout=15)
             ocr = ddddocr.DdddOcr(show_ad=False)
             cap_text = ocr.classification(cap_resp.content)
@@ -65,7 +65,7 @@ def login_and_get_token(log) -> dict:
             enc_user = cipher.encrypt(S.LOGIN_USER.encode())
             # 4. 登录
             login_resp = requests.post(
-                f"{S.BASE_URL}/xiaozhi/user/login",
+                f"{S.BASE_URL}/yuhe/user/login",
                 json={"username": enc_user.hex(),
                       "password": enc_pwd.hex(),
                       "captcha": cap_text,
@@ -121,7 +121,7 @@ def test_page(page, slug: str, log) -> dict:
     api_calls = []
     def on_response(resp):
         url = resp.url
-        if "/xiaozhi/" in url or "/admin/" in url:
+        if "/yuhe/" in url or "/admin/" in url:
             api_calls.append({
                 "method": resp.request.method,
                 "url": url,
@@ -170,7 +170,7 @@ def test_page(page, slug: str, log) -> dict:
                     if a["method"].upper() in ("GET", "POST", "PUT", "DELETE")]
         dom_after = page.evaluate("document.querySelectorAll('*').length")
         api_desc = "; ".join(
-            f"{a['method']} {a['url'].split('/xiaozhi/')[-1][:40]}->{a['status']}"
+            f"{a['method']} {a['url'].split('/yuhe/')[-1][:40]}->{a['status']}"
             for a in new_apis[:3]
         )
         has_err = any(not a["ok"] for a in new_apis)

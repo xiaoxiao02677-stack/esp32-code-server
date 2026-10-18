@@ -2,15 +2,15 @@
 """动态字形推送（glyph_push）端到端验收模拟器。
 
 作用：以与服务端同一份契约（固件 main/protocols/text_glyph_payload.cc）构造 hello 能力声明，
-连上真实 xiaozhi-server 的 WebSocket，触发一轮文本下发，把收到的 glyph_push 载荷
+连上真实 yuhe-server 的 WebSocket，触发一轮文本下发，把收到的 glyph_push 载荷
 按**固件 Parse() 的每一条拒绝规则**逐项复检。
 
 用法：
-    python glyph_push_simulator.py ws://sandyun.top:8001/xiaozhi/v1/ --mac <真实设备MAC> \
+    python glyph_push_simulator.py ws://sandyun.top:8001/yuhe/v1/ --mac <真实设备MAC> \
         --text "你好小禾，请用一句话介绍你自己" --charset basic
 
     # 负向（未声明能力，应完全不下发）
-    python glyph_push_simulator.py ws://sandyun.top:8001/xiaozhi/v1/ --mac <MAC> --no-glyph
+    python glyph_push_simulator.py ws://sandyun.top:8001/yuhe/v1/ --mac <MAC> --no-glyph
 
 依赖：websockets（生产 venv 已内置）
 退出码：0=通过，1=失败
@@ -199,7 +199,7 @@ async def run(args) -> int:
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("uri", help="如 ws://sandyun.top:8001/xiaozhi/v1/")
+    p.add_argument("uri", help="如 ws://sandyun.top:8001/yuhe/v1/")
     p.add_argument("--mac", required=True, help="必须是服务端已登记的真实设备 MAC")
     p.add_argument("--text", default="你好小禾，请用一句话介绍你自己")
     p.add_argument("--bundle", default="noto-v1")

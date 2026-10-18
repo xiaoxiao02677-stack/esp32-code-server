@@ -85,7 +85,7 @@ class TTSProvider(TTSProviderBase):
 
     def _build_payload(self, text):
         return {
-            "user": {"uid": "xiaozhi-esp32-server"},
+            "user": {"uid": "yuhe-esp32-server"},
             "req_params": {
                 "text": text,
                 "speaker": self.voice,

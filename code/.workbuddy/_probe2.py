@@ -5,6 +5,6 @@ c.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=20, look_fo
 def sh(cmd, t=200):
     _, o, e = c.exec_command(cmd, timeout=t)
     return o.read().decode("utf-8","replace").strip(), e.read().decode("utf-8","replace").strip()
-print(sh("cat /etc/systemd/system/xiaozhi-server.service | grep -E 'ExecStart|WorkingDirectory|User' | head"))
-print(sh("ls /root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python* 2>/dev/null | head"))
+print(sh("cat /etc/systemd/system/yuhe-server.service | grep -E 'ExecStart|WorkingDirectory|User' | head"))
+print(sh("ls /root/xiaozhi-server/main/yuhe-server/.venv/bin/python* 2>/dev/null | head"))
 c.close()

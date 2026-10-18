@@ -33,13 +33,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SSH_HELPER = os.path.join(os.path.dirname(SCRIPT_DIR), "ssh_run.py")
 
 # ---- 环境（均可在命令行覆盖，部署后按需调整） ----
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 DEVICE_ID = "14:c1:9f:d1:33:48"
-API_BASE = "http://sandyun.top:8001/xiaozhi"
+API_BASE = "http://sandyun.top:8001/yuhe"
 MYSQL = ["mysql", "-uroot", "-p123456", "xiaozhi_esp32_server"]
 AGENT_ID = "03532a34fcea46639099adb38474a2d9"
-AGENT_DB = f"/root/xiaozhi-server/main/xiaozhi-server/data/memory/{AGENT_ID}.db"
-REMOTE_LOG = "/root/xiaozhi-server/main/xiaozhi-server/data/app.log"
+AGENT_DB = f"/root/xiaozhi-server/main/yuhe-server/data/memory/{AGENT_ID}.db"
+REMOTE_LOG = "/root/xiaozhi-server/main/yuhe-server/data/app.log"
 
 # MySQL 中 Memory 模型配置的 id
 MEM_HOLO_ID = "Memory_mem_holographic"
@@ -153,7 +153,7 @@ def md5(s: str) -> str:
 
 # ---- 部署检查 ----
 def check_deployed() -> dict:
-    out = ssh_text(f"ls /root/xiaozhi-server/main/xiaozhi-server/core/providers/memory/ 2>/dev/null")
+    out = ssh_text(f"ls /root/xiaozhi-server/main/yuhe-server/core/providers/memory/ 2>/dev/null")
     code_ok = "mem_holographic" in out
     out2 = ssh_text("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8003/api/memory/agents")
     # 部署后 loopback middleware 对无 key 请求返回 401（404=路由未挂载，403=非回环源）。
@@ -317,7 +317,7 @@ def run_a1(args) -> dict:
                 "checks": dep["checks"], "notes": [f"线上未部署（{dep['evidence']}）"],
                 "cleanup": {}}
 
-    # 1) 备份 + 切引擎（mysql update ai_agent + 重启 xiaozhi-server）
+    # 1) 备份 + 切引擎（mysql update ai_agent + 重启 yuhe-server）
     bak = f"/tmp/e2e_memory_{AGENT_ID}_{time.strftime('%Y%m%d_%H%M%S')}.db.bak"
     backup_sql = f"SELECT mem_model_id FROM ai_agent WHERE id='{AGENT_ID}'"
     old_engine = ssh_text(mysql_cmd(backup_sql)).strip().splitlines()[-1].strip()
@@ -328,9 +328,9 @@ def run_a1(args) -> dict:
     cleanup["backup"] = bak
     cleanup["old_engine"] = old_engine
 
-    # 2) 重启 xiaozhi-server（新连接生效）
-    restart = ssh_all("systemctl restart xiaozhi-server 2>&1 || "
-                      "(pkill -f 'python app.py' && sleep 2 && cd /root/xiaozhi-server/main/xiaozhi-server && nohup .venv/bin/python app.py > /tmp/xz_restart.log 2>&1 &)")
+    # 2) 重启 yuhe-server（新连接生效）
+    restart = ssh_all("systemctl restart yuhe-server 2>&1 || "
+                      "(pkill -f 'python app.py' && sleep 2 && cd /root/xiaozhi-server/main/yuhe-server && nohup .venv/bin/python app.py > /tmp/xz_restart.log 2>&1 &)")
     log(f"      restart rc-err: {restart.strip()[-200:]}")
     time.sleep(8)
     up = ssh_text("ss -tlnp | grep -c ':8000 '").strip() == "1"
@@ -587,7 +587,7 @@ def run_a10(args) -> dict:
     # 1) 切回 mem_local_short + 重启
     ssh_text(mysql_cmd(
         f"UPDATE ai_agent SET mem_model_id='{MEM_LOCAL_ID}' WHERE id='{AGENT_ID}'"))
-    ssh_all("systemctl restart xiaozhi-server 2>&1 || (pkill -f 'python app.py' && sleep 2 && cd /root/xiaozhi-server/main/xiaozhi-server && nohup .venv/bin/python app.py > /tmp/xz_restart.log 2>&1 &)")
+    ssh_all("systemctl restart yuhe-server 2>&1 || (pkill -f 'python app.py' && sleep 2 && cd /root/xiaozhi-server/main/yuhe-server && nohup .venv/bin/python app.py > /tmp/xz_restart.log 2>&1 &)")
     time.sleep(8)
     up = ssh_text("ss -tlnp | grep -c ':8000 '").strip() == "1"
     checks["切换回退后服务存活"] = up

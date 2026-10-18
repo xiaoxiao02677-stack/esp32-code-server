@@ -207,8 +207,8 @@ async function load() {
       ...a,
       wakeWords: a.wakeWords ? a.wakeWords.split(';').filter(Boolean) : []
     }))
-    // 「在线设备」统计卡：必须走 adminApi（/xiaozhi 前缀，由 manager-api 注入 server secret）。
-    // 原来直接 fetch('/api/wake-word/devices') 有三个错：少了 /xiaozhi 前缀打到静态站
+    // 「在线设备」统计卡：必须走 adminApi（/yuhe 前缀，由 manager-api 注入 server secret）。
+    // 原来直接 fetch('/api/wake-word/devices') 有三个错：少了 /yuhe 前缀打到静态站
     // 返回 200 text/html（json 解析抛错被空 catch 吞掉）、没带 agent_id、用的是用户 JWT
     // 而 Python 只认 server auth_key ⇒ 该卡片长期恒为 0。
     try {

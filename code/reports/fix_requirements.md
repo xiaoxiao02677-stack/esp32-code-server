@@ -32,30 +32,30 @@
 
 | 文件路径 | 行号 | 状态 | 说明 |
 |----------|------|------|------|
-| `网页后台/xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/memory/` | - | **缺失** | 整个 memory 模块目录不存在 |
+| `网页后台/yuhe-esp32-server/main/manager-api/src/main/java/yuhe/modules/memory/` | - | **缺失** | 整个 memory 模块目录不存在 |
 
-**Python 服务（xiaozhi-server）**：
+**Python 服务（yuhe-server）**：
 
 | 文件路径 | 行号 | 状态 | 说明 |
 |----------|------|------|------|
-| `网页后台/xiaozhi-esp32-server/main/xiaozhi-server/core/api/memory_handler.py` | - | **缺失** | MemoryManageHandler 类不存在 |
-| `网页后台/xiaozhi-esp32-server/main/xiaozhi-server/core/http_server.py` | 1-92 | **缺少路由注册** | 未导入 MemoryManageHandler，未注册 `/api/memory/**` 路由 |
+| `网页后台/yuhe-esp32-server/main/yuhe-server/core/api/memory_handler.py` | - | **缺失** | MemoryManageHandler 类不存在 |
+| `网页后台/yuhe-esp32-server/main/yuhe-server/core/http_server.py` | 1-92 | **缺少路由注册** | 未导入 MemoryManageHandler，未注册 `/api/memory/**` 路由 |
 
 #### 参考实现
 镜像仓库已有完整实现：
-- `code-server-mirror/xiaozhi-server/core/api/memory_handler.py` (244 行)
-- `code-server-mirror/manager-api/src/main/java/xiaozhi/modules/memory/` (9 个 Java 文件)
+- `code-server-mirror/yuhe-server/core/api/memory_handler.py` (244 行)
+- `code-server-mirror/manager-api/src/main/java/yuhe/modules/memory/` (9 个 Java 文件)
 
 #### 修复方案
 
 **步骤 1：复制 Python 记忆处理器**
 ```bash
-cp code-server-mirror/xiaozhi-server/core/api/memory_handler.py \
-   网页后台/xiaozhi-esp32-server/main/xiaozhi-server/core/api/memory_handler.py
+cp code-server-mirror/yuhe-server/core/api/memory_handler.py \
+   网页后台/yuhe-esp32-server/main/yuhe-server/core/api/memory_handler.py
 ```
 
 **步骤 2：修改 http_server.py**
-文件：`网页后台/xiaozhi-esp32-server/main/xiaozhi-server/core/http_server.py`
+文件：`网页后台/yuhe-esp32-server/main/yuhe-server/core/http_server.py`
 
 | 行号范围 | 操作 | 说明 |
 |----------|------|------|
@@ -67,18 +67,18 @@ cp code-server-mirror/xiaozhi-server/core/api/memory_handler.py \
 
 **步骤 3：复制 Java 记忆模块**
 ```bash
-mkdir -p 网页后台/xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/memory/
-cp -r code-server-mirror/manager-api/src/main/java/xiaozhi/modules/memory/* \
-      网页后台/xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/memory/
+mkdir -p 网页后台/yuhe-esp32-server/main/manager-api/src/main/java/yuhe/modules/memory/
+cp -r code-server-mirror/manager-api/src/main/java/yuhe/modules/memory/* \
+      网页后台/yuhe-esp32-server/main/manager-api/src/main/java/yuhe/modules/memory/
 ```
 
 **步骤 4：重启服务**
 ```bash
 # 重启 Python 服务
-systemctl restart xiaozhi-server
+systemctl restart yuhe-server
 
 # 重新编译并重启 Java 服务
-cd 网页后台/xiaozhi-esp32-server/main/manager-api
+cd 网页后台/yuhe-esp32-server/main/manager-api
 mvn clean package -DskipTests
 systemctl restart xiaozhi-manager-api
 ```
@@ -184,14 +184,14 @@ GET /ttsVoice?ttsModelId=<TTS模型ID>&name=&page=0&limit=10
 ### 4.1 记忆模块验证
 ```bash
 # 1. 启动服务后测试
-curl -k "https://sandyun.top:8001/xiaozhi/memory/agents" \
+curl -k "https://sandyun.top:8001/yuhe/memory/agents" \
   -H "Authorization: Bearer <token>"
 
 # 期望返回：
 # {"code":0,"msg":"success","data":[{"agent_id":"...","name":"...","fact_count":0,...}]}
 
 # 2. 测试记忆条目列表
-curl -k "https://sandyun.top:8001/xiaozhi/memory/facts?agent_id=<agent_id>&page=1&size=20" \
+curl -k "https://sandyun.top:8001/yuhe/memory/facts?agent_id=<agent_id>&page=1&size=20" \
   -H "Authorization: Bearer <token>"
 
 # 期望返回：
@@ -201,13 +201,13 @@ curl -k "https://sandyun.top:8001/xiaozhi/memory/facts?agent_id=<agent_id>&page=
 ### 4.2 模型接口验证
 ```bash
 # 1. 测试模型列表
-curl -k "https://sandyun.top:8001/xiaozhi/models/list?modelType=llm&page=0&limit=10" \
+curl -k "https://sandyun.top:8001/yuhe/models/list?modelType=llm&page=0&limit=10" \
   -H "Authorization: Bearer <token>"
 
 # 期望返回：成功，返回模型列表
 
 # 2. 测试音色列表（需要先获取 ttsModelId）
-curl -k "https://sandyun.top:8001/xiaozhi/ttsVoice?ttsModelId=<ttsModelId>&page=0&limit=10" \
+curl -k "https://sandyun.top:8001/yuhe/ttsVoice?ttsModelId=<ttsModelId>&page=0&limit=10" \
   -H "Authorization: Bearer <token>"
 
 # 期望返回：成功，返回音色列表
@@ -219,8 +219,8 @@ curl -k "https://sandyun.top:8001/xiaozhi/ttsVoice?ttsModelId=<ttsModelId>&page=
 
 | 操作 | 文件路径 | 说明 |
 |------|----------|------|
-| 新增 | `xiaozhi-server/core/api/memory_handler.py` | 记忆管理 HTTP 处理器（244 行） |
-| 修改 | `xiaozhi-server/core/http_server.py` | 添加记忆路由注册（+60 行） |
+| 新增 | `yuhe-server/core/api/memory_handler.py` | 记忆管理 HTTP 处理器（244 行） |
+| 修改 | `yuhe-server/core/http_server.py` | 添加记忆路由注册（+60 行） |
 | 新增 | `manager-api/.../modules/memory/` | Java 记忆模块（9 个文件） |
 | 修改 | `tests/full_test.py` | 修复测试用例参数（+4 行） |
 
@@ -229,13 +229,13 @@ curl -k "https://sandyun.top:8001/xiaozhi/ttsVoice?ttsModelId=<ttsModelId>&page=
 ## 六、附录：完整源码参考
 
 ### 6.1 记忆处理器完整代码
-参见：`code-server-mirror/xiaozhi-server/core/api/memory_handler.py`
+参见：`code-server-mirror/yuhe-server/core/api/memory_handler.py`
 
 ### 6.2 Java Controller 代码
-参见：`code-server-mirror/manager-api/src/main/java/xiaozhi/modules/memory/controller/MemoryFactController.java`
+参见：`code-server-mirror/manager-api/src/main/java/yuhe/modules/memory/controller/MemoryFactController.java`
 
 ### 6.3 HTTP Server 完整配置
-参见：`code-server-mirror/xiaozhi-server/core/http_server.py`
+参见：`code-server-mirror/yuhe-server/core/http_server.py`
 
 ---
 

@@ -15,21 +15,21 @@
 刷完起不来（例如屏幕不亮、无限重启）就先跑 `diag.py` 体检。
 
 **屏幕界面**：四个 `yh-*` 版型统一使用屿禾「小柚」皮肤（共享层
-`main/display/yh_skin/`，上电首帧即品牌画面，不使用 xiaozhi 原生 UI）。
+`main/display/yh_skin/`，上电首帧即品牌画面，不使用 yuhe 原生 UI）。
 布局规格、开机时间线、状态映射与踩坑清单见 **[`UI_SKIN.md`](UI_SKIN.md)**。
 
 固件源码（下文记作 `<FW>`）默认使用**本目录自带的副本**：
 
 ```
-hardware/sets/xiaozhi-esp32/                    ← 默认：sets 自成一体，不碰上游工作区
-hardware/small_screen_camera/xiaozhi-esp32/     ← 回退：副本不存在时才用
+hardware/sets/yuhe-esp32/                    ← 默认：sets 自成一体，不碰上游工作区
+hardware/small_screen_camera/yuhe-esp32/     ← 回退：副本不存在时才用
 ```
 
 副本按「仅源码」维护（约 10 MB，不含 `build/` 与 `managed_components/`）。
 首次编译若缺 `managed_components/`，脚本会**自动从上游目录本地拷贝**一份
 （远比联网重下 758 MB 快）；上游也没有时才交给 ESP-IDF 联网拉取。
 
-要改用别处的固件根，用 `--fw-root <DIR>` 或环境变量 `XIAOZHI_FW_ROOT`。
+要改用别处的固件根，用 `--fw-root <DIR>` 或环境变量 `YUHE_FW_ROOT`。
 
 ---
 
@@ -62,8 +62,8 @@ python hardware/sets/build.py --board yh-cam --server test --yes
 
 | 环境 | 参数 | OTA 地址 | YH 心跳端口 |
 |---|---|---|---|
-| 生产（默认） | `--server prod` | `http://sandyun.top:8002/xiaozhi/ota/` | 12399 |
-| 测试 | `--server test` | `http://sandyun.top:8144/xiaozhi/ota/` | 8199 |
+| 生产（默认） | `--server prod` | `http://sandyun.top:8002/yuhe/ota/` | 12399 |
+| 测试 | `--server test` | `http://sandyun.top:8144/yuhe/ota/` | 8199 |
 
 > 测试环境 8101 是 TLS 端口、明文 HTTP 设备连不上，设备入口一律走 8144；
 > 测试 VM 的 YH 心跳口是 8199（`.config.yaml` 的 `heartbeat_port`），不是生产的 12399。
@@ -115,7 +115,7 @@ hardware/sets/
 ├── SPEC.md              ← 版型作者规范（要新增版型先读它）
 ├── build.py             ← 编译入口（选版型 → 同步 → 注册 → 编译 → 归档）
 ├── flash.py             ← 烧录入口（多线程探测 COM 口 → esptool 烧录）
-├── xiaozhi-esp32/       ← 固件源码副本 <FW>（仅源码；build/ 与 managed_components/ 不入库）
+├── yuhe-esp32/       ← 固件源码副本 <FW>（仅源码；build/ 与 managed_components/ 不入库）
 ├── boards/
 │   ├── yh-cam/          ← 一个版型一个目录
 │   │   ├── set.json     ← 菜单数据源（build.py 读）
@@ -174,7 +174,7 @@ hardware/sets/
 | 产物 | 用途 |
 |---|---|
 | `<name>-merged-binary.bin` | 合并好的单文件，可直接 OTA 或首次烧录 |
-| `<name>-xiaozhi.bin` | 应用分区 |
+| `<name>-yuhe.bin` | 应用分区 |
 | `<name>-generated_assets.bin` | assets 分区（字体/图标），**首次必须全量烧录** |
 | `<name>-bootloader.bin` | bootloader |
 | `<name>-partition-table.bin` | 分区表 |
@@ -190,7 +190,7 @@ hardware/sets/
 | `-y` / `--yes` | 跳过所有确认，含引脚未验证警告 |
 | `--no-archive` | 编译后不归档 |
 | `--fw-arg=<ARG>` | 额外透传给 `<FW>/scripts/build.py`，可重复。**必须用等号**：`--fw-arg=--zip` |
-| `--fw-root <DIR>` | 手动指定固件根目录（默认用 sets 自带副本 `sets/xiaozhi-esp32/`） |
+| `--fw-root <DIR>` | 手动指定固件根目录（默认用 sets 自带副本 `sets/yuhe-esp32/`） |
 | `--no-color` | 关闭彩色输出（日志重定向到文件时用） |
 
 烧录不在这里，见下一节。
@@ -327,7 +327,7 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
   0x0         bootloader.bin                   15536 字节
   0x8000      partition-table.bin               3072 字节
   0xd000      ota_data_initial.bin              8192 字节
-  0x20000     xiaozhi.bin                    2757424 字节
+  0x20000     yuhe.bin                    2757424 字节
   0x800000    generated_assets.bin           4054873 字节
 …
 [烧录] 逐段写入：一个镜像一个 esptool 会话，某段断了只补这一段
@@ -356,7 +356,7 @@ app **前面**，assets 一断 app 就一个字节也没写，设备留着上一
 
 ```
 [自检] 烧录地址与分区表对不上
-        · xiaozhi.bin 要写到 0x10000，但分区表里没有任何分区起始于该地址
+        · yuhe.bin 要写到 0x10000，但分区表里没有任何分区起始于该地址
         · app 要写到 0x10000，而分区表里的 app 分区在 0x20000、0x410000 —— 布局不同源
 ```
 
@@ -542,7 +542,7 @@ Espressif 参考设计里是 **DTR→GPIO0、RTS→EN**，esptool 的 `ClassicRe
 删掉 `<FW>\build` 目录再重跑：
 
 ```bat
-rmdir /s /q G:\demo\21_xiaozhi\hardware\sets\xiaozhi-esp32\build
+rmdir /s /q G:\demo\21_xiaozhi\hardware\sets\yuhe-esp32\build
 python hardware/sets/build.py --board yh-cam --yes
 ```
 
@@ -550,7 +550,7 @@ sdkconfig 的变更在老 build 目录里不会自动生效，这是 IDF 的常�
 
 > ⚠️ **切换版型必须全量重编**：`<FW>/build` 是所有版型共用的**单一**构建目录，
 > 切换版型后 sdkconfig 会整体改变，Kconfig 可能不生效。
-> 脚本在开始编译前会检查 `build/xiaozhi-build.sdkconfig.defaults`，
+> 脚本在开始编译前会检查 `build/yuhe-build.sdkconfig.defaults`，
 > 发现上次编译的是别的版型时会主动中文告警并给出删除命令——看到就照做。
 > 另外切换前记得先归档（默认已归档到 `out/<id>/`）或自行备份产物。
 
@@ -607,7 +607,7 @@ python hardware/sets/flash.py --port COM18 -y       :: 指定串口直接烧
 手工烧也行：`merged-binary.bin` 可直接用于 OTA 或首次烧录，
 **assets 分区（`generated_assets.bin`）首次必须全量烧录**。
 注意固件自带的 `yh_flash.bat` 硬编码指向上游目录
-`hardware\small_screen_camera\xiaozhi-esp32`，用 sets 副本编译时请走 `flash.py`。
+`hardware\small_screen_camera\yuhe-esp32`，用 sets 副本编译时请走 `flash.py`。
 
 **Q：报 `A fatal error occurred: Failed to connect to ESP32-S3: Invalid head of packet (0x49)`**
 **0x49 就是字符 `I`**，是应用日志（`I (123) Tag: ...`）的首字节 —— 说明芯片在跑应用、

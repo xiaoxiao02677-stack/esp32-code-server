@@ -39,16 +39,16 @@ out = ssh("SECRET=$(mysql -N -uroot -p123456 xiaozhi_esp32_server -e \"select pa
           "curl -s -w '\\nHTTP=%{http_code}' -X POST -H \"Authorization: Bearer $SECRET\" http://127.0.0.1:8003/api/llm/preview -H 'Content-Type: application/json' -d '{\"type\":\"openai\"}'")
 check("R2 llm preview auth+validation (400 text required)", "400" in out, out.strip().replace("\n", " ")[:120])
 
-# 3. Java /xiaozhi/models/llmPreview routing (401 business code without login)
-out = ssh("curl -s 'http://127.0.0.1:8002/xiaozhi/models/llmPreview?modelId=x&text=hi'")
+# 3. Java /yuhe/models/llmPreview routing (401 business code without login)
+out = ssh("curl -s 'http://127.0.0.1:8002/yuhe/models/llmPreview?modelId=x&text=hi'")
 check("R2 llmPreview proxy route live (code:401 unauth)", '"code":401' in out, out.strip()[:80])
 
 # 4. Java session-delete route live (401 business code without login)
-out = ssh("curl -s -X DELETE 'http://127.0.0.1:8002/xiaozhi/agent/abc/chat-history/sid'")
+out = ssh("curl -s -X DELETE 'http://127.0.0.1:8002/yuhe/agent/abc/chat-history/sid'")
 check("R3 chat session delete route live (code:401 unauth)", '"code":401' in out, out.strip()[:80])
 
 # 5. MCP read routes live
-out = ssh("curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8002/xiaozhi/agent/mcp/address/abc'")
+out = ssh("curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8002/yuhe/agent/mcp/address/abc'")
 check("R1 mcp address route live", ("401" in out or "200" in out), out.strip())
 
 # 5. web bundle deployed (fix: strip the echoed command noise)
@@ -58,11 +58,11 @@ bundle = bundle[0] if bundle else ""
 check("R4 web bundle deployed", bool(bundle), bundle)
 
 # 7. device update route exists (401 business code)
-out = ssh("curl -s -X PUT -H 'Content-Type: application/json' -d '{\"alias\":\"t\"}' 'http://127.0.0.1:8002/xiaozhi/device/update/xxx'")
+out = ssh("curl -s -X PUT -H 'Content-Type: application/json' -d '{\"alias\":\"t\"}' 'http://127.0.0.1:8002/yuhe/device/update/xxx'")
 check("R3 device update route live (code:401 unauth)", '"code":401' in out, out.strip()[:80])
 
 # 8. otaMag upload route exists (401/400 business code without file)
-out = ssh("curl -s -X POST 'http://127.0.0.1:8002/xiaozhi/otaMag/upload'")
+out = ssh("curl -s -X POST 'http://127.0.0.1:8002/yuhe/otaMag/upload'")
 check("R3 ota upload route live", ('"code":401' in out or '"code":400' in out), out.strip()[:80])
 
 print()

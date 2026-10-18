@@ -20,7 +20,7 @@
 
 ### 1.1 源：`/cc/` = cc-console
 - 形态：**单文件** `G:/demo/21_xiaozhi/cc-console/src/App.vue`（约 2400 行），16 个功能页 + API 调试页（+ 后续追加的 MCP 接入点页、链路模拟器）。
-- 接口层：统一 `this.api(path, opts)`，基址 `/xiaozhi`，SM2 登录鉴权。
+- 接口层：统一 `this.api(path, opts)`，基址 `/yuhe`，SM2 登录鉴权。
 - 装饰层（**不迁移**）：`src/styles/`、kawaii 卡片/动画 CSS。
 
 ### 1.2 目标：`admincc` = console-v2 的 admin 构建
@@ -112,7 +112,7 @@
 - **服务器**：`serverList`。
 - **链路模拟**：`asrRecognize(modelId)`、`llmPreview({modelId,text,systemPrompt})`。
 
-> 复用：`authApi`（登录）、`customerApi` 无需迁移；`api.js` 基座 `/xiaozhi`、SM2 鉴权、业务码 `code===0` 判定均直接复用，**零修改**。
+> 复用：`authApi`（登录）、`customerApi` 无需迁移；`api.js` 基座 `/yuhe`、SM2 鉴权、业务码 `code===0` 判定均直接复用，**零修改**。
 
 ---
 

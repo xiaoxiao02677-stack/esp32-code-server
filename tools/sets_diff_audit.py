@@ -33,8 +33,8 @@ from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_A = REPO_ROOT / "hardware/small_secreen/xiaozhi-esp32/main"
-SRC_B = REPO_ROOT / "hardware/sets/xiaozhi-esp32/main"
+SRC_A = REPO_ROOT / "hardware/small_secreen/yuhe-esp32/main"
+SRC_B = REPO_ROOT / "hardware/sets/yuhe-esp32/main"
 DEFAULT_REPORT = REPO_ROOT / "code/reports/2026-10-17-复刻同源审计.md"
 
 # 比对时整目录跳过（第三方托管组件 / 构建产物）
@@ -42,8 +42,8 @@ EXCLUDE_DIRS = {"managed_components", "build", ".git"}
 # 比对时按后缀跳过
 EXCLUDE_SUFFIXES = {".o", ".obj"}
 
-A_LABEL = "hardware/small_secreen/xiaozhi-esp32/main"
-B_LABEL = "hardware/sets/xiaozhi-esp32/main"
+A_LABEL = "hardware/small_secreen/yuhe-esp32/main"
+B_LABEL = "hardware/sets/yuhe-esp32/main"
 
 # ---------------------------------------------------------------------------
 # 白名单：key = 相对 A/B main 的 POSIX 路径（支持 "dir/**" 前缀与 fnmatch 通配）
@@ -212,8 +212,8 @@ FEATURES: list[Feature] = [
 ]
 
 # Q7 相关源文件（只读核查，不改代码）
-DEVICE_IMPL = REPO_ROOT / "yh/manager-api/src/main/java/xiaozhi/modules/device/service/impl/DeviceServiceImpl.java"
-OTA_IMPL = REPO_ROOT / "yh/manager-api/src/main/java/xiaozhi/modules/device/service/impl/OtaServiceImpl.java"
+DEVICE_IMPL = REPO_ROOT / "yh/manager-api/src/main/java/yuhe/modules/device/service/impl/DeviceServiceImpl.java"
+OTA_IMPL = REPO_ROOT / "yh/manager-api/src/main/java/yuhe/modules/device/service/impl/OtaServiceImpl.java"
 
 
 @dataclass
@@ -684,7 +684,7 @@ def audit_sync_drift() -> list[SyncDrift]:
 # 2026-10-17 皮肤统稿：B 侧把圆屏皮肤从 boards/yuhe/yh-n16r8-st7789/round_screen_display.cc
 # 提升为 main/display/yh_skin/yh_skin_display.cc（4 版型共用），断言目标随之切换；
 # D1/D2/D3/D5 的可观测不变量保持原样，D4 由「占位对象必须创建」承接。
-ROUND_SCREEN_REL = "hardware/sets/xiaozhi-esp32/main/display/yh_skin/yh_skin_display.cc"
+ROUND_SCREEN_REL = "hardware/sets/yuhe-esp32/main/display/yh_skin/yh_skin_display.cc"
 ROUND_SCREEN_POSITIVE = [
     ("D2 码点上限保持 72", "constexpr size_t kBubbleMaxCodepoints = 72;"),
     ("D2 保持 WRAP（未改 DOT）", "lv_label_set_long_mode(bubble_label_, LV_LABEL_LONG_WRAP);"),
@@ -1002,7 +1002,7 @@ def render_report(pairs: list[FilePair], features: list[Feature], q7: Q7Result, 
     out.append("- 行级增删用 `git diff --no-index --numstat` 统计。Kconfig/CMakeLists 的行数归属以**固定 blob** 为基线"
                "（不随 HEAD 前移、不受 amend/rebase 影响）：")
     out.append("  `git cat-file blob 68c5db5b > /tmp/K.base && git diff --no-index --numstat -- "
-               "hardware/small_secreen/xiaozhi-esp32/main/Kconfig.projbuild /tmp/K.base` → 81/9；"
+               "hardware/small_secreen/yuhe-esp32/main/Kconfig.projbuild /tmp/K.base` → 81/9；"
                "CMakeLists 基线 blob 为 f42eafbf（与工作区一致）→ 31/8。"
                "`git cat-file blob` 提示 “LF will be replaced by CRLF” 属工作区 checkout 设置，不影响 numstat。")
     out.append("- 复跑：`PYTHONUTF8=1 D:/INSTALL/python313/python.exe tools/sets_diff_audit.py --report code/reports/2026-10-17-复刻同源审计.md`")

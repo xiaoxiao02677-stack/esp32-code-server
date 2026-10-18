@@ -2,15 +2,15 @@
   "mcpServers": {
     "aoci-fw-small": {
       "command": "D:/INSTALL/aoci/aoci.exe",
-      "args": ["--repo", "G:/demo/21_xiaozhi/hardware/small_secreen/xiaozhi-esp32", "mcp"]
+      "args": ["--repo", "G:/demo/21_xiaozhi/hardware/small_secreen/yuhe-esp32", "mcp"]
     },
     "aoci-fw-big": {
       "command": "D:/INSTALL/aoci/aoci.exe",
-      "args": ["--repo", "G:/demo/21_xiaozhi/hardware/big_secreen/xiaozhi-esp32", "mcp"]
+      "args": ["--repo", "G:/demo/21_xiaozhi/hardware/big_secreen/yuhe-esp32", "mcp"]
     },
     "aoci-server": {
       "command": "D:/INSTALL/aoci/aoci.exe",
-      "args": ["--repo", "G:/demo/21_xiaozhi/yh/xiaozhi-server", "mcp"]
+      "args": ["--repo", "G:/demo/21_xiaozhi/yh/yuhe-server", "mcp"]
     },
     "aoci-hermes": {
       "command": "D:/INSTALL/aoci/aoci.exe",

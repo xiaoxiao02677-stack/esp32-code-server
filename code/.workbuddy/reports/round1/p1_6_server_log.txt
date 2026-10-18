@@ -1,9 +1,9 @@
 
-$ awk -v s="261005 04:08:00" -v e="261005 04:18:29" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -cE 'ERROR|Traceback|Exception'
+$ awk -v s="261005 04:08:00" -v e="261005 04:18:29" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/yuhe-server/data/app.log | grep -cE 'ERROR|Traceback|Exception'
 3
 [rc=0]
 
-$ awk -v s="261005 04:08:00" -v e="261005 04:18:29" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -E 'ERROR|Traceback|Exception' | head -10
+$ awk -v s="261005 04:08:00" -v e="261005 04:18:29" 'substr($0,1,15) >= s && substr($0,1,15) <= e' /root/xiaozhi-server/main/yuhe-server/data/app.log | grep -E 'ERROR|Traceback|Exception' | head -10
 261005 04:13:56[0.9.7-00000000000000][core.utils.audioRateController]-ERROR-发送音频失败: received 1000 (OK); then sent 1000 (OK)
 261005 04:13:56[0.9.7-00000000000000][core.utils.audioRateController]-ERROR-音频发送循环异常: received 1000 (OK); then sent 1000 (OK)
 261005 04:13:56[0.9.7-00000000000000][core.providers.tts.base]-ERROR-audio_play_priority_thread: None received 1000 (OK); then sent 1000 (OK)

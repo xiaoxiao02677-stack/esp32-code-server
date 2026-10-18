@@ -26,12 +26,12 @@
 ## 部署记录
 - 备份：`/root/backup/2026-10-08-doubao-v3/tables_before.sql`（三表，md5 f6c9963a）
 - 传输：3 文件 sftp 上传，md5 双端一致（provider b44d08bf / test 892c5044 / sql cb973dbf）
-- 落位：`/root/xiaozhi-server/main/xiaozhi-server/core/providers/tts/doubao_v3.py` + tests；py_compile OK
+- 落位：`/root/xiaozhi-server/main/yuhe-server/core/providers/tts/doubao_v3.py` + tests；py_compile OK
 - 真机合成：服务器 venv 直跑 provider → 144756 字节 WAV（RIFF 头正常）LIVE TEST OK
 - SQL 导入：直导成功（provider 动态加载，无需重启 Python 服务；Liquibase 登记待下次 jar 重启自动补，幂等安全）
 - API 验证：
-  - `GET /xiaozhi/models/list?modelType=TTS` → TTS_DoubaoV3 在列，enabled=1，凭据字段齐全
-  - `GET /xiaozhi/ttsVoice?ttsModelId=TTS_DoubaoV3` → code=0 total=12（中文名称+语种正常）
+  - `GET /yuhe/models/list?modelType=TTS` → TTS_DoubaoV3 在列，enabled=1，凭据字段齐全
+  - `GET /yuhe/ttsVoice?ttsModelId=TTS_DoubaoV3` → code=0 total=12（中文名称+语种正常）
 - 清理：/tmp 三文件已删；服务日志无异常
 
 ## 回滚剧本
@@ -41,7 +41,7 @@ mysql -uroot -p123456 xiaozhi_esp32_server < /root/backup/2026-10-08-doubao-v3/t
 # Liquibase 登记（若 jar 已重启过）
 mysql -uroot -p123456 xiaozhi_esp32_server -e "DELETE FROM DATABASECHANGELOG WHERE ID='202610071200';"
 # Python 文件删除即可（provider 动态加载）
-rm /root/xiaozhi-server/main/xiaozhi-server/core/providers/tts/doubao_v3.py /root/xiaozhi-server/main/xiaozhi-server/tests/core/providers/tts/test_doubao_v3.py
+rm /root/xiaozhi-server/main/yuhe-server/core/providers/tts/doubao_v3.py /root/xiaozhi-server/main/yuhe-server/tests/core/providers/tts/test_doubao_v3.py
 # 本地镜像删除对应文件 + master.yaml 注册行
 ```
 

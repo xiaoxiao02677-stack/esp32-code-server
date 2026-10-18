@@ -11,7 +11,7 @@ All with the real session token via Java (8002), i.e. the exact browser path.
 import json
 import subprocess
 
-API = "http://127.0.0.1:8002/xiaozhi"
+API = "http://127.0.0.1:8002/yuhe"
 AGENT_ID = "a8b7726cf67f42fc8511a3a4ea82ca69"
 
 

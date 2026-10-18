@@ -2,7 +2,7 @@
   "suite": "sim-user-v1",
   "design": "sim_test_design_v1.md（高见远 v1，2026-10-05）",
   "device_id": "14:c1:9f:d1:33:48",
-  "ws_url": "ws://sandyun.top:8001/xiaozhi/v1/",
+  "ws_url": "ws://sandyun.top:8001/yuhe/v1/",
   "started": "2026-10-05 04:34:21",
   "ended": "2026-10-05 04:39:49",
   "cases": [

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""重启线上 xiaozhi-server（Python）并验活。
+"""重启线上 yuhe-server（Python）并验活。
 
 用法：python restart_py_server.py
 """
@@ -25,14 +25,14 @@ def main():
         print(o or "(无)")
 
         print("\n[2/5] 停止")
-        sh(client, "pkill -f 'xiaozhi-server/main/xiaozhi-server'; "
+        sh(client, "pkill -f 'yuhe-server/main/yuhe-server'; "
                    "pkill -f 'venv/bin/python app.py'; sleep 3; true")
         rc, o, e = sh(client, "ps -eo pid,cmd | grep '[a]pp.py' | wc -l")
         print("剩余 app.py 进程数:", o)
 
         print("\n[3/5] 启动")
-        sh(client, "cd /root/xiaozhi-server/main/xiaozhi-server && "
-                   "setsid nohup .venv/bin/python app.py > /tmp/xiaozhi-server.log "
+        sh(client, "cd /root/xiaozhi-server/main/yuhe-server && "
+                   "setsid nohup .venv/bin/python app.py > /tmp/yuhe-server.log "
                    "2>&1 < /dev/null & echo STARTED", timeout=20)
         time.sleep(12)
 
@@ -44,10 +44,10 @@ def main():
         print("监听:", o or "(未监听!)")
 
         print("\n[5/5] 日志尾部")
-        rc, o, e = sh(client, "tail -n 40 /tmp/xiaozhi-server.log")
+        rc, o, e = sh(client, "tail -n 40 /tmp/yuhe-server.log")
         print(o)
         rc, o, e = sh(client, "grep -iE 'traceback|error|exception' "
-                              "/tmp/xiaozhi-server.log | tail -15")
+                              "/tmp/yuhe-server.log | tail -15")
         print("--- 错误行 ---")
         print(o or "(无错误)")
     finally:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """获取测试环境 demo 账号的登录 token（SM2 加密 + Redis 验证码过闸）。
 
-链路：8101/xiaozhi/ -> 8002 manager-api（同一 DB，demo 账号沿用）
+链路：8101/yuhe/ -> 8002 manager-api（同一 DB，demo 账号沿用）
 验证码：触发 /user/captcha 后从 Redis key 'sys:captcha:{uuid}' 读取明文。
 """
 import json
@@ -13,7 +13,7 @@ import uuid as uuidlib
 
 from gmssl import sm2
 
-B = "https://sandyun.top:8101/xiaozhi"
+B = "https://sandyun.top:8101/yuhe"
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE

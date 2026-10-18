@@ -11,7 +11,7 @@
 ## 1. 用户域现状（sys_user）
 
 ### 1.1 Entity
-`G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/sys/entity/SysUserEntity.java`
+`G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/sys/entity/SysUserEntity.java`
 
 ```java
 @TableName("sys_user")            // 无逻辑删除字段（无 @TableLogic）
@@ -166,7 +166,7 @@ doGetAuthenticationInfo: token 过期→IncorrectCredentialsException(401)
 
 ## 3. 公共设施
 
-- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/common/utils/Result.java`
+- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/common/utils/Result.java`
   ```java
   public class Result<T> { private int code = 0; private String msg = "success"; private T data; }
   // new Result<T>().ok(data) / .error(ErrorCode) / .error(int code, String msg)
@@ -269,13 +269,13 @@ CREATE TABLE IF NOT EXISTS ai_agent_wake_word (
   - insert: creator、createDate（+ 别名 createdAt）、updater、updateDate、dataOperation("I")
   - update: updater、updateDate、dataOperation("U")
   - 实体字段需配 `@TableField(fill = FieldFill.INSERT / INSERT_UPDATE)` 才生效。
-- 结论: **框架是 MyBatis-Plus**（BaseMapper/LambdaQueryWrapper），不是原生 MyBatis；pagination 用 MP 分页插件；自动填充走 FieldMetaObjectHandler；`application.yml`: `mybatis-plus.mapper-locations=classpath*:/mapper/**/*.xml`、`typeAliasesPackage=xiaozhi.modules.*.entity`、`id-type: ASSIGN_ID`（雪花，实体 id 用 Long 或 String 均可，如 wake_word 表是 VARCHAR(32)）。
+- 结论: **框架是 MyBatis-Plus**（BaseMapper/LambdaQueryWrapper），不是原生 MyBatis；pagination 用 MP 分页插件；自动填充走 FieldMetaObjectHandler；`application.yml`: `mybatis-plus.mapper-locations=classpath*:/mapper/**/*.xml`、`typeAliasesPackage=yuhe.modules.*.entity`、`id-type: ASSIGN_ID`（雪花，实体 id 用 Long 或 String 均可，如 wake_word 表是 VARCHAR(32)）。
 
 ---
 
 ## 7. 登录与用户信息接口（现有行为基准）
 
-`G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/security/controller/LoginController.java`（`@RequestMapping("/user")`）
+`G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/security/controller/LoginController.java`（`@RequestMapping("/user")`）
 
 | 接口 | 方法/路径 | 入参 | 返回 |
 |---|---|---|---|
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS ai_agent_wake_word (
 
 ## 8. 默认模型 / 音色实体（默认模型关联落点）
 
-- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/model/entity/ModelConfigEntity.java`
+- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/model/entity/ModelConfigEntity.java`
   - 表 `ai_model_config`: String id；`modelType`（Memory/ASR/VAD/LLM/TTS）；`modelCode`；`modelName`；`isDefault`(0/1)；`isEnabled`；`configJson`（JSONObject + JacksonTypeHandler，@TableName(autoResultMap=true)）；docLink/remark/sort + 审计字段。
 - `.../modules/model/service/ModelConfigService.java` 关键方法（默认模型联动直接用）:
   ```java
@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS ai_agent_wake_word (
   String getModelNameById(String id);
   int countConfigJsonLlmReference(String llmModelId);
   ```
-- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/timbre/entity/TimbreEntity.java`
+- `G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/timbre/entity/TimbreEntity.java`
   - 表 `ai_tts_voice`: String id；languages；name；remark；referenceAudio/referenceText；voiceInstruction；dynamicInstruction；instructionLlmId；sort（FieldStrategy.NOT_NULL）；ttsModelId；ttsVoice；voiceDemo + 审计字段。
 - 「展示项配置/默认模型」建议落点: 新表如 `sys_user_display_config`/`sys_user_default_model`（user_id → model_type + model_id 或 timbre_id），Service 内调 `ModelConfigService.getModelByIdFromCache` 校验关联存在性；Redis key 命名跟随 `RedisKeys.java` 现有前缀风格（`model:name:`、`timbre:name:`）。
 
@@ -345,7 +345,7 @@ CREATE TABLE IF NOT EXISTS ai_agent_wake_word (
 | `modules/sys/service/impl/SysParamsServiceImpl.java` | 本地多 deleteById/BUILTIN_PARAM_MAX_ID=1000/paramCode 唯一校验/paramType=1；服务器无 |
 | `resources/i18n/messages*.properties` | 本地多 10205/10206/10207/10214~10219 键（唤醒词、参数错误码）；服务器只有到 10204 |
 | `resources/db/changelog/db.changelog-master.yaml` | **本地多 3 个 changeSet**: 202610090130(team-lead, MARK_RAN 幂等)、202610101030(team-lead)、202610101100(backend-java) |
-| `common/config/SwaggerConfig.java` | 仅文案：本地"屿禾工坊管理服务"，服务器"xiaozhi-esp32-manager-api" |
+| `common/config/SwaggerConfig.java` | 仅文案：本地"屿禾工坊管理服务"，服务器"yuhe-esp32-manager-api" |
 | `agent/controller/AgentChatHistoryController.java`、`agent/dto/AgentChatHistoryReportDTO.java` | 仅注释/Schema 文案（"设备"↔"小智"） |
 
 服务器文件 mtime 佐证: ShiroConfig 2026-10-12 20:57、SysUserTokenServiceImpl 10-12 03:15、PythonApiProxyController 10-12 21:03、MemoryEntityController 10-12 00:18、db.changelog-master.yaml 10-10 20:34。服务器目录**无 git 仓库**（git log 空）。本地镜像 git 状态干净（工作区改动均在 manager-api 仓库之外）。
@@ -359,7 +359,7 @@ CREATE TABLE IF NOT EXISTS ai_agent_wake_word (
 
 ## 10. 用户管理模块落点方案（建议包路径 + 文件清单模板）
 
-### 10.1 包路径（沿用现有分层，全部在 `src/main/java/xiaozhi/modules/sys/` 下）
+### 10.1 包路径（沿用现有分层，全部在 `src/main/java/yuhe/modules/sys/` 下）
 
 ```
 modules/sys/
@@ -412,7 +412,7 @@ resources/
 ## 附录 A: 关键文件绝对路径速查
 
 ```
-G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/
+G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/
 ├── common/
 │   ├── utils/Result.java / ConvertUtils.java
 │   ├── page/PageData.java / TokenDTO.java
@@ -454,7 +454,7 @@ G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/resources/
 # 本地 md5
 md5sum <4个抽查文件>
 # 服务器 md5
-ssh -p 22223 root@sandyun.top "md5sum /root/yh/app/manager-api/src/main/java/xiaozhi/..."
+ssh -p 22223 root@sandyun.top "md5sum /root/yh/app/manager-api/src/main/java/yuhe/..."
 # 全树比对
 ssh -p 22223 root@sandyun.top "cd /root/yh/app/manager-api && find src -type f \( -name '*.java' -o -name '*.xml' -o -name '*.yaml' -o -name '*.yml' -o -name '*.sql' -o -name '*.properties' \) -exec md5sum {} \; | sort -k2"
 # DB 变更集实况

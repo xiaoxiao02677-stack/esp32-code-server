@@ -1,6 +1,6 @@
 import { get, post, del } from '@/apis/httpRequest'
 
-const BASE_URL = '/xiaozhi/api/memory'
+const BASE_URL = '/yuhe/api/memory'
 
 export const memoryApi = {
   // ==================== 实体图谱 ====================

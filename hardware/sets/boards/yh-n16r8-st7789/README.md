@@ -127,7 +127,7 @@ python hardware/sets/build.py
 等价的 menuconfig 选项：
 
 ```
-Xiaozhi Assistant -> Board Type -> Yuhe N16R8 ST7789 (sets)
+Yuhe Assistant -> Board Type -> Yuhe N16R8 ST7789 (sets)
 ```
 
 字体（抄自模板板 `CONFIG_BOARD_TYPE_YUHE_1_54TFT_WIFI`）：

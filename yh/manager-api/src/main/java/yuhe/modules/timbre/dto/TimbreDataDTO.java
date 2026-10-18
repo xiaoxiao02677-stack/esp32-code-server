@@ -1,0 +1,58 @@
+package yuhe.modules.timbre.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+/**
+ * 音色表数据DTO
+ * 
+ * @author zjy
+ * @since 2025-3-21
+ */
+@Data
+@Schema(description = "音色表信息")
+public class TimbreDataDTO {
+
+    @Schema(description = "语言")
+    @NotBlank(message = "{timbre.languages.require}")
+    private String languages;
+
+    @Schema(description = "音色名称")
+    @NotBlank(message = "{timbre.name.require}")
+    private String name;
+
+    @Schema(description = "备注")
+    private String remark;
+
+    @Schema(description = "参考音频路径")
+    private String referenceAudio;
+
+    @Schema(description = "參考文本")
+    private String referenceText;
+
+    @Schema(description = "音色级语气指令（doubao 2.0 指令遵循，下发时覆盖模型级指令）")
+    private String voiceInstruction;
+
+    @Schema(description = "动态语气指令开关：开启后由 LLM 根据聊天记录定制指令")
+    private Boolean dynamicInstruction;
+
+    @Schema(description = "动态指令生成 LLM 模型ID")
+    private String instructionLlmId;
+
+    @Schema(description = "排序")
+    @Min(value = 0, message = "{sort.number}")
+    private Long sort;
+
+    @Schema(description = "对应 TTS 模型主键")
+    @NotBlank(message = "{timbre.ttsModelId.require}")
+    private String ttsModelId;
+
+    @Schema(description = "音色编码")
+    @NotBlank(message = "{timbre.ttsVoice.require}")
+    private String ttsVoice;
+
+    @Schema(description = "音频播放地址")
+    private String voiceDemo;
+}

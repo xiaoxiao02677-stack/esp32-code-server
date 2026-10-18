@@ -5,18 +5,18 @@ sys.path.insert(0, r"G:\demo\21_xiaozhi\code\.workbuddy")
 from ssh_run import get_client
 
 PAIRS = [
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\model\dto\VoiceDTO.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/model/dto/VoiceDTO.java"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\timbre\entity\TimbreEntity.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/timbre/entity/TimbreEntity.java"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\timbre\dto\TimbreDataDTO.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/timbre/dto/TimbreDataDTO.java"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\timbre\vo\TimbreDetailsVO.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/timbre/vo/TimbreDetailsVO.java"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\timbre\service\impl\TimbreServiceImpl.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/timbre/service/impl/TimbreServiceImpl.java"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\xiaozhi\modules\config\service\impl\ConfigServiceImpl.java",
-     "/root/xiaozhi-server/main/manager-api/src/main/java/xiaozhi/modules/config/service/impl/ConfigServiceImpl.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\model\dto\VoiceDTO.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/model/dto/VoiceDTO.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\timbre\entity\TimbreEntity.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/timbre/entity/TimbreEntity.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\timbre\dto\TimbreDataDTO.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/timbre/dto/TimbreDataDTO.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\timbre\vo\TimbreDetailsVO.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/timbre/vo/TimbreDetailsVO.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\timbre\service\impl\TimbreServiceImpl.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/timbre/service/impl/TimbreServiceImpl.java"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\src\main\java\yuhe\modules\config\service\impl\ConfigServiceImpl.java",
+     "/root/xiaozhi-server/main/manager-api/src/main/java/yuhe/modules/config/service/impl/ConfigServiceImpl.java"),
 ]
 
 client = get_client()

@@ -58,7 +58,7 @@
 <div class="wrap">
 
   <h1>固件 ↔ 服务器 功能对接核查报告</h1>
-  <div class="sub">核查对象：<code>hardware/sets/xiaozhi-esp32</code>（四版型统一接屿禾私有）&nbsp;·&nbsp;生产服务器 <code>sandyun.top</code>（Java 8002 / Python 8000·8003·12399 / nginx 8001）</div>
+  <div class="sub">核查对象：<code>hardware/sets/yuhe-esp32</code>（四版型统一接屿禾私有）&nbsp;·&nbsp;生产服务器 <code>sandyun.top</code>（Java 8002 / Python 8000·8003·12399 / nginx 8001）</div>
 
   <div class="meta">
     <div><b>固件侧证据</b>源码静态分析：main/ota.cc、protocols/、yh/、mcp_server.cc、boards/common/board.cc、四版型 config.json</div>
@@ -79,7 +79,7 @@
     <tbody>
       <tr>
         <td>OTA 版本检查 / 设备信息</td>
-        <td><code>POST {CONFIG_OTA_URL}</code><br><span class="ev">= http://sandyun.top:8002/xiaozhi/ota/</span></td>
+        <td><code>POST {CONFIG_OTA_URL}</code><br><span class="ev">= http://sandyun.top:8002/yuhe/ota/</span></td>
         <td>Java <code>POST /ota/</code></td>
         <td><span class="st s-ok">已对接</span></td>
         <td class="ev">实测 200，返回 <code>server_time / activation / firmware / websocket</code></td>
@@ -107,8 +107,8 @@
       </tr>
       <tr>
         <td>WebSocket 语音主通道</td>
-        <td><code>ws://sandyun.top:8001/xiaozhi/v1/</code><br>+ <code>Authorization: Bearer &lt;token&gt;</code></td>
-        <td>nginx <code>/xiaozhi/v1/</code> → Python 8000</td>
+        <td><code>ws://sandyun.top:8001/yuhe/v1/</code><br>+ <code>Authorization: Bearer &lt;token&gt;</code></td>
+        <td>nginx <code>/yuhe/v1/</code> → Python 8000</td>
         <td><span class="st s-ok">已对接</span></td>
         <td class="ev">sys_params <code>server.websocket</code> 与固件期望值完全一致</td>
       </tr>
@@ -173,7 +173,7 @@
         <td>MCP 工具 <code>self.assets.set_download_url</code> + NVS <code>download_url</code> → Assets::Download</td>
         <td>Java <code>/otaMag/uploadAssetsBin</code> + <code>/otaMag/download/{uuid}</code></td>
         <td><span class="st s-warn">部分对接</span></td>
-        <td class="ev">端点存在但 <code>ai_ota(type=assets)=0</code>；实测 <code>/xiaozhi/assets/download/*</code> 返回 401</td>
+        <td class="ev">端点存在但 <code>ai_ota(type=assets)=0</code>；实测 <code>/yuhe/assets/download/*</code> 返回 401</td>
       </tr>
     </tbody>
   </table>
@@ -333,10 +333,10 @@
   <div class="box warn">
     <h4>⚠️ 部分对接 / 需注意（4 项）</h4>
     <ul>
-      <li><b>assets 资源包 OTA</b> —— 上传/下载端点存在，但无任何 assets 记录，且 <code>/xiaozhi/assets/download/*</code> 返回 401。<code>/otaMag/uploadAssetsBin</code> 可直接复用，把这类文件放行到与 <code>/ota</code> 同级或更新路径。</li>
+      <li><b>assets 资源包 OTA</b> —— 上传/下载端点存在，但无任何 assets 记录，且 <code>/yuhe/assets/download/*</code> 返回 401。<code>/otaMag/uploadAssetsBin</code> 可直接复用，把这类文件放行到与 <code>/ota</code> 同级或更新路径。</li>
       <li><b>唤醒词覆盖行为</b> —— 服务端一旦下发设备级唤醒词，编译期默认「你好小禾」即失效。现有 3 台设备中已有 2 台下发了其它词，属预期还是误配需业务确认。</li>
       <li><b>唤醒词存储位置</b> —— <code>ai_agent_wake_word</code> 表 0 行，实际数据落在 <code>ai_device_config.wake_word</code>；两套入口并存，建议明确单一真源。</li>
-      <li><b>固件副本与上游源码</b> —— <code>hardware/sets/xiaozhi-esp32</code> 与 <code>hardware/small_screen_camera/xiaozhi-esp32</code> 各自独立，改一处不会同步另一处。</li>
+      <li><b>固件副本与上游源码</b> —— <code>hardware/sets/yuhe-esp32</code> 与 <code>hardware/small_screen_camera/yuhe-esp32</code> 各自独立，改一处不会同步另一处。</li>
     </ul>
   </div>
 
@@ -350,8 +350,8 @@
   </div>
 
   <div class="foot">
-    数据来源：生产 Swagger（<code>http://sandyun.top:8002/xiaozhi/v3/api-docs</code>，163 条路径）· 实测 curl（OTA / activate / config-version / assets-download）· MySQL <code>xiaozhi_esp32_server</code> · systemd / nginx / <code>ss -lntup</code> · 固件源码静态分析。<br>
-    注：Python 侧结论同时参考了本地镜像 <code>yh/xiaozhi-server</code> 与生产 <code>/root/xiaozhi-server/main/xiaozhi-server</code>；生产已启用 <code>read_config_from_api</code> 并配置 <code>manager-api.url</code>，本地镜像未含该段配置。
+    数据来源：生产 Swagger（<code>http://sandyun.top:8002/yuhe/v3/api-docs</code>，163 条路径）· 实测 curl（OTA / activate / config-version / assets-download）· MySQL <code>xiaozhi_esp32_server</code> · systemd / nginx / <code>ss -lntup</code> · 固件源码静态分析。<br>
+    注：Python 侧结论同时参考了本地镜像 <code>yh/yuhe-server</code> 与生产 <code>/root/xiaozhi-server/main/yuhe-server</code>；生产已启用 <code>read_config_from_api</code> 并配置 <code>manager-api.url</code>，本地镜像未含该段配置。
   </div>
 </div>
 </body>

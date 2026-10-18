@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulate a xiaozhi device: connect WS, say something, verify TTS audio.
+"""Simulate a yuhe device: connect WS, say something, verify TTS audio.
 
 Usage: python verify_tts.py [text]
 """
@@ -13,7 +13,7 @@ import websockets
 
 # device id seen in server logs (my-s3-tft board)
 DEVICE_ID = "14:c1:9f:d1:33:48"
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 
 
 async def main():

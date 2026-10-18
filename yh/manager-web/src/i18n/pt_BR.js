@@ -204,7 +204,7 @@ export default {
   'firmwareDialog.firmwareFile': 'Arquivo de Firmware',
   'firmwareDialog.clickUpload': 'Clique para Enviar',
   'firmwareDialog.uploadTip': 'Apenas arquivos de firmware (.bin/.apk) são suportados, e o tamanho não deve exceder 100MB',
-  'firmwareDialog.uploadHint': 'Lembrete: Por favor, envie o arquivo xiaozhi.bin pré-mesclado, não o arquivo merged-binary.bin mesclado',
+  'firmwareDialog.uploadHint': 'Lembrete: Por favor, envie o arquivo yuhe.bin pré-mesclado, não o arquivo merged-binary.bin mesclado',
   'firmwareDialog.remark': 'Observação',
   'firmwareDialog.remarkPlaceholder': 'Por favor, insira informações de observação',
   'firmwareDialog.requiredFirmwareName': 'Por favor, insira o nome do firmware (placa + versão)',
@@ -298,7 +298,7 @@ export default {
 
   // Página de registro
   'register.title': 'Criar Conta',
-  'register.welcome': 'Bem-vindo ao XiaoZhi AI',
+  'register.welcome': 'Bem-vindo ao Yuhe AI',
   'register.usernamePlaceholder': 'Por favor, insira o nome de usuário',
   'register.mobilePlaceholder': 'Por favor, insira o número de celular',
   'register.captchaPlaceholder': 'Por favor, insira o captcha',
@@ -584,7 +584,7 @@ export default {
   'button.close': 'Fechar',
 
   // Informações do sistema
-  'system.name': 'Serviço XiaoZhi',
+  'system.name': 'Serviço Yuhe',
 
   // Impressão vocal
   'voiceprint.management': 'Gerenciamento de Impressão Vocal',
@@ -723,7 +723,7 @@ export default {
 
   // Página inicial
   'home.addAgent': 'Adicionar Agente',
-  'home.greeting': 'Olá XiaoZhi',
+  'home.greeting': 'Olá Yuhe',
   'home.wish': 'Vamos ter um dia maravilhoso!',
   'home.languageModel': 'LLM',
   'home.voiceModel': 'TTS',
@@ -796,7 +796,7 @@ export default {
   'paramManagement.deleteFailed': 'Falha na exclusão. Por favor, tente novamente',
   'paramManagement.operationCancelled': 'Exclusão cancelada',
   'paramManagement.operationClosed': 'Operação fechada',
-  'paramManagement.updateSuccess': 'Atualizado com sucesso. Algumas configurações só terão efeito após reiniciar o módulo xiaozhi-server.',
+  'paramManagement.updateSuccess': 'Atualizado com sucesso. Algumas configurações só terão efeito após reiniciar o módulo yuhe-server.',
   'paramManagement.addSuccess': 'Adicionado com sucesso',
   'paramManagement.updateFailed': 'Falha na atualização',
   'paramManagement.addFailed': 'Falha ao adicionar',
@@ -1008,7 +1008,7 @@ export default {
   // Descrições de Tooltip para campos de formulário
   'roleConfig.tooltip.agentName': 'Defina o nome do seu agente de IA para identificação e reconhecimento',
   'roleConfig.tooltip.roleTemplate': 'Escolha entre modelos de função predefinidos para configurar rapidamente as configurações básicas do seu agente',
-  'roleConfig.tooltip.contextProvider': 'Quando o XiaoZhi é ativado, busca dados de sistemas externos e os injeta dinamicamente no prompt do sistema do LLM',
+  'roleConfig.tooltip.contextProvider': 'Quando o Yuhe é ativado, busca dados de sistemas externos e os injeta dinamicamente no prompt do sistema do LLM',
   'roleConfig.tooltip.roleIntroduction': 'Defina o posicionamento do papel, traços de personalidade, normas comportamentais e histórico de conhecimento profissional do agente de IA',
   'roleConfig.tooltip.memoryHis': 'Resumir conteúdo do registro de chat',
   'roleConfig.tooltip.languageCode': 'Defina o código de idioma como pt-BR, en-US, etc., usado para reconhecimento de recursos específicos',
@@ -1097,7 +1097,7 @@ export default {
   'modelConfig.enableSuccess': 'Ativado com sucesso',
   'modelConfig.disableSuccess': 'Desativado com sucesso',
   'modelConfig.operationFailed': 'Falha na operação',
-  'modelConfig.setDefaultSuccess': 'Modelo padrão definido com sucesso. Por favor, reinicie o módulo xiaozhi-server manualmente',
+  'modelConfig.setDefaultSuccess': 'Modelo padrão definido com sucesso. Por favor, reinicie o módulo yuhe-server manualmente',
   'modelConfig.itemsPerPage': '{items} itens/página',
   'modelConfig.firstPage': 'Primeira Página',
   'modelConfig.prevPage': 'Página Anterior',

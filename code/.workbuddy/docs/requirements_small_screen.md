@@ -1,6 +1,6 @@
 # 小智 ESP32 固件 — 需求文档
 
-> 路径：`G:/demo/21_xiaozhi/code/small_secreen/xiaozhi-esp32`
+> 路径：`G:/demo/21_xiaozhi/code/small_secreen/yuhe-esp32`
 > 生成日期：2026-10-11
 > 范围：固件侧（ESP-IDF/ESP32-S3）+ 服务端（含 Web 管理后台）
 

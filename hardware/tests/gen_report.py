@@ -118,12 +118,12 @@ def main():
 
 ### 2.1 技术栈
 - **前端**：Vue 3（Vite 构建），部署于 `/admincc/`，含「体验端」+「管理员视图」双模式
-- **后端**：Java Spring Boot（manager-api），Python aiohttp（xiaozhi-server）
+- **后端**：Java Spring Boot（manager-api），Python aiohttp（yuhe-server）
 - **数据库**：MySQL + Redis
 - **加密**：SM2（C1C3C2），验证码为 SpecCaptcha 5 位图形
 
 ### 2.2 登录方式
-- 直调 `POST /xiaozhi/user/login`（SM2 加密 `验证码+密码`）+ ddddocr 识别验证码
+- 直调 `POST /yuhe/user/login`（SM2 加密 `验证码+密码`）+ ddddocr 识别验证码
 - 将 `{{token, expire, clientHash}}` 注入 `localStorage['cc_token']`
 - 浏览器打开后自动进入已登录状态
 

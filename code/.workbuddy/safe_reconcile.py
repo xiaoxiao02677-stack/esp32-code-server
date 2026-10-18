@@ -1,7 +1,7 @@
 import json, os, hashlib, fnmatch, datetime, shutil
 
 import sys
-REPO = sys.argv[1] if len(sys.argv) > 1 else r"G:/demo/21_xiaozhi/code/xiaozhi-esp32"
+REPO = sys.argv[1] if len(sys.argv) > 1 else r"G:/demo/21_xiaozhi/code/yuhe-esp32"
 ACI = os.path.join(REPO, ".aoci")
 cfg = json.load(open(os.path.join(ACI, "config.json")))
 base = json.load(open(os.path.join(ACI, "baseline.json")))

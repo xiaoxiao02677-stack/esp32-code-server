@@ -16,8 +16,8 @@ import paramiko
 
 HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
 
-LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server"
-REMOTE_ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server"
+REMOTE_ROOT = "/root/xiaozhi-server/main/yuhe-server"
 LOCAL_MISC = r"G:\demo\21_xiaozhi\code\.workbuddy"
 
 PY_FILES = ["core/connection.py", "core/websocket_server.py"]
@@ -66,7 +66,7 @@ def main():
     print("\n[2/5] 修复 nginx 配置（去掉重复的 location = /）")
     sh("cp -f /etc/nginx/sites-available/xiaozhi-manager "
        f"/etc/nginx/sites-available/xiaozhi-manager.bak-{ts}", quiet=True)
-    sftp.put(f"{LOCAL_MISC}\\nginx_xiaozhi_manager_fixed.conf",
+    sftp.put(f"{LOCAL_MISC}\\nginx_yuhe_manager_fixed.conf",
              "/tmp/xz_nginx_fixed.conf")
     sh("cp -f /tmp/xz_nginx_fixed.conf /etc/nginx/sites-available/xiaozhi-manager", quiet=True)
     rc, o, e = sh("nginx -t 2>&1")
@@ -81,12 +81,12 @@ def main():
 
     # ---------- 3. systemd unit ----------
     print("\n[3/5] 更新 systemd unit（Restart=always）")
-    sh("cp -f /etc/systemd/system/xiaozhi-server.service "
-       f"/etc/systemd/system/xiaozhi-server.service.bak-{ts}", quiet=True)
-    sftp.put(f"{LOCAL_MISC}\\xiaozhi-server.service", "/tmp/xz_service")
-    sh("cp -f /tmp/xz_service /etc/systemd/system/xiaozhi-server.service", quiet=True)
+    sh("cp -f /etc/systemd/system/yuhe-server.service "
+       f"/etc/systemd/system/yuhe-server.service.bak-{ts}", quiet=True)
+    sftp.put(f"{LOCAL_MISC}\\yuhe-server.service", "/tmp/xz_service")
+    sh("cp -f /tmp/xz_service /etc/systemd/system/yuhe-server.service", quiet=True)
     sh("systemctl daemon-reload", quiet=True)
-    _, o, _ = sh("systemctl show xiaozhi-server -p Restart -p LimitNOFILE", quiet=True)
+    _, o, _ = sh("systemctl show yuhe-server -p Restart -p LimitNOFILE", quiet=True)
     print(f"  {o}")
 
     # ---------- 4. 切换到 systemd 托管 ----------
@@ -97,9 +97,9 @@ def main():
     if pids:
         sh("kill -9 " + " ".join(pids), quiet=True)
         time.sleep(3)
-    sh("systemctl restart xiaozhi-server", timeout=60, quiet=True)
+    sh("systemctl restart yuhe-server", timeout=60, quiet=True)
     time.sleep(20)
-    rc, o, _ = sh("systemctl is-active xiaozhi-server", quiet=True)
+    rc, o, _ = sh("systemctl is-active yuhe-server", quiet=True)
     print(f"  is-active: {o}")
     _, o, _ = sh("ps -eo pid,etime,cmd | grep '[a]pp.py'", quiet=True)
     print(f"  进程: {o}")

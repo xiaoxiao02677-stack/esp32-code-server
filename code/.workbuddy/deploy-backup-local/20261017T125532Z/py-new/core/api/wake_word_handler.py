@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""唤醒词推送 HTTP API"""
+import json
+import logging
+from aiohttp import web
+from core.api.base_handler import BaseHandler
+
+logger = logging.getLogger(__name__)
+TAG = __name__
+
+
+def _json_response(code: int, msg: str, data=None, status: int = 200) -> web.Response:
+    body = json.dumps({"code": code, "msg": msg, "data": data}, ensure_ascii=False, separators=(",", ":"))
+    resp = web.Response(text=body, content_type="application/json", status=status)
+    resp.headers["Access-Control-Allow-Headers"] = "client-id, content-type, device-id, authorization"
+    resp.headers["Access-Control-Allow-Credentials"] = "true"
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
+class WakeWordHandler(BaseHandler):
+    def __init__(self, config: dict, wake_word_service=None):
+        super().__init__(config)
+        self.wake_word_service = wake_word_service
+        self._auth_key = config.get("server", {}).get("auth_key", "")
+
+    def _verify_auth(self, request: web.Request) -> bool:
+        auth = request.headers.get("Authorization", "")
+        token = auth[7:] if auth.startswith("Bearer ") else auth
+        # 安全修复：空 token 一律拒绝（原先 not token 放行=匿名可调推送接口）；
+        # 仅与 auth_key 常量时间比较，且 auth_key 未配置时全部拒绝
+        if not self._auth_key or not token:
+            logger.warning("[%s] 鉴权失败（token为空或服务端未配置auth_key）", TAG)
+            return False
+        import hmac as _hmac
+        return _hmac.compare_digest(token, self._auth_key)
+
+    async def handle_push(self, request: web.Request) -> web.Response:
+        try:
+            if not self._verify_auth(request):
+                return _json_response(401, "无效的认证token", status=401)
+            body = await request.json()
+            agent_id = body.get("agent_id")
+            device_id = body.get("device_id")
+            wake_words = body.get("wake_words", [])
+            # 显示文本（汉字，可选）：与 wake_words 索引对齐，屏幕显示用
+            display_words = body.get("wake_word_display")
+            if display_words is None:
+                display_words = body.get("display_words")
+            tts_rate = int(body.get("tts_rate", 0))
+            # 允许空列表（清空设备唤醒词，配合固件 ClearWakeWordCommands 语义），
+            # 仅要求类型为 list
+            if not isinstance(wake_words, list):
+                return _json_response(400, "wake_words 必须为列表", status=400)
+            if display_words is not None and not isinstance(display_words, list):
+                return _json_response(400, "wake_word_display 必须为列表", status=400)
+            if len(wake_words) > 5:
+                # 宽容截断而非 400：manager-api 允许 10 词且热推送路径不截断，
+                # 硬拒会让"保存成功但热更新静默失效"（UI 无感知）。设备上限 5。
+                logger.warning("[%s] wake_words %d 个超过设备上限 5，截断", TAG, len(wake_words))
+                wake_words = wake_words[:5]
+                if display_words:
+                    display_words = display_words[:5]
+            # 长度按形态区分：拼音（纯 ASCII）60 字符（esp-sr 单条硬上限 62），汉字 32
+            if any((not isinstance(w, str))
+                   or len(w.strip()) > (60 if w.strip().isascii() else 32) for w in wake_words):
+                return _json_response(400, "wake_words 每项须为字符串（拼音 ≤60 / 汉字 ≤32）", status=400)
+            if display_words is not None:
+                if len(display_words) > 5 or any(
+                        (not isinstance(d, str)) or len(d.strip()) > 32 for d in display_words):
+                    return _json_response(400, "wake_word_display 最多 5 项且每项 ≤32 字符", status=400)
+            if not agent_id and not device_id:
+                return _json_response(400, "agent_id 和 device_id 至少需要指定一个", status=400)
+            if self.wake_word_service is None:
+                return _json_response(503, "WakeWordService 未初始化", status=503)
+            result = await self.wake_word_service.push_wake_words(
+                agent_id=agent_id, device_id=device_id, wake_words=wake_words,
+                tts_rate=tts_rate, display_words=display_words)
+            return _json_response(0, "success", data=result)
+        except json.JSONDecodeError:
+            return _json_response(400, "请求体 JSON 解析失败", status=400)
+        except Exception as e:
+            logger.error("[%s] 推送唤醒词异常: %s", TAG, e, exc_info=True)
+            return _json_response(500, f"内部错误: {str(e)}", status=500)
+
+    async def handle_push_device_config(self, request: web.Request) -> web.Response:
+        """通用 device_config 下发（manager-api 经 server.secret 鉴权代理转发）。
+
+        请求体：{"agent_id": "...", "device_id": "...", "payload": {...}}
+        payload 键白名单与 0~100 值域由 WakeWordService.push_device_config 校验；
+        唤醒词阈值 / 实时打断阈值 / 音量亮度等改设备本地配置的消息统一走此入口。
+        """
+        try:
+            if not self._verify_auth(request):
+                return _json_response(401, "无效的认证token", status=401)
+            body = await request.json()
+            agent_id = body.get("agent_id")
+            device_id = body.get("device_id")
+            payload = body.get("payload")
+            if not isinstance(payload, dict) or not payload:
+                return _json_response(400, "payload 必须为非空对象", status=400)
+            if not agent_id and not device_id:
+                return _json_response(400, "agent_id 和 device_id 至少需要指定一个", status=400)
+            if self.wake_word_service is None:
+                return _json_response(503, "WakeWordService 未初始化", status=503)
+            log_tag = str(body.get("log_tag") or "设备配置")
+            result = await self.wake_word_service.push_device_config(
+                agent_id=agent_id, device_id=device_id, payload=payload, log_tag=log_tag)
+            return _json_response(0, "success", data=result)
+        except ValueError as e:
+            return _json_response(400, str(e), status=400)
+        except json.JSONDecodeError:
+            return _json_response(400, "请求体 JSON 解析失败", status=400)
+        except Exception as e:
+            logger.error("[%s] 下发设备配置异常: %s", TAG, e, exc_info=True)
+            return _json_response(500, f"内部错误: {str(e)}", status=500)
+
+    async def handle_list_devices(self, request: web.Request) -> web.Response:
+        try:
+            if not self._verify_auth(request):
+                return _json_response(401, "无效的认证token", status=401)
+            if self.wake_word_service is None:
+                return _json_response(503, "WakeWordService 未初始化", status=503)
+            filter_agent = request.query.get("agent_id")
+            online = self.wake_word_service.get_online_devices()
+            if filter_agent:
+                agent_devices = self.wake_word_service._agent_devices.get(filter_agent, set())
+                online = [d for d in online if d in agent_devices]
+            return _json_response(0, "success", data={"devices": online})
+        except Exception as e:
+            logger.error("[%s] 查询设备列表异常: %s", TAG, e, exc_info=True)
+            return _json_response(500, f"内部错误: {str(e)}", status=500)

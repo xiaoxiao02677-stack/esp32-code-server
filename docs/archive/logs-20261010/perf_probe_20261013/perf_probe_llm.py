@@ -4,8 +4,8 @@ import sys
 import os
 import time
 
-sys.path.insert(0, "/root/yh/app/xiaozhi-server")
-os.chdir("/root/yh/app/xiaozhi-server")
+sys.path.insert(0, "/root/yh/app/yuhe-server")
+os.chdir("/root/yh/app/yuhe-server")
 
 import logging
 

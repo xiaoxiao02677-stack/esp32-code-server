@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deploy wake-word realtime push fix (device_config format) to sandyun.top.
 
-Files (local code-server-mirror -> remote /root/xiaozhi-server/main/xiaozhi-server):
+Files (local code-server-mirror -> remote /root/xiaozhi-server/main/yuhe-server):
   1. core/services/wake_word_service.py  (push device_config payload, offline queue latest-only)
   2. core/connection.py                  (websocket/MQTT-gateway detection before wake service register)
   3. core/api/wake_word_handler.py       (allow empty wake_words list = clear semantics)
@@ -17,8 +17,8 @@ HOST = "sandyun.top"
 PORT = 22222
 USER = "root"
 
-LOCAL_BASE = "G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server"
-REMOTE_BASE = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_BASE = "G:/demo/21_xiaozhi/code-server-mirror/yuhe-server"
+REMOTE_BASE = "/root/xiaozhi-server/main/yuhe-server"
 FILES = [
     "core/services/wake_word_service.py",
     "core/connection.py",
@@ -48,7 +48,7 @@ def main():
     client = get_client()
     try:
         # 0. 前置健康检查
-        rc, out, err = run(client, "systemctl is-active xiaozhi-server")
+        rc, out, err = run(client, "systemctl is-active yuhe-server")
         print(f"pre-check service: {out}")
         if out != "active":
             print("!! 服务当前非 active，中止部署")
@@ -86,24 +86,24 @@ def main():
             sys.exit(1)
 
         # 4. 重启服务
-        rc, out, err = run(client, "systemctl restart xiaozhi-server")
-        print(f"restart xiaozhi-server: rc={rc} {err[:100]}")
+        rc, out, err = run(client, "systemctl restart yuhe-server")
+        print(f"restart yuhe-server: rc={rc} {err[:100]}")
 
         # 5. 等待启动 + 健康检查
         time.sleep(6)
-        rc, out, err = run(client, "systemctl is-active xiaozhi-server")
+        rc, out, err = run(client, "systemctl is-active yuhe-server")
         print(f"service status: {out}")
         if out != "active":
             print("!! 重启后服务异常，查看日志：")
             rc, out, err = run(client,
-                "journalctl -u xiaozhi-server --since '2 minutes ago' --no-pager | tail -30")
+                "journalctl -u yuhe-server --since '2 minutes ago' --no-pager | tail -30")
             print(out)
             sys.exit(1)
         rc, out, err = run(client,
             "ss -tlnp | grep 8003 | head -3")
         print(f"port 8003: {out}")
         rc, out, err = run(client,
-            "journalctl -u xiaozhi-server --since '1 minute ago' --no-pager | tail -15")
+            "journalctl -u yuhe-server --since '1 minute ago' --no-pager | tail -15")
         print("recent log:")
         print(out)
     finally:

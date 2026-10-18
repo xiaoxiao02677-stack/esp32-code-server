@@ -5,7 +5,7 @@ import subprocess
 import urllib.parse
 
 ROOT = "G:/demo/21_xiaozhi"
-API = "http://127.0.0.1:8002/xiaozhi"
+API = "http://127.0.0.1:8002/yuhe"
 AGENT_ID = "a8b7726cf67f42fc8511a3a4ea82ca69"
 
 results = []

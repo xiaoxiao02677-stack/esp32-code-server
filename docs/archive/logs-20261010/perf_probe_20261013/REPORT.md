@@ -1,9 +1,9 @@
-# xiaozhi-server 性能实测报告（live-prober，2026-10-13）
+# yuhe-server 性能实测报告（live-prober，2026-10-13）
 
 ## 0. 环境与方法
 - 服务器：root@sandyun.top:22223（Ubuntu 24.04，免密密钥登录；任务书中 22/60022 端口不适用，实际端口 22223）
-- 项目：`/root/yh/app/xiaozhi-server`，Python venv 为 `/root/yh/app/xiaozhi-server/.venv`
-- 方法：复用项目自身模块工厂（`core.utils.llm.create_instance` / `core.utils.tts.create_instance`），临时探测脚本只放 `/tmp`，测完已删除；**项目代码零修改**。官方 `performance_tester_llm/tts.py` 直接运行（需 `PYTHONPATH=/root/yh/app/xiaozhi-server`）。
+- 项目：`/root/yh/app/yuhe-server`，Python venv 为 `/root/yh/app/yuhe-server/.venv`
+- 方法：复用项目自身模块工厂（`core.utils.llm.create_instance` / `core.utils.tts.create_instance`），临时探测脚本只放 `/tmp`，测完已删除；**项目代码零修改**。官方 `performance_tester_llm/tts.py` 直接运行（需 `PYTHONPATH=/root/yh/app/yuhe-server`）。
 - 测试对象（生产快照 DB 中的默认模型）：
   - LLM：`LLM_DeepSeek` → deepseek-flash @ https://api.deepseek.com（type=openai，流式 response()）
   - TTS：`TTS_QwenTTS_Flash` → qwen3-tts-flash，音色 Cherry @ https://maas.qianwenaiapi.com（非流式 HTTP：POST 合成 + GET 下载音频）
@@ -61,7 +61,7 @@
 ## C. 运行中遇到的环境问题与解决
 1. 任务书给 22/60022 端口 + 密码认证，实际为 22223 端口 + 密钥免密（见 MEMORY.md）；直接使用 22223 成功。
 2. 服务器 `doc/` 下无 performance_testerer.md；在本仓库「网页后台」镜像中找到文档，按其要求配置已在 `data/.config.yaml`。
-3. `performance_tester.py` 为交互式（input()），SSH 非交互跑不了 → 直接运行子模块脚本；子模块直接跑报 `ModuleNotFoundError: core` → 需 `PYTHONPATH=/root/yh/app/xiaozhi-server`。
+3. `performance_tester.py` 为交互式（input()），SSH 非交互跑不了 → 直接运行子模块脚本；子模块直接跑报 `ModuleNotFoundError: core` → 需 `PYTHONPATH=/root/yh/app/yuhe-server`。
 4. `data/.config.yaml` 含 manager-api.url → 配置实际从 Java API（server-base）拉取，而 **LLM 与 QwenTTS 不在 server-base 返回中**（按设备在 /config/agent-models 下发）→ 官方 LLM 测试器报「没有可用的测试结果」。解决：从 MySQL `ai_model_config.config_json` 读取真实配置，经环境变量注入临时探测脚本（密钥不出服务器、日志脱敏），复现与线上一致的调用路径。
 5. EdgeTTS 403 排查：时钟正常 + 本地对照同样 403 → 定位为上游端点拒绝，非环境问题（详见 A3）。
 6. Qwen TTS 30.98s 单例：复测 2 句恢复正常，判定瞬态；已记录。

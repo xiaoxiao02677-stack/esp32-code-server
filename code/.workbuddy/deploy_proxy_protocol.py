@@ -46,7 +46,7 @@ NEW_STREAM = """stream {
 def ws_probe(tls, devid):
     """从本机（外网）连 8001 做 WS 握手探针。"""
     req = (
-        f"GET /xiaozhi/v1/?device-id={devid} HTTP/1.1\r\n"
+        f"GET /yuhe/v1/?device-id={devid} HTTP/1.1\r\n"
         f"Host: {PUB_HOST}:{PUB_PORT}\r\n"
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
@@ -95,9 +95,9 @@ def main():
     print("步骤 2: 新增 9002/9444 proxy_protocol 上游")
     print("=" * 64)
     sftp.put(r"G:\demo\21_xiaozhi\code\.workbuddy\nginx-device-proxy-protocol.conf",
-             "/etc/nginx/sites-available/xiaozhi-device-pp")
-    sh("ln -sf /etc/nginx/sites-available/xiaozhi-device-pp "
-       "/etc/nginx/sites-enabled/xiaozhi-device-pp")
+             "/etc/nginx/sites-available/yuhe-device-pp")
+    sh("ln -sf /etc/nginx/sites-available/yuhe-device-pp "
+       "/etc/nginx/sites-enabled/yuhe-device-pp")
     print(sh("ls -l /etc/nginx/sites-enabled/")[0])
 
     print()
@@ -148,7 +148,7 @@ def main():
 
     print("\nPython 日志里的连接 IP（关键）:")
     print("  " + (sh(r"grep -E 'conn - Headers' "
-                     r"/root/xiaozhi-server/main/xiaozhi-server/data/app.log "
+                     r"/root/xiaozhi-server/main/yuhe-server/data/app.log "
                      r"| tail -5")[0] or "(无)"))
 
     sftp.close(); c.close()

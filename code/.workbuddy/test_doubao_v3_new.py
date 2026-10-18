@@ -2,7 +2,7 @@
 """用真实 TTSProvider 类跑线上合成，校验新 payload 与音频产出。"""
 import sys, os, types as _t
 
-ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server"
+ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server"
 sys.path.insert(0, ROOT)
 
 

@@ -4,10 +4,10 @@
 |---|---|
 | 版本 | v1.0 |
 | 日期 | 2026-10-17 |
-| 基线（上游 A） | `G:/demo/21_xiaozhi/hardware/small_secreen/xiaozhi-esp32` |
-| 目标（B） | `G:/demo/21_xiaozhi/hardware/sets/xiaozhi-esp32` + `hardware/sets/boards/*` |
+| 基线（上游 A） | `G:/demo/21_xiaozhi/hardware/small_secreen/yuhe-esp32` |
+| 目标（B） | `G:/demo/21_xiaozhi/hardware/sets/yuhe-esp32` + `hardware/sets/boards/*` |
 | 控制台 | `G:/demo/21_xiaozhi/yh/console-v2` |
-| 服务端 | `G:/demo/21_xiaozhi/yh/manager-api`（Java）、`yh/xiaozhi-server`（Python） |
+| 服务端 | `G:/demo/21_xiaozhi/yh/manager-api`（Java）、`yh/yuhe-server`（Python） |
 | 性质 | 需求规格（不含代码实现），全程只读核查 |
 
 ---
@@ -27,9 +27,9 @@
 
 | 术语 | 定义 |
 |---|---|
-| **A（基线）** | `hardware/small_secreen/xiaozhi-esp32`，用户认定的"功能与 UI 黄金标准" |
-| **B（目标）** | `hardware/sets/xiaozhi-esp32` 固件副本 + `hardware/sets/boards/<id>` 版型源 |
-| **`<FW>`** | B 的固件源码副本，即 `hardware/sets/xiaozhi-esp32` |
+| **A（基线）** | `hardware/small_secreen/yuhe-esp32`，用户认定的"功能与 UI 黄金标准" |
+| **B（目标）** | `hardware/sets/yuhe-esp32` 固件副本 + `hardware/sets/boards/<id>` 版型源 |
+| **`<FW>`** | B 的固件源码副本，即 `hardware/sets/yuhe-esp32` |
 | **版型（set）** | `hardware/sets/boards/<id>/`，由 `sets/build.py` 同步进 `<FW>/main/boards/yuhe/<id>/` |
 | **圆屏皮肤** | `RoundScreenDisplay`，240×240 安全区布局，深紫渐变 + 单气泡 + 中心 emoji + 顶栏时间/电量 |
 | **壁纸** | 设备主屏背景图，当前是编译进固件的 `bg_good`（`good.jpg` → RGB565 C 数组） |
@@ -340,7 +340,7 @@
   "device_config": {
     "wallpaper": {
       "version": "3",
-      "url": "http://host:8002/xiaozhi/otaMag/download/<uuid>",
+      "url": "http://host:8002/yuhe/otaMag/download/<uuid>",
       "md5": "9f2c...",
       "size": 115200,
       "width": 240,

@@ -4,7 +4,7 @@ import json
 import subprocess
 
 ROOT = "G:/demo/21_xiaozhi"
-API = "http://127.0.0.1:8002/xiaozhi"
+API = "http://127.0.0.1:8002/yuhe"
 VID = "2107854015092224001"
 
 

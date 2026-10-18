@@ -37,7 +37,7 @@ INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, r
 INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, remark) VALUES (306, 'enable_stop_tts_notify', 'false', 'boolean', 1, '是否开启结束提示音');
 INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, remark) VALUES (307, 'stop_tts_notify_voice', 'config/assets/tts_notify.mp3', 'string', 1, '结束提示音文件路径');
 INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, remark) VALUES (308, 'exit_commands', '退出;关闭', 'array', 1, '退出命令列表');
-INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, remark) VALUES (309, 'xiaozhi', '{
+INSERT INTO `sys_params` (id, param_code, param_value, value_type, param_type, remark) VALUES (309, 'yuhe', '{
   "type": "hello",
   "version": 1,
   "transport": "websocket",

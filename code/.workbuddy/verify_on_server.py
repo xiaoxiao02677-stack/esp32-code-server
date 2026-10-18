@@ -10,7 +10,7 @@ from ssh_run import get_client  # noqa: E402
 
 SCRIPT = r'''
 import sys, json, base64, asyncio
-sys.path.insert(0, "/root/xiaozhi-server/main/xiaozhi-server")
+sys.path.insert(0, "/root/xiaozhi-server/main/yuhe-server")
 from unittest.mock import patch, Mock
 from core.providers.tts.doubao_v3 import TTSProvider
 
@@ -70,7 +70,7 @@ print("\nSERVER VERIFY ALL PASS")
 
 client = get_client()
 try:
-    cmd = "cd /root/xiaozhi-server/main/xiaozhi-server && cat > /tmp/_vfy.py <<'PYEOF'\n" + \
+    cmd = "cd /root/xiaozhi-server/main/yuhe-server && cat > /tmp/_vfy.py <<'PYEOF'\n" + \
           SCRIPT + "\nPYEOF\n.venv/bin/python /tmp/_vfy.py"
     _, out, err = client.exec_command(cmd, timeout=120)
     print(out.read().decode("utf-8", "replace"))

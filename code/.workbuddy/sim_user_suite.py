@@ -21,11 +21,11 @@ from typing import Optional
 import websockets
 
 # ---------- 常量区（设计 §0/§1） ----------
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 DEVICE_ID = "14:c1:9f:d1:33:48"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SSH_HELPER = os.path.join(SCRIPT_DIR, "ssh_run.py")
-REMOTE_LOG = "/root/xiaozhi-server/main/xiaozhi-server/data/app.log"
+REMOTE_LOG = "/root/xiaozhi-server/main/yuhe-server/data/app.log"
 
 BUDGETS = {  # name: (硬线 FAIL, 期望 SLOW)，单位秒
     "connect": (5, 2),

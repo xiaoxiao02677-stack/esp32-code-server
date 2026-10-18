@@ -1,0 +1,6 @@
+35fed18f25b63e1cdde4d9f1eec2acfc  postsave_device_config.sql
+  43 4822 postsave_device_config.sql
+db=xiaozhi_esp32_server
+rows: ai_device_config=5 ai_agent=5
+taken_at=2026-10-17 21:36:33 CST
+type: EVIDENCE snapshot, NOT a rollback asset

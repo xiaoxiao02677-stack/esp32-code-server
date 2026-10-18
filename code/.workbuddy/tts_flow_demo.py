@@ -6,7 +6,7 @@
 依据 docs/websocket_zh.md 协议 + 服务端 sendTextHandle 实现整理：
 
 通信流程（本脚本模拟设备角色，↘=我们发送，↙=服务器下发）：
-  1. WS 连接 ws://sandyun.top:8001/xiaozhi/v1/（Authorization: Bearer 设备token）
+  1. WS 连接 ws://sandyun.top:8001/yuhe/v1/（Authorization: Bearer 设备token）
   2. ↘ {"type":"hello","version":1,"transport":"websocket",
   3.    "audio_params":{"format":"opus","sample_rate":16000,"channels":1,"frame_duration":60}}
   4. ↙ {"type":"hello","transport":"websocket",...,"session_id":"..."}
@@ -33,7 +33,7 @@ import wave
 import websockets  # pip install websockets
 
 # ================= 配置 =================
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"  # 8001 双协议分流：明文 ws → nginx 9001 → Python 8000
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"  # 8001 双协议分流：明文 ws → nginx 9001 → Python 8000
 DEVICE_TOKEN = ""  # 设备激活 token；服务器配置 server.auth.enabled=false 时可留空
 TEXT = sys.argv[1] if len(sys.argv) > 1 else "你好，我是屿禾工坊的语音助手，很高兴见到你！"
 OUT_WAV = "tts_output.wav"

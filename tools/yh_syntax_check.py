@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-FW = REPO / "hardware" / "sets" / "xiaozhi-esp32"
+FW = REPO / "hardware" / "sets" / "yuhe-esp32"
 CC_JSON = FW / "build" / "compile_commands.json"
 
 # 皮肤模块默认清单
@@ -131,7 +131,7 @@ def run_one(template: dict, target: Path) -> tuple[int, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="sets 固件单文件语法校验（不编译烧录）")
-    ap.add_argument("files", nargs="*", help="相对 hardware/sets/xiaozhi-esp32 的源文件路径")
+    ap.add_argument("files", nargs="*", help="相对 hardware/sets/yuhe-esp32 的源文件路径")
     ap.add_argument("--all-skin", action="store_true", help="校验皮肤模块 4 个文件")
     ap.add_argument("--board", default=None, help="板型名（用于挑 BOARD_NAME 匹配的模板）")
     args = ap.parse_args()

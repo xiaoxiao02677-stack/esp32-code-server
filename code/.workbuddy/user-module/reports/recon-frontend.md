@@ -66,7 +66,7 @@ console-v2/
 
 ### 2.1 request() 封装（L106-157）
 
-- `API_BASE = '/xiaozhi'`（反代 → manager-api:8002，同源无 CORS）。
+- `API_BASE = '/yuhe'`（反代 → manager-api:8002，同源无 CORS）。
 - 鉴权：`headers.Authorization = 'Bearer ' + getToken()`，token 存 localStorage key `cc_token`（JSON: `{token, expire, loginAt}`；自动从旧 `v2_token` 迁移）。
 - body 默认 JSON.stringify + Content-Type: application/json；`formData` 走 FormData；`rawBody` 直传（ASR 音频）；`raw: true` 返回原始 Response（ttsPreview 等自己 fetch）。
 - **错误行为**：
@@ -93,7 +93,7 @@ export const api = {
 
 ### 2.3 authApi（L168-187）
 
-- `captchaUrl(uuid)`：`/xiaozhi/user/captcha?uuid=...`（img src 直用）
+- `captchaUrl(uuid)`：`/yuhe/user/captcha?uuid=...`（img src 直用）
 - `pubConfig()`：GET /user/pub-config → `{ sm2PublicKey, ... }`
 - `login(username, password, captcha, captchaId)`：password = `'04' + sm2.doEncrypt(captcha + password, pubKey, 1)`，POST /user/login；成功后 `setToken(JSON.stringify({...res.data, loginAt: Date.now()}))`
 - `userInfo()`：GET /user/info

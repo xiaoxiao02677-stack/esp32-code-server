@@ -6,7 +6,7 @@ import subprocess
 r = subprocess.run(
     ["python", "G:/demo/21_xiaozhi/code/.workbuddy/ssh_run.py",
      'TOKEN=$(MYSQL_PWD=123456 mysql -uroot xiaozhi_esp32_server -N -e "SELECT token FROM sys_user_token ORDER BY update_date DESC LIMIT 1"); '
-     'curl -s "http://127.0.0.1:8002/xiaozhi/agent/a8b7726cf67f42fc8511a3a4ea82ca69" -H "Authorization: Bearer $TOKEN"'],
+     'curl -s "http://127.0.0.1:8002/yuhe/agent/a8b7726cf67f42fc8511a3a4ea82ca69" -H "Authorization: Bearer $TOKEN"'],
     capture_output=True, text=True, encoding="utf-8", errors="replace",
     timeout=120, cwd="G:/demo/21_xiaozhi")
 for line in r.stdout.splitlines():

@@ -9,9 +9,9 @@
 并可选把返回的升级包真正下载回来比对 md5。
 
 用法：
-    python ota_simulator.py --base http://sandyun.top:8002/xiaozhi/ota \
+    python ota_simulator.py --base http://sandyun.top:8002/yuhe/ota \
         --mac AA:BB:CC:DD:EE:02 --board yh-cam --app-version 2.5.0 \
-        --expect-url --verify-download --local-file ../sets/out/yh-cam/yh-cam-xiaozhi.bin
+        --expect-url --verify-download --local-file ../sets/out/yh-cam/yh-cam-yuhe.bin
 
 退出码：0=通过，1=失败
 """
@@ -45,7 +45,7 @@ def report_payload(mac: str, board: str, app_version: str) -> dict:
         "chip_model_name": "esp32s3",
         "chip_info": {"model": 9, "cores": 2, "revision": 0, "features": 18},
         "application": {
-            "name": "xiaozhi",
+            "name": "yuhe",
             "version": app_version,
             "compile_time": "Oct 16 2026T19:33:25Z",
             "idf_version": "v6.1-dirty",
@@ -77,7 +77,7 @@ def fetch(url: str):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", default="http://sandyun.top:8002/xiaozhi/ota")
+    ap.add_argument("--base", default="http://sandyun.top:8002/yuhe/ota")
     ap.add_argument("--mac", required=True)
     ap.add_argument("--board", required=True, help="固件上报的 board.type")
     ap.add_argument("--app-version", required=True, help="设备当前固件版本，如 2.5.0")

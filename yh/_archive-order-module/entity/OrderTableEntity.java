@@ -1,4 +1,4 @@
-package xiaozhi.modules.order.entity;
+package yuhe.modules.order.entity;
 
 import java.math.BigDecimal;
 import java.util.Date;

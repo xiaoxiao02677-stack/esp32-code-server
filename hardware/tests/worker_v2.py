@@ -333,12 +333,12 @@ class WorkerV2:
                 continue
 
             # 点击后检查：API 请求 / DOM 变化 / 弹窗 / toast
-            new_apis = self.net_since(t1, url_filter="/xiaozhi/")
+            new_apis = self.net_since(t1, url_filter="/yuhe/")
             dom_after = page.evaluate("document.querySelectorAll('*').length")
             dom_changed = dom_after != dom_before
             dialog_cnt = page.locator(".modal-mask, .el-dialog, .ant-modal, [class*=modal], [class*=popup], [class*=drawer]").count()
 
-            api_desc = "; ".join(f"{a['method']} {a['url'].split('/xiaozhi/')[-1][:50]}->{a['status']}" for a in new_apis[:4])
+            api_desc = "; ".join(f"{a['method']} {a['url'].split('/yuhe/')[-1][:50]}->{a['status']}" for a in new_apis[:4])
             has_api_err = any(a.get("ok") is False for a in new_apis)
 
             if new_apis and not has_api_err:

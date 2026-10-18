@@ -1,7 +1,7 @@
 # 小智 ESP32 固件代码修改思路梳理
 
 > 生成时间：2026-10-11
-> 路径基准：`G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32`
+> 路径基准：`G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32`
 > 分析范围：固件侧 + 服务端（概要）
 
 ---
@@ -597,7 +597,7 @@ CREATE TABLE wechat_bindings (
 POST /api/v1/wechat/bind
 {
   "openid": "oXXXX",
-  "device_id": "xiaozhi-xxx"
+  "device_id": "yuhe-xxx"
 }
 
 GET /api/v1/wechat/device/{device_id}/status

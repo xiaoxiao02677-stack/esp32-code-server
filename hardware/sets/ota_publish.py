@@ -2,7 +2,7 @@
 """把 build.py 产出的固件发布到「固件升级管理」（ai_ota），打通设备 OTA 升级链路。
 
 流程（与管理端页面完全同一条后端链路）：
-  1. 读取 <out>/<board>/<board>-xiaozhi.bin，解析 ESP32 app 描述符拿到真实 version
+  1. 读取 <out>/<board>/<board>-yuhe.bin，解析 ESP32 app 描述符拿到真实 version
   2. POST {server}/otaMag/upload              -> uploadfile/<md5>.bin
   3. POST {server}/otaMag  (同一 type 幂等 upsert) -> ai_ota 记录
   4. 可选：用 OTA 模拟器复验「低版本设备能拿到升级 URL」
@@ -43,7 +43,7 @@ CTX.verify_mode = ssl.CERT_NONE
 SETS_ROOT = Path(__file__).resolve().parent
 OUT_ROOT = SETS_ROOT / "out"
 
-DEFAULT_SERVER = "http://sandyun.top:8002/xiaozhi"
+DEFAULT_SERVER = "http://sandyun.top:8002/yuhe"
 DEFAULT_CAPTCHA_CMD = 'ssh -p 22222 root@sandyun.top "redis-cli -n 0 get sys:captcha:{uuid}"'
 
 # 版型 -> 展示名 / 备注（可按需修改；type 必须等于固件上报的 board.type）
@@ -198,12 +198,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--board", help="版型 id（如 yh-cam）")
     ap.add_argument("--all", action="store_true", help="发布 out/ 下全部版型")
-    ap.add_argument("--bin", help="直接指定固件文件（默认取 out/<board>/<board>-xiaozhi.bin）")
+    ap.add_argument("--bin", help="直接指定固件文件（默认取 out/<board>/<board>-yuhe.bin）")
     ap.add_argument("--out-root", default=str(OUT_ROOT))
-    ap.add_argument("--server", default=os.environ.get("XIAOZHI_SERVER", DEFAULT_SERVER))
-    ap.add_argument("--token", default=os.environ.get("XIAOZHI_TOKEN"))
-    ap.add_argument("--user", default=os.environ.get("XIAOZHI_USER"))
-    ap.add_argument("--password", default=os.environ.get("XIAOZHI_PASSWORD"))
+    ap.add_argument("--server", default=os.environ.get("YUHE_SERVER", DEFAULT_SERVER))
+    ap.add_argument("--token", default=os.environ.get("YUHE_TOKEN"))
+    ap.add_argument("--user", default=os.environ.get("YUHE_USER"))
+    ap.add_argument("--password", default=os.environ.get("YUHE_PASSWORD"))
     ap.add_argument("--captcha-cmd", default=DEFAULT_CAPTCHA_CMD)
     ap.add_argument("--name", help="固件展示名（默认按版型表）")
     ap.add_argument("--remark", help="备注（默认按版型表）")
@@ -216,7 +216,7 @@ def main() -> int:
     if args.all:
         boards = sorted(
             p.name for p in out_root.iterdir()
-            if p.is_dir() and (p / f"{p.name}-xiaozhi.bin").is_file()
+            if p.is_dir() and (p / f"{p.name}-yuhe.bin").is_file()
         )
     elif args.board:
         boards = [args.board]
@@ -236,7 +236,7 @@ def main() -> int:
 
     rc = 0
     for board in boards:
-        bin_path = Path(args.bin) if args.bin else out_root / board / f"{board}-xiaozhi.bin"
+        bin_path = Path(args.bin) if args.bin else out_root / board / f"{board}-yuhe.bin"
         rc |= publish_one(args.server, token or "", board, bin_path,
                           args.name, args.remark, args.dry_run)
         if args.verify and not args.dry_run and args.mac:

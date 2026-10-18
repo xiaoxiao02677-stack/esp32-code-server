@@ -1,0 +1,29 @@
+--- a/managed_components/lvgl__lvgl/src/misc/lv_event.c
++++ b/managed_components/lvgl__lvgl/src/misc/lv_event.c
+@@ -319,9 +319,26 @@
+ {
+     lv_event_t * e = event_head;
+ 
++    /* YH 本地加固（非上游）：把无界遍历改成有界。
++     *
++     * 背景：event_head 是 lv_global 里的单个全局链表，节点却是各调用者
++     * 栈上的 lv_event_t 局部变量。本工程 LV_USE_OS == LV_OS_NONE，LVGL
++     * 内部零加锁；一旦有第二个任务同时 push/pop，head 会被还原成「另一个
++     * 任务早已返回的栈槽」，该槽被同深度复用后 lv_event_push 写出
++     * e->prev = &e 的自环 —— 本函数就会永久空转（实测卡死 30s+，task_wdt
++     * 每 10s 打印完全相同的栈，设备假死且 LVGL 锁再也不还）。
++     *
++     * 加这个计数上限不是修根因（根因是并发调用），而是把「永久假死」降级成
++     * 「这一次删除少标几个 invalidate 标记」。上限取 256：正常事件嵌套深度
++     * 远小于它（实测最深 3~4 层），命中即说明链已损坏。 */
++    uint32_t yh_guard = 0;
++
+     while(e) {
+         if(e->original_target == target || e->current_target == target) e->deleted = 1;
+         e = e->prev;
++        if(++yh_guard > 256) {
++            break;  /* 链成环：放弃本次标记，绝不在这里自旋 */
++        }
+     }
+ }
+ 

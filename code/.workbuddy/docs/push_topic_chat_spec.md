@@ -3,7 +3,7 @@
 > 版本：v1.0（2026-10-12）
 > 生成方式：5 agent 协同（需求解析 / 前端分析 / 服务端分析 / 固件分析 / 整合成文）
 > 约束：本需求**禁止对代码进行增删**，本文档仅为需求规格与修改思路
-> 涉及仓库：console-v2（前端管理台）、xiaozhi-server（Python 服务端）、xiaozhi-esp32（固件，仅作兼容约束分析，不改）
+> 涉及仓库：console-v2（前端管理台）、yuhe-server（Python 服务端）、yuhe-esp32（固件，仅作兼容约束分析，不改）
 
 ---
 
@@ -134,7 +134,7 @@
 ### 4.1 创建任务请求体（新增字段标注 ★）
 ```json
 {
-  "device_ids": ["xiaozhi-xxxx"],
+  "device_ids": ["yuhe-xxxx"],
   "content": {
     "push_type": "random",
     "topic_sources": ["memory", "weather"],   // ★ 与 audio_url 二选一
@@ -266,7 +266,7 @@ TopicGenerator.generate
 - [ ] 话题源 checkbox 三选项可多选，默认不勾选
 - [ ] 详情弹窗正确显示话题源；旧任务显示"—"不报错
 
-### 服务端（xiaozhi-server）
+### 服务端（yuhe-server）
 - [ ] audio_url 与 topic_sources 双空 → 400；双填 → 400
 - [ ] topic_sources 非法值 → 400；单字符串归一化为列表
 - [ ] cron 任务能按周期实际触发（缺陷修复验证）
@@ -277,7 +277,7 @@ TopicGenerator.generate
 - [ ] LLM 调用在 to_thread 中执行（压测时设备连接不卡顿）
 - [ ] TTS 产物可经静态路由被设备 HTTP 拉取
 
-### 固件（xiaozhi-esp32，仅回归不改码）
+### 固件（yuhe-esp32，仅回归不改码）
 - [ ] notify 固定音频推送行为与改造前一致
 - [ ] B' 场景：会话窗口内收到 tts 流播完自动回 Listening，用户可直接接话
 - [ ] 冷启动场景：notify 播报正常，唤醒词可打断 Notifying

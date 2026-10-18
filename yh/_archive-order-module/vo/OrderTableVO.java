@@ -1,4 +1,4 @@
-package xiaozhi.modules.order.vo;
+package yuhe.modules.order.vo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import xiaozhi.common.utils.DateUtils;
+import yuhe.common.utils.DateUtils;
 
 /**
  * 订单 VO

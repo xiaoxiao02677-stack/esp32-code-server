@@ -40,7 +40,7 @@ taskLVGL 卡在 lv_event_mark_deleted:323 的 while(e) 30 秒+
 ## 应用 / 回退
 
 ```bash
-cd hardware/sets/xiaozhi-esp32
+cd hardware/sets/yuhe-esp32
 patch -p1 --dry-run --forward < ../patches/lv-event-loop-guard.patch   # 先干跑，应 rc=0
 patch -p1 --forward < ../patches/lv-event-loop-guard.patch
 

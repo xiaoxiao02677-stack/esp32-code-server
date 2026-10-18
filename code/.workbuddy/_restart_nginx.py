@@ -24,7 +24,7 @@ print("  127.0.0.1:9001 ->", sh("curl -s -m 5 -o /dev/null -w '%{http_code}' htt
 print("  127.0.0.1:9443 ->", sh("curl -sk -m 5 -o /dev/null -w '%{http_code}' https://127.0.0.1:9443/")[0])
 
 def ws_probe(tls, devid):
-    req=(f"GET /xiaozhi/v1/?device-id={devid} HTTP/1.1\r\nHost: sandyun.top:8001\r\n"
+    req=(f"GET /yuhe/v1/?device-id={devid} HTTP/1.1\r\nHost: sandyun.top:8001\r\n"
          "Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
          f"Sec-WebSocket-Version: 13\r\nUser-Agent: ip-probe-{devid}\r\n\r\n")
     s=socket.create_connection(("sandyun.top",8001),timeout=10)
@@ -42,5 +42,5 @@ print("  ws :", ws_probe(False,"postrestart-plain"))
 print("  wss:", ws_probe(True,"postrestart-tls"))
 time.sleep(6)
 print("  stream:", sh("tail -2 /var/log/nginx/stream-8001.log")[0])
-print("  Python:", sh(r"grep -E 'conn - Headers' /root/xiaozhi-server/main/xiaozhi-server/data/app.log | tail -2 | cut -c1-150")[0])
+print("  Python:", sh(r"grep -E 'conn - Headers' /root/xiaozhi-server/main/yuhe-server/data/app.log | tail -2 | cut -c1-150")[0])
 c.close()

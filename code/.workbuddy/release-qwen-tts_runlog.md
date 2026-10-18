@@ -5,7 +5,7 @@
 > 事实来源：deploy_memory_v1.md 第 0 节 + release-kawaii-v2.md 模式
 
 ## 阶段 0：基线 + 备份（PASS）
-- 备份目录 `/root/backup/2026-10-08/`（1012M）：jar(85,343,915B, md5=3c6ffb4fd3cc31eba637eefbdc5fa49d) + xiaozhi-server-src + xiaozhi-manager-web(230文件) + mysqldump(46K)
+- 备份目录 `/root/backup/2026-10-08/`（1012M）：jar(85,343,915B, md5=3c6ffb4fd3cc31eba637eefbdc5fa49d) + yuhe-server-src + xiaozhi-manager-web(230文件) + mysqldump(46K)
 - Liquibase 部署前：无 202610061500 行（预期）
 - 双服务 active
 
@@ -22,12 +22,12 @@
 ## 阶段 3：服务（PASS）
 - Java：jar cp + restart，active（15:41:07），/opt jar md5=target md5
   - **Liquibase 断言：DATABASECHANGELOG 有 202610061500 ✓；ai_model_provider qwen_tts 种子行=1 ✓**
-  - 日志 xiaozhi-esp32-api.log 无 error/exception，error.log 空
+  - 日志 yuhe-esp32-api.log 无 error/exception，error.log 空
 - Python：保险 restart，active；8003 /api/memory/agents=401（契约保持）；8000=200；app.log 无 traceback
 - 备注：服务器 venv 无 pytest，未在服务器重跑单测（本地 11 过）
 
 ## 阶段 4：冒烟（PASS）
-1. 无 token GET /xiaozhi/models/qwenTtsModels → `{"code":401,"msg":"未授权"}`（Shiro 鉴权在）✓
+1. 无 token GET /yuhe/models/qwenTtsModels → `{"code":401,"msg":"未授权"}`（Shiro 鉴权在）✓
 2. 带用户 token（cbb1fea7...，用户既有会话）+ 无效 apiKey → `{"code":500,"msg":"获取模型列表失败：API密钥无效或已过期"}`（完整链路 Shiro→Controller→JDK HttpClient→千问平台 401→友好错误映射，全通）✓
 3. 前端：index=200（引用新 app.259ee5ec.js）、app.js=200、chunk154=200、service-worker=200 ✓
 

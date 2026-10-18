@@ -942,7 +942,7 @@
 import { sm2 } from 'sm-crypto';
 import API_CATALOG from './lib/apiCatalog';
 
-const API_BASE = '/xiaozhi';
+const API_BASE = '/yuhe';
 
 // 模型类型（对齐原控制台 ProviderManagement 的 9 类）
 const MODEL_TYPES = [

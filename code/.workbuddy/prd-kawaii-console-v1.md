@@ -6,7 +6,7 @@
 | 作者 | 许清楚（Xu，产品经理） |
 | 状态 | 待评审 |
 | 关联任务 | #2 架构设计 / #3 设计系统 / #4 布局框架 / #5+#6 页面改造 / #7 配置同步后端 / #8 配置同步固件 / #9 QA / #10 部署 |
-| 源码依据 | manager-web（Vue 2.6 + Element UI 2.15 + vue-router 3 + vuex 3 + vue-i18n 六语言 + PWA，views/ 22 页，导航为 HeaderBar 顶栏）；xiaozhi-server `core/providers/tools/unified_tool_manager.py` execute_tool 统一入口、`core/connection.py` hello 后 private_config 下发（agent_id/device_max_output_size/chat_history_conf/mcp_endpoint 等先例）；固件 `main/mcp_server.cc`（self.audio_speaker.set_volume / self.screen.set_brightness / self.screen.set_theme，现仅设内存不落盘）；manager-api MySQL `ai_device` 表（id/user_id/mac_address/agent_id/board/alias/app_version/... 无任何配置字段）；hermes 记忆模块已上线（holographic 引擎 + MemoryManagement 页 + 8 端点 REST） |
+| 源码依据 | manager-web（Vue 2.6 + Element UI 2.15 + vue-router 3 + vuex 3 + vue-i18n 六语言 + PWA，views/ 22 页，导航为 HeaderBar 顶栏）；yuhe-server `core/providers/tools/unified_tool_manager.py` execute_tool 统一入口、`core/connection.py` hello 后 private_config 下发（agent_id/device_max_output_size/chat_history_conf/mcp_endpoint 等先例）；固件 `main/mcp_server.cc`（self.audio_speaker.set_volume / self.screen.set_brightness / self.screen.set_theme，现仅设内存不落盘）；manager-api MySQL `ai_device` 表（id/user_id/mac_address/agent_id/board/alias/app_version/... 无任何配置字段）；hermes 记忆模块已上线（holographic 引擎 + MemoryManagement 页 + 8 端点 REST） |
 
 ---
 
@@ -237,7 +237,7 @@ P0 验收 = A1~A9 + A12；P1 追加 A10、A11。
 
 - **不动 Element UI 组件库本体**：不 fork、不改 node_modules 源码；只用全局样式覆盖与包装组件。
 - **不换框架**：Vue 2.6 + vue-router 3 + vuex 3 + vue-i18n 保持；不上 Vue 3 / 不引入新 UI 库 / 不引入 Tailwind 运行时（tokens 若用 Tailwind 风格命名仅为语义约定，样式落地方式由 #3 定）。
-- **不动后端业务逻辑**：除 P0-4 配置同步链路（拦截 + 存储 + 下发）与 P0-5 参数面板复用既有配置接口外，manager-api / xiaozhi-server 业务逻辑零改动。
+- **不动后端业务逻辑**：除 P0-4 配置同步链路（拦截 + 存储 + 下发）与 P0-5 参数面板复用既有配置接口外，manager-api / yuhe-server 业务逻辑零改动。
 - **不动固件业务逻辑**：除配置恢复应用点（开机应用 device_config）外，ESP32 固件功能逻辑零改动；MCP 工具签名不变。
 - **不动 YH/WebSocket 协议**：device_config 走既有 hello private_config 通道，不新增消息类型。
 - **不做用户端（设备侧）配置管理**：设备用户不能用语音"查看/重置云端配置"（本期范围外，语音交互复杂度高）；只有固件自动应用。

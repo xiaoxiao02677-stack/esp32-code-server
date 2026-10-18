@@ -21,7 +21,7 @@ set IDF_PYTHON_ENV_PATH=D:\INSTALL\esp\tools\python\v6.1\venv
 
 ### 2. 进入项目目录
 ```bash
-cd G:/demo/21_xiaozhi/code/small_secreen/xiaozhi-esp32
+cd G:/demo/21_xiaozhi/code/small_secreen/yuhe-esp32
 ```
 
 ### 3. 配置目标板子
@@ -34,7 +34,7 @@ idf.py reconfigure
 ```bash
 idf.py menuconfig
 ```
-导航到：`Component config` → `Xiaozhi ESP32 Board Type` → 选择 `my-s3-tft`
+导航到：`Component config` → `Yuhe ESP32 Board Type` → 选择 `my-s3-tft`
 
 或者直接命令行：
 ```bash
@@ -56,7 +56,7 @@ yh_flash.bat COM12
 
 ### 方法2：手动全量烧录
 ```bash
-python -m esptool --chip esp32s3 -p COM12 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0xd000 build/ota_data_initial.bin 0x20000 build/xiaozhi.bin 0x800000 build/generated_assets.bin
+python -m esptool --chip esp32s3 -p COM12 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0xd000 build/ota_data_initial.bin 0x20000 build/yuhe.bin 0x800000 build/generated_assets.bin
 ```
 
 ## 三、串口监视
@@ -119,5 +119,5 @@ ssh -p 22222 root@sandyun.top
 MYSQL_PWD=123456 mysql -uroot xiaozhi_esp32_server -e "SELECT * FROM ai_device LIMIT 10;"
 
 # 查看最近连接日志
-tail -100 /root/xiaozhi-server/main/xiaozhi-server/data/app.log | grep -E "device|hello|connect"
+tail -100 /root/xiaozhi-server/main/yuhe-server/data/app.log | grep -E "device|hello|connect"
 ```

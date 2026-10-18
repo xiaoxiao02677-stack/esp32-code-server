@@ -71,7 +71,7 @@
 
   <div class="meta">
     <div><b>日期</b>2026-10-16</div>
-    <div><b>固件</b>hardware/sets/xiaozhi-esp32（四版型 · YH 协议 · 唤醒词「你好小禾」· 16M 分区表）</div>
+    <div><b>固件</b>hardware/sets/yuhe-esp32（四版型 · YH 协议 · 唤醒词「你好小禾」· 16M 分区表）</div>
     <div><b>服务器</b>生产 sandyun.top —— Java 8002 / Python 8000(WS)·8003(HTTP)·12399(TCP+UDP) / nginx 8001</div>
     <div><b>验收方式</b>生产真机端口 + 真实管理端 API + 固件报文同构模拟器（全部可复现命令）</div>
   </div>
@@ -131,7 +131,7 @@
     <tbody>
       <tr><td><code>modules/device/service/DeviceConfigFileService.java</code></td><td>新增</td><td>设备配置包服务接口（buildPayload / buildVersion / buildDownloadUrl）</td></tr>
       <tr><td><code>modules/device/service/impl/DeviceConfigFileServiceImpl.java</code></td><td>新增</td><td>读设备配置生成确定性 JSON；版本 = <code>cfg-</code> + payload SHA-256 前 12 位</td></tr>
-      <tr><td><code>modules/device/filter/OtaSlashNormalizeFilter.java</code></td><td>新增</td><td>最高优先级过滤器，归一化 <code>/xiaozhi/ota//config/version</code>，兼容固件 <code>GetCheckVersionUrl()</code> 尾部斜杠</td></tr>
+      <tr><td><code>modules/device/filter/OtaSlashNormalizeFilter.java</code></td><td>新增</td><td>最高优先级过滤器，归一化 <code>/yuhe/ota//config/version</code>，兼容固件 <code>GetCheckVersionUrl()</code> 尾部斜杠</td></tr>
       <tr><td><code>modules/device/controller/OTAController.java</code></td><td>修改</td><td>新增 <code>GET config/version</code>、<code>GET config/download</code> 两个端点</td></tr>
     </tbody>
   </table>
@@ -141,7 +141,7 @@
     <li>备份：<code>/opt/xiaozhi/xiaozhi-esp32-api.jar.bak-otacfg-20261016T120213Z</code>；重启后 active</li>
   </ul>
 
-  <h3>2.2 Python 服务端 <span class="tag">yh/xiaozhi-server → 生产 /root/xiaozhi-server/main/xiaozhi-server</span></h3>
+  <h3>2.2 Python 服务端 <span class="tag">yh/yuhe-server → 生产 /root/xiaozhi-server/main/yuhe-server</span></h3>
   <div class="scroll">
   <table>
     <thead><tr><th style="width:330px">文件</th><th style="width:70px">类型</th><th>说明</th></tr></thead>
@@ -173,16 +173,16 @@
 
   <h3>3.1 配置版本检查 + 配置包下载</h3>
 <pre><span class="c"># 固件为 CONFIG_OTA_URL 带尾斜杠，真实请求会拼出双斜杠</span>
-GET  /xiaozhi/ota/config/version?device_id=c4:9e:7e:08:c2:b4        <span class="g">→ 200</span>
+GET  /yuhe/ota/config/version?device_id=c4:9e:7e:08:c2:b4        <span class="g">→ 200</span>
      {"version":"cfg-615ed27167d0",
-      "download_url":"http://sandyun.top:8002/xiaozhi/ota/config/download?device_id=c4:9e:7e:08:c2:b4"}
+      "download_url":"http://sandyun.top:8002/yuhe/ota/config/download?device_id=c4:9e:7e:08:c2:b4"}
 
-GET  /xiaozhi/ota<span class="y">//</span>config/version?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>  <span class="c">← 固件真实请求形态</span>
-     同上 JSON（日志：[ota-config] 归一化重复斜杠: /xiaozhi/ota//config/version -&gt; /xiaozhi/ota/config/version）
+GET  /yuhe/ota<span class="y">//</span>config/version?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>  <span class="c">← 固件真实请求形态</span>
+     同上 JSON（日志：[ota-config] 归一化重复斜杠: /yuhe/ota//config/version -&gt; /yuhe/ota/config/version）
 
-GET  /xiaozhi/ota/config/download?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>
+GET  /yuhe/ota/config/download?device_id=c4:9e:7e:08:c2:b4       <span class="g">→ 200</span>
      {"device_id":"c4:9e:7e:08:c2:b4",
-      "server":{"ota":"http://sandyun.top:8002/xiaozhi/ota/","websocket":"ws://sandyun.top:8001/xiaozhi/v1/"},
+      "server":{"ota":"http://sandyun.top:8002/yuhe/ota/","websocket":"ws://sandyun.top:8001/yuhe/v1/"},
       "device_config":{"volume":20}}</pre>
   <ul>
     <li><b>确定性</b>：同设备重复请求版本恒定；不同设备版本互异（<code>cfg-615ed27167d0</code> / <code>cfg-1f0f6bdd6a77</code> / <code>cfg-bf75a80ffff5</code> / <code>cfg-63c2ab381554</code>）—— 设备配置变更即版本变更</li>
@@ -197,7 +197,7 @@ GET  /xiaozhi/ota/config/download?device_id=c4:9e:7e:08:c2:b4       <span class=
 
   <h3>3.2 OTA 固件包升级</h3>
 <pre><span class="c"># 真实管理端 API 全链路（非 SQL 直插）</span>
-POST /otaMag/upload   -F file=@yh-cam-xiaozhi.bin
+POST /otaMag/upload   -F file=@yh-cam-yuhe.bin
      <span class="g">→ {"code":0,"data":"uploadfile/cbe6adf17d9bf6b4e2b60677ef915733.bin"}</span>
 POST /otaMag          {"firmwareName":"屿禾-CAM版固件(OV2640+AEC)","type":"yh-cam",
                        "version":"2.5.1","size":2901888,"firmwarePath":"uploadfile/cbe6adf1….bin",…}
@@ -298,7 +298,7 @@ listen/detect "你好小禾，请用一句话介绍你自己"
       <tr><td>设备激活</td><td><code>POST {OTA_URL}/activate</code>（202=等待确认）</td><td>Java <code>POST /ota/activate</code></td><td><span class="st s-ok">✅</span></td><td>实测 202</td></tr>
       <tr><td><b>配置版本检查</b></td><td><code>GET {OTA_URL}/config/version?device_id=</code></td><td><b>Java <code>GET /ota/config/version</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>生产 200；双斜杠形态亦 200</td></tr>
       <tr><td><b>配置包下载</b></td><td><code>config_download_url_</code> → Assets</td><td><b>Java <code>GET /ota/config/download</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>生产 200，返回确定性配置 JSON</td></tr>
-      <tr><td>WebSocket 语音主通道</td><td><code>ws://sandyun.top:8001/xiaozhi/v1/</code></td><td>nginx → Python 8000</td><td><span class="st s-ok">✅</span></td><td>实测建链 + 68 音频帧</td></tr>
+      <tr><td>WebSocket 语音主通道</td><td><code>ws://sandyun.top:8001/yuhe/v1/</code></td><td>nginx → Python 8000</td><td><span class="st s-ok">✅</span></td><td>实测建链 + 68 音频帧</td></tr>
       <tr><td>WS 鉴权</td><td><code>websocket.token</code> 存 NVS</td><td>Python <code>auth.verify_token</code></td><td><span class="st s-ok">✅</span></td><td><code>auth.enabled=false</code> 放行</td></tr>
       <tr><td><b>WS UDP 心跳</b></td><td><code>host:8002</code> UDP <code>{"type":"udp_heartbeat"}</code></td><td><b>Python <code>0.0.0.0:8002/UDP</code>（新增）</b></td><td><span class="st s-ok">✅</span></td><td>回 <code>udp_heartbeat_ack</code>；公网 UDP 转发属路由器侧</td></tr>
       <tr><td>YH 私有协议</td><td>TCP 12399</td><td>Python <code>HeartbeatServer</code></td><td><span class="st s-ok">✅</span></td><td>端口可连，消息类型对齐</td></tr>
@@ -307,7 +307,7 @@ listen/detect "你好小禾，请用一句话介绍你自己"
       <tr><td>MQTT 通道</td><td>完整实现</td><td><code>server.mqtt_gateway=null</code></td><td><span class="st s-neu">⚪ 未启用</span></td><td>两端具备</td></tr>
       <tr><td>时间同步</td><td><code>server_time.timezone_offset</code></td><td>Java 返回 +480</td><td><span class="st s-ok">✅</span></td><td>实测</td></tr>
       <tr><td><b>OTA 固件包升级</b></td><td><code>Ota::Upgrade(firmware.url)</code></td><td>Java <code>/otaMag/*</code> + <code>ai_ota</code></td><td><span class="st s-warn">⚠️ 部分</span></td><td>链路全通并实测；<code>ai_ota</code> 现 1 条（yh-cam），另三版型待编译后一键发布</td></tr>
-      <tr><td>assets 资源包 OTA</td><td>MCP <code>set_download_url</code></td><td><code>/otaMag/uploadAssetsBin</code></td><td><span class="st s-warn">⚠️ 部分</span></td><td>端点齐；<code>/xiaozhi/assets/download/*</code> 401 仍未处理</td></tr>
+      <tr><td>assets 资源包 OTA</td><td>MCP <code>set_download_url</code></td><td><code>/otaMag/uploadAssetsBin</code></td><td><span class="st s-warn">⚠️ 部分</span></td><td>端点齐；<code>/yuhe/assets/download/*</code> 401 仍未处理</td></tr>
     </tbody>
   </table>
   </div>
@@ -373,9 +373,9 @@ listen/detect "你好小禾，请用一句话介绍你自己"
 
   <h3>既有待办（本轮未涉及）</h3>
   <ul>
-    <li><code>assets</code> 资源包 OTA：<code>/xiaozhi/assets/download/*</code> 仍返回 401</li>
+    <li><code>assets</code> 资源包 OTA：<code>/yuhe/assets/download/*</code> 仍返回 401</li>
     <li>唤醒词真源：<code>ai_agent_wake_word</code> 0 行，实际落 <code>ai_device_config.wake_word</code>，两套入口并存</li>
-    <li>固件双副本（<code>hardware/sets/xiaozhi-esp32</code> 与 <code>hardware/small_screen_camera/xiaozhi-esp32</code>）需保持同步</li>
+    <li>固件双副本（<code>hardware/sets/yuhe-esp32</code> 与 <code>hardware/small_screen_camera/yuhe-esp32</code>）需保持同步</li>
   </ul>
 
   <h3>回滚方式</h3>
@@ -384,15 +384,15 @@ listen/detect "你好小禾，请用一句话介绍你自己"
     <thead><tr><th style="width:110px">组件</th><th>回滚</th></tr></thead>
     <tbody>
       <tr><td>Java</td><td><code>cp /opt/xiaozhi/xiaozhi-esp32-api.jar.bak-otacfg-20261016T120213Z /opt/xiaozhi/xiaozhi-esp32-api.jar &amp;&amp; systemctl restart xiaozhi-manager-api</code></td></tr>
-      <tr><td>Python</td><td><code>cp -a /root/backup-glyphpush-20261016T120807Z/core/. /root/xiaozhi-server/main/xiaozhi-server/core/ &amp;&amp; systemctl restart xiaozhi-server</code></td></tr>
-      <tr><td>字形包</td><td>移除 <code>data/glyph_bundle/</code> 即自动降级为「不补字」（不影响语音链路）；或设 <code>XIAOZHI_GLYPH_BUNDLE_DIR</code> 指向其他目录</td></tr>
-      <tr><td>UDP 心跳</td><td>配置 <code>server.ws_udp_heartbeat_port: 0</code> 关闭监听；或环境变量 <code>XIAOZHI_WS_UDP_HEARTBEAT_PORT=0</code></td></tr>
+      <tr><td>Python</td><td><code>cp -a /root/backup-glyphpush-20261016T120807Z/core/. /root/xiaozhi-server/main/yuhe-server/core/ &amp;&amp; systemctl restart yuhe-server</code></td></tr>
+      <tr><td>字形包</td><td>移除 <code>data/glyph_bundle/</code> 即自动降级为「不补字」（不影响语音链路）；或设 <code>YUHE_GLYPH_BUNDLE_DIR</code> 指向其他目录</td></tr>
+      <tr><td>UDP 心跳</td><td>配置 <code>server.ws_udp_heartbeat_port: 0</code> 关闭监听；或环境变量 <code>YUHE_WS_UDP_HEARTBEAT_PORT=0</code></td></tr>
     </tbody>
   </table>
   </div>
 
   <div class="foot">
-    注：Python 侧结论同时参考本地镜像 <code>yh/xiaozhi-server</code> 与生产 <code>/root/xiaozhi-server/main/xiaozhi-server</code>（二者改动后已逐文件同步，md5 可校验）。<br>
+    注：Python 侧结论同时参考本地镜像 <code>yh/yuhe-server</code> 与生产 <code>/root/xiaozhi-server/main/yuhe-server</code>（二者改动后已逐文件同步，md5 可校验）。<br>
     验收脚本：<code>hardware/tests/glyph_push_simulator.py</code> · <code>hardware/tests/ota_simulator.py</code> · <code>hardware/sets/ota_publish.py</code>
   </div>
 

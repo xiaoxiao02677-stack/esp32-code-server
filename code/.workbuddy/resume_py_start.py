@@ -33,16 +33,16 @@ def main():
             print("!! 无进程，需要启动")
 
         print("\n[2] 启动（后台不读 stdout）")
-        sh(client, "cd /root/xiaozhi-server/main/xiaozhi-server && "
-                   "setsid nohup .venv/bin/python app.py > /tmp/xiaozhi-server.log 2>&1 < /dev/null &",
+        sh(client, "cd /root/xiaozhi-server/main/yuhe-server && "
+                   "setsid nohup .venv/bin/python app.py > /tmp/yuhe-server.log 2>&1 < /dev/null &",
             read=False)
         time.sleep(15)
 
         print("\n[3] 验活")
         sh(client, "ps -eo pid,etime,cmd | grep '[a]pp.py' | head -3")
         sh(client, "ss -lnt | grep -E ':(8000|8003|12399)'")
-        sh(client, "curl -s -o /dev/null -w 'manager-api 8002: %{http_code}\\n' http://127.0.0.1:8002/xiaozhi/user/pub-config")
-        sh(client, "tail -5 /tmp/xiaozhi-server.log")
+        sh(client, "curl -s -o /dev/null -w 'manager-api 8002: %{http_code}\\n' http://127.0.0.1:8002/yuhe/user/pub-config")
+        sh(client, "tail -5 /tmp/yuhe-server.log")
     finally:
         client.close()
 

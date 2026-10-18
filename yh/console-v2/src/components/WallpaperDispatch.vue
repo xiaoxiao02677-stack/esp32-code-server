@@ -471,11 +471,11 @@ function normalizeDevice(d) {
   }
 }
 
-// 归一化 MAC：14:c1:9f:d1:33:48 / 14-C1-9F-D1-33-48 / xiaozhi-14c19fd13348 → 14c19fd13348
+// 归一化 MAC：14:c1:9f:d1:33:48 / 14-C1-9F-D1-33-48 / yuhe-14c19fd13348 → 14c19fd13348
 // （与 Python 侧 _normalize_device_id 对齐；心跳设备表按归一化 ID 匹配）
 function normMac(s) {
   let v = String(s || '').trim().toLowerCase()
-  if (v.startsWith('xiaozhi-')) v = v.slice(8)
+  if (v.startsWith('yuhe-')) v = v.slice(8)
   return v.replace(/[:\-]/g, '')
 }
 

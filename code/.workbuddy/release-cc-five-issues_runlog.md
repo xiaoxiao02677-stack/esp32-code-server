@@ -41,7 +41,7 @@
 ## 验证（e2e_cc_verify2.py，7/7 PASS）
 - /api/model/test：401 无 token / 400 缺 body（Python 鉴权+校验生效）
 - /models/modelTest、/agent/mcp/test、/device/bind、/device/manual-add：未登录 {"code":401}（路由+Shiro 生效）
-- web bundle 本地=线上；xiaozhi-server/manager-api/nginx 三服务 active
+- web bundle 本地=线上；yuhe-server/manager-api/nginx 三服务 active
 
 ## 遗留
 - 模型新增/编辑表单（原控制台有 provider 动态表单）未移植——当前模型 CRUD 走「API 调试」页；如需可视化表单是下一轮工作
@@ -150,7 +150,7 @@ systemPrompt/modelId 全被 Jackson 丢弃），`createAgent()` 无条件用 get
 - chat() 工具组装与 response_with_functions 判定放宽为 `("function_call", "nointent")`
 - 插件配置加载去掉 Intent_nointent 跳过（nointent 配置块无 functions 字段时兜底空 dict）
 - few-shot 注入同样放宽
-- 部署：sftp connection.py → systemctl restart xiaozhi-server（active 无报错）
+- 部署：sftp connection.py → systemctl restart yuhe-server（active 无报错）
 - 生效条件：设备重连后（工具在 MCP 握手时注册）
 
 ### 问题B：自定义添加音色
@@ -265,7 +265,7 @@ S_ 前缀 = 声音复刻音色，必须配套：①复刻服务归属的 appid �
 
 ### 需求
 浏览器访问 cc-console 需要 HTTPS（getUserMedia 麦克风 API 要求安全上下文），
-但 8001 同时承载设备 WebSocket（ws://sandyun.top:8001/xiaozhi/v1/，有活跃外网设备连接）
+但 8001 同时承载设备 WebSocket（ws://sandyun.top:8001/yuhe/v1/，有活跃外网设备连接）
 ——不能简单转 SSL。
 
 ### 方案（stream 层 TLS 探测分流）
@@ -278,8 +278,8 @@ sites-available 的 server 改为 listen 9001 + 8443 ssl + 9443 ssl。
 ### 验证（全过）
 - https://sandyun.top:8001/cc/ → 200（TLS 握手 subject=sandyun.top）✓
 - http://sandyun.top:8001/cc/ → 200（旧书签/设备不受影响）✓
-- 设备 WS 升级握手 /xiaozhi/v1/ → 101 Switching Protocols ✓
-- https API 代理 /xiaozhi/agent/list → 200 ✓
+- 设备 WS 升级握手 /yuhe/v1/ → 101 Switching Protocols ✓
+- https API 代理 /yuhe/agent/list → 200 ✓
 - 外网设备既有连接（117.67.194.234×3）保持 ESTABLISHED，未断线 ✓
 
 注意：麦克风功能要求页面用 https:// 打开（http 下浏览器禁用 getUserMedia，
@@ -385,7 +385,7 @@ MediaRecorder 输出）→ POST asrRecognize → 识别结果：
 
 ### 后续接入 CI 建议
 git hook / CI 流水线加 `cd cc-console && npm run check:contract`（FAIL 即阻断）。
-后端接口变更后重导出契约：curl http://127.0.0.1:8002/xiaozhi/v3/api-docs -o contract/openapi.json
+后端接口变更后重导出契约：curl http://127.0.0.1:8002/yuhe/v3/api-docs -o contract/openapi.json
 
 ---
 
@@ -417,12 +417,12 @@ git hook / CI 流水线加 `cd cc-console && npm run check:contract`（FAIL 即�
 - 前端 index-CYE35WOj.js 上线
 
 ## 2026-10-08 18:00 设备 WS 连接失败修复（服务器侧）
-- 现象: ESP32 待机/按键时弹「无法连接服务 ws://sandyun.top:8001/xiaozhi/v1/」+ TCP receive failed: -1，33 秒即复现；服务器日志见 17:46:38 一秒内设备 3 连 3 断（重连风暴）
-- 根因 1: xiaozhi-server core/connection.py 竞态——close() 先把 self.executor 置 None，而 _background_initialize 协程仍在跑，回头 executor.submit() 抛 'NoneType' object has no attribute 'submit'，连接初始化失败被关闭
+- 现象: ESP32 待机/按键时弹「无法连接服务 ws://sandyun.top:8001/yuhe/v1/」+ TCP receive failed: -1，33 秒即复现；服务器日志见 17:46:38 一秒内设备 3 连 3 断（重连风暴）
+- 根因 1: yuhe-server core/connection.py 竞态——close() 先把 self.executor 置 None，而 _background_initialize 协程仍在跑，回头 executor.submit() 抛 'NoneType' object has no attribute 'submit'，连接初始化失败被关闭
 - 根因 2: close_connection_no_voice_time=120(空闲 180s 踢线) 与圆屏桌宠常驻在线冲突，制造高频断连，反复触发上述竞态
 - 修复: connection.py 对 executor 取 snapshot+判空；config.yaml 120→3600
 - 生效: 已在服务器打补丁并重启（PID 401933, :8000 LISTEN）；公网 E2E 验证 HANDSHAKE_OK → SERVER_HELLO(device_config)；重启后新日志 0 处『后台初始化失败』
-- 镜像同步: code-server-mirror/xiaozhi-server 同步打补丁，防止下次部署回滚
+- 镜像同步: code-server-mirror/yuhe-server 同步打补丁，防止下次部署回滚
 
 ## 2026-10-08 20:10 设备掉线双修复（服务器根因 + 固件兜底）
 - 现象: 设备 36 秒即掉线弹『无法连接服务』；服务器日志显示 20:00:14 连接 → 20:03:14 超时关闭（精确 180s）

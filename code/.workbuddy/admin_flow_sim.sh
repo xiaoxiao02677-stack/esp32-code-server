@@ -2,7 +2,7 @@
 # 管理员全流程自动化模拟（④）：模拟管理员登录 → 配角色/人设 → 模拟设备对话 → 记忆落库验证 → 可视化数据就绪检查
 # 用法: bash admin_flow_sim.sh   （在服务器上运行）
 set -e
-API="http://127.0.0.1:8002/xiaozhi"
+API="http://127.0.0.1:8002/yuhe"
 dbq() { MYSQL_PWD=123456 mysql -uroot xiaozhi_esp32_server -N -e "$1"; }
 J='Content-Type: application/json'
 
@@ -64,7 +64,7 @@ print('  code:', d.get('code'), '| prompt 下发:', bool(data.get('prompt')))
 print('  LLM/TTS/ASR:', list((data.get('LLM') or {}).keys()), list((data.get('TTS') or {}).keys()), list((data.get('ASR') or {}).keys()))"
 
 step "5) LLM 对话实测（人设生效验证）"
-cd /root/xiaozhi-server/main/xiaozhi-server
+cd /root/xiaozhi-server/main/yuhe-server
 .venv/bin/python << 'PYEOF'
 import sys, subprocess, json
 sys.path.insert(0, '.')
@@ -95,5 +95,5 @@ for f in lst[:3]:
     print('   -', (f.get('content') or '')[:40], '|', f.get('category'), '|', f.get('createdAt'))"
 
 step "8) 收尾核验（双服务健康）"
-systemctl is-active xiaozhi-manager-api xiaozhi-server
+systemctl is-active xiaozhi-manager-api yuhe-server
 echo "===== 管理员全流程模拟完成 ====="

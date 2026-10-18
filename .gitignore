@@ -48,23 +48,23 @@ code/.workbuddy/archive/
 # .trash 隔离区（整理产物，永不入库）
 .trash/
 # 一次性 agent 工作产物（2026-10-15 已隔离到 .trash/agents-20261015，随 .trash/ 规则永不入库）
-# camera 为上游 xiaozhi-esp32 完整仓的嵌套 git 仓（自带版本保护），父仓不跟踪——2026-10-15 移入 hardware/
+# camera 为上游 yuhe-esp32 完整仓的嵌套 git 仓（自带版本保护），父仓不跟踪——2026-10-15 移入 hardware/
 hardware/camera/
 # small_secreen_test 为小屏试验沙盒（与 small_secreen 仅 4 文件差异，本地保留不入库）
 hardware/small_secreen_test/
 # small_screen_camera 为摄像头板×小屏工作区（用户活跃使用中，性质待定）
 hardware/small_screen_camera/
-# 固件（hardware/）：ESP-IDF 构建输出（2026-10-15 由 code/xiaozhi-esp32 迁移而来，idf.py 可重建）
-hardware/*/xiaozhi-esp32/build/
-hardware/*/xiaozhi-esp32/managed_components/
-hardware/*/xiaozhi-esp32/sdkconfig
-hardware/*/xiaozhi-esp32/sdkconfig.old
+# 固件（hardware/）：ESP-IDF 构建输出（2026-10-15 由 code/yuhe-esp32 迁移而来，idf.py 可重建）
+hardware/*/yuhe-esp32/build/
+hardware/*/yuhe-esp32/managed_components/
+hardware/*/yuhe-esp32/sdkconfig
+hardware/*/yuhe-esp32/sdkconfig.old
 hardware/*/build/
 hardware/*/managed_components/
 # ===== hardware/sets 多版型适配中心（2026-10-16 新建）=====
 # 版型源码与自带固件副本的源码入库；编译产物、第三方依赖与注册备份不入库
-# （副本的 build/ 与 managed_components/ 已被上面 hardware/*/xiaozhi-esp32/ 两条规则覆盖）
-hardware/sets/xiaozhi-esp32/sdkconfig
+# （副本的 build/ 与 managed_components/ 已被上面 hardware/*/yuhe-esp32/ 两条规则覆盖）
+hardware/sets/yuhe-esp32/sdkconfig
 hardware/sets/out/
 hardware/sets/build*/
 hardware/sets/*.bak-sets
@@ -78,7 +78,7 @@ code/.workbuddy/tmp-*/
 code/.workbuddy/*.tar
 code/.workbuddy/*.log
 *.log
-!yh/xiaozhi-server/**/*.log
+!yh/yuhe-server/**/*.log
 sftp-test.txt
 node_modules/
 .DS_Store
@@ -102,12 +102,12 @@ tools/aoci-code/vendor/
 yh/manager-api/target/
 yh/manager-web/node_modules/
 yh/manager-web/dist*/
-yh/xiaozhi-server/models/
-yh/xiaozhi-server/data/
-# tmp/ music/ 在 yh/xiaozhi-server/.gitignore（生产同步下来的文件）里已有，此处根级双保险：
+yh/yuhe-server/models/
+yh/yuhe-server/data/
+# tmp/ music/ 在 yh/yuhe-server/.gitignore（生产同步下来的文件）里已有，此处根级双保险：
 # 该文件本身来自生产，未来同步可能被覆盖，届时缺失规则会把运行时音频/临时文件当源码入库
-yh/xiaozhi-server/tmp/
-yh/xiaozhi-server/music/
+yh/yuhe-server/tmp/
+yh/yuhe-server/music/
 yh/*/logs/
 yh/**/__pycache__/
 yh/**/*.pyc

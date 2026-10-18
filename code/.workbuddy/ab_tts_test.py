@@ -52,7 +52,7 @@ A = {
 }
 # B: 项目当前实现（无 namespace，补 model=expressive，context_texts）
 B = {
-    "user": {"uid": "xiaozhi-esp32-server"},
+    "user": {"uid": "yuhe-esp32-server"},
     "req_params": {
         "text": TEXT, "speaker": SPEAKER,
         "model": "seed-tts-2.0-expressive",

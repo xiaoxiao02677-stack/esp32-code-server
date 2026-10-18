@@ -1,5 +1,5 @@
 # 换行符策略（仅作用于 hardware/sets/ 子树，不影响仓库根与其他 hardware 目录）
-# 源码与文本类文件统一以 LF 存储和工作区检出，保证与上游 xiaozhi-esp32 源文件
+# 源码与文本类文件统一以 LF 存储和工作区检出，保证与上游 yuhe-esp32 源文件
 # 逐行可比（diff 不再出现全文件换行噪声）；Windows 批处理保留 CRLF；固件二进制不转换。
 * text=auto eol=lf
 

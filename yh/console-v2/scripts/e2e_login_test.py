@@ -9,7 +9,7 @@ import uuid as uuidlib
 
 sys.path.insert(0, r"G:\demo\21_xiaozhi\code\.workbuddy")
 
-BASE = "https://sandyun.top:8001/xiaozhi"
+BASE = "https://sandyun.top:8001/yuhe"
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE

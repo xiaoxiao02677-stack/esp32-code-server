@@ -1,0 +1,45 @@
+#pragma once
+
+// 开机画面（首帧接管）
+//
+// 目标：上电后屏幕亮起的第一帧就是品牌画面，绝不出现原生 xiaozhi 状态栏 /
+// 机器人 AI logo / UserAgent 版本串。
+//
+// 时间线：
+//   SetupUI()        → BuildSplash()：背景图 + 品牌名 + 副标题 + 呼吸点 + 版本
+//   WiFi 连接中      → SetSplashStatus("正在连接网络…")
+//   配网 / 激活      → yh_skin_cards 的卡片盖在 splash 之上（不销毁 splash）
+//   首次进入待机     → DismissSplash()（300ms 淡出），交还主界面
+//
+// 约束：DisplayLockGuard 为递归锁，本模块函数**可重入**（允许在已持锁的
+// 上下文里调用）。但若从 esp_timer / 协议任务等非 LVGL 上下文进来，
+// 调用方仍须自行加锁 —— 内层刻意不再重复加锁，避免掩盖无锁窗口。
+
+#include <lvgl.h>
+
+#include "yh_skin_types.h"
+
+namespace yh_skin {
+
+struct SplashInfo {
+    const char* brand = "小柚";
+    const char* subtitle = "";
+    const char* version = "";  // 右下角小字
+};
+
+void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFonts& fonts,
+                 const SplashInfo& info);
+
+// 进度文案（「正在连接网络…」）；nullptr 或空串 = 清除
+void SetSplashStatus(const char* text);
+
+// 进度条 0..100；<0 隐藏
+void SetSplashProgress(int percent);
+
+void DismissSplash();
+bool SplashVisible();
+
+// 显示层据此判断：splash 可见时是否吞掉普通状态文案，避免「待机中」盖住品牌画面
+bool SplashAbsorbsStatus(const char* status);
+
+}  // namespace yh_skin

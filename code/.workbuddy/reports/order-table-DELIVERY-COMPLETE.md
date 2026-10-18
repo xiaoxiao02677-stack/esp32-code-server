@@ -24,16 +24,16 @@ order_table_config (列配置存储)
 ### 2. 后端API ✅ 已验证
 ```bash
 # 所有端点正常响应（返回401表示路由已注册）
-GET  /xiaozhi/order/page      → {"code":401}
-GET  /xiaozhi/order/{id}      → {"code":401}
-POST /xiaozhi/order           → {"code":401}
-PUT  /xiaozhi/order/{id}      → {"code":401}
-DELETE /xiaozhi/order/{id}    → {"code":401}
-POST /xiaozhi/order/export    → {"code":401}
-GET  /xiaozhi/order/stats     → {"code":401}
+GET  /yuhe/order/page      → {"code":401}
+GET  /yuhe/order/{id}      → {"code":401}
+POST /yuhe/order           → {"code":401}
+PUT  /yuhe/order/{id}      → {"code":401}
+DELETE /yuhe/order/{id}    → {"code":401}
+POST /yuhe/order/export    → {"code":401}
+GET  /yuhe/order/stats     → {"code":401}
 ```
 
-**验证方式**: `curl http://127.0.0.1:8002/xiaozhi/order/page?page=1&limit=10`  
+**验证方式**: `curl http://127.0.0.1:8002/yuhe/order/page?page=1&limit=10`  
 **响应**: `{"code":401,"msg":"未授权","data":null}` ✅
 
 ### 3. 前端页面 ✅
@@ -60,10 +60,10 @@ GET  /xiaozhi/order/stats     → {"code":401}
 | 服务 | 地址 | 状态 |
 |------|------|------|
 | 前端页面 | http://sandyun.top:8101/order | ✅ |
-| API接口 | http://sandyun.top:8101/xiaozhi/order/* | ✅ |
+| API接口 | http://sandyun.top:8101/yuhe/order/* | ✅ |
 | 数据库 | MySQL @ sandyun.top:22223 | ✅ |
 
-**API Base**: `http://127.0.0.1:8002/xiaozhi`（内部）  
+**API Base**: `http://127.0.0.1:8002/yuhe`（内部）  
 **对外端口**: 8101（HTTPS）
 
 ---
@@ -72,7 +72,7 @@ GET  /xiaozhi/order/stats     → {"code":401}
 
 ```
 后端源码:
-G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/order/
+G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/order/
 ├── controller/OrderTableController.java
 ├── dao/OrderTableDao.java
 ├── dto/OrderTableDTO.java

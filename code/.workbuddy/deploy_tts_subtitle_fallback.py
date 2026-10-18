@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """部署 TTS 字幕保底修复（base.py）：
 冲突检查(远程md5必须等于改前基线) → 备份.bak-ttsfix → SFTP上传 →
-md5校验 → 服务器py_compile → 重启xiaozhi-server → is-active确认。
+md5校验 → 服务器py_compile → 重启yuhe-server → is-active确认。
 
 用法：python deploy_tts_subtitle_fallback.py
 """
@@ -12,8 +12,8 @@ import paramiko
 
 HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
 
-LOCAL_FILE = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server\core\providers\tts\base.py"
-REMOTE_ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_FILE = r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server\core\providers\tts\base.py"
+REMOTE_ROOT = "/root/xiaozhi-server/main/yuhe-server"
 REMOTE_FILE = f"{REMOTE_ROOT}/core/providers/tts/base.py"
 
 # 改前本地基线（部署前远程必须与此一致，否则说明有其他 agent 改过，放弃部署）
@@ -94,21 +94,21 @@ def main():
     print("  OK")
 
     # 5. 重启 + 确认 active
-    print("[5/6] 重启 xiaozhi-server")
-    rc, o, e = sh("systemctl restart xiaozhi-server", timeout=90)
+    print("[5/6] 重启 yuhe-server")
+    rc, o, e = sh("systemctl restart yuhe-server", timeout=90)
     if rc != 0:
         print(f"  !! restart 失败: {e}")
         sys.exit(6)
-    rc, o, e = sh("systemctl is-active xiaozhi-server")
+    rc, o, e = sh("systemctl is-active yuhe-server")
     print(f"  is-active: {o}")
     if o != "active":
-        rc, o, e = sh("systemctl status xiaozhi-server --no-pager -l | head -30")
+        rc, o, e = sh("systemctl status yuhe-server --no-pager -l | head -30")
         print(o or e)
         sys.exit(7)
 
     # 6. 快速看启动日志有无报错
     print("[6/6] 启动日志检查")
-    rc, o, e = sh("journalctl -u xiaozhi-server -n 20 --no-pager | tail -20")
+    rc, o, e = sh("journalctl -u yuhe-server -n 20 --no-pager | tail -20")
     print(o or "(空)")
 
     sftp.close()

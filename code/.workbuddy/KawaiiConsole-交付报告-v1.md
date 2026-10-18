@@ -69,7 +69,7 @@
 
 ### 2.2 交付文件
 
-**Python（`xiaozhi-server`）— 4 文件**
+**Python（`yuhe-server`）— 4 文件**
 
 | 文件 | 改动 |
 |---|---|
@@ -83,7 +83,7 @@
 新：`DeviceConfigEntity` / `DeviceConfigDao` / `DeviceConfigService` / `DeviceConfigServiceImpl` / `DeviceConfigDTO`；
 改：`ConfigServiceImpl`（下发白名单纵深）、`MemoryAgentVO` + `MemoryFactServiceImpl`（C 线 memModelId）、`202610060030.sql`（建表 `ai_device_config`）+ `master.yaml` 追加、`ConfigController`（POST /config/device-config）。
 
-**固件（`xiaozhi-esp32`）— 4 文件 +135/-6**
+**固件（`yuhe-esp32`）— 4 文件 +135/-6**
 
 | 文件 | 改动 |
 |---|---|
@@ -146,7 +146,7 @@
 ## 六、待办与阻塞（按优先级）
 
 ### 🔴 P0 阻塞（部署前必须处理）
-1. **`xiaozhi-server/data/.config.yaml:9` 含生产 secret（2d7b6bde-…）已入库**。
+1. **`yuhe-server/data/.config.yaml:9` 含生产 secret（2d7b6bde-…）已入库**。
    → 上线前必须：① 两端同步轮换 `server.secret`；② 清除该文件版本历史/出库；③ 加 `.gitignore` + 部署模板化。
 2. **QA #9 三栈真机联调未跑**（A5-A8 未验证）：说话改音量 → 服务器落库 → 重启设备 → 沿用新值。**这是本次交付唯一未证的功能闭环**。
 
@@ -176,7 +176,7 @@
 | 设计系统 | `manager-web/src/styles/kawaii/{tokens,element-overrides,index}.scss` |
 | 布局组件 | `manager-web/src/components/layout/*.vue`（5 个） |
 | 记忆面板 | `manager-web/src/components/memory/MemoryEngineParams.vue` |
-| B 线 Python | `xiaozhi-server/core/providers/tools/device_config_sync.py` 等 4 文件 |
+| B 线 Python | `yuhe-server/core/providers/tools/device_config_sync.py` 等 4 文件 |
 | B 线 Java | `manager-api/modules/device/**`、`modules/config/**`、`resources/db/changelog/202610060030.sql` |
-| B 线固件 | `xiaozhi-esp32/main/{application.cc,boards/common/board.cc,boards/…/my_s3_tft_board.cc}` |
-| 固件索引 | `xiaozhi-esp32/aoci.code.txt`（1068 条 FRAS） |
+| B 线固件 | `yuhe-esp32/main/{application.cc,boards/common/board.cc,boards/…/my_s3_tft_board.cc}` |
+| 固件索引 | `yuhe-esp32/aoci.code.txt`（1068 条 FRAS） |

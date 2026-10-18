@@ -1,7 +1,7 @@
 # P1-5 MQTT 网关 device_config 透传真机实测手册
 
 > 对应交付报告 P1 第 5 条「MQTT 网关透传实测」。
-> 契约背景：连接标记 `conn_from_mqtt_gateway=True` 时，云端设备配置**下发**保守跳过（xiaozhi-server/core/connection.py:924，design §6 风险4），真机透传未实测。
+> 契约背景：连接标记 `conn_from_mqtt_gateway=True` 时，云端设备配置**下发**保守跳过（yuhe-server/core/connection.py:924，design §6 风险4），真机透传未实测。
 > 本手册全部代码走读结论 + 部署机可执行的验证步骤。每条命令均标注「需人工在部署机执行」。
 
 ---
@@ -16,7 +16,7 @@
 | `core/connection.py:229-232` | `handle_connection` 中判定：`ws.request.path.endswith("?from=mqtt_gateway")`。命中打日志「**连接来自:MQTT网关**」 |
 | `core/websocket_server.py:76-83` | WS 服务用 `websockets.serve(handler, host, port)` 监听，**不按路径过滤**，任意 path 均进 `ConnectionHandler`；gateway 客户端连接时自带 `?from=mqtt_gateway` 查询串 |
 
-判定链路：MQTT 网关（外部组件，见 config.yaml `server.mqtt_gateway` 注释「根据mqtt_gateway的.env文件配置」）以 **WS 客户端**身份连到 xiaozhi-server，URL 追加 `?from=mqtt_gateway`，请求头带 `device-id: <MAC>`；物理设备只与网关说 MQTT（topic：`device-server` 上行 / `devices/p2p/{MAC}` 下行，见 `core/api/ota_handler.py:272-279` 的 OTA 下发结构）。
+判定链路：MQTT 网关（外部组件，见 config.yaml `server.mqtt_gateway` 注释「根据mqtt_gateway的.env文件配置」）以 **WS 客户端**身份连到 yuhe-server，URL 追加 `?from=mqtt_gateway`，请求头带 `device-id: <MAC>`；物理设备只与网关说 MQTT（topic：`device-server` 上行 / `devices/p2p/{MAC}` 下行，见 `core/api/ota_handler.py:272-279` 的 OTA 下发结构）。
 
 ### 1.2 跳过点全清单（conn_from_mqtt_gateway=True 时）
 
@@ -45,7 +45,7 @@
 ```mermaid
 flowchart LR
   DEV[物理设备<br/>仅MQTT] -- "MQTT pub/sub<br/>device-server / devices/p2p/MAC" --> GW[MQTT网关<br/>外部组件, .env配置]
-  GW -- "WS: <任意path>?from=mqtt_gateway<br/>Header: device-id=MAC" --> XZ[xiaozhi-server<br/>ConnectionHandler]
+  GW -- "WS: <任意path>?from=mqtt_gateway<br/>Header: device-id=MAC" --> XZ[yuhe-server<br/>ConnectionHandler]
   XZ -- "判定 connection.py:230<br/>conn_from_mqtt_gateway=True<br/>log: 连接来自:MQTT网关" --> XZ
   XZ -- "read_config_from_api=True<br/>Java getAgentModels" --> API[(Java 管理API)]
   API -- "device_config 字段" --> XZ
@@ -58,10 +58,10 @@ flowchart LR
 
 ## 2. 前置条件
 
-1. xiaozhi-server 已部署且 `config.yaml` 中 `read_config_from_api: true`，Java 管理 API 可达。
+1. yuhe-server 已部署且 `config.yaml` 中 `read_config_from_api: true`，Java 管理 API 可达。
 2. 目标 MAC（下例用 `AA:BB:CC:DD:EE:FF`）已在 Kawaii 管理端绑定，并在控制台写入 device_config（如 `{"volume": 40}`）——这是验证「下发跳过」的前置（S2 对未写配置的本就不发）。
 3. 网关二选一：
-   - **方案 A（真机链路）**：官方 `xiaozhi-mqtt-gateway` 组件 + EMQX/Mosquitto，`server.mqtt_gateway` 配置为 `host:port`；
+   - **方案 A（真机链路）**：官方 `yuhe-mqtt-gateway` 组件 + EMQX/Mosquitto，`server.mqtt_gateway` 配置为 `host:port`；
    - **方案 B（最小模拟，推荐先做）**：直接用下面 §4 脚本模拟「网关 WS 客户端」，不依赖真实 MQTT，可 100% 复现服务端判定与日志，覆盖 S2/S3 的服务端侧行为。真实 MQTT 只多一层「网关是否原样转发自定义 text type」的问题（见 §5 R1），B 方案验完后用 A 补真机端到端。
 
 ## 3. 最小验证脚本（方案 B）
@@ -76,7 +76,7 @@ flowchart LR
 """
 import asyncio, json, sys, websockets
 
-WS_URL = "ws://127.0.0.1:8000/xiaozhi/"  # 按实际 server.ip/port 改
+WS_URL = "ws://127.0.0.1:8000/yuhe/"  # 按实际 server.ip/port 改
 MAC = sys.argv[1]
 GATEWAY = "--gateway" in sys.argv
 URL = WS_URL + ("?from=mqtt_gateway" if GATEWAY else "")
@@ -137,4 +137,4 @@ asyncio.run(main())
 1. **a 放开网关下发：本期不做，留真机实测**。保守 P0 契约维持；开关方案留档：`connection.py:924` 去掉 `not self.conn_from_mqtt_gateway`（或加 `config.yaml` 开关 `enable_device_config_mqtt_gateway` 门控，默认 False，A4 真机实测通过后改默认 True，可配置回退不发版）。
 2. **b 不对称收敛：已实施**。`device_config_sync.py` `on_tool_call` 上报 gate（现 L93）追加 `getattr(conn, "conn_from_mqtt_gateway", False)` 条件——网关连接下上报与下发同时跳过，与 P0 契约「均跳过」对齐；跳过时打日志「设备配置上报跳过：工具 … 来自MQTT网关连接（保守策略）」。单测：`tests/core/providers/tools/test_device_config_sync.py::test_gateway_connection_skips_report`。
 3. **c 下发跳过日志：已实施**。`connection.py` 下发块 else 分支补 info 日志「跳过云端设备配置下发 (device …)：MQTT网关透传（保守策略，design §6 风险4）」/「设备未绑定」，现场排障可观测（A2 断言点更新）。
-4. 方案 B 脚本与 A4 真机网关（官方 xiaozhi-mqtt-gateway）部署分工：本手册未包含网关侧 .env 细节（网关不在本仓库），A4 需网关维护方配合。
+4. 方案 B 脚本与 A4 真机网关（官方 yuhe-mqtt-gateway）部署分工：本手册未包含网关侧 .env 细节（网关不在本仓库），A4 需网关维护方配合。

@@ -112,7 +112,7 @@ async function send() {
       if (v !== undefined && v !== null && v !== '') qs.append(k, v)
     })
     const qsStr = qs.toString()
-    const url = '/xiaozhi' + path + (qsStr ? (path.includes('?') ? '&' : '?') + qsStr : '')
+    const url = '/yuhe' + path + (qsStr ? (path.includes('?') ? '&' : '?') + qsStr : '')
     const headers = {}
     const token = getToken()
     if (token) headers.Authorization = 'Bearer ' + token

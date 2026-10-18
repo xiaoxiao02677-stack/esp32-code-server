@@ -7,7 +7,7 @@
 用途：把项目现在正在发的 TTS 请求包，原样抽成一份可以直接双击跑的脚本，
       你自己听一听「语气指令 / 音色指令」到底有没有生效。
 
-来源：xiaozhi-server/core/providers/tts/doubao_v3.py（已对齐官方脚本）
+来源：yuhe-server/core/providers/tts/doubao_v3.py（已对齐官方脚本）
 
 依赖：pip install requests      （只这一个）
 运行：python tts_voice_probe.py
@@ -37,7 +37,7 @@ RESOURCE_ID = "seed-icl-2.0"        # 声音复刻资源
 SPEAKER = "S_N8pC5xwg2"             # 复刻音色（S_ 开头）
 FORMAT = "mp3"
 SAMPLE_RATE = 24000
-UID = "xiaozhi-esp32-server"
+UID = "yuhe-esp32-server"
 NAMESPACE = "BidirectionalTTS"
 
 # 如果你想用「后付费复刻」而不是预付费，把这两行打开：

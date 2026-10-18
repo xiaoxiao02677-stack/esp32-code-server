@@ -15,13 +15,13 @@
 
 ### 2. 后端API ✅
 - 7个RESTful端点已注册并响应
-- 分页查询: `GET /xiaozhi/order/page`
-- 订单详情: `GET /xiaozhi/order/{id}`
-- 新增订单: `POST /xiaozhi/order`
-- 更新订单: `PUT /xiaozhi/order/{id}`
-- 删除订单: `DELETE /xiaozhi/order/{id}`
-- 导出CSV: `POST /xiaozhi/order/export`
-- 统计数据: `GET /xiaozhi/order/stats`
+- 分页查询: `GET /yuhe/order/page`
+- 订单详情: `GET /yuhe/order/{id}`
+- 新增订单: `POST /yuhe/order`
+- 更新订单: `PUT /yuhe/order/{id}`
+- 删除订单: `DELETE /yuhe/order/{id}`
+- 导出CSV: `POST /yuhe/order/export`
+- 统计数据: `GET /yuhe/order/stats`
 
 **验证结果**: API端点正常响应（需Bearer token认证）
 
@@ -35,7 +35,7 @@
 ## 🔗 访问地址
 
 - **前端页面**: http://sandyun.top:8101/order
-- **API Base**: http://sandyun.top:8101/xiaozhi
+- **API Base**: http://sandyun.top:8101/yuhe
 - **数据库**: MySQL root/123456 @ sandyun.top:22223
 
 ---
@@ -44,7 +44,7 @@
 
 ### 后端源码
 ```
-G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/order/
+G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/order/
 ├── controller/OrderTableController.java
 ├── dao/OrderTableDao.java
 ├── dto/OrderTableDTO.java

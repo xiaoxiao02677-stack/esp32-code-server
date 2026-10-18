@@ -5,7 +5,7 @@ import asyncio
 import os
 import sys
 
-ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+ROOT = "/root/xiaozhi-server/main/yuhe-server"
 sys.path.insert(0, ROOT)
 
 from core.providers.tts.doubao_v3 import TTSProvider  # noqa: E402

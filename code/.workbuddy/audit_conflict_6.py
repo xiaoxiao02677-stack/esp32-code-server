@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 
 SSH = ["python", "G:/demo/21_xiaozhi/code/.workbuddy/ssh_run.py"]
-BASE = "/root/xiaozhi-server/main/xiaozhi-server"
+BASE = "/root/xiaozhi-server/main/yuhe-server"
 FILES = [
     "core/api/wake_word_handler.py",
     "core/websocket_server.py",
@@ -65,7 +65,7 @@ def snapshot():
     stat_out = ssh(stat_cmd)
     mtimes = dict(re.findall(r"^(\S+ \S+) (\S+)$", stat_out, re.M))
     # service state
-    svc = ssh("systemctl show xiaozhi-server -p ActiveEnterTimestamp --value")
+    svc = ssh("systemctl show yuhe-server -p ActiveEnterTimestamp --value")
     svc = svc.split("[rc=]")[0].strip().splitlines()
     active_since = svc[-1].strip() if svc else "?"
     return remote_time, hashes, mtimes, active_since

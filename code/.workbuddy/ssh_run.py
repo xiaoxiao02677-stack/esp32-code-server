@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SSH helper for xiaozhi-server diagnostics (sandyun.top:22222).
+"""SSH helper for yuhe-server diagnostics (sandyun.top:22222).
 
 Usage: python ssh_run.py "command1" ["command2" ...]
 Reads commands as argv; prints stdout/stderr per command.

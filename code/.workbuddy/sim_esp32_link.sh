@@ -6,7 +6,7 @@ MAC="14:c1:9f:d1:33:48"
 CID="sim-esp32-test"
 
 echo "== 1) 模拟设备拉全量配置（server.secret 鉴权）:"
-curl -s -m 10 -X POST 'http://127.0.0.1:8002/xiaozhi/config/agent-models' \
+curl -s -m 10 -X POST 'http://127.0.0.1:8002/yuhe/config/agent-models' \
   -H "Authorization: Bearer $SEC" -H 'Content-Type: application/json' \
   -d "{\"clientId\":\"$CID\",\"macAddress\":\"$MAC\",\"selectedModule\":{}}" -o /tmp/dev_cfg.json -w "HTTP %{http_code}\n"
 python3 -c "
@@ -22,7 +22,7 @@ for m in ('LLM','TTS','ASR','VAD','Memory'):
         print(f'{m}: {mid} type={cfg.get(\"type\")}')"
 
 echo "== 2) 千问TTS provider 实测（模拟设备语音合成）:"
-cd /root/xiaozhi-server/main/xiaozhi-server
+cd /root/xiaozhi-server/main/yuhe-server
 .venv/bin/python << 'PYEOF'
 import asyncio, sys, subprocess, json
 sys.path.insert(0, '.')
@@ -82,7 +82,7 @@ asyncio.run(run())
 PYEOF
 
 echo "== 5) 模拟设备上报 device_config（B线云端记忆）:"
-curl -s -m 10 -X POST 'http://127.0.0.1:8002/xiaozhi/config/device-config' \
+curl -s -m 10 -X POST 'http://127.0.0.1:8002/yuhe/config/device-config' \
   -H "Authorization: Bearer $SEC" -H 'Content-Type: application/json' \
   -d "{\"clientId\":\"$CID\",\"macAddress\":\"$MAC\",\"config\":{\"volume\":42}}" | head -c 150; echo
 MYSQL_PWD=123456 mysql -uroot xiaozhi_esp32_server -N -e "SELECT device_id, JSON_EXTRACT(config_json,'$.volume') FROM ai_device_config WHERE device_id LIKE '%d1:33:48%'"

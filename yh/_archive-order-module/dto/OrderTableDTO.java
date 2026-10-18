@@ -1,4 +1,4 @@
-package xiaozhi.modules.order.dto;
+package yuhe.modules.order.dto;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -10,10 +10,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
 import lombok.Data;
-import xiaozhi.common.utils.DateUtils;
-import xiaozhi.common.validator.group.AddGroup;
-import xiaozhi.common.validator.group.DefaultGroup;
-import xiaozhi.common.validator.group.UpdateGroup;
+import yuhe.common.utils.DateUtils;
+import yuhe.common.validator.group.AddGroup;
+import yuhe.common.validator.group.DefaultGroup;
+import yuhe.common.validator.group.UpdateGroup;
 
 /**
  * 订单 DTO

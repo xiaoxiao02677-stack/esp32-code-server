@@ -25,7 +25,7 @@ UPDATE `ai_model_config` SET
 UPDATE `ai_model_config` SET 
 `doc_link` = 'https://github.com/modelscope/FunASR',
 `remark` = 'FunASR本地模型配置说明：
-1. 需要下载模型文件到xiaozhi-server/models/SenseVoiceSmall目录
+1. 需要下载模型文件到yuhe-server/models/SenseVoiceSmall目录
 2. 支持中日韩粤语音识别
 3. 本地推理，无需网络连接
 4. 待识别文件保存在tmp/目录' WHERE `id` = 'ASR_FunASR';

@@ -36,7 +36,7 @@
 唤醒词热更新与"清空回默认"依赖新固件，**必须先烧录**。小屏设备（ESP32-S3-N16R8，COM 口按实际）：
 
 ```bat
-cd /d G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32
+cd /d G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32
 yh_flash.bat COM6        :: 自动探测串口也可不带参数；等效 esptool 全量布局烧录（含 generated_assets.bin）
 ```
 
@@ -46,7 +46,7 @@ python -m esptool --chip esp32s3 -p COM6 -b 460800 --before default-reset --afte
   write-flash "@flash_args" --flash-mode dio --flash-size 16MB --flash-freq 80m
 ```
 
-布局：`0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data_initial / 0x20000 xiaozhi.bin / 0x800000 generated_assets.bin`。**注意 16MB 分区强耦合**：4M 设备误烧会失败。
+布局：`0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data_initial / 0x20000 yuhe.bin / 0x800000 generated_assets.bin`。**注意 16MB 分区强耦合**：4M 设备误烧会失败。
 
 ### 2.2 烧录后验证清单
 

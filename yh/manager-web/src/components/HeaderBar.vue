@@ -3,8 +3,8 @@
     <div class="header-container">
       <!-- 左侧元素 -->
       <div class="header-left" @click="handleRouter('home')">
-        <img loading="lazy" alt="" src="@/assets/xiaozhi-logo.png" class="logo-img" />
-        <img loading="lazy" alt="" :src="xiaozhiAiIcon" class="brand-img" />
+        <img loading="lazy" alt="" src="@/assets/yuhe-logo.png" class="logo-img" />
+        <img loading="lazy" alt="" :src="yuheAiIcon" class="brand-img" />
       </div>
 
       <!-- 中间导航菜单 -->
@@ -256,24 +256,24 @@ export default {
           return this.$t("language.zhCN");
       }
     },
-    // 根据当前语言获取对应的xiaozhi-ai图标
-    xiaozhiAiIcon() {
+    // 根据当前语言获取对应的yuhe-ai图标
+    yuheAiIcon() {
       const currentLang = this.currentLanguage;
       switch (currentLang) {
         case "zh_CN":
-          return require("@/assets/xiaozhi-ai.png");
+          return require("@/assets/yuhe-ai.png");
         case "zh_TW":
-          return require("@/assets/xiaozhi-ai_zh_TW.png");
+          return require("@/assets/yuhe-ai_zh_TW.png");
         case "en":
-          return require("@/assets/xiaozhi-ai_en.png");
+          return require("@/assets/yuhe-ai_en.png");
         case "de":
-          return require("@/assets/xiaozhi-ai_de.png");
+          return require("@/assets/yuhe-ai_de.png");
         case "vi":
-          return require("@/assets/xiaozhi-ai_vi.png");
+          return require("@/assets/yuhe-ai_vi.png");
         case "pt_BR":
-          return require("@/assets/xiaozhi-ai_en.png");
+          return require("@/assets/yuhe-ai_en.png");
         default:
-          return require("@/assets/xiaozhi-ai.png");
+          return require("@/assets/yuhe-ai.png");
       }
     },
     // 用户菜单选项

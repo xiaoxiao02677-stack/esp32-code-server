@@ -1,4 +1,4 @@
-package xiaozhi.modules.memory.controller;
+package yuhe.modules.memory.controller;
 
 import java.util.Map;
 
@@ -14,11 +14,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
-import xiaozhi.common.utils.Result;
-import xiaozhi.modules.memory.client.MemoryInternalClient;
+import yuhe.common.utils.Result;
+import yuhe.modules.memory.client.MemoryInternalClient;
 
 /**
- * 实体图谱与时间线管理（代理转发到 xiaozhi-server :8003）
+ * 实体图谱与时间线管理（代理转发到 yuhe-server :8003）
  */
 @AllArgsConstructor
 @RestController

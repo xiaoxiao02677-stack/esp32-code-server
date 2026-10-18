@@ -14,5 +14,5 @@ print(sh("nginx -T 2>/dev/null | grep -n -B3 -A25 'listen.*9001' | head -60")[0]
 print("\n=== 9443 server 块 ===")
 print(sh("nginx -T 2>/dev/null | grep -n -B3 -A20 'listen.*9443' | head -50")[0])
 print("\n=== app.log 是否有重启前历史 ===")
-print(sh("head -2 /root/xiaozhi-server/main/xiaozhi-server/data/app.log; echo ...; tail -2 /root/xiaozhi-server/main/xiaozhi-server/data/app.log")[0])
+print(sh("head -2 /root/xiaozhi-server/main/yuhe-server/data/app.log; echo ...; tail -2 /root/xiaozhi-server/main/yuhe-server/data/app.log")[0])
 c.close()

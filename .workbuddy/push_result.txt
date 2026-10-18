@@ -1,7 +1,7 @@
 warning: in the working copy of 'cc-console/src/App.vue', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'cc-console/src/styles/kawaii.css', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'code-server-mirror/manager-api/src/main/java/xiaozhi/modules/config/service/impl/ConfigServiceImpl.java', CRLF will be replaced by LF the next time Git touches it
-warning: in the working copy of 'code-server-mirror/xiaozhi-server/core/http_server.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'code-server-mirror/manager-api/src/main/java/yuhe/modules/config/service/impl/ConfigServiceImpl.java', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'code-server-mirror/yuhe-server/core/http_server.py', CRLF will be replaced by LF the next time Git touches it
 warning: in the working copy of 'code/.workbuddy/release-cc-five-issues_runlog.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of '.workbuddy/asr_onserver.py', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of '.workbuddy/check_agent_detail.py', LF will be replaced by CRLF the next time Git touches it
@@ -59,10 +59,10 @@ warning: in the working copy of 'cc-console/scripts/check_contract.py', LF will 
  create mode 100644 cc-console/contract/exceptions.json
  create mode 100644 cc-console/contract/openapi.json
  create mode 100644 cc-console/scripts/check_contract.py
- create mode 100644 code-server-mirror/manager-api/src/main/java/xiaozhi/modules/model/controller/AsrRecognizeController.java
- create mode 100644 code-server-mirror/xiaozhi-server/core/api/asr_recognize_handler.py
- create mode 100644 code-server-mirror/xiaozhi-server/core/providers/memory/mem_hybrid/__init__.py
- create mode 100644 code-server-mirror/xiaozhi-server/core/providers/memory/mem_hybrid/mem_hybrid.py
+ create mode 100644 code-server-mirror/manager-api/src/main/java/yuhe/modules/model/controller/AsrRecognizeController.java
+ create mode 100644 code-server-mirror/yuhe-server/core/api/asr_recognize_handler.py
+ create mode 100644 code-server-mirror/yuhe-server/core/providers/memory/mem_hybrid/__init__.py
+ create mode 100644 code-server-mirror/yuhe-server/core/providers/memory/mem_hybrid/mem_hybrid.py
 remote: Powered by [01;33mGITEE.COM [0m[1.1.23]        
 remote: Set trace flag 8642cd8f        
 To gitee.com:mm-Super-Nices/esp32-code-server.git

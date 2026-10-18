@@ -15,15 +15,15 @@
    - 清空唤醒词恢复默认词的语义修复（此前下发空词会被忽略，造成"无法回默认"死锁）
    - 拼音表多字词条（"小禾"/"哈喽"/"hello"）前移，修复逐字拆词导致整词被丢弃的 bug
 
-**产物三件套**（位于 `small_secreen/xiaozhi-esp32/build/`）：
+**产物三件套**（位于 `small_secreen/yuhe-esp32/build/`）：
 
 | 文件 | 大小 | 说明 |
 |------|------|------|
-| `xiaozhi.bin` | 2.83 MB | 应用固件（app 分区 0x20000） |
+| `yuhe.bin` | 2.83 MB | 应用固件（app 分区 0x20000） |
 | `generated_assets.bin` | 3.6 MB | 资产分区（MN7 模型 + index.json 命令表，**必须刷**） |
 | `merged-binary.bin` | 12 MB | 五合一合并镜像（含 bootloader/分区表/ota_data/app/assets） |
 
-烧录前可自查构建新鲜度：`xiaozhi.bin`、`generated_assets.bin`、`merged-binary.bin` 三个文件的时间戳应一致且晚于源码修改时间（本轮为 2026-10-10 21:33）。若 merged 比另两个旧，说明 merge 步骤没跑完，**不要使用旧 merged**。
+烧录前可自查构建新鲜度：`yuhe.bin`、`generated_assets.bin`、`merged-binary.bin` 三个文件的时间戳应一致且晚于源码修改时间（本轮为 2026-10-10 21:33）。若 merged 比另两个旧，说明 merge 步骤没跑完，**不要使用旧 merged**。
 
 ---
 
@@ -34,13 +34,13 @@
 先进入固件仓库的 build 目录（命令中的相对路径以此为准）：
 
 ```bash
-cd G:/demo/21_xiaozhi/code/small_secreen/xiaozhi-esp32/build
+cd G:/demo/21_xiaozhi/code/small_secreen/yuhe-esp32/build
 ```
 
 一行式全量烧录（COM 口按实际改，Windows 下如 `COM5`）：
 
 ```bash
-python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 bootloader/bootloader.bin 0x8000 partition_table/partition-table.bin 0xd000 ota_data_initial.bin 0x20000 xiaozhi.bin 0x800000 generated_assets.bin
+python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-size 16MB --flash-freq 80m 0x0 bootloader/bootloader.bin 0x8000 partition_table/partition-table.bin 0xd000 ota_data_initial.bin 0x20000 yuhe.bin 0x800000 generated_assets.bin
 ```
 
 **分区地址说明**（勿改动）：
@@ -50,7 +50,7 @@ python -m esptool --chip esp32s3 -p COM5 -b 460800 --before default-reset --afte
 | `0x0` | `bootloader/bootloader.bin` | 引导加载器 |
 | `0x8000` | `partition_table/partition-table.bin` | 分区表 |
 | `0xd000` | `ota_data_initial.bin` | OTA 数据（保证从 factory/app 首分区启动） |
-| `0x20000` | `xiaozhi.bin` | 应用固件 |
+| `0x20000` | `yuhe.bin` | 应用固件 |
 | `0x800000` | `generated_assets.bin` | **资产分区（MN7 模型+命令表）** |
 
 ### 方式 B：merged 一把梭
@@ -160,4 +160,4 @@ MultiNet7 识别阈值当前为 **0.4**（`my-s3-tft/config.json` 中 `CONFIG_CU
 
 ---
 
-*手册生成：2026-10-10 21:35 · 基于构建产物 21:33（xiaozhi.bin 2.83MB / generated_assets.bin 3.6MB / merged-binary.bin 12MB，二进制内已验证：NVS 清空日志串、默认拼音命令、MN7 模型均在位，WakeNet 零残留）*
+*手册生成：2026-10-10 21:35 · 基于构建产物 21:33（yuhe.bin 2.83MB / generated_assets.bin 3.6MB / merged-binary.bin 12MB，二进制内已验证：NVS 清空日志串、默认拼音命令、MN7 模型均在位，WakeNet 零残留）*

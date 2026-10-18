@@ -12,7 +12,7 @@ from gmssl import sm2
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
-B = "http://sandyun.top:8001/xiaozhi"
+B = "http://sandyun.top:8001/yuhe"
 USERNAME = "hermes_test"
 PASSWORD = "Xk9#mQ2$vL8@wR5!nZ4+pJ7&bH3"
 

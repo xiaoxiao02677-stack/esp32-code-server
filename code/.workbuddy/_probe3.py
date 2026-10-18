@@ -7,6 +7,6 @@ sftp.put(r"G:\demo\21_xiaozhi\code\.workbuddy\server_tts_probe.py", "/tmp/server
 def sh(cmd, t=240):
     _, o, e = c.exec_command(cmd, timeout=t)
     return o.read().decode("utf-8","replace").strip(), e.read().decode("utf-8","replace").strip()
-o,e = sh("cd /root/xiaozhi-server/main/xiaozhi-server && .venv/bin/python /tmp/server_tts_probe.py")
+o,e = sh("cd /root/xiaozhi-server/main/yuhe-server && .venv/bin/python /tmp/server_tts_probe.py")
 print(o); print("[ERR]", e)
 c.close()

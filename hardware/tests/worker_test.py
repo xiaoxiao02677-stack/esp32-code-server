@@ -19,7 +19,7 @@ import ui_common
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 FRONT_URL = "https://sandyun.top:8001/admincc/#/"
-BASE_URL = "https://sandyun.top:8001/xiaozhi"
+BASE_URL = "https://sandyun.top:8001/yuhe"
 
 
 def now_ms():

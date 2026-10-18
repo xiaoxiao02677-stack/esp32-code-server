@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>屿禾工坊 · 项目商业计划书</title>
+<style>
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  color: #16211D; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  font-size: 9.2pt; line-height: 1.75;
+}
+.page {
+  width: 210mm; height: 297mm; position: relative; overflow: hidden;
+  background: #fff; page-break-after: always; break-after: page;
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+.pad { position: absolute; left: 0; top: 0; width: 210mm; height: 297mm; padding: 17mm 19mm 15mm; }
+
+/* ---------- 通用头部 / 页脚 ---------- */
+.phead {
+  position: absolute; left: 19mm; right: 19mm; top: 10mm;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 7.2pt; letter-spacing: .12em; color: #8A928D;
+  border-bottom: .4pt solid #E2DED4; padding-bottom: 2.4mm;
+}
+.phead b { color: #14342B; font-weight: 700; letter-spacing: .16em; }
+.pfoot {
+  position: absolute; left: 19mm; right: 19mm; bottom: 8mm;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 6.8pt; color: #9AA29C; letter-spacing: .1em;
+  border-top: .4pt solid #EDEAE1; padding-top: 2mm;
+}
+.pfoot .cn { color: #B08A54; letter-spacing: .18em; }
+
+/* ---------- 标题体系 ---------- */
+.kicker { font-size: 7.4pt; letter-spacing: .26em; color: #B08A54; margin-bottom: 2.5mm; }
+h1.sec { font-size: 21pt; font-weight: 700; color: #14342B; margin: 0 0 2mm; letter-spacing: .01em; }
+h1.sec small { display: block; font-size: 8pt; font-weight: 400; color: #9AA29C; letter-spacing: .18em; margin-top: 1.2mm; }
+.lede { font-size: 9.6pt; color: #3D4A44; line-height: 1.85; margin: 4mm 0 0; max-width: 158mm; }
+.rule { height: .6pt; background: #14342B; width: 16mm; margin: 4mm 0 5mm; }
+h2.sub { font-size: 10.4pt; font-weight: 700; color: #14342B; margin: 5mm 0 2mm; letter-spacing: .02em; }
+h2.sub span { color: #B08A54; font-size: 8pt; margin-right: 2mm; letter-spacing: .1em; }
+p { margin: 0 0 2mm; }
+.muted { color: #6C7770; }
+.tiny { font-size: 7.2pt; color: #8A928D; line-height: 1.6; }
+
+/* ---------- 布局 ---------- */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5mm; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+.row { display: flex; gap: 5mm; }
+
+/* ---------- 卡片 ---------- */
+.card { border: .5pt solid #E2DED4; border-radius: 2.4mm; padding: 4.5mm 5mm; background: #FCFBF8; }
+.card.plain { background: #fff; }
+.card h3 { font-size: 9.4pt; margin: 0 0 1.6mm; color: #14342B; font-weight: 700; }
+.card p { font-size: 8.2pt; line-height: 1.7; color: #55605A; margin: 0; }
+.card .no { font-size: 7pt; letter-spacing: .2em; color: #B08A54; display: block; margin-bottom: 1.4mm; }
+
+.kpi { border-top: 1.6pt solid #14342B; padding-top: 3mm; }
+.kpi .v { font-size: 19pt; font-weight: 700; color: #14342B; letter-spacing: -.01em; line-height: 1.1; }
+.kpi .v em { font-size: 9pt; font-style: normal; font-weight: 400; color: #6C7770; margin-left: 1mm; }
+.kpi .k { font-size: 7.6pt; color: #6C7770; margin-top: 1.4mm; line-height: 1.5; }
+
+/* ---------- 表格 ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+th { text-align: left; font-weight: 700; color: #14342B; background: #F2EFE7; padding: 2.1mm 2.4mm; font-size: 7.6pt; letter-spacing: .04em; border-bottom: .5pt solid #D9D4C7; }
+td { padding: 2.1mm 2.4mm; border-bottom: .4pt solid #EBE7DC; color: #3D4A44; vertical-align: top; }
+tr:last-child td { border-bottom: .5pt solid #D9D4C7; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr.total td { background: #F7F5EE; font-weight: 700; color: #14342B; }
+.cap { font-size: 6.9pt; color: #9AA29C; margin-top: 1.6mm; letter-spacing: .04em; }
+
+/* ---------- 封面 ---------- */
+.cover { background: #14342B; color: #F4F1E8; }
+.cover .pad { padding: 22mm 20mm; }
+.cover .brand { display: flex; align-items: center; gap: 4mm; }
+.cover .seal {
+  width: 13mm; height: 13mm; border: .8pt solid #C9A46A; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11pt; color: #C9A46A; letter-spacing: -.02em; font-weight: 700;
+}
+.cover .bname { font-size: 11pt; letter-spacing: .38em; color: #EFEADB; font-weight: 700; }
+.cover .bname i { display: block; font-style: normal; font-size: 6.4pt; letter-spacing: .3em; color: #8FA79A; margin-top: 1.4mm; }
+.cover .ct { margin-top: 52mm; }
+.cover .ct .tag { font-size: 7.4pt; letter-spacing: .34em; color: #C9A46A; }
+.cover .ct h1 { font-size: 30pt; line-height: 1.35; margin: 5mm 0 0; font-weight: 700; letter-spacing: .02em; }
+.cover .ct h1 em { font-style: normal; color: #C9A46A; }
+.cover .ct .sub { margin-top: 6mm; font-size: 10.5pt; color: #C3CEC5; letter-spacing: .05em; font-weight: 300; }
+.cover .meta { position: absolute; left: 20mm; right: 20mm; bottom: 24mm; display: flex; justify-content: space-between; align-items: flex-end; }
+.cover .meta div { font-size: 7.4pt; color: #8FA79A; letter-spacing: .16em; line-height: 2; }
+.cover .meta b { color: #F4F1E8; font-size: 10pt; letter-spacing: .06em; }
+.cover .conf { border: .6pt solid #6E8578; color: #C9A46A; padding: 1.6mm 3.4mm; font-size: 6.8pt; letter-spacing: .24em; }
+.cover .mark { position: absolute; right: -40mm; top: 44mm; width: 130mm; height: 130mm; border: .5pt solid rgba(201,164,106,.22); border-radius: 50%; }
+.cover .mark2 { position: absolute; right: -18mm; top: 66mm; width: 86mm; height: 86mm; border: .5pt solid rgba(201,164,106,.16); border-radius: 50%; }
+
+/* ---------- 图表容器 ---------- */
+.figure { margin: 3mm 0 0; }
+.figure .fcap { font-size: 6.9pt; color: #9AA29C; margin-top: 1.4mm; letter-spacing: .04em; }
+svg { display: block; }
+
+.quote {
+  border-left: 2pt solid #B08A54; padding: 1mm 0 1mm 4mm; margin: 4mm 0;
+  font-size: 10pt; color: #14342B; line-height: 1.8; font-weight: 300;
+}
+ul.clean { margin: 0; padding-left: 4mm; }
+ul.clean li { font-size: 8.4pt; color: #3D4A44; line-height: 1.8; margin-bottom: .8mm; }
+.tagline { display: inline-block; font-size: 7pt; padding: .6mm 2mm; border: .5pt solid #C9A46A; color: #A87C42; border-radius: 1mm; letter-spacing: .1em; }
+.hl { color: #14342B; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ============ P1 封面 ============ -->
+<section class="page cover">
+  <div class="mark"></div><div class="mark2"></div>
+  <div class="pad">
+    <div class="brand">
+      <div class="seal">屿</div>
+      <div class="bname">屿禾工坊<i>YUHE ATELIER</i></div>
+    </div>
+    <div class="ct">
+      <div class="tag">项 目 商 业 计 划 书</div>
+      <h1>小禾<br>一台<em>记得住你</em>的<br>桌面陪伴机器人</h1>
+      <div class="sub">天使轮融资 · 人民币 800 万元 · 出让 12% 股权</div>
+    </div>
+    <div class="meta">
+      <div>
+        <b>2026 年 10 月</b><br>
+        VERSION 1.0　|　厦门 · 屿禾工坊
+      </div>
+      <div class="conf">机 密　CONFIDENTIAL</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ P2 项目概览 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>01　项目概览 / EXECUTIVE SUMMARY</span></div>
+  <div class="pad">
+    <div class="kicker">O V E R V I E W</div>
+    <h1 class="sec">我们要做的，不是更便宜的智能音箱<small>而是一台买得起、记得住、会主动开口的家庭成员</small></h1>
+    <p class="lede">屿禾工坊是一家智能硬件与端云一体 AI 的公司。我们把大模型能力压进一台 399–899 元的桌面机器人：它在本地唤醒、在云端思考、在屏幕上用表情回应你，并把每一次对话沉淀为长期记忆——于是它能在你没有开口的时候，先问一句"今天怎么回来这么晚"。</p>
+
+    <div class="g4" style="margin-top:9mm">
+      <div class="kpi"><div class="v">4<em>款</em></div><div class="k">在产硬件版型<br>共用同一套固件与云端</div></div>
+      <div class="kpi"><div class="v">1.5–2.2<em>s</em></div><div class="k">语音首响实测区间<br>优化目标 0.8s</div></div>
+      <div class="kpi"><div class="v">8<em>MB</em></div><div class="k">独立资源分区<br>换肤 / 换表情不刷机</div></div>
+      <div class="kpi"><div class="v">7×24</div><div class="k">主动关怀引擎<br>定时 / 随机 / 记忆驱动</div></div>
+    </div>
+
+    <div class="g3" style="margin-top:9mm">
+      <div class="card"><span class="no">0 1　问题</span><h3>智能音箱"听得见，但记不住"</h3><p>市面产品停在"指令—响应"：说完就忘、不会主动、没有性格。老人独处、孩子放学、独居青年下班——真正缺的不是播放器，是有人接话。</p></div>
+      <div class="card"><span class="no">0 2　解法</span><h3>端云一体的陪伴闭环</h3><p>本地唤醒 + 云端大模型 + 长期记忆 + 主动发起。硬件只做"耳朵、嘴巴和脸"，理解与人格在云端持续进化，一次升级全量生效。</p></div>
+      <div class="card"><span class="no">0 3　差异</span><h3>把成本结构做成护城河</h3><p>一套固件覆盖四种硬件，一套后台管理全部设备。研发摊薄、物料复用、OTA 统一——同价位对手做不出这个陪伴深度。</p></div>
+    </div>
+
+    <div class="card plain" style="margin-top:9mm;border-color:#14342B;border-width:.8pt;background:#F7F5EE">
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:0 0 44mm">
+          <div class="tiny" style="letter-spacing:.2em;color:#B08A54">本 轮 融 资</div>
+          <div style="font-size:20pt;font-weight:700;color:#14342B;line-height:1.3;margin-top:1mm">800 <span style="font-size:10pt">万元</span></div>
+          <div class="tiny">出让 12%　投前估值 5,867 万元</div>
+        </div>
+        <div style="flex:1;border-left:.5pt solid #D9D4C7;padding-left:6mm">
+          <div class="tiny" style="letter-spacing:.2em;color:#B08A54">资 金 用 途</div>
+          <table style="margin-top:1.5mm;font-size:7.6pt">
+            <tr><td style="padding:1mm 2mm 1mm 0;border:none">研发与产品迭代</td><td class="num" style="padding:1mm 0;border:none;width:14mm">35%</td><td style="padding:1mm 0 1mm 4mm;border:none" class="muted">四版型量产化、云端记忆与主动关怀</td></tr>
+            <tr><td style="padding:1mm 2mm 1mm 0;border:none">供应链备货与模具</td><td class="num" style="padding:1mm 0;border:none">25%</td><td style="padding:1mm 0 1mm 4mm;border:none" class="muted">首批 8,000 台物料与结构件模具</td></tr>
+            <tr><td style="padding:1mm 2mm 1mm 0;border:none">市场与渠道</td><td class="num" style="padding:1mm 0;border:none">20%</td><td style="padding:1mm 0 1mm 4mm;border:none" class="muted">样板市场、内容种草、伙伴招募</td></tr>
+            <tr><td style="padding:1mm 2mm 1mm 0;border:none">认证与合规</td><td class="num" style="padding:1mm 0;border:none">8%</td><td style="padding:1mm 0 1mm 4mm;border:none" class="muted">3C、SRRC、数据与未成年人合规</td></tr>
+            <tr><td style="padding:1mm 2mm 1mm 0;border:none">团队与流动资金</td><td class="num" style="padding:1mm 0;border:none">12%</td><td style="padding:1mm 0 1mm 4mm;border:none" class="muted">关键岗位补强、18 个月现金安全垫</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>02 / 11</span></div>
+</section>
+
+<!-- ============ P3 市场与机会 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>02　市场与机会 / MARKET</span></div>
+  <div class="pad">
+    <div class="kicker">M A R K E T　&amp;　T I M I N G</div>
+    <h1 class="sec">三个结构性变化，把"陪伴"从奢侈品变成了日用品<small>WHY NOW</small></h1>
+
+    <div class="g3" style="margin-top:7mm">
+      <div class="card"><span class="no">驱 动 力 一</span><h3>推理成本进入分位区间</h3><p>大模型语音链路（识别—生成—合成）的单位成本在过去两年下降一个量级，单台设备每月的云端成本已可控制在 3–6 元，订阅制首次具备正毛利空间。</p></div>
+      <div class="card"><span class="no">驱 动 力 二</span><h3>家庭结构在变薄</h3><p>据公开统计，我国 60 岁及以上人口已超过 2.9 亿，单人户家庭超过 1.25 亿户。"没人接话"从个体情绪变成普遍的家庭结构问题。</p></div>
+      <div class="card"><span class="no">驱 动 力 三</span><h3>硬件从工具转向关系</h3><p>用户不再为"能放歌"付费，而为"懂我"付费。带人格、有记忆、会主动的终端，正在替代以内容为中心的旧品类。</p></div>
+    </div>
+
+    <h2 class="sub" style="margin-top:8mm"><span>2.1</span>谁在为陪伴付费</h2>
+    <table>
+      <thead><tr><th style="width:24mm">客群</th><th style="width:30mm">付费决策人</th><th>核心诉求</th><th style="width:38mm">我们的对应产品</th></tr></thead>
+      <tbody>
+        <tr><td><b>学龄儿童</b></td><td>家长（30–45 岁）</td><td>放学后的对话陪伴、习惯提醒、情绪疏导；家长要"看得见的安全"</td><td>小禾 mini / 小禾 eye</td></tr>
+        <tr><td><b>独居青年</b></td><td>本人（22–35 岁）</td><td>下班后的情绪价值、桌面颜值、个性化人格与彩蛋</td><td>小禾（桌面标准版）</td></tr>
+        <tr><td><b>银发人群</b></td><td>子女（异地）</td><td>主动问候、吃药与日程提醒、大屏大字、一键呼叫</td><td>小禾 max / 机构方案</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sub" style="margin-top:7mm"><span>2.2</span>竞争位置：我们站在"高陪伴 × 中价位"的空档</h2>
+    <div class="figure">
+      <svg width="640" height="212" viewBox="0 0 640 212">
+        <rect x="0" y="0" width="640" height="212" fill="#FCFBF8"/>
+        <!-- axes -->
+        <line x1="62" y1="182" x2="612" y2="182" stroke="#C9C3B4" stroke-width="1"/>
+        <line x1="62" y1="18" x2="62" y2="182" stroke="#C9C3B4" stroke-width="1"/>
+        <polygon points="612,182 604,178.5 604,185.5" fill="#C9C3B4"/>
+        <polygon points="62,18 58.5,26 65.5,26" fill="#C9C3B4"/>
+        <text x="337" y="205" font-size="10" fill="#6C7770" text-anchor="middle" font-family="Microsoft YaHei">价格 →（399 元　　549 元　　799 元）</text>
+        <text x="26" y="100" font-size="10" fill="#6C7770" text-anchor="middle" font-family="Microsoft YaHei" transform="rotate(-90 26 100)">情感陪伴深度 →</text>
+        <!-- grid lines -->
+        <line x1="62" y1="100" x2="612" y2="100" stroke="#EDEAE1" stroke-width="1" stroke-dasharray="3 4"/>
+        <line x1="320" y1="18" x2="320" y2="182" stroke="#EDEAE1" stroke-width="1" stroke-dasharray="3 4"/>
+        <!-- quadrant labels -->
+        <text x="600" y="34" font-size="8.5" fill="#BDB7A6" text-anchor="end" font-family="Microsoft YaHei">高陪伴 · 高价格</text>
+        <text x="74" y="34" font-size="8.5" fill="#BDB7A6" font-family="Microsoft YaHei">高陪伴 · 低价格（空档）</text>
+        <text x="74" y="174" font-size="8.5" fill="#BDB7A6" font-family="Microsoft YaHei">低陪伴 · 低价格</text>
+        <!-- points -->
+        <circle cx="150" cy="152" r="7" fill="#CFC9B9"/><text x="163" y="156" font-size="9" fill="#6C7770" font-family="Microsoft YaHei">智能音箱（99–299 元）</text>
+        <circle cx="236" cy="132" r="7" fill="#CFC9B9"/><text x="249" y="136" font-size="9" fill="#6C7770" font-family="Microsoft YaHei">早教故事机</text>
+        <circle cx="520" cy="60" r="7" fill="#CFC9B9"/><text x="510" y="52" font-size="9" fill="#6C7770" text-anchor="end" font-family="Microsoft YaHei">人形 / 宠物机器人（3,000 元+）</text>
+        <circle cx="418" cy="146" r="7" fill="#CFC9B9"/><text x="430" y="150" font-size="9" fill="#6C7770" font-family="Microsoft YaHei">手机陪伴 App（无实体）</text>
+        <!-- us -->
+        <circle cx="300" cy="74" r="18" fill="#14342B" opacity="0.10"/>
+        <circle cx="300" cy="74" r="9" fill="#14342B"/>
+        <text x="300" y="46" font-size="10.5" fill="#14342B" font-weight="bold" text-anchor="middle" font-family="Microsoft YaHei">小禾</text>
+        <text x="300" y="108" font-size="8.2" fill="#3F7D62" text-anchor="middle" font-family="Microsoft YaHei">399–899 元 · 长期记忆 · 主动开口</text>
+        <!-- annotation -->
+        <path d="M318 74 L392 60" stroke="#B08A54" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+      </svg>
+      <div class="fcap">注：纵轴为"情感陪伴深度"（记忆持续性 × 主动交互能力 × 人格化程度）的相对评估，横轴为终端零售价区间；点位为品类代表，非市场份额。</div>
+    </div>
+
+    <div class="quote">我们不去抢 199 元的音箱市场，也不做 3,000 元的科技玩具。<br>我们要占的是"愿意为一句关心付 500 块"的那群人。</div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>03 / 11</span></div>
+</section>
+
+<!-- ============ P4 产品矩阵 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>03　产品矩阵 / PRODUCT</span></div>
+  <div class="pad">
+    <div class="kicker">P R O D U C T　L I N E</div>
+    <h1 class="sec">四款硬件，一套灵魂<small>ONE FIRMWARE　·　FOUR FORMS</small></h1>
+    <p class="lede">四款产品不是四个项目，而是同一套端云系统在不同形态上的投射：同一份固件、同一个云端大脑、同一个管理后台。这让我们用一支团队维护四条产品线。</p>
+
+    <table style="margin-top:7mm">
+      <thead><tr><th style="width:26mm">型号</th><th style="width:34mm">形态</th><th>核心场景</th><th style="width:26mm" class="num">零售价</th><th style="width:22mm" class="num">硬件毛利率</th></tr></thead>
+      <tbody>
+        <tr><td><b>小禾 mini</b></td><td>1.54″ 圆屏 · 内置电池</td><td>便携随身、儿童书包、车载；可脱离电源使用</td><td class="num">¥399</td><td class="num">47.8%</td></tr>
+        <tr><td><b>小禾</b></td><td>2.4″ 圆屏 · 桌面</td><td>主力机型：床头 / 书桌 / 办公桌，全天候陪伴</td><td class="num">¥549</td><td class="num">49.2%</td></tr>
+        <tr><td><b>小禾 eye</b></td><td>2.4″ 圆屏 + 摄像头</td><td>看护与视频互动；支持回声消除，可边播边说</td><td class="num">¥799</td><td class="num">50.0%</td></tr>
+        <tr><td><b>小禾 max</b></td><td>3.2″ 大屏 · 床头</td><td>银发场景：大字大音量、日程与用药提醒、一键呼叫</td><td class="num">¥899</td><td class="num">49.6%</td></tr>
+      </tbody>
+    </table>
+    <div class="cap">毛利率 =（零售价 − BOM − 包装物流 − 渠道综合成本 20.6% − 售后计提 2%）÷ 零售价；四机型因结构与直营占比差异略有不同，加权毛利率 48.3%（渠道成本回到 18% 时对应 52%）。不含云端服务成本。</div>
+
+    <h2 class="sub" style="margin-top:8mm"><span>3.1</span>为什么"一套固件四款硬件"是真优势</h2>
+    <div class="g4" style="margin-top:3mm">
+      <div class="card"><span class="no">研 发</span><h3>一次开发，四次复用</h3><p>屏幕、引脚、音频通路以配置描述，新增一款机型只需一份板级配置，不需重写业务逻辑。</p></div>
+      <div class="card"><span class="no">供 应 链</span><h3>物料高度共用</h3><p>主控、音频编解码、扬声器、结构工艺同源，批量议价能力强，备料风险集中可控。</p></div>
+      <div class="card"><span class="no">运 维</span><h3>一个后台管全部</h3><p>设备、固件、内容、壁纸、推送、订单在同一控制台，运营不需要按机型切换系统。</p></div>
+      <div class="card"><span class="no">迭 代</span><h3>新能力全量下发</h3><p>云端升级即全机型生效；端侧通过双分区 OTA 灰度，失败自动回滚，不会刷成砖。</p></div>
+    </div>
+
+    <h2 class="sub" style="margin-top:8mm"><span>3.2</span>产品路线：从"陪伴单品"到"家庭终端"</h2>
+    <div class="figure">
+      <svg width="640" height="118" viewBox="0 0 640 118">
+        <line x1="30" y1="42" x2="616" y2="42" stroke="#D9D4C7" stroke-width="1.2"/>
+        <g font-family="Microsoft YaHei">
+          <circle cx="70" cy="42" r="5" fill="#14342B"/><text x="70" y="26" font-size="8" fill="#8A928D" text-anchor="middle">2026 Q4</text>
+          <text x="70" y="66" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">量产交付</text>
+          <text x="70" y="82" font-size="8" fill="#6C7770" text-anchor="middle">四版型小批试产</text>
+          <text x="70" y="96" font-size="8" fill="#6C7770" text-anchor="middle">3C / SRRC 认证</text>
+
+          <circle cx="215" cy="42" r="5" fill="#3F7D62"/><text x="215" y="26" font-size="8" fill="#8A928D" text-anchor="middle">2027</text>
+          <text x="215" y="66" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">渠道铺设</text>
+          <text x="215" y="82" font-size="8" fill="#6C7770" text-anchor="middle">年销 10,000 台</text>
+          <text x="215" y="96" font-size="8" fill="#6C7770" text-anchor="middle">启动订阅制</text>
+
+          <circle cx="360" cy="42" r="5" fill="#3F7D62"/><text x="360" y="26" font-size="8" fill="#8A928D" text-anchor="middle">2028</text>
+          <text x="360" y="66" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">订阅规模化</text>
+          <text x="360" y="82" font-size="8" fill="#6C7770" text-anchor="middle">年销 40,000 台</text>
+          <text x="360" y="96" font-size="8" fill="#6C7770" text-anchor="middle">启动 Pre-A</text>
+
+          <circle cx="505" cy="42" r="5" fill="#B08A54"/><text x="505" y="26" font-size="8" fill="#8A928D" text-anchor="middle">2029</text>
+          <text x="505" y="66" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">行业方案</text>
+          <text x="505" y="82" font-size="8" fill="#6C7770" text-anchor="middle">年销 100,000 台</text>
+          <text x="505" y="96" font-size="8" fill="#6C7770" text-anchor="middle">养老 / 幼教 / 酒店</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>04 / 11</span></div>
+</section>
+
+<!-- ============ P5 产品体验 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>04　产品体验 / EXPERIENCE</span></div>
+  <div class="pad">
+    <div class="kicker">U S E R　E X P E R I E N C E</div>
+    <h1 class="sec">把"陪伴"拆成五个可以交付的功能<small>FIVE DELIVERABLE CAPABILITIES</small></h1>
+
+    <div class="g2" style="margin-top:6mm;gap:5mm 7mm">
+      <div class="card"><span class="no">0 1　自 然 对 话</span><h3>说出来就能被打断</h3><p>本地唤醒词"你好小禾"秒级响应；说话时可随时打断正在播报的回答——不用等它讲完。支持连续追问，不必每次重新唤醒。</p></div>
+      <div class="card"><span class="no">0 2　表 情 人 格</span><h3>它有脸，也有脾气</h3><p>21 种情绪表情随对话内容实时切换；久未互动会犯困、被夸奖会害羞。人格由云端提示词统一定义，可随版本整体演进。</p></div>
+      <div class="card"><span class="no">0 3　长 期 记 忆</span><h3>上周说的话，它记得</h3><p>对话被抽取为事实与偏好入库，形成时间线；下次对话自动召回。"我膝盖疼"这类信息会在合适的时候被重新提起。</p></div>
+      <div class="card"><span class="no">0 4　主 动 关 怀</span><h3>它会先开口</h3><p>不是等你叫它。系统按定时、随机与记忆话题三种策略主动发起对话："降温了，记得加件外套"——这条链路是本品类最稀缺的能力。</p></div>
+      <div class="card"><span class="no">0 5　个 性 化 外 观</span><h3>每台都可以不一样</h3><p>壁纸、主题、提示音由云端下发，一张 240×240 的图即刻生效，不用刷固件。节日皮肤、IP 联名、用户自传，都是可运营的增量。</p></div>
+      <div class="card" style="background:#14342B;border-color:#14342B;color:#EFEADB"><span class="no" style="color:#C9A46A">0 6　可 扩 展</span><h3 style="color:#F4F1E8">设备侧工具调用</h3><p style="color:#B9C7BF">音量、亮度、主题、拍照、主动播报等能力以标准工具协议暴露给云端模型，模型可自行编排——加一个新技能，不必改固件。</p></div>
+    </div>
+
+    <h2 class="sub" style="margin-top:8mm"><span>4.1</span>一次完整的陪伴闭环</h2>
+    <div class="figure">
+      <svg width="640" height="150" viewBox="0 0 640 150">
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#B08A54"/></marker></defs>
+        <g font-family="Microsoft YaHei">
+          <rect x="8" y="34" width="122" height="62" rx="4" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="69" y="55" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">听 见</text>
+          <text x="69" y="72" font-size="7.8" fill="#6C7770" text-anchor="middle">本地唤醒 · 回声消除</text>
+          <text x="69" y="85" font-size="7.8" fill="#6C7770" text-anchor="middle">16kHz 上行</text>
+
+          <line x1="134" y1="65" x2="160" y2="65" stroke="#B08A54" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="164" y="34" width="122" height="62" rx="4" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="225" y="55" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">理 解</text>
+          <text x="225" y="72" font-size="7.8" fill="#6C7770" text-anchor="middle">语音识别 · 大模型</text>
+          <text x="225" y="85" font-size="7.8" fill="#6C7770" text-anchor="middle">流式生成，边想边说</text>
+
+          <line x1="290" y1="65" x2="316" y2="65" stroke="#B08A54" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="320" y="34" width="122" height="62" rx="4" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="381" y="55" font-size="9.5" fill="#14342B" font-weight="bold" text-anchor="middle">回 应</text>
+          <text x="381" y="72" font-size="7.8" fill="#6C7770" text-anchor="middle">语音合成 · 表情联动</text>
+          <text x="381" y="85" font-size="7.8" fill="#6C7770" text-anchor="middle">分句即播，不等整段</text>
+
+          <line x1="446" y1="65" x2="472" y2="65" stroke="#B08A54" stroke-width="1.2" marker-end="url(#ar)"/>
+
+          <rect x="476" y="34" width="122" height="62" rx="4" fill="#14342B" stroke="#14342B"/>
+          <text x="537" y="55" font-size="9.5" fill="#F4F1E8" font-weight="bold" text-anchor="middle">记 住</text>
+          <text x="537" y="72" font-size="7.8" fill="#B9C7BF" text-anchor="middle">事实与偏好抽取</text>
+          <text x="537" y="85" font-size="7.8" fill="#B9C7BF" text-anchor="middle">写入长期记忆</text>
+
+          <!-- feedback loop -->
+          <path d="M537 100 L537 122 L69 122 L69 100" fill="none" stroke="#C9A46A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+          <rect x="238" y="113" width="130" height="18" rx="9" fill="#FCFBF8" stroke="#E8DFCC"/>
+          <text x="303" y="126" font-size="8" fill="#A87C42" text-anchor="middle">明天，它主动先开口</text>
+        </g>
+      </svg>
+      <div class="fcap">闭环的关键在最后一步：记忆不只用于"回答得更准"，而是成为主动发起话题的素材库——这是从"应答工具"跨到"陪伴关系"的分界线。</div>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>05 / 11</span></div>
+</section>
+
+<!-- ============ P6 技术架构 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>05　技术架构 / ARCHITECTURE</span></div>
+  <div class="pad">
+    <div class="kicker">S Y S T E M　A R C H I T E C T U R E</div>
+    <h1 class="sec">四条技术栈，各管一段<small>DEVICE　·　REALTIME　·　BUSINESS　·　CONSOLE</small></h1>
+    <p class="lede">整套系统不是一个大后端，而是四层解耦：设备只做采集与呈现，<span class="hl">Python 实时服务</span>负责对话与音频流，<span class="hl">Java 业务服务</span>负责设备、用户、订单与内容，<span class="hl">Vue 管理台</span>负责运营。任一层可独立重启、独立扩容，互不阻塞。</p>
+
+    <div class="figure" style="margin-top:5mm">
+      <svg width="640" height="330" viewBox="0 0 640 330">
+        <g font-family="Microsoft YaHei">
+          <!-- 端侧 -->
+          <rect x="6" y="6" width="628" height="64" rx="4" fill="#FBF9F3" stroke="#D9D4C7"/>
+          <rect x="6" y="6" width="4" height="64" fill="#B08A54"/>
+          <text x="20" y="24" font-size="8" fill="#A87C42" letter-spacing="2">端 侧 ｜ DEVICE　·　ESP32-S3</text>
+          <rect x="20" y="30" width="146" height="30" rx="3" fill="#fff" stroke="#D9D4C7"/>
+          <text x="93" y="44" font-size="8" fill="#14342B" font-weight="bold" text-anchor="middle">ESP-IDF 固件</text>
+          <text x="93" y="55" font-size="6.8" fill="#6C7770" text-anchor="middle">实时系统 · 多任务调度</text>
+          <rect x="176" y="30" width="146" height="30" rx="3" fill="#fff" stroke="#D9D4C7"/>
+          <text x="249" y="44" font-size="8" fill="#14342B" font-weight="bold" text-anchor="middle">音频前端 AFE</text>
+          <text x="249" y="55" font-size="6.8" fill="#6C7770" text-anchor="middle">唤醒 · 降噪 · 回声消除</text>
+          <rect x="332" y="30" width="146" height="30" rx="3" fill="#fff" stroke="#D9D4C7"/>
+          <text x="405" y="44" font-size="8" fill="#14342B" font-weight="bold" text-anchor="middle">LVGL 9 图形</text>
+          <text x="405" y="55" font-size="6.8" fill="#6C7770" text-anchor="middle">圆屏皮肤 · 表情 · 气泡</text>
+          <rect x="488" y="30" width="130" height="30" rx="3" fill="#fff" stroke="#D9D4C7"/>
+          <text x="553" y="44" font-size="8" fill="#14342B" font-weight="bold" text-anchor="middle">Opus 编解码</text>
+          <text x="553" y="55" font-size="6.8" fill="#6C7770" text-anchor="middle">60ms 帧 · 16/24kHz</text>
+
+          <!-- 实时服务 -->
+          <rect x="6" y="78" width="628" height="74" rx="4" fill="#14342B"/>
+          <text x="20" y="96" font-size="8" fill="#C9A46A" letter-spacing="2">实 时 服 务 ｜ REALTIME　·　Python</text>
+          <text x="620" y="96" font-size="6.8" fill="#8FA79A" text-anchor="end">aiohttp 异步框架　·　单机万级长连接</text>
+          <rect x="20" y="104" width="140" height="38" rx="3" fill="#1D463A" stroke="#3F7D62"/>
+          <text x="90" y="118" font-size="7.8" fill="#F4F1E8" font-weight="bold" text-anchor="middle">WebSocket 接入</text>
+          <text x="90" y="131" font-size="6.8" fill="#9FB5A9" text-anchor="middle">会话 · 心跳 · 重连</text>
+          <rect x="168" y="104" width="150" height="38" rx="3" fill="#1D463A" stroke="#3F7D62"/>
+          <text x="243" y="118" font-size="7.8" fill="#F4F1E8" font-weight="bold" text-anchor="middle">对话编排</text>
+          <text x="243" y="131" font-size="6.8" fill="#9FB5A9" text-anchor="middle">识别 → 大模型 → 合成</text>
+          <rect x="326" y="104" width="140" height="38" rx="3" fill="#1D463A" stroke="#3F7D62"/>
+          <text x="396" y="118" font-size="7.8" fill="#F4F1E8" font-weight="bold" text-anchor="middle">记忆与人格</text>
+          <text x="396" y="131" font-size="6.8" fill="#9FB5A9" text-anchor="middle">长期记忆 · 话题召回</text>
+          <rect x="474" y="104" width="144" height="38" rx="3" fill="#1D463A" stroke="#3F7D62"/>
+          <text x="546" y="118" font-size="7.8" fill="#F4F1E8" font-weight="bold" text-anchor="middle">主动推送调度</text>
+          <text x="546" y="131" font-size="6.8" fill="#9FB5A9" text-anchor="middle">定时 · 随机 · 队列</text>
+
+          <!-- 业务服务 -->
+          <rect x="6" y="160" width="628" height="74" rx="4" fill="#F1F5F2" stroke="#9FB5A9"/>
+          <rect x="6" y="160" width="4" height="74" fill="#3F7D62"/>
+          <text x="20" y="178" font-size="8" fill="#3F7D62" letter-spacing="2">业 务 服 务 ｜ BUSINESS　·　Java 21 / Spring Boot 3</text>
+          <text x="620" y="178" font-size="6.8" fill="#7C8B84" text-anchor="end">Shiro 鉴权　·　Druid 连接池　·　37 个 REST 控制器</text>
+          <rect x="20" y="186" width="140" height="38" rx="3" fill="#fff" stroke="#C9D5CD"/>
+          <text x="90" y="200" font-size="7.8" fill="#14342B" font-weight="bold" text-anchor="middle">设备与固件</text>
+          <text x="90" y="213" font-size="6.8" fill="#6C7770" text-anchor="middle">台账 · OTA 版本 · 灰度</text>
+          <rect x="168" y="186" width="150" height="38" rx="3" fill="#fff" stroke="#C9D5CD"/>
+          <text x="243" y="200" font-size="7.8" fill="#14342B" font-weight="bold" text-anchor="middle">用户与权限</text>
+          <text x="243" y="213" font-size="6.8" fill="#6C7770" text-anchor="middle">账号 · 角色 · 国密登录</text>
+          <rect x="326" y="186" width="140" height="38" rx="3" fill="#fff" stroke="#C9D5CD"/>
+          <text x="396" y="200" font-size="7.8" fill="#14342B" font-weight="bold" text-anchor="middle">内容与素材</text>
+          <text x="396" y="213" font-size="6.8" fill="#6C7770" text-anchor="middle">壁纸 · 音色 · 知识库</text>
+          <rect x="474" y="186" width="144" height="38" rx="3" fill="#fff" stroke="#C9D5CD"/>
+          <text x="546" y="200" font-size="7.8" fill="#14342B" font-weight="bold" text-anchor="middle">订单与运营</text>
+          <text x="546" y="213" font-size="6.8" fill="#6C7770" text-anchor="middle">订单 · 统计 · 导出</text>
+
+          <!-- 管理台 -->
+          <rect x="6" y="242" width="628" height="48" rx="4" fill="#FBF9F3" stroke="#D9D4C7"/>
+          <rect x="6" y="242" width="4" height="48" fill="#B08A54"/>
+          <text x="20" y="260" font-size="8" fill="#A87C42" letter-spacing="2">管 理 台 ｜ CONSOLE　·　Vue 3 + Vite 5</text>
+          <text x="20" y="276" font-size="7.4" fill="#3D4A44">设备运维　·　固件发布　·　内容下发　·　推送任务　·　订单与权限　·　双入口（管理端 / 客户端）</text>
+
+          <!-- 网关 -->
+          <rect x="6" y="298" width="628" height="26" rx="13" fill="#fff" stroke="#D9D4C7"/>
+          <text x="320" y="315" font-size="7.6" fill="#55605A" text-anchor="middle">Nginx 网关：TLS 终止 · 静态资源托管 · 接口反向代理 · 双入口路由　｜　MySQL 8 + Redis 为三层共用数据底座</text>
+        </g>
+      </svg>
+      <div class="fcap">图：四层技术架构（概要级）。通信契约：设备 ↔ 实时服务走 WebSocket + 二进制音频帧；管理台 ↔ 业务服务走 HTTPS/REST；业务与实时服务通过数据库与缓存交换状态。</div>
+    </div>
+
+    <div class="g3" style="margin-top:4mm">
+      <div class="card"><h3 style="font-size:8.6pt">为什么实时层用 Python</h3><p>对话是 I/O 密集型：等待识别、等待模型、等待合成。异步框架能让单机同时挂住大量长连接，且模型与语音供应商的 SDK 生态最完整，换供应商只改适配层。</p></div>
+      <div class="card"><h3 style="font-size:8.6pt">为什么业务层用 Java</h3><p>设备、订单、权限、OTA 是有事务与审计要求的业务。Spring 生态在权限模型、数据一致性、后台管理上最成熟，团队接手成本低，长期可维护。</p></div>
+      <div class="card"><h3 style="font-size:8.6pt">为什么端侧做瘦终端</h3><p>理解与人格放在云端，设备只保留采集、播放与渲染。这样换模型、改人格、加技能都不需要用户换机——产品可以像 App 一样持续迭代。</p></div>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>06 / 11</span></div>
+</section>
+
+<!-- ============ P7 技术选型 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>06　技术选型 / TECH STACK</span></div>
+  <div class="pad">
+    <div class="kicker">T E C H　S T A C K　&amp;　M E T R I C S</div>
+    <h1 class="sec">每一层都选了"能长期维护"的方案<small>STACK　·　LATENCY　·　RELIABILITY</small></h1>
+
+    <table style="margin-top:5mm;font-size:7.4pt">
+      <thead><tr><th style="width:26mm">层</th><th style="width:56mm">技术栈</th><th>承担职责</th><th style="width:42mm">选型理由</th></tr></thead>
+      <tbody>
+        <tr><td><b>端侧固件</b></td><td>ESP32-S3 · ESP-IDF · LVGL 9 · Opus · AFE</td><td>唤醒、降噪、回声消除、音频编解码、界面渲染</td><td>单芯片完成采集+播放+显示，BOM 与功耗可控</td></tr>
+        <tr><td><b>实时服务</b></td><td>Python 3 · aiohttp · websockets · opuslib</td><td>长连接会话、音频流、识别/大模型/合成编排、记忆检索、推送调度</td><td>异步高并发、模型生态最全、算法迭代快</td></tr>
+        <tr><td><b>业务服务</b></td><td>Java 21 · Spring Boot 3 · Shiro · Druid</td><td>设备、用户、订单、OTA、内容、壁纸、知识库（37 个 REST 控制器）</td><td>事务与权限成熟，后台运营能力强</td></tr>
+        <tr><td><b>数据层</b></td><td>MySQL 8 · Redis · 本地/对象存储</td><td>业务主数据、会话状态、下发回执与队列、固件与素材文件</td><td>关系库保一致性，缓存承担实时态</td></tr>
+        <tr><td><b>管理台</b></td><td>Vue 3.4 · Vue Router 4 · Vite 5 · 国密 SM2</td><td>设备运维、固件发布、内容下发、订单与权限、管理端/客户端双入口</td><td>组件化、构建秒级、无重型 UI 依赖</td></tr>
+        <tr><td><b>交付与运维</b></td><td>Nginx · systemd · 双分区 OTA</td><td>网关与静态托管、进程守护、固件升级与回滚</td><td>不依赖容器编排，两台服务器即可承载</td></tr>
+      </tbody>
+    </table>
+    <div class="cap">以上为技术选型概要，不涉及核心算法与业务实现细节。系统全部组件均为可替换设计：模型、语音、存储、支付均通过适配层接入。</div>
+
+    <h2 class="sub" style="margin-top:5mm"><span>6.1</span>体验是可以被量化的：语音首响时间</h2>
+    <div class="figure">
+      <svg width="640" height="186" viewBox="0 0 640 186">
+        <g font-family="Microsoft YaHei">
+          <text x="0" y="30" font-size="8.4" fill="#14342B" font-weight="bold">当前实测</text>
+          <text x="0" y="43" font-size="7" fill="#9AA29C">1.5 – 2.2 s</text>
+          <text x="0" y="112" font-size="8.4" fill="#3F7D62" font-weight="bold">优化目标</text>
+          <text x="0" y="125" font-size="7" fill="#9AA29C">≈ 0.8 s</text>
+
+          <rect x="72" y="18" width="86" height="24" fill="#C9BFA8"/>
+          <rect x="158" y="18" width="98" height="24" fill="#B08A54"/>
+          <rect x="256" y="18" width="196" height="24" fill="#8FA79A"/>
+          <rect x="452" y="18" width="42" height="24" fill="#D9D4C7"/>
+          <text x="115" y="34" font-size="7.4" fill="#3D3A30" text-anchor="middle">识别 0.3s</text>
+          <text x="207" y="34" font-size="7.4" fill="#48371E" text-anchor="middle">大模型首字 0.4s</text>
+          <text x="354" y="34" font-size="7.4" fill="#22302A" text-anchor="middle">语音合成首包 0.7s</text>
+          <text x="473" y="34" font-size="7.2" fill="#6C7770" text-anchor="middle">0.2s</text>
+          <text x="506" y="34" font-size="7.4" fill="#14342B">= 1.8s</text>
+
+          <rect x="72" y="100" width="60" height="24" fill="#BFD3C7"/>
+          <rect x="132" y="100" width="72" height="24" fill="#3F7D62"/>
+          <rect x="204" y="100" width="94" height="24" fill="#14342B"/>
+          <rect x="298" y="100" width="34" height="24" fill="#9FB5A9"/>
+          <text x="102" y="116" font-size="7.2" fill="#22302A" text-anchor="middle">0.2s</text>
+          <text x="168" y="116" font-size="7.2" fill="#EFEADB" text-anchor="middle">0.25s</text>
+          <text x="251" y="116" font-size="7.2" fill="#EFEADB" text-anchor="middle">0.3s</text>
+          <text x="315" y="116" font-size="7.2" fill="#22302A" text-anchor="middle">0.05s</text>
+          <text x="352" y="116" font-size="7.4" fill="#14342B">= 0.8s</text>
+
+          <line x1="72" y1="150" x2="600" y2="150" stroke="#D9D4C7"/>
+          <g font-size="6.8" fill="#9AA29C" text-anchor="middle">
+            <text x="72" y="163">0</text><text x="204" y="163">0.5s</text><text x="336" y="163">1.0s</text><text x="468" y="163">1.5s</text><text x="600" y="163">2.0s</text>
+          </g>
+          <line x1="204" y1="146" x2="204" y2="154" stroke="#D9D4C7"/>
+          <line x1="336" y1="146" x2="336" y2="154" stroke="#D9D4C7"/>
+          <line x1="468" y1="146" x2="468" y2="154" stroke="#D9D4C7"/>
+          <line x1="392" y1="10" x2="392" y2="150" stroke="#C9A46A" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="396" y="10" font-size="7.2" fill="#A87C42">行业优秀基准 ≈ 0.9 s</text>
+          <text x="72" y="180" font-size="7.2" fill="#6C7770">优化手段：合成改流式边生成边播、分句并行、上下游连接复用。"合成首包"占当前总延迟四成，换流式即可回收约 0.4 s。</text>
+        </g>
+      </svg>
+      <div class="fcap">数据来源：本项目端到端链路实测（文字输入模拟用户语音，逐阶段打点），取多次采样中位数而非实验室理想值。</div>
+    </div>
+
+    <h2 class="sub" style="margin-top:4mm"><span>6.2</span>工程可靠性</h2>
+    <div class="g4" style="gap:4mm">
+      <div class="card" style="padding:3.4mm 4mm"><h3 style="font-size:8.2pt">升级不变砖</h3><p>双分区 OTA，新固件启动失败自动回滚；升级过程可见进度。</p></div>
+      <div class="card" style="padding:3.4mm 4mm"><h3 style="font-size:8.2pt">资源独立升级</h3><p>字体、表情、皮肤放独立分区，换肤不刷固件，活动可周级上线。</p></div>
+      <div class="card" style="padding:3.4mm 4mm"><h3 style="font-size:8.2pt">断网自愈</h3><p>指数退避重连 + 心跳保活；服务端重启后设备 30 秒内自动归位。</p></div>
+      <div class="card" style="padding:3.4mm 4mm"><h3 style="font-size:8.2pt">可观测</h3><p>在线率、首响分位、任务送达率在管理台可查，问题从投诉前移到告警。</p></div>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>07 / 11</span></div>
+</section>
+
+<!-- ============ P8 运营模式 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>07　运营模式 / OPERATIONS</span></div>
+  <div class="pad">
+    <div class="kicker">O P E R A T I N G　M O D E L</div>
+    <h1 class="sec">钱怎么进来，怎么分出去<small>CASH IN　·　CASH OUT　·　DIVIDEND</small></h1>
+    <p class="lede">公司的经营原则只有一条：<span class="hl">所有收入进入公司对公账户，按持股比例参与分红。</span>没有个人账户收款，没有体外循环，没有口头承诺的分成。</p>
+
+    <div class="figure" style="margin-top:4mm">
+      <svg width="640" height="156" viewBox="0 0 640 156">
+        <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#8FA79A"/></marker></defs>
+        <g font-family="Microsoft YaHei">
+          <text x="0" y="12" font-size="7.4" fill="#A87C42" letter-spacing="2">收 入 来 源</text>
+          <rect x="0" y="20" width="118" height="24" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/><text x="59" y="36" font-size="7.8" fill="#3D4A44" text-anchor="middle">电商 / 直营</text>
+          <rect x="0" y="50" width="118" height="24" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/><text x="59" y="66" font-size="7.8" fill="#3D4A44" text-anchor="middle">区域经销商</text>
+          <rect x="0" y="80" width="118" height="24" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/><text x="59" y="96" font-size="7.8" fill="#3D4A44" text-anchor="middle">行业项目</text>
+          <rect x="0" y="110" width="118" height="24" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/><text x="59" y="126" font-size="7.8" fill="#3D4A44" text-anchor="middle">订阅续费</text>
+
+          <line x1="122" y1="32" x2="166" y2="66" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+          <line x1="122" y1="62" x2="166" y2="72" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+          <line x1="122" y1="92" x2="166" y2="78" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+          <line x1="122" y1="122" x2="166" y2="84" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+
+          <rect x="170" y="46" width="128" height="44" rx="4" fill="#14342B"/>
+          <text x="234" y="64" font-size="8.8" fill="#F4F1E8" font-weight="bold" text-anchor="middle">公司对公账户</text>
+          <text x="234" y="79" font-size="6.8" fill="#9FB5A9" text-anchor="middle">基本户 · 企业支付 · 平台店铺</text>
+
+          <line x1="302" y1="68" x2="330" y2="68" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+
+          <rect x="334" y="26" width="128" height="26" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="398" y="43" font-size="7.8" fill="#3D4A44" text-anchor="middle">成本 · 费用 · 税金</text>
+          <rect x="334" y="58" width="128" height="26" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="398" y="75" font-size="7.8" fill="#3D4A44" text-anchor="middle">弥补亏损 + 公积金 10%</text>
+          <rect x="334" y="90" width="128" height="32" rx="3" fill="#F7F5EE" stroke="#D9D4C7"/>
+          <text x="398" y="103" font-size="7.8" fill="#3D4A44" text-anchor="middle">现金流安全垫</text>
+          <text x="398" y="125" font-size="6.6" fill="#8A928D" text-anchor="middle">预留 6 个月运营资金</text>
+
+          <line x1="466" y1="108" x2="492" y2="108" stroke="#8FA79A" stroke-width="1" marker-end="url(#ar2)"/>
+
+          <rect x="496" y="86" width="142" height="44" rx="4" fill="#B08A54"/>
+          <text x="567" y="103" font-size="8.8" fill="#fff" font-weight="bold" text-anchor="middle">按持股比例分红</text>
+          <text x="567" y="117" font-size="6.8" fill="#FBF3E4" text-anchor="middle">年度 · 审计后 · 代扣个税</text>
+
+          <text x="334" y="146" font-size="7" fill="#8A928D">分配顺序：税后净利 → 弥补亏损 → 法定公积金 → 可分配利润 → 股东会决议 → 按比例分配</text>
+        </g>
+      </svg>
+      <div class="fcap">图：资金归集与分配路径。任一环节不接受个人账户收款；渠道代收货款须由持牌机构分账，避免"二清"合规风险。</div>
+    </div>
+
+    <h2 class="sub" style="margin-top:3mm"><span>7.1</span>资金归集三条铁律</h2>
+    <div class="g3" style="gap:4mm">
+      <div class="card" style="padding:2.6mm 3.6mm"><h3 style="font-size:8.2pt">只进对公账户</h3><p>基本户为主账户，企业与平台账户全部为公司主体；日终归集，账户不留大额余额，禁止个人卡收款。</p></div>
+      <div class="card" style="padding:2.6mm 3.6mm"><h3 style="font-size:8.2pt">三流一致</h3><p>合同主体 = 开票主体 = 收款主体；月度对账单由财务与法定代表人双签，差异挂账不超过 30 天。</p></div>
+      <div class="card" style="padding:2.6mm 3.6mm"><h3 style="font-size:8.2pt">分红以审计为准</h3><p>年度审计报告是唯一分配依据，不用经营现金流或预收款替代利润口径，不做"边亏边分"。</p></div>
+    </div>
+
+    <h2 class="sub" style="margin-top:4mm"><span>7.2</span>分红机制六条约定</h2>
+    <div class="g3" style="gap:3mm 4mm">
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">口径</h3><p>以审计税后净利为起点，先弥补以前年度亏损，再提 10% 法定公积金（累计达注册资本 50% 可停提），余额方可分配。</p></div>
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">时点</h3><p>年度审计后 4 个月内完成核算、6 个月内支付；逾期按日计违约金，写入股东协议。</p></div>
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">上限</h3><p>分红不得超过可动用现金的约定比例，且须先扣除 6 个月固定成本、应付账款与应交税费，防止分红导致断流。</p></div>
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">亏损</h3><p>亏损年度不分红；累计亏损未弥补前不得分配，已分配的依法返还。</p></div>
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">税务</h3><p>自然人股东股息红利按 20% 由公司代扣代缴，分配时出具完税凭证。</p></div>
+      <div class="card" style="padding:2.4mm 3.2mm"><h3 style="font-size:8pt">决策</h3><p>分红、增资、对外担保、关联交易须 2/3 以上表决权通过；不按比例分配须全体股东一致同意并写入章程。</p></div>
+    </div>
+
+    <h2 class="sub" style="margin-top:4mm"><span>7.3</span>《股东分红协议》条款要点（供律师起草）</h2>
+    <div class="row" style="gap:6mm">
+      <div style="flex:1">
+        <table style="font-size:6.5pt">
+          <tbody>
+            <tr><td style="width:2mm;border:none;padding:.55mm 0">1</td><td style="border:none;padding:.55mm 0"><b>定义</b>：可分配利润、分红决议日、持股比例（按实缴出资计）。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">2</td><td style="border:none;padding:.55mm 0"><b>分配顺序</b>：弥补亏损 → 法定公积金 → 任意公积金 → 按比例分配。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">3</td><td style="border:none;padding:.55mm 0"><b>分红比例</b>：按实缴比例；不按比例须全体书面同意。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">4</td><td style="border:none;padding:.55mm 0"><b>时间与支付</b>：审计后 6 个月内转账至实名账户，代扣个税。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">5</td><td style="border:none;padding:.55mm 0"><b>亏损分担</b>：以认缴出资额为限，不承担超额债务。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">6</td><td style="border:none;padding:.55mm 0"><b>返还条款</b>：分红后 6 个月内若无偿付能力且系分红所致，按比例返还。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:1">
+        <table style="font-size:6.5pt">
+          <tbody>
+            <tr><td style="width:2mm;border:none;padding:.55mm 0">7</td><td style="border:none;padding:.55mm 0"><b>追加投资优先权</b>：按比例优先认缴，30 日不行使视为放弃。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">8</td><td style="border:none;padding:.55mm 0"><b>反稀释</b>：约定估值下限或加权平均反稀释，期权池 ≤15%。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">9</td><td style="border:none;padding:.55mm 0"><b>竞业与保密</b>：在职及离职后 2 年竞业限制，保密无期限。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">10</td><td style="border:none;padding:.55mm 0"><b>转让限制</b>：对外转让须过半数同意，其他股东优先购买，创始人锁定 3 年。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">11</td><td style="border:none;padding:.55mm 0"><b>违约责任</b>：抽逃出资、私收货款按金额 2 倍赔偿并取消当年分红。</td></tr>
+            <tr><td style="border:none;padding:.55mm 0">12</td><td style="border:none;padding:.55mm 0"><b>争议与生效</b>：适用中国法律，协商不成提交公司所在地法院；与章程冲突以章程为准。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cap" style="margin-top:1mm">以上为条款要点，不构成法律意见；正式文本由执业律师出具，并同步修订公司章程与工商备案。</div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>08 / 11</span></div>
+</section>
+
+<!-- ============ P9 合作伙伴 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>08　合作伙伴机制 / PARTNERS</span></div>
+  <div class="pad">
+    <div class="kicker">P A R T N E R　S Y S T E M</div>
+    <h1 class="sec">伙伴拿分成，不拿股权<small>THREE TIERS　·　CLEAR RULES</small></h1>
+    <p class="lede">我们不靠自建门店扩张。伙伴负责"把货卖到人手里"，公司负责"把产品做好、把服务兜住"。三级体系、季度考核、明码红线——让扩张速度与秩序同时成立。</p>
+
+    <h2 class="sub" style="margin-top:4mm"><span>8.1</span>三级伙伴体系</h2>
+    <table style="font-size:7.3pt">
+      <thead><tr><th style="width:15mm">级别</th><th style="width:44mm">准入（年度实际回款）</th><th style="width:18mm" class="num">进货折扣</th><th style="width:24mm">账期 / 授信</th><th>支持与义务</th></tr></thead>
+      <tbody>
+        <tr><td><b>S 战略</b></td><td>≥300 万元，或项目 ≥8 个 / 年（单项目 ≥20 台）</td><td class="num">80 折</td><td>30 天 / 授信 30 万</td><td>地级市可撤销销售授权、联合市场基金 8%、样板店补贴 50%、专属技术经理、季度集训</td></tr>
+        <tr><td><b>A 认证</b></td><td>100–300 万元，或项目 3–7 个 / 年</td><td class="num">83 折</td><td>15 天 / 授信 10 万</td><td>项目报备保护、市场基金 4%、物料展具、线上认证、工单 48 小时响应</td></tr>
+        <tr><td><b>B 注册</b></td><td>&lt;100 万元，或项目 1–2 个；新签首年一律 B 级</td><td class="num">85 折</td><td>现款 / 预付 30%</td><td>首单报备保护 90 天、市场基金 2%、自助文档、工单 72 小时</td></tr>
+      </tbody>
+    </table>
+    <div class="cap">折让 15–20% 即公司让出的渠道成本；行业集成商项目备案价 75 折，逐单审批、买断定性，不得用于零售。计佣基数一律为「实际回款 − 退货退款 − 折扣折让」，发货额、开票额、GMV 均不计佣。</div>
+
+    <h2 class="sub" style="margin-top:4mm"><span>8.2</span>伙伴生命周期</h2>
+    <div class="figure">
+      <svg width="640" height="92" viewBox="0 0 640 92">
+        <g font-family="Microsoft YaHei">
+          <rect x="0" y="20" width="108" height="32" fill="#14342B"/><polygon points="108,20 122,36 108,52" fill="#14342B"/>
+          <text x="54" y="40" font-size="8.2" fill="#F4F1E8" text-anchor="middle">招 募</text>
+          <rect x="126" y="20" width="108" height="32" fill="#1D463A"/><polygon points="234,20 248,36 234,52" fill="#1D463A"/>
+          <text x="180" y="40" font-size="8.2" fill="#F4F1E8" text-anchor="middle">资 质 认 证</text>
+          <rect x="252" y="20" width="108" height="32" fill="#2E5A4A"/><polygon points="360,20 374,36 360,52" fill="#2E5A4A"/>
+          <text x="306" y="40" font-size="8.2" fill="#F4F1E8" text-anchor="middle">首 单 陪 跑</text>
+          <rect x="378" y="20" width="108" height="32" fill="#3F7D62"/><polygon points="486,20 500,36 486,52" fill="#3F7D62"/>
+          <text x="432" y="40" font-size="8.2" fill="#F4F1E8" text-anchor="middle">季 度 考 核</text>
+          <rect x="504" y="20" width="124" height="32" fill="#B08A54"/>
+          <text x="566" y="40" font-size="8.2" fill="#fff" text-anchor="middle">升级 / 降级 / 退出</text>
+          <text x="0" y="72" font-size="7" fill="#8A928D">考核五项：回款完成率 35% · 激活率 25% · 退货率 15% · 客诉响应 15% · 品牌合规 10%；≥80 达标，连续两季 &lt;70 降级。</text>
+          <text x="0" y="84" font-size="7" fill="#8A928D">退出：主动退出可申请库存回购（6 个月内未拆封 80%，公司有权无义务）；违规清退不予回购，授权与客户资料同步回收。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="g2" style="margin-top:3mm">
+      <div class="card" style="border-color:#C9A46A;background:#FCFAF3;padding:3.6mm 4.4mm">
+        <h3 style="font-size:8.6pt">红线清单（分两级处置）</h3>
+        <ul class="clean" style="margin-top:1mm">
+          <li><b>即时终止</b>：私自收款（回款进个人账户）、跨区窜货、虚假宣传（宣称医疗功效）</li>
+          <li><b>首次暂停供货 30 天</b>：低于指导价倾销、越过公司直接服务并收费；二次即终止</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:3.6mm 4.4mm">
+        <h3 style="font-size:8.6pt">伙伴与股东的三条边界</h3>
+        <ul class="clean" style="margin-top:1mm">
+          <li><b>分成 ≠ 股权</b>：签《合作协议》，不出资、不记载于股东名册、不做工商登记。</li>
+          <li><b>不参与经营决策</b>：无表决权、不派董事，重大事项仅知情与建议。</li>
+          <li><b>不承担亏损</b>：分成以实际回款为基数，不保底、不分担债务——避免"名股实债"。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="sub" style="margin-top:4mm"><span>8.3</span>首年落地节奏</h2>
+    <div class="g4" style="gap:4mm">
+      <div class="kpi"><div class="v" style="font-size:15pt">12<em>家</em></div><div class="k">Q1 签约：<br>长三角 / 珠三角，B 10 + A 2</div></div>
+      <div class="kpi"><div class="v" style="font-size:15pt">35<em>家</em></div><div class="k">Q2 累计：<br>新增 S 2、A 8、B 13</div></div>
+      <div class="kpi"><div class="v" style="font-size:15pt">65<em>家</em></div><div class="k">Q3 累计：<br>S 4、A 18、B 43</div></div>
+      <div class="kpi"><div class="v" style="font-size:15pt">60<em>%</em></div><div class="k">渠道出货占比<br>红线事件 0 起</div></div>
+    </div>
+    <div class="cap" style="margin-top:2mm">首年渠道容量按 S 40 / A 15 / B 6 台/月测算，Q3 单月约 690 台，年化 8,000–10,000 台，与销量规划匹配；缺口由直营电商补足。伙伴数增至 150 家后容量同步扩张，直营占比自然回落。</div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>09 / 11</span></div>
+</section>
+
+<!-- ============ P10 规划与融资 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>09　规划与融资 / ROADMAP</span></div>
+  <div class="pad">
+    <div class="kicker">R O A D M A P　&amp;　F U N D I N G</div>
+    <h1 class="sec">从四台样机，到十万台年销<small>THREE-YEAR ROADMAP</small></h1>
+    <p class="lede">第一阶段把产品做对，第二阶段把货铺开，第三阶段把服务做成第二增长曲线。每一步都有可验证的里程碑，而不是一句"三年十亿"。</p>
+
+    <table style="margin-top:5mm;font-size:7.4pt">
+      <thead><tr><th style="width:30mm">阶段</th><th class="num">2027</th><th class="num">2028</th><th class="num">2029</th><th>关键动作</th></tr></thead>
+      <tbody>
+        <tr><td><b>年销量目标</b></td><td class="num">10,000 台</td><td class="num">40,000 台</td><td class="num">100,000 台</td><td>先做样板市场，再复制区域</td></tr>
+        <tr><td><b>渠道伙伴</b></td><td class="num">65 家</td><td class="num">150 家</td><td class="num">300 家</td><td>S/A/B 三级，季度考核升降级</td></tr>
+        <tr><td><b>产品线</b></td><td class="num">4 款</td><td class="num">4 款 + 联名</td><td class="num">6 款</td><td>一套固件覆盖全部机型</td></tr>
+        <tr><td><b>订阅渗透率</b></td><td class="num">18%</td><td class="num">26%</td><td class="num">34%</td><td>记忆、人格、主动关怀为付费点</td></tr>
+        <tr><td><b>核心场景</b></td><td class="num">家庭</td><td class="num">家庭 + 幼教</td><td class="num">全场景</td><td>逐步进入养老、酒店客房</td></tr>
+        <tr><td><b>团队规模</b></td><td class="num">12 人</td><td class="num">24 人</td><td class="num">45 人</td><td>研发 / 供应链 / 运营三线</td></tr>
+      </tbody>
+    </table>
+    <div class="cap">以上为发展目标，非业绩承诺；实际节奏受供应链、渠道拓展与订阅转化影响。</div>
+
+    <div class="row" style="margin-top:5mm;gap:8mm">
+      <div style="flex:0 0 200px">
+        <h2 class="sub" style="margin-top:0"><span>9.1</span>资金用途</h2>
+        <svg width="200" height="142" viewBox="0 0 200 142">
+          <g font-family="Microsoft YaHei">
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#E8E4D8" stroke-width="15"/>
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#14342B" stroke-width="15"
+              stroke-dasharray="94.6 175.6" transform="rotate(-90 62 68)"/>
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#3F7D62" stroke-width="15"
+              stroke-dasharray="67.5 202.7" stroke-dashoffset="-94.6" transform="rotate(-90 62 68)"/>
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#6FA089" stroke-width="15"
+              stroke-dasharray="54.0 216.2" stroke-dashoffset="-162.1" transform="rotate(-90 62 68)"/>
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#C9A46A" stroke-width="15"
+              stroke-dasharray="21.6 248.6" stroke-dashoffset="-216.1" transform="rotate(-90 62 68)"/>
+            <circle cx="62" cy="68" r="43" fill="none" stroke="#D9C7A8" stroke-width="15"
+              stroke-dasharray="32.4 237.8" stroke-dashoffset="-237.7" transform="rotate(-90 62 68)"/>
+            <text x="62" y="64" font-size="14" fill="#14342B" font-weight="bold" text-anchor="middle">800</text>
+            <text x="62" y="78" font-size="6.8" fill="#8A928D" text-anchor="middle">万元</text>
+            <g font-size="6.8" fill="#3D4A44">
+              <rect x="120" y="24" width="6.5" height="6.5" fill="#14342B"/><text x="131" y="31">研发 35%</text>
+              <rect x="120" y="42" width="6.5" height="6.5" fill="#3F7D62"/><text x="131" y="49">供应链 25%</text>
+              <rect x="120" y="60" width="6.5" height="6.5" fill="#6FA089"/><text x="131" y="67">市场 20%</text>
+              <rect x="120" y="78" width="6.5" height="6.5" fill="#C9A46A"/><text x="131" y="85">合规 8%</text>
+              <rect x="120" y="96" width="6.5" height="6.5" fill="#D9C7A8"/><text x="131" y="103">团队 7%</text>
+              <rect x="120" y="114" width="6.5" height="6.5" fill="#EDE8DA"/><text x="131" y="121">流动 5%</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div style="flex:1">
+        <h2 class="sub" style="margin-top:0"><span>9.2</span>融资方案</h2>
+        <table style="font-size:7.2pt">
+          <tbody>
+            <tr><td style="width:22mm"><b>轮次</b></td><td>天使轮，人民币 800 万元，出让 12% 股权，投前估值 5,867 万元</td></tr>
+            <tr><td><b>资金覆盖</b></td><td>四版型量产、云端能力建设、首批备货、样板市场与合规认证，可支撑至 2029 年末</td></tr>
+            <tr><td><b>里程碑</b></td><td>2027 年销 1 万台、订阅跑通；2028 年渠道扩至 150 家、启动 Pre-A；2029 年销 10 万台</td></tr>
+            <tr><td><b>退出路径</b></td><td>Pre-A / A 轮老股转让、被智能家居或教育硬件集团并购、长期分红</td></tr>
+          </tbody>
+        </table>
+        <div class="card" style="margin-top:3mm;background:#F7F5EE;border-color:#D9D4C7;padding:3.4mm 4mm">
+          <h3 style="font-size:8.4pt">我们怎么用这笔钱</h3>
+          <p>研发 35% 用于把四款机型收敛到一条产线与一套固件；供应链 25% 用于首批备货与模具；市场 20% 用于样板市场与伙伴招募——不是买流量，是买"可复制的样板"。</p>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sub" style="margin-top:5mm"><span>9.3</span>三年路线</h2>
+    <div class="figure">
+      <svg width="640" height="96" viewBox="0 0 640 96">
+        <line x1="24" y1="34" x2="616" y2="34" stroke="#D9D4C7" stroke-width="1.2"/>
+        <g font-family="Microsoft YaHei">
+          <circle cx="70" cy="34" r="5" fill="#14342B"/><text x="70" y="20" font-size="7.4" fill="#8A928D" text-anchor="middle">2026 Q4</text>
+          <text x="70" y="54" font-size="8.6" fill="#14342B" font-weight="bold" text-anchor="middle">量产交付</text>
+          <text x="70" y="68" font-size="7.2" fill="#6C7770" text-anchor="middle">四版型小批试产</text>
+          <text x="70" y="80" font-size="7.2" fill="#6C7770" text-anchor="middle">3C / SRRC 认证</text>
+
+          <circle cx="232" cy="34" r="5" fill="#3F7D62"/><text x="232" y="20" font-size="7.4" fill="#8A928D" text-anchor="middle">2027</text>
+          <text x="232" y="54" font-size="8.6" fill="#14342B" font-weight="bold" text-anchor="middle">渠道铺设</text>
+          <text x="232" y="68" font-size="7.2" fill="#6C7770" text-anchor="middle">65 家伙伴 · 1 万台</text>
+          <text x="232" y="80" font-size="7.2" fill="#6C7770" text-anchor="middle">订阅制上线</text>
+
+          <circle cx="394" cy="34" r="5" fill="#3F7D62"/><text x="394" y="20" font-size="7.4" fill="#8A928D" text-anchor="middle">2028</text>
+          <text x="394" y="54" font-size="8.6" fill="#14342B" font-weight="bold" text-anchor="middle">规模复制</text>
+          <text x="394" y="68" font-size="7.2" fill="#6C7770" text-anchor="middle">150 家 · 4 万台</text>
+          <text x="394" y="80" font-size="7.2" fill="#6C7770" text-anchor="middle">启动 Pre-A</text>
+
+          <circle cx="556" cy="34" r="5" fill="#B08A54"/><text x="556" y="20" font-size="7.4" fill="#8A928D" text-anchor="middle">2029</text>
+          <text x="556" y="54" font-size="8.6" fill="#14342B" font-weight="bold" text-anchor="middle">行业方案</text>
+          <text x="556" y="68" font-size="7.2" fill="#6C7770" text-anchor="middle">300 家 · 10 万台</text>
+          <text x="556" y="80" font-size="7.2" fill="#6C7770" text-anchor="middle">养老 / 幼教 / 酒店</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>10 / 11</span></div>
+</section>
+
+<!-- ============ P11 风险与保密 ============ -->
+<section class="page">
+  <div class="phead"><b>屿禾工坊</b><span>10　风险与保密 / RISK</span></div>
+  <div class="pad">
+    <div class="kicker">R I S K　&amp;　C O N F I D E N T I A L I T Y</div>
+    <h1 class="sec">我们知道风险在哪<small>RISKS　AND　OUR　RESPONSES</small></h1>
+
+    <table style="margin-top:6mm;font-size:7.6pt">
+      <thead><tr><th style="width:34mm">风险</th><th>具体表现</th><th style="width:74mm">我们的应对</th></tr></thead>
+      <tbody>
+        <tr><td><b>供应链与备货</b></td><td>首批备货占用现金；屏幕、主控涨价或交期拉长</td><td>四机型共用物料提高议价力；首单小批量 + 滚动补货；关键料双供应商</td></tr>
+        <tr><td><b>云端成本</b></td><td>重度用户对话量大，模型调用成本超预期</td><td>多供应商可切换、按场景选模型档位；记忆检索加缓存与阈值；订阅制定价覆盖成本</td></tr>
+        <tr><td><b>合规与隐私</b></td><td>儿童与老人场景涉及个人信息、语音数据</td><td>数据最小化采集、分级授权、家长端可控；不做医疗功效宣称；3C / SRRC 与未成年人保护合规前置</td></tr>
+        <tr><td><b>渠道库存</b></td><td>伙伴压货、窜货导致价格体系失序</td><td>三级体系 + 红线条款 + 库存回购；一物一码追溯，窜货可定位</td></tr>
+        <tr><td><b>竞争</b></td><td>大厂以低价音箱切入陪伴场景</td><td>不在价格带正面竞争，靠记忆与主动关怀形成体验差；把成本结构做成长期优势</td></tr>
+        <tr><td><b>技术依赖</b></td><td>语音与模型供应商服务波动</td><td>适配层抽象、可热切换；关键链路保留降级策略（保底语音包）</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sub" style="margin-top:8mm"><span>10.1</span>保密条款</h2>
+    <div class="card plain" style="border-color:#14342B;border-width:.8pt;padding:6mm 7mm;background:#FCFBF8">
+      <p style="font-size:8.2pt;line-height:1.9;color:#3D4A44">
+        本文件由屿禾工坊编制，包含产品规划、技术架构、财务测算、运营机制等商业秘密，<b>仅供指定的潜在投资人评估本项目使用</b>。
+      </p>
+      <table style="font-size:7.8pt;margin-top:3mm">
+        <tbody>
+          <tr><td style="width:14mm;border:none;padding:1.4mm 0"><b>一</b></td><td style="border:none;padding:1.4mm 0">接收方不得以任何形式复制、转发、公开、引用本文件全部或部分内容；不得向第三方披露其存在。</td></tr>
+          <tr><td style="border:none;padding:1.4mm 0"><b>二</b></td><td style="border:none;padding:1.4mm 0">接收方仅可将本文件用于投资评估，不得用于反向工程、竞品对标、供应商谈判或其他商业目的。</td></tr>
+          <tr><td style="border:none;padding:1.4mm 0"><b>三</b></td><td style="border:none;padding:1.4mm 0">本文件所载技术与架构为概要级描述，不构成对核心实现、源代码、算法与数据模型的披露或授权。</td></tr>
+          <tr><td style="border:none;padding:1.4mm 0"><b>四</b></td><td style="border:none;padding:1.4mm 0">财务数据为规划测算，不构成业绩承诺；实际经营结果可能因市场与供应链变化而存在重大差异。</td></tr>
+          <tr><td style="border:none;padding:1.4mm 0"><b>五</b></td><td style="border:none;padding:1.4mm 0">保密义务自接收之日起生效，期限为五年；违反者应承担相应法律责任并赔偿由此造成的全部损失。</td></tr>
+          <tr><td style="border:none;padding:1.4mm 0"><b>六</b></td><td style="border:none;padding:1.4mm 0">本文件不构成任何要约、要约邀请或投资建议；合作以双方签署的正式协议为准。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row" style="margin-top:9mm;align-items:flex-end">
+      <div style="flex:1">
+        <div class="tiny" style="letter-spacing:.2em;color:#B08A54">C O N T A C T</div>
+        <div style="font-size:11pt;color:#14342B;font-weight:700;margin-top:2mm">屿禾工坊　·　创始团队</div>
+        <div class="tiny" style="margin-top:1.5mm">项目对接人：＿＿＿＿＿　电话：＿＿＿＿＿＿＿　邮箱：＿＿＿＿＿＿＿</div>
+      </div>
+      <div style="flex:0 0 62mm;text-align:right">
+        <div class="tiny" style="letter-spacing:.2em;color:#B08A54">版 本</div>
+        <div style="font-size:9pt;color:#14342B;margin-top:1.5mm">V1.0　2026 年 10 月</div>
+        <div class="tiny" style="margin-top:1.5mm">共 11 页　·　机密文件</div>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span class="cn">机 密</span><span>屿禾工坊 · 项目商业计划书</span><span>11 / 11</span></div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+ "id": "yh-n16r8-st7789",
+ "name": "第一代小方块（ESP32-S3-N16R8 / ST7789）",
+ "description": "ST7789 240x240 + MAX98357A + INMP441，无 codec 直驱 I2S",
+ "manufacturer": "yuhe",
+ "target": "esp32s3",
+ "board_dir": "yuhe/yh-n16r8-st7789",
+ "kconfig_symbol": "BOARD_TYPE_YUHE_SET_N16R8_ST7789",
+ "kconfig_prompt": "Yuhe N16R8 ST7789 (sets)",
+ "text_font": "font_noto_sans_basic_20_4",
+ "icon_font": "font_material_symbols_20_4",
+ "build_name": "yh-n16r8-st7789",
+ "sdkconfig_append": [],
+ "pins_verified": true,
+ "notes": "圆屏皮肤改为共享层 main/display/yh_skin（YhSkinDisplay + YhSkinProfile::Round240(false)），视觉基准仍是 my-s3-tft 的 RoundScreenDisplay：时间/电量(隐藏)/表情/气泡/提示 + good.jpg 背景，开机首帧为品牌画面。本目录不再放 round_screen_display.* 与 good_bg.c（已归档到 .trash/2026-10-17-yh-skin/）。BOOT 键三事件（短按对话/双击表情彩蛋/长按静音）与 1s 节拍保持不变。"
+}

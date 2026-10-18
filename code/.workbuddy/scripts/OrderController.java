@@ -1,15 +1,15 @@
-package xiaozhi.modules.order.controller;
+package yuhe.modules.order.controller;
 
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.*;
 
-import xiaozhi.common.page.PageData;
-import xiaozhi.modules.order.service.OrderService;
+import yuhe.common.page.PageData;
+import yuhe.modules.order.service.OrderService;
 
 @RestController
-@RequestMapping("/xiaozhi/order")
+@RequestMapping("/yuhe/order")
 public class OrderController {
     
     private final OrderService orderService;

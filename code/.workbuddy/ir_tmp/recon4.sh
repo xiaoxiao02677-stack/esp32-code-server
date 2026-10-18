@@ -21,7 +21,7 @@ systemctl --user list-unit-files 2>/dev/null | head -20
 echo
 echo "===== 4. FS sweep: ELF modified last 3 days outside vendor/known paths ====="
 find / -xdev -type f -newermt "-3 days" 2>/dev/null \
- | grep -vE "^/(proc|sys|run|dev)|/yh/|/root/yh|essl|/var/lib|/var/cache|/usr/lib/python|site-packages|\.pyc|/home/demo/xiaozhi|xiaozhi-esp32|\.workbuddy" \
+ | grep -vE "^/(proc|sys|run|dev)|/yh/|/root/yh|essl|/var/lib|/var/cache|/usr/lib/python|site-packages|\.pyc|/home/demo/yuhe|yuhe-esp32|\.workbuddy" \
  | xargs -r file 2>/dev/null | grep -E "ELF|executable" | head -40
 echo
 echo "===== 5. any file matching implant size (3820020) or name systemd-journald ====="

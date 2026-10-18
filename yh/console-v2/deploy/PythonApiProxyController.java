@@ -1,4 +1,4 @@
-package xiaozhi.modules.sys.controller;
+package yuhe.modules.sys.controller;
 
 import java.util.Map;
 
@@ -17,13 +17,13 @@ import org.springframework.web.client.RestTemplate;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import xiaozhi.common.constant.Constant;
-import xiaozhi.modules.sys.service.SysParamsService;
+import yuhe.common.constant.Constant;
+import yuhe.modules.sys.service.SysParamsService;
 
 /**
  * Python 服务 API 代理（/api/push/**、/api/wake-word/**）。
  *
- * 背景：这些端点在 xiaozhi-server(Python:8003) 上，鉴权用 server secret；
+ * 背景：这些端点在 yuhe-server(Python:8003) 上，鉴权用 server secret；
  * 浏览器只持有用户 token，无法直连。本代理挂在 manager-api 下（Shiro oauth2 用户鉴权），
  * 转发时注入 server secret，让管理端页面可以统一用用户 token 访问。
  */

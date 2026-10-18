@@ -49,7 +49,7 @@ class SM2Helper:
 def get_sm2_helper():
     """获取 SM2 加密器实例"""
     import requests
-    BASE_URL = "https://sandyun.top:8001/xiaozhi"
+    BASE_URL = "https://sandyun.top:8001/yuhe"
 
     resp = requests.get(f"{BASE_URL}/user/pub-config", verify=False)
     config = resp.json()
@@ -75,7 +75,7 @@ def login(username: str, password: str, captcha_text: str = "") -> str:
     from io import BytesIO
     from PIL import Image
 
-    BASE_URL = "https://sandyun.top:8001/xiaozhi"
+    BASE_URL = "https://sandyun.top:8001/yuhe"
     sm2_helper = get_sm2_helper()
 
     # 获取验证码

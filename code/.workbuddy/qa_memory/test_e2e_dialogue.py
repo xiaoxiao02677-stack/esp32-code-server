@@ -11,7 +11,7 @@
 ⚠️ 部署后才有 mem_holographic 与 demo Agent 绑定：
   - 线上（sandyun.top）尚未部署新代码前，本脚本自动 SKIP（默认行为）；
   - 部署后执行：python test_e2e_dialogue.py --run
-  - 也可对本地/其他环境：--url ws://IP:PORT/xiaozhi/v1/ --device <mac>
+  - 也可对本地/其他环境：--url ws://IP:PORT/yuhe/v1/ --device <mac>
 
 断言逻辑：
   - 通过监听 WS 消息收集 tts 文本（sentence_start 携带 text）；
@@ -24,7 +24,7 @@
 用法：
   python test_e2e_dialogue.py            # 部署前默认跳过（exit 0，打印 SKIP）
   python test_e2e_dialogue.py --run      # 部署后真跑
-  python test_e2e_dialogue.py --run --url ws://sandyun.top:8001/xiaozhi/v1/ \
+  python test_e2e_dialogue.py --run --url ws://sandyun.top:8001/yuhe/v1/ \
       --device 14:c1:9f:d1:33:48 --agent-id 03532a34...
 """
 import argparse
@@ -39,7 +39,7 @@ except ImportError:
     websockets = None
 
 DEVICE_ID = "14:c1:9f:d1:33:48"           # verify_tts.py 同款设备（my-s3-tft）
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 AGENT_ID = "03532a34"                      # 试点 demo Agent（部署后确认完整 id）
 
 SESSION_1_UTTERANCE = "我叫张三，我喜欢听粤语歌"

@@ -1,0 +1,20 @@
+{
+    "type": "bigscreen-s3",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "bigscreen-s3",
+            "sdkconfig_append": [
+                "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
+                "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\"",
+                "CONFIG_SPIRAM=y",
+                "CONFIG_SPIRAM_MODE_OCT=y",
+                "CONFIG_SPIRAM_SPEED_80M=y",
+                "CONFIG_YH_PROTOCOL_ENABLED=y",
+                "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
+                "CONFIG_YH_SERVER_PORT=12399",
+                "CONFIG_OTA_URL=\"http://sandyun.top:8002/yuhe/ota/\""
+            ]
+        }
+    ]
+}

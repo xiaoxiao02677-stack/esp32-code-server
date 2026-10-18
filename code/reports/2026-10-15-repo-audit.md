@@ -16,7 +16,7 @@
 | code/test_environment | 1.2G | 测试环境部署包快照（app 933M + db 189M + deploy 82M）· 远端真实环境在 22223 |
 | code-server-mirror | 633M | 服务端源码镜像（含未部署 order 模块，红线保留）· node_modules 292M + 5 份 dist 共 78M 可回收 |
 | hermes-agent-main | 338M | 上游 agent 框架参考仓（带 .aoci 治理）· 保留 |
-| 网页后台 | 275M | **最早期上游 xiaozhi-esp32-server 完整克隆**（1625 个 git 跟踪文件，状态干净）· 与 code-server-mirror 功能重叠 |
+| 网页后台 | 275M | **最早期上游 yuhe-esp32-server 完整克隆**（1625 个 git 跟踪文件，状态干净）· 与 code-server-mirror 功能重叠 |
 | code/super_small_screen | 173M | 小屏原型（已被 small_secreen 取代）· build 170M 可回收 |
 | console-v2 | 43M | 生产前端（活跃）· 有源码未进 git（风险） |
 | stylekit / aoci-code / cc-console | 42M/17M/39M | UI 样式库参考 / AOCI 工具源码 / 旧控制台（线上仍在用）· 保留 |
@@ -28,7 +28,7 @@
 2. **【高危】code/camera 整个 1.2G 未进 git**：摄像头板固件开发中（szpi-esp32s3），有自定义 build_szpi.bat、board 改动，无任何版本保护。
 3. **【敏感】code/artifacts/token_main.json 含登录 token + clientHash**：虽是测试 token，不应躺在可入库的 artifacts 目录。
 4. **nul 保留名文件 ×3**：code/nul（51B，`dir` 命令误重定向产物）、camera/nul（365B，git CRLF 警告重定向）、small_secreen/nul（同类）——Windows 下无法常规删除，需 PowerShell `\\?\` 前缀隔离到 .trash（已有先例）。
-5. **code/.mcp.json 已失效**：三个 MCP 条目全部指向 `code/xiaozhi-esp32`（该目录已不存在，现分散在 big_secreen/small_secreen 下）。
+5. **code/.mcp.json 已失效**：三个 MCP 条目全部指向 `code/yuhe-esp32`（该目录已不存在，现分散在 big_secreen/small_secreen 下）。
 6. **纯冗余副本 ×4**：code/ 根的 heartbeat.py.new/.orig 与 push_scheduler.py.new/.orig 两对文件 diff=0（内容完全相同，是当时留下的重复拷贝，正式补丁在生产与 fixes/ 体系里）。
 7. **git 22 个已修改文件未提交**：含 big_secreen 固件源码（application.cc 等 8 个）、small_secreen 板型 4 个、console-v2 3 个、code-server-mirror 4 个（order 模块相关）、memory 文档 3 个。
 8. **.workbuddy 里有 330M 死重**：scope_status_server.json 150M + aoci/results 155M + scope_plan/status_hermes 25M——全部来自已锁定的 scope 工具失败实验（记忆确认 scope apply/plan/preview 已禁用）。
@@ -53,7 +53,7 @@
 - 根目录：6 份 PROJECT-*.md + 验收清单 → `docs/`（新建）；4 个 tts 探针脚本 + tts_out/ + tts_ab_out/ + tts_output.opus → `docs/archive/tts-probe-20261009/`（结论已沉淀记忆，留档即可）
 - code/ 根散件：sim-body.bin + sim-headers.txt → artifacts/push-debug/；heartbeat/push_scheduler 四个冗余副本 + ._tmp_devmgmt.scss + .tmpbuild → .trash；logs/ → docs/archive/（或保留）；验收清单 → 根 docs/
 - 3 个 nul → PowerShell `\\?\` 隔离到 .trash/
-- .mcp.json 修正路径（aoci-fw 指向 small_secreen/xiaozhi-esp32 等）或移除失效条目
+- .mcp.json 修正路径（aoci-fw 指向 small_secreen/yuhe-esp32 等）或移除失效条目
 - README.md 充实为真实导航（当前仅 1 行）
 
 ### P4 · 大区处置（需用户拍板）

@@ -70,7 +70,7 @@ sys.modules["core.providers.tts.base"] = base_mod
 import importlib.util
 
 spec = importlib.util.spec_from_file_location(
-    MOD, r"G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server/core/providers/tts/doubao_v3.py"
+    MOD, r"G:/demo/21_xiaozhi/code-server-mirror/yuhe-server/core/providers/tts/doubao_v3.py"
 )
 mod = importlib.util.module_from_spec(spec)
 sys.modules[MOD] = mod
@@ -132,7 +132,7 @@ chk(p1["req_params"]["additions"].count("context_texts") == 1
     "场景1 语气指令进 context_texts")
 chk("namespace" in p1 and p1["namespace"] == "BidirectionalTTS",
     "顶层 namespace = BidirectionalTTS")
-chk(p1["user"]["uid"] == "xiaozhi-esp32-server", "顶层 user.uid")
+chk(p1["user"]["uid"] == "yuhe-esp32-server", "顶层 user.uid")
 chk("model" not in p1["req_params"], "默认不发送 model（对齐官方脚本）")
 chk("enable_emotion" not in p1["req_params"]["audio_params"]
     and "emotion_scale" not in p1["req_params"]["audio_params"],

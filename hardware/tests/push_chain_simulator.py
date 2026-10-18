@@ -4,7 +4,7 @@
 
 忠实复刻固件通知播放链路的语义，对任意 URL/文件判定「设备能否完整播放」：
 
-固件链路（small_secreen/xiaozhi-esp32）：
+固件链路（small_secreen/yuhe-esp32）：
   yh_protocol.cc SEND_NOTIFY → Application::NotifyAudio → NotifyPlayer
   (main/notify/notify_player.cc)
     HTTP GET，请求头：Accept: audio/ogg, application/ogg
@@ -291,7 +291,7 @@ def http_get_like_device(url: str):
     req = urllib.request.Request(url, headers={
         "Accept": FIRMWARE_ACCEPT,
         "Accept-Encoding": "identity",
-        "User-Agent": "xiaozhi-push-chain-simulator/1.0",
+        "User-Agent": "yuhe-push-chain-simulator/1.0",
     })
     t0 = time.time()
     try:

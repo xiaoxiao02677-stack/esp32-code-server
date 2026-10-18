@@ -11,7 +11,7 @@ import time
 import websockets
 
 DEVICE_ID = "14:c1:9f:d1:33:48"
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 
 
 async def run_once(text: str, sample_rate: int) -> dict:

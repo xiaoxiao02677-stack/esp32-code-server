@@ -2,7 +2,7 @@
 
 > 生成：2026-10-13 ｜ 方式：5 agent 协同（链路分析 / 测试器审计 / 远程实测 / 行业基准 / 成文）
 > 约束：全程只读，未对项目代码做任何增删改
-> 实测环境：sandyun.top 远程服务器（/root/yh/app/xiaozhi-server），原始数据见 `logs/perf_probe_20261013/`
+> 实测环境：sandyun.top 远程服务器（/root/yh/app/yuhe-server），原始数据见 `logs/perf_probe_20261013/`
 
 ---
 
@@ -126,7 +126,7 @@ _audio_play_priority_thread                    base.py:518
 
 | 方案 | 原理 | 预期收益 | 成本 | 风险 |
 |---|---|---|---|---|
-| A1 **TTS 换流式供应商**（火山 doubao 双向流式，首包 ~300ms 官方标称；xiaozhi 社区实测平均合成 0.503s 最优） | 边合成边出帧，首句不等全文 | TTFA 1.5-2.2s → **≈1.0s**；对照讯飞 1509ms→火山 798ms | 低（config.yaml:815-879 已预留 huoshan_double_stream 段，dto.py:19-23 已预留 SINGLE/DUAL_STREAM 接口） | 需开通火山账号与计费；中文音色迁移 |
+| A1 **TTS 换流式供应商**（火山 doubao 双向流式，首包 ~300ms 官方标称；yuhe 社区实测平均合成 0.503s 最优） | 边合成边出帧，首句不等全文 | TTFA 1.5-2.2s → **≈1.0s**；对照讯飞 1509ms→火山 798ms | 低（config.yaml:815-879 已预留 huoshan_double_stream 段，dto.py:19-23 已预留 SINGLE/DUAL_STREAM 接口） | 需开通火山账号与计费；中文音色迁移 |
 | A2 **TTS 长尾治理**：调小 tts_timeout（5-8s 总量）+ 供应商侧重试 | 消除 30s 级瞬态 | 尾延迟 30s→<8s | 极低（改配置） | 超时过紧增加失败率，需配合 fallback |
 | A3 **fallback 链修复**：EdgeTTS 已 403，fallback 换 qwen-tts 或 huoshan（当前 fallback 也指向 EdgeTTS，modules_initialize.py:151-208，等于无兜底） | 恢复降级能力 | 可用性 | 极低 | 无 |
 | A4 TTS 供应商区域就近 | 避免跨区 RTT 100-300ms（火山官方 FAQ：延迟>500ms 先查跨区域） | 保障项 | 极低 | 无 |
@@ -168,7 +168,7 @@ _audio_play_priority_thread                    base.py:518
 
 ### 7.1 现有性能测试器使用说明（tester-auditor 审计结论）
 
-- 目录 `performance_tester/` 下 6 个模块**独立直跑**（入口选择器与 doc 文档在镜像仓库不存在），必须以 xiaozhi-server 为 cwd，依赖 config.yaml + data/.config.yaml
+- 目录 `performance_tester/` 下 6 个模块**独立直跑**（入口选择器与 doc 文档在镜像仓库不存在），必须以 yuhe-server 为 cwd，依赖 config.yaml + data/.config.yaml
 - **可直接复用**：llm tester（首 token+总耗时，打点法 :98-101）、tts tester（MockConn 模式 :49-61 绕开 conn 依赖）、stream_tts（7 家硬编码，注意缺 config 节点会 KeyError）
 - **本场景废弃**：asr / stream_asr（ASR 已文字模拟）；vllm（视觉）
 - **缺口**：无端到端模拟器——现有工具均为组件孤立基准。全链路模拟器方案 A（推荐）：mock conn 后直接 `await startToChat(conn, text)`，T0 文字入 / T1 意图后 / T2 LLM 首 token / T3 LLM 完 / T4 TTS 首块 / T5 LAST 入播放队列 / T6 文件就绪，tabulate 瀑布报表（句子ID/LLM TTFT/LLM 生成/TTS 首块含队列/TTS 尾部/E2E + avg/p95）
@@ -179,7 +179,7 @@ _audio_play_priority_thread                    base.py:518
 - 端到端分界：rayvoc.ai/blog/voice-ai-latency-guide；telnyx.com/resources/low-latency-voice-ai
 - LLM TTFT：global-apis.com 2026-05 横评；CSDN 引掘金国产模型压测
 - TTS 首包：火山官方 volcengine.com/docs/6561/1257543（双向流式 300ms）；Vapi humannessindex（MiniMax 315ms median）
-- xiaozhi 社区：GitHub Eivs/xiaozhi-esp32-server FAQ（AliLLM 0.547s + DoubaoTTS 0.503s 最优组合）；GitCode 串行 4s→流式改造案例
+- yuhe 社区：GitHub Eivs/yuhe-esp32-server FAQ（AliLLM 0.547s + DoubaoTTS 0.503s 最优组合）；GitCode 串行 4s→流式改造案例
 - 连接复用：CSDN 300ms→20ms 实测；async-concurrency.com aiohttp keepalive 规范
 
 ### 7.3 数据完整性声明

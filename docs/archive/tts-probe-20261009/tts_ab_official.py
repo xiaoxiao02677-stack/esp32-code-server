@@ -28,7 +28,7 @@ RESOURCE_ID = "seed-icl-2.0"
 SPEAKER_ID = "S_N8pC5xwg2"
 FORMAT = "mp3"
 SAMPLE_RATE = 24000
-UID = "xiaozhi-esp32-server"
+UID = "yuhe-esp32-server"
 NAMESPACE = "BidirectionalTTS"
 
 TEXT = "今天真是个好日子，我们一起出去玩吧！"

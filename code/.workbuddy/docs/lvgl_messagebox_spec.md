@@ -3,7 +3,7 @@
 - 版本：v1.0
 - 日期：2026-10-13
 - 状态：待评审（仅需求规格，未改动任何代码）
-- 范围：xiaozhi-esp32 固件（G:/demo/21_xiaozhi/code/small_secreen/xiaozhi-esp32），显示子系统
+- 范围：yuhe-esp32 固件（G:/demo/21_xiaozhi/code/small_secreen/yuhe-esp32），显示子系统
 - 依据：本仓库现有代码（只读分析），关键文件与行为均注明出处
 
 ---

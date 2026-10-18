@@ -15,7 +15,7 @@
 | ④ | agent-3 实现 / agent-11 复核 | 固件拼音表次序 + 误导日志 | ✅ 完成 | 多字词条（小禾/哈喽/hello）前移表顶防逐字拆词；board.cc 按 SupportsDynamicWakeWords() 区分日志；custom_wake_word.cc 3 处 ESP_LOG 规范化 | 无 |
 | ⑤ | agent-7/8/10/15/17 | TTS fallback / 403 快速失败 / 字幕保底 | ✅ 完成 | base.py 失败路径补发 FIRST 字幕；_is_fatal_tts_error 识别 8 种永久错误；EdgeTTS fallback（zh-CN-XiaoxiaoNeural）主备降级，venv 实测 ALL_FALLBACK_TESTS_PASSED；21:37 重启生效（agent-17 审计补的遗漏）；DB 默认音色统一官方 zh_female_xiaohe_uranus_bigtts | 无 |
 | ⑥ | agent-8 | 前端 cc-console 修复 | ✅ 完成 | 双击竞态入口置位+启动令牌、watch 清残留、AbortController 120s、simBusy finally 重置、MediaRecorder try/catch；npm build 通过（dist 21:34） | 无 |
-| ⑦ | agent-3/14/18/19/20 | 构建部署验证 | ✅ 完成 | 固件三件套 21:32-21:33（xiaozhi.bin 2,833,504B / assets 3.6MB / merged 12MB，二进制符号验证全 PASS）；E2E 推送复测全绿：Java POST 200 → Python → DB → bigscreen+小屏 2 设备实时收 device_config → TTS 字幕"你好小禾"闭环 | 无 |
+| ⑦ | agent-3/14/18/19/20 | 构建部署验证 | ✅ 完成 | 固件三件套 21:32-21:33（yuhe.bin 2,833,504B / assets 3.6MB / merged 12MB，二进制符号验证全 PASS）；E2E 推送复测全绿：Java POST 200 → Python → DB → bigscreen+小屏 2 设备实时收 device_config → TTS 字幕"你好小禾"闭环 | 无 |
 
 ## 交付文档（3 份）
 

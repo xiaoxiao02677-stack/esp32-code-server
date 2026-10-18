@@ -16,13 +16,13 @@
 | **MSYS 坑（重要）** | Git Bash 会把以 `/` 开头的参数自动转成 `C:/...`。**所有含 `/root/...` 绝对路径的命令必须前缀 `MSYS_NO_PATHCONV=1`**。否则会静默变成错误路径 | 已实测复现并规避 |
 | **引号坑（重要）** | ssh_run.py 的命令参数含括号/内嵌引号时 bash 会先解析崩溃。**复杂脚本一律用 base64 传入**：`echo <B64> \| base64 -d > /tmp/x.sh && bash /tmp/x.sh` | 已实测复现并规避 |
 | 本地 rsync | **不存在**（服务器有）。本手册传输全部走：本地 tar 打包 → sftp_push.py 上传 → 服务器解包 → md5 校验 | `which rsync` 空 |
-| Python 服务 | venv `/root/xiaozhi-server/main/xiaozhi-server/.venv`（带点！Python 3.12.3），systemd 单元 `xiaozhi-server`，WorkingDirectory=`/root/xiaozhi-server/main/xiaozhi-server` | 已实测 |
+| Python 服务 | venv `/root/xiaozhi-server/main/yuhe-server/.venv`（带点！Python 3.12.3），systemd 单元 `yuhe-server`，WorkingDirectory=`/root/xiaozhi-server/main/yuhe-server` | 已实测 |
 | Python 配置 | 每个 WS 连接从 Java 拉私有配置（`data/.config.yaml` 只含 server/manager-api 段 + read_config_from_api=true）。**config.yaml 不随连接生效、config_from_api.yaml 只是模板，故两者均无需同步、严禁 --delete 时误动** | 代码走读 + md5 实测 |
 | Java 服务 | 源码 `/root/xiaozhi-server/main/manager-api/`，jar 部署于 `/opt/xiaozhi/xiaozhi-esp32-api.jar`，systemd 单元 `xiaozhi-manager-api`（ExecStart `java -jar /opt/xiaozhi/xiaozhi-esp32-api.jar --spring.profiles.active=dev`），JDK 21，mvn 3.8.7，m2 缓存 141M（热，含 spring-boot 全套） | 已实测 |
 | Java 配置 | 运行目录 /opt/xiaozhi 下**没有** application-dev.yml，DB 等配置在 jar 内 resources（dev profile 指向 MySQL）；外部只放 jar + logs | ls 实测 |
 | Liquibase | **Spring Boot 自动装配**（`@DependsOn("liquibase")` 佐证 bean 存在，changelog 在 jar resources 默认路径）。`mvn package` 不执行 changelog，**jar 启动时才执行**，DATABASECHENGELOG 表已存在（查 `202610051800` 返回 0 行而非报错） | 代码 + 服务器实测 |
 | Vue | 本地 `npm run build`（node 22/npm 10 可用，node_modules 已装，dist 现有构建 10-05 18:44 已含记忆 chunk `dist/js/607.0ad10ed9.js`）→ 传 `/var/www/xiaozhi-manager/`（nginx 8001，静态零重启）。**有 service-worker**，验证必须强刷 | 已实测 |
-| nginx | 8001 根 `/var/www/xiaozhi-manager`，`/xiaozhi/` 反代 127.0.0.1:8002（context-path /xiaozhi）。**未发现 8003 代理**（8003 只服务 OTA/vision/memory） | nginx -T 实测 |
+| nginx | 8001 根 `/var/www/xiaozhi-manager`，`/yuhe/` 反代 127.0.0.1:8002（context-path /yuhe）。**未发现 8003 代理**（8003 只服务 OTA/vision/memory） | nginx -T 实测 |
 | 8003 与 loopback | 8003 公网直达（无代理层），`memory_loopback_middleware` 只放行 127.0.0.1/::1；Java 经 127.0.0.1:8003 互调，port 参数取 `sys_params.server.http_port`（当前 8003），fallback 8003 | 代码走读 |
 | 共享密钥 | `server.secret`（Python data/.config.yaml L9）= `sys_params.server.secret` = `2d7b6bde-4de9-49f1-9072-476cec13292e`；Java 侧 `Constant.SERVER_SECRET` 读 sys_params（fromCache=false） | 双端实测一致 |
 | MySQL | root/123456（e2e 脚本同源），库 `xiaozhi_esp32_server`。**服务器无 sqlite3 CLI，用 venv python3 sqlite3 模块**；FTS5 已实测可用（venv Python 3.12.3 自带 FTS5）；venv numpy 1.26.4 已装 | 已实测 |
@@ -35,7 +35,7 @@
 - **Python**（git 修改 6 文件 + 新增 5 文件）：`core/http_server.py`（loopback middleware + /api/memory 路由）、`core/connection.py`（agent_id 注入）、`core/api/memory_handler.py`（新）、`core/providers/memory/mem_holographic/`（新 5 文件：`__init__.py/holographic.py/store.py/retrieval.py/mem_holographic.py`，纯标准库 + 可选 numpy）、`mem0ai/mem_local_short/mem_report_only/nomem` 各加 `get_status()`；`config.yaml` 加 mem_holographic 段（**只对本地单模块模式生效，线上由 Java 下发，不同步**）
 - **Java**（git 修改 3 + 新增 9）：`ConfigServiceImpl`（下发 agent_id + 注入 db_dir）、`ModelConfigServiceImpl`（mem0ai key 脱敏徽标）、`db.changelog-master.yaml` + 新 `202610051800.sql`（种子两行）；新增 `modules/memory/` 包 9 文件（controller/service/dto/vo/client）
 - **Vue**（git 修改 11 + 新增 2）：路由/HeaderBar/i18n×6/api.js + 新 `views/MemoryManagement.vue`、`apis/module/memory.js`
-- 镜像内残留（**不部署**）：`.aoci/`（含 280K baseline.json，本地认知资产）、`aoci*.txt`、`AGENTS.md`、`.gitattributes`、`.workbuddy/`（qa 脚本副本）、`xiaozhi-server/.workbuddy/`。git 状态"脏"但内容干净，不影响部署
+- 镜像内残留（**不部署**）：`.aoci/`（含 280K baseline.json，本地认知资产）、`aoci*.txt`、`AGENTS.md`、`.gitattributes`、`.workbuddy/`（qa 脚本副本）、`yuhe-server/.workbuddy/`。git 状态"脏"但内容干净，不影响部署
 
 ### 传输总原则（本手册核心方法）
 
@@ -43,7 +43,7 @@
 
 ```bash
 # 本地（Git Bash）
-tar czf /tmp/mirror-python.tar.gz -C "G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server" .
+tar czf /tmp/mirror-python.tar.gz -C "G:/demo/21_xiaozhi/code-server-mirror/yuhe-server" .
 python "G:/demo/21_xiaozhi/code/.workbuddy/sftp_push.py" /tmp/mirror-python.tar.gz /tmp/mirror-python.tar.gz
 
 # 服务器（经 ssh_run.py，注意 MSYS_NO_PATHCONV=1 与无括号）
@@ -52,7 +52,7 @@ rsync -rltgoD --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log --exclude=.workbuddy/ --exclude=tmp/ \
   --exclude=models/ --exclude=music/ --exclude=tts_notify.mp3 \
-  /tmp/mirror-python/ /root/xiaozhi-server/main/xiaozhi-server/ \
+  /tmp/mirror-python/ /root/xiaozhi-server/main/yuhe-server/ \
   && rm -rf /tmp/mirror-python
 ```
 
@@ -69,7 +69,7 @@ rsync -rltgoD --delete \
 mkdir -p /root/backup/2026-10-05
 cp -a /opt/xiaozhi/xiaozhi-esp32-api.jar /root/backup/2026-10-05/
 rsync -a --exclude=.venv/ --exclude=data/ --exclude=__pycache__/ --exclude=*.log \
-  /root/xiaozhi-server/main/xiaozhi-server/ /root/backup/2026-10-05/xiaozhi-server-src/
+  /root/xiaozhi-server/main/yuhe-server/ /root/backup/2026-10-05/yuhe-server-src/
 rsync -a /var/www/xiaozhi-manager/ /root/backup/2026-10-05/xiaozhi-manager-web/
 mysqldump -uroot -p123456 --single-transaction --routines --triggers \
   xiaozhi_esp32_server | gzip > /root/backup/2026-10-05/xiaozhi_esp32_server.sql.gz
@@ -83,7 +83,7 @@ du -sh /root/backup/2026-10-05/ && ls -la /root/backup/2026-10-05/
 ```bash
 mysql -uroot -p123456 xiaozhi_esp32_server < <(gzip -dc /root/backup/2026-10-05/xiaozhi_esp32_server.sql.gz)  # 恢复 DB
 cp /root/backup/2026-10-05/xiaozhi-esp32-api.jar /opt/xiaozhi/ && systemctl restart xiaozhi-manager-api
-rsync -a --delete /root/backup/2026-10-05/xiaozhi-server-src/ /root/xiaozhi-server/main/xiaozhi-server/ && systemctl restart xiaozhi-server
+rsync -a --delete /root/backup/2026-10-05/yuhe-server-src/ /root/xiaozhi-server/main/yuhe-server/ && systemctl restart yuhe-server
 rsync -a --delete /root/backup/2026-10-05/xiaozhi-manager-web/ /var/www/xiaozhi-manager/
 ```
 
@@ -91,13 +91,13 @@ rsync -a --delete /root/backup/2026-10-05/xiaozhi-manager-web/ /var/www/xiaozhi-
 
 ---
 
-## 阶段 2：Python 服务（xiaozhi-server）
+## 阶段 2：Python 服务（yuhe-server）
 
 ### 2.1 同步（改动 11 文件 + 新增 mem_holographic 包，总量 <100KB）
 
 ```bash
 # 本地
-cd "G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server" && tar czf /tmp/mirror-python.tar.gz .
+cd "G:/demo/21_xiaozhi/code-server-mirror/yuhe-server" && tar czf /tmp/mirror-python.tar.gz .
 python "G:/demo/21_xiaozhi/code/.workbuddy/sftp_push.py" /tmp/mirror-python.tar.gz /tmp/mirror-python.tar.gz
 
 # 服务器（经 ssh_run.py）
@@ -106,7 +106,7 @@ rsync -rltgoD --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log --exclude=.workbuddy/ --exclude=tmp/ \
   --exclude=models/ --exclude=music/ --exclude=tts_notify.mp3 \
-  /tmp/mirror-python/ /root/xiaozhi-server/main/xiaozhi-server/
+  /tmp/mirror-python/ /root/xiaozhi-server/main/yuhe-server/
 rm -rf /tmp/mirror-python /tmp/mirror-python.tar.gz
 ```
 
@@ -117,27 +117,27 @@ rm -rf /tmp/mirror-python /tmp/mirror-python.tar.gz
 
 **验收（同步后、重启前）**：
 ```bash
-ls /root/xiaozhi-server/main/xiaozhi-server/core/providers/memory/mem_holographic/
-grep -c "api/memory" /root/xiaozhi-server/main/xiaozhi-server/core/http_server.py   # >= 1
-/root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python -m py_compile \
-  /root/xiaozhi-server/main/xiaozhi-server/core/api/memory_handler.py \
-  /root/xiaozhi-server/main/xiaozhi-server/core/http_server.py \
-  /root/xiaozhi-server/main/xiaozhi-server/core/connection.py && echo PY_COMPILE_OK
+ls /root/xiaozhi-server/main/yuhe-server/core/providers/memory/mem_holographic/
+grep -c "api/memory" /root/xiaozhi-server/main/yuhe-server/core/http_server.py   # >= 1
+/root/xiaozhi-server/main/yuhe-server/.venv/bin/python -m py_compile \
+  /root/xiaozhi-server/main/yuhe-server/core/api/memory_handler.py \
+  /root/xiaozhi-server/main/yuhe-server/core/http_server.py \
+  /root/xiaozhi-server/main/yuhe-server/core/connection.py && echo PY_COMPILE_OK
 ```
 
 ### 2.2 重启 + 探活
 
 ```bash
-systemctl restart xiaozhi-server
+systemctl restart yuhe-server
 sleep 5
-systemctl is-active xiaozhi-server                                        # 预期 active
+systemctl is-active yuhe-server                                        # 预期 active
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/             # 预期 200/404（端口活着）
 # 部署后信号①：无鉴权本机请求 → 401（而不是 404）
 curl -s -w '\nHTTP:%{http_code}' http://127.0.0.1:8003/api/memory/agents  # 预期 {"code":401,...} HTTP:401
 # 部署后信号②：带 key 本机请求 → 200 code=0（空 agents 列表也成立）
 curl -s -H "Authorization: Bearer 2d7b6bde-4de9-49f1-9072-476cec13292e" \
   -w '\nHTTP:%{http_code}' http://127.0.0.1:8003/api/memory/agents
-tail -30 /root/xiaozhi-server/main/xiaozhi-server/data/app.log           # 无 traceback
+tail -30 /root/xiaozhi-server/main/yuhe-server/data/app.log           # 无 traceback
 ```
 
 **预期输出**：`PY_COMPILE_OK`；is-active=active；8000 有响应；8003 `/api/memory/agents` 无 key=**401**（404 说明路由未挂载，立即查日志）；带 key=**200 code:0**（若 demo Agent 不在列表为空数组也 PASS）。
@@ -148,8 +148,8 @@ tail -30 /root/xiaozhi-server/main/xiaozhi-server/data/app.log           # 无 t
 rsync -a --delete \
   --exclude=.venv/ --exclude=data/ --exclude=config.yaml --exclude=config_from_api.yaml \
   --exclude=__pycache__/ --exclude=*.log \
-  /root/backup/2026-10-05/xiaozhi-server-src/ /root/xiaozhi-server/main/xiaozhi-server/
-systemctl restart xiaozhi-server && sleep 5 && systemctl is-active xiaozhi-server
+  /root/backup/2026-10-05/yuhe-server-src/ /root/xiaozhi-server/main/yuhe-server/
+systemctl restart yuhe-server && sleep 5 && systemctl is-active yuhe-server
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8003/api/memory/agents   # 应回到 404（旧代码）
 ```
 
@@ -271,7 +271,7 @@ ls /tmp/qa_memory/          # 预期 test_internal_api.sh test_java_api.sh e2e_m
 # 服务器
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8003/api/memory/agents   # 无key → 401
 mysql -uroot -p123456 -N -e "select count(*) from xiaozhi_esp32_server.ai_model_config where id='Memory_mem_holographic' and is_enabled=1;"  # =1
-ls /root/xiaozhi-server/main/xiaozhi-server/core/providers/memory/mem_holographic/mem_holographic.py  # 存在
+ls /root/xiaozhi-server/main/yuhe-server/core/providers/memory/mem_holographic/mem_holographic.py  # 存在
 ```
 
 ### R2 内部记忆管理 API（test_internal_api.sh，服务器本机执行）
@@ -313,13 +313,13 @@ cd /tmp/qa_memory && python3 e2e_memory_suite.py --case all
 
 **预期**：跨会话问"我叫什么名字/喜欢听什么"命中"张三/粤语"；`data/memory/03532a34....db` 出现 profile/preference 条目；`test_e2e_dialogue.py` 无 `--run` 时自动 SKIP。
 
-**注意**：e2e 套件会重启 xiaozhi-server 两次（引擎切换），选低峰时段。
+**注意**：e2e 套件会重启 yuhe-server 两次（引擎切换），选低峰时段。
 
 ### R5 性能与回退（qa_perf_rollback.py，本地或服务器）
 
 ```bash
 # 本地预演已跑；部署后真机复测需在服务器做（依赖 numpy 已在 venv）
-cd /tmp/qa_memory && /root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python qa_perf_rollback.py --facts 500 --rounds 50
+cd /tmp/qa_memory && /root/xiaozhi-server/main/yuhe-server/.venv/bin/python qa_perf_rollback.py --facts 500 --rounds 50
 ```
 
 **预期**：query_memory P95 ≤300ms；回退安全断言（切引擎后库文件保留）全 PASS。
@@ -327,7 +327,7 @@ cd /tmp/qa_memory && /root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python q
 ### 控制台人工检查
 
 - 浏览器（强刷 Ctrl+Shift+R）打开 `http://sandyun.top:8001/` → 登录 → 侧边栏出现"记忆管理"→ demo Agent 出现记忆统计 → 条目增删改查可用。
-- F12 确认 `GET /xiaozhi/memory/agents` 返回 200 code:0。
+- F12 确认 `GET /yuhe/memory/agents` 返回 200 code:0。
 - **PWA 强刷**：旧 service-worker 可能缓存旧 JS；若菜单缺失先 Ctrl+Shift+R，仍缺失清站点数据。
 
 ---
@@ -384,7 +384,7 @@ SSH='MSYS_NO_PATHCONV=1 python "G:/demo/21_xiaozhi/code/.workbuddy/ssh_run.py"'
 PUSH='python "G:/demo/21_xiaozhi/code/.workbuddy/sftp_push.py"'
 
 # 服务器探活三连
-systemctl is-active xiaozhi-server xiaozhi-manager-api
+systemctl is-active yuhe-server xiaozhi-manager-api
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8003/api/memory/agents          # 401
 curl -s -H 'Authorization: Bearer 2d7b6bde-4de9-49f1-9072-476cec13292e' -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8003/api/memory/agents  # 200
 ```

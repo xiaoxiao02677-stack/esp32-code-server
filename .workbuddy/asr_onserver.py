@@ -15,7 +15,7 @@ with open("/tmp/asr_test.webm", "rb") as f:
 print("audio bytes:", len(audio))
 
 req = urllib.request.Request(
-    "http://127.0.0.1:8002/xiaozhi/models/asrRecognize?modelId=ASR_Qwen3Flash",
+    "http://127.0.0.1:8002/yuhe/models/asrRecognize?modelId=ASR_Qwen3Flash",
     data=audio, method="POST",
     headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "audio/webm"})
 try:

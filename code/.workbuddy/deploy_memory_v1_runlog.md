@@ -26,10 +26,10 @@
 
 ## 部署后信号总表（终态 21:36 巡检）
 
-- xiaozhi-server / xiaozhi-manager-api / nginx：全 active
+- yuhe-server / xiaozhi-manager-api / nginx：全 active
 - 端口：8000(python WS) 8001(nginx) 8002(java) 8003(python http) 全监听
 - 8003 /api/memory/agents：无 key 401 / 带共享密钥 200 code:0 / 外网 403
-- 8002 /xiaozhi/memory/agents：无 token 业务码 401 / 带管理员 token code:0
+- 8002 /yuhe/memory/agents：无 token 业务码 401 / 带管理员 token code:0
 - demo Agent 03532a34：mem_model_id=Memory_mem_holographic（悬空已消解），库 3 条测试记忆（张三×2/粤语，A1 产生，供 A2 复用）
 - 磁盘 104G 可用 / 内存 5.8G available
 

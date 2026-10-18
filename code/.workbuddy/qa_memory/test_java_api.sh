@@ -3,20 +3,20 @@
 # test_java_api.sh — manager-api 记忆管理 REST API 复验（部署后 #7 复用）
 # 验收对应：A2 管理页 CRUD（管理端链路）、A3 搜索筛选、A5/A6 引擎徽标与分派
 #
-# 端点：http://{HOST}:{PORT}/{CTX}/memory/**（默认 127.0.0.1:8002 + context-path /xiaozhi；
-#       application.yml server.servlet.context-path=/xiaozhi，nginx 8001 /xiaozhi/ 也反代到 8002/xiaozhi/）
+# 端点：http://{HOST}:{PORT}/{CTX}/memory/**（默认 127.0.0.1:8002 + context-path /yuhe；
+#       application.yml server.servlet.context-path=/yuhe，nginx 8001 /yuhe/ 也反代到 8002/yuhe/）
 # 鉴权：manager-web 管理员登录 token（oauth2）；Shiro 默认链 /**→oauth2 保护
 #
 # 用法（先登录控制台拿 token，见下方 HOW-TO）：
 #   TOKEN=eyJhbGciOi... bash test_java_api.sh
-#   TOKEN=xxx HOST=127.0.0.1 PORT=8002 CTX=/xiaozhi AGENT_ID=03532a34... bash test_java_api.sh
-#   TOKEN=xxx HOST=sandyun.top PORT=8001 CTX=/xiaozhi AGENT_ID=... bash test_java_api.sh  # 走 nginx
+#   TOKEN=xxx HOST=127.0.0.1 PORT=8002 CTX=/yuhe AGENT_ID=03532a34... bash test_java_api.sh
+#   TOKEN=xxx HOST=sandyun.top PORT=8001 CTX=/yuhe AGENT_ID=... bash test_java_api.sh  # 走 nginx
 #
 # HOW-TO 获取 TOKEN：
-#   1) 浏览器打开控制台 -> F12 -> Network -> 任一 /xiaozhi/memory 或 /model 请求 ->
+#   1) 浏览器打开控制台 -> F12 -> Network -> 任一 /yuhe/memory 或 /model 请求 ->
 #      Request Headers 里复制 Authorization: Bearer xxx 的 xxx；
 #   2) 或用账号密码换 token（本地沙箱环境）：
-#      curl -s -X POST http://HOST:8002/xiaozhi/sys/login -H 'Content-Type: application/json' \
+#      curl -s -X POST http://HOST:8002/yuhe/sys/login -H 'Content-Type: application/json' \
 #        -d '{"username":"admin","password":"<密码>","captcha":"","uuid":""}'
 #      （若开了验证码则用方式 1）
 #
@@ -26,7 +26,7 @@ set -u
 
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8002}"
-CTX="${CTX:-/xiaozhi}"
+CTX="${CTX:-/yuhe}"
 TOKEN="${TOKEN:-}"
 AGENT_ID="${AGENT_ID:-}"    # 必传：目标 Agent（试点 demo：03532a34...）
 BASE="http://${HOST}:${PORT}${CTX}/memory"

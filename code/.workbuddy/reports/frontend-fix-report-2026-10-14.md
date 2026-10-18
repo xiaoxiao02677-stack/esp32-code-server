@@ -66,7 +66,7 @@ scp -P 22223 -r dist/* root@sandyun.top:/var/www/console-v2/app/
 
 - **主页**: https://sandyun.top:8101/
 - **订单管理**: https://sandyun.top:8101/order
-- **API接口**: https://sandyun.top:8101/xiaozhi/order/*
+- **API接口**: https://sandyun.top:8101/yuhe/order/*
 
 ---
 

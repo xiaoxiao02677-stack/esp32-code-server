@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """连通性自动化测试（文档 §7.1 七维度）：
-对每个接口走 同源代理 /xiaozhi/，验证 DNS/协议/超时/方法/参数/响应解析/异常分支。
+对每个接口走 同源代理 /yuhe/，验证 DNS/协议/超时/方法/参数/响应解析/异常分支。
 未登录接口返回 401/code!=0 也算"连通性通过"（能触达后端并有明确语义）。"""
 import json
 import subprocess
 import sys
 
-BASE = "https://sandyun.top:8001/xiaozhi"
+BASE = "https://sandyun.top:8001/yuhe"
 
 # (方法, 路径, 说明) —— 从 openapi.json 基线抽取的代表性子集
 CASES = [

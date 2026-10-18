@@ -29,8 +29,8 @@
 - 验证：
   - DB：4 模型音色 48/24/12/14=98 ✓，base_url 全部就位 ✓，中文无乱码 ✓，provider fields 含 base_url ✓
   - API（本机 8002，demo 用户既有 token）：
-    - GET /xiaozhi/ttsVoice?ttsModelId=TTS_QwenTTS_Flash → code=0 total=48（Cherry/Serena/Ethan…）✓
-    - GET /xiaozhi/models/list?modelType=TTS → 4 个 Qwen 行 base_url 就位、api_key 正常脱敏 ✓
+    - GET /yuhe/ttsVoice?ttsModelId=TTS_QwenTTS_Flash → code=0 total=48（Cherry/Serena/Ethan…）✓
+    - GET /yuhe/models/list?modelType=TTS → 4 个 Qwen 行 base_url 就位、api_key 正常脱敏 ✓
 - 服务：xiaozhi-manager-api active 未重启（无 Java 代码改动，直改 DB 即时生效）
 - 清理：/tmp/202610071100.sql、/tmp/jarx 已删
 

@@ -12,7 +12,7 @@ LOCAL = r"G:\demo\21_xiaozhi\code\.workbuddy"
 
 
 def ws_probe(tls, devid, host="sandyun.top", port=8001):
-    req = (f"GET /xiaozhi/v1/?device-id={devid} HTTP/1.1\r\n"
+    req = (f"GET /yuhe/v1/?device-id={devid} HTTP/1.1\r\n"
            f"Host: {host}:{port}\r\n"
            "Upgrade: websocket\r\nConnection: Upgrade\r\n"
            "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
@@ -48,7 +48,7 @@ def main():
     print("=" * 62)
     print("步骤 1: 备份现有站点配置")
     print("=" * 62)
-    for f in ("xiaozhi-manager", "xiaozhi-device-pp"):
+    for f in ("xiaozhi-manager", "yuhe-device-pp"):
         sh(f"cp -a /etc/nginx/sites-available/{f} "
            f"/etc/nginx/sites-available/{f}.bak-{STAMP} 2>/dev/null || true")
     print(sh(f"ls -l /etc/nginx/sites-available/*.bak-{STAMP}")[0])
@@ -57,16 +57,16 @@ def main():
     print("=" * 62)
     print("步骤 2: 上传 snippet 与两个 server 块")
     print("=" * 62)
-    sftp.put(rf"{LOCAL}\nginx-snippet-xiaozhi-common.conf",
-             "/etc/nginx/snippets/xiaozhi-common.conf")
+    sftp.put(rf"{LOCAL}\nginx-snippet-yuhe-common.conf",
+             "/etc/nginx/snippets/yuhe-common.conf")
     sftp.put(rf"{LOCAL}\nginx-site-xiaozhi-manager.conf",
              "/etc/nginx/sites-available/xiaozhi-manager")
     sftp.put(rf"{LOCAL}\nginx-device-proxy-protocol.conf",
-             "/etc/nginx/sites-available/xiaozhi-device-pp")
-    sh("chmod 644 /etc/nginx/snippets/xiaozhi-common.conf "
+             "/etc/nginx/sites-available/yuhe-device-pp")
+    sh("chmod 644 /etc/nginx/snippets/yuhe-common.conf "
        "/etc/nginx/sites-available/xiaozhi-manager "
-       "/etc/nginx/sites-available/xiaozhi-device-pp")
-    print("已上传：snippets/xiaozhi-common.conf、xiaozhi-manager、xiaozhi-device-pp")
+       "/etc/nginx/sites-available/yuhe-device-pp")
+    print("已上传：snippets/yuhe-common.conf、xiaozhi-manager、yuhe-device-pp")
 
     print()
     print("=" * 62)
@@ -92,8 +92,8 @@ def main():
         b = sh(f"curl -sk -o /dev/null -w '%{{http_code}}' https://127.0.0.1:8443{p}")[0]
         print(f"  {p:12s} 8001={a}  8443={b}  {'OK' if a == b == '200' else '不一致!'}")
     print("  / 标题:", sh("curl -sk https://127.0.0.1:8001/ | grep -o '<title>[^<]*</title>'")[0])
-    print("  /xiaozhi/ API:", sh("curl -sk -o /dev/null -w '%{http_code}' "
-                                "https://127.0.0.1:8001/xiaozhi/")[0])
+    print("  /yuhe/ API:", sh("curl -sk -o /dev/null -w '%{http_code}' "
+                                "https://127.0.0.1:8001/yuhe/")[0])
 
     print()
     print("=" * 62)
@@ -105,7 +105,7 @@ def main():
     print("  stream 层:", sh("tail -2 /var/log/nginx/stream-8001.log")[0])
     print("  Python 日志:")
     print("   " + sh(r"grep -E 'conn - Headers' "
-                     r"/root/xiaozhi-server/main/xiaozhi-server/data/app.log "
+                     r"/root/xiaozhi-server/main/yuhe-server/data/app.log "
                      r"| tail -2 | cut -c1-190")[0])
 
     print()

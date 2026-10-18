@@ -1,12 +1,12 @@
 // ============ 原控制台 API 适配层（契约零修改，差异前端消化 C4） ============
 // 基线: cc-console/contract/openapi.json (173 接口)
-// 反代: /xiaozhi/ -> manager-api:8002 (同源，无 CORS)
+// 反代: /yuhe/ -> manager-api:8002 (同源，无 CORS)
 // 鉴权: Bearer token (localStorage)，登录密码 SM2 加密 —— 与原控制台完全一致 (C3)
 
 import { sm2 } from 'sm-crypto'
 import { ref } from 'vue'
 
-const API_BASE = '/xiaozhi'
+const API_BASE = '/yuhe'
 const TOKEN_KEY = 'cc_token'
 // 用户模块：登录后缓存的用户信息（username/superAdmin/roles[]），路由守卫与导航切换按钮用
 const USER_INFO_KEY = 'cc_user_info'
@@ -377,7 +377,7 @@ export const adminApi = {
   userAssignRoles: (b) => api.put('/admin/users/roles', b),
   userRestore: (id) => api.put(`/admin/users/restore/${id}`),
   userImport: (list) => api.post('/admin/users/import', list),
-  userExportUrl: (p) => `/xiaozhi/admin/users/export?${new URLSearchParams(p)}`,
+  userExportUrl: (p) => `/yuhe/admin/users/export?${new URLSearchParams(p)}`,
   userSessions: (p) => api.get('/admin/users/sessions', p),
   userForceLogout: (id) => api.post(`/admin/users/forceLogout/${id}`, {}),
 
@@ -525,7 +525,7 @@ export const userApi = {
   customVoiceUpdate: (id, b) => api.put(`/user/custom-voices/${id}`, b),
   customVoiceDelete: (id) => api.del(`/user/custom-voices/${id}`)
 }
-// ============ 订单管理API（对齐已部署的 OrderController：@RequestMapping("/order")，context-path=/xiaozhi） ============
+// ============ 订单管理API（对齐已部署的 OrderController：@RequestMapping("/order")，context-path=/yuhe） ============
 const orderApi = {
   // 分页列表：GET /order/page（keyword 模糊匹配 user_name/contact/product）
   orderPage: (params = {}) => {

@@ -85,7 +85,7 @@ function confirmRestartPy() {
   }
   askConfirm({
     title: '重启语音服务',
-    message: `将向节点 ${target.wsUrl} 下发重启指令，xiaozhi-server 会平滑自重启，设备短暂断线后自动重连。确定继续吗？`,
+    message: `将向节点 ${target.wsUrl} 下发重启指令，yuhe-server 会平滑自重启，设备短暂断线后自动重连。确定继续吗？`,
     danger: true,
     onOk: async () => {
       restartingPy.value = true

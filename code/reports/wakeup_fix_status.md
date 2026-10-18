@@ -67,7 +67,7 @@
 4. settings.cc EraseKey/EraseAll dirty_ 落盘修复（自愈依赖）（agent-6）
 5. esp_mn_commands_add/update 返回值检查 ×3 处，防静默失败回归（agent-6，22:18）
 6. 服务端 wake_word_service.py 改发 device_config + 鉴权修复（agent-7 线）
-7. 终版三件套：xiaozhi.bin + generated_assets.bin + merged-binary.bin（agent-8，22:44，四项内容验证全 PASS）
+7. 终版三件套：yuhe.bin + generated_assets.bin + merged-binary.bin（agent-8，22:44，四项内容验证全 PASS）
 
 ## 波次 2：修复实施（已由某 agent 启动，22:11-22:15 进行中）
 
@@ -81,12 +81,12 @@
 | NVS 带调自愈 | ✅ 已实现 | custom_wake_word.cc L139-159：legacy_toned 检测→丢弃→EraseKey |
 | settings.cc EraseKey 落盘 | ✅ 已实现 | dirty_ 置位修复（自愈删除依赖此） |
 | 服务端推送格式 | ✅ 已改 | wake_word_service.py 改发 device_config + handler 鉴权修复 |
-| xiaozhi.bin 固件重建 | 🔄 22:15 进行中 | 21:50 的 bin **不含** 22:11 board.cc 修改，须等新构建 |
+| yuhe.bin 固件重建 | 🔄 22:15 进行中 | 21:50 的 bin **不含** 22:11 board.cc 修改，须等新构建 |
 | merged-binary | ⏳ 待新 bin | 21:50 版已过时 |
 
 **⚠️ 剩余缺口（协调员核查后：3→2 项）**：
 1. **`esp_mn_commands_add` 返回值不检查**（custom_wake_word.cc L190/L253/L304 三处）——静默失败缺陷未根修，下次格式错误仍无日志可查
-2. **21:50 xiaozhi.bin 不含去调修复**——烧录必须等 22:15 构建完成的新 bin（防拿旧件再烧一次）
+2. **21:50 yuhe.bin 不含去调修复**——烧录必须等 22:15 构建完成的新 bin（防拿旧件再烧一次）
 3. ~~服务器直发拼音透传风险~~ **已排除**（22:20 协调员核查）：DB `ai_device_config.wake_word`="你好小禾"（汉字，12:12 更新）；Java ConfigServiceImpl 只做白名单透传（≤32字符/≤5项），无 pinyin 生成代码；Python 端 config.yaml 全局 wakeup_words 全为汉字。服务器永远下发汉字，由固件 HanziToPinyin 无调表转换——链路安全
 
 ### 任务系统状态（22:18 核查）
@@ -106,11 +106,11 @@
 - [22:11-22:15] 发现波次 2 已被某 agent 启动：board.cc/config.json 去调（22:11）、assets 重建（22:13）、sdkconfig 重生成（22:14）、固件构建中（22:15）。NVS 自愈+settings.cc 落盘修复+服务端 device_config 改造均已就位。剩余 3 缺口（返回值检查/旧 bin 风险/服务端直发拼音透传）已记录并上报
 - [22:18] 任务系统确认：波次 2 实施者=agent-6（任务#1 completed），构建任务#2 in_progress（CMake 配置完成）
 - [22:20] 缺口 3 排除：DB/Java/Python 三层核查，服务器只下发汉字，无带调拼音风险。剩余缺口 2：返回值检查（可后补）+ 等新 bin 烧录（关键路径）
-- [22:23] 新 xiaozhi.bin 产出（2,834,144B，22:23:24，构建日志 20616）。同刻发现 COM6 串口监控日志（61076）在跑
+- [22:23] 新 yuhe.bin 产出（2,834,144B，22:23:24，构建日志 20616）。同刻发现 COM6 串口监控日志（61076）在跑
 - [22:28] **运行时实锤闭环**：设备日志捕获 `E MN_COMMAND: invalid command, please check format, ni3 hao3 xiao3 he2`（I(9808)/I(131948) 嗨小禾 hai1 xiao3 he2 同拒）+ `No commands available, not updating` + 活跃表仅剩 MN7 自带 313 条 → 根因机理 100% 确认
 - [22:28] 判定设备仍跑旧固件（无自愈日志+推送转换仍带调）。待烧录：22:23 bin + 22:13 assets（merged 21:50 过时）；COM6 被 monitor 占用需先释放。已上报 team-lead
 - [22:30] 任务#2 completed（构建日志 57720：bin 2,834,144B）。**merged-binary 22:23:58 已重打**（含新 bin+新 assets，验证：带调=-1/无调@190667/自愈串@191132）——三件套全部就绪且内容验证通过。COM6 monitor（61076）已于 22:23:31 停更，等待烧录执行
 - [22:37] ⚠️ build 目录 22:36:46 被整删，22:23 三件套全部丢失。初判"高危"后经记忆文件澄清：**有意删除**——agent-6 的返回值检查补丁在 22:23 构建后才完成，需重建才能包含。补丁已验证（3 处 add esp_err_t + 3 处 update esp_mn_error_t* 检查，API 语义正确）。等 agent-8 重建
 - [22:39] 缺口清单更新：缺口1（返回值检查）✅ 已入源码；缺口2（等含补丁的新 bin）🔄 等待 agent-8 构建；缺口3 已排除。最终产物预期 = 拼音去调 + NVS 自愈 + 返回值检查三项全含
 - [22:40] agent-8 重建启动（CMake 配置中，日志 54164）。源码定格 22:18 版（含三项核心修复；multinet_model 缺失 LOGW 未纳入，属增强项下轮）。监控挂好，bin 产出即复检
-- [22:44] **🎯 终版三件套产出并复检全 PASS**：xiaozhi.bin（22:44:35，带调-1/无调@59595/自愈@60060/**返回值检查@59232**）+ assets（22:40:49，带调-1/无调@3570694）+ merged（22:44:38 重打）。增量构建仅 4.5 分钟。已通知 team-lead 烧录要点（整烧 merged 0x0 + 三连验证）。**协调员任务闭环**
+- [22:44] **🎯 终版三件套产出并复检全 PASS**：yuhe.bin（22:44:35，带调-1/无调@59595/自愈@60060/**返回值检查@59232**）+ assets（22:40:49，带调-1/无调@3570694）+ merged（22:44:38 重打）。增量构建仅 4.5 分钟。已通知 team-lead 烧录要点（整烧 merged 0x0 + 三连验证）。**协调员任务闭环**

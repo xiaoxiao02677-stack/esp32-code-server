@@ -6,13 +6,13 @@
 固件源码（下文记作 `<FW>`）默认是 **sets 自带的副本**：
 
 ```
-hardware/sets/xiaozhi-esp32/                    ← 默认（sets 自成一体）
-hardware/small_screen_camera/xiaozhi-esp32/     ← 回退（副本不存在时才用）
+hardware/sets/yuhe-esp32/                    ← 默认（sets 自成一体）
+hardware/small_screen_camera/yuhe-esp32/     ← 回退（副本不存在时才用）
 ```
 
 副本按「仅源码」维护，不含 `build/` 与 `managed_components/`；
 首次编译缺依赖时脚本会自动从上游本地拷贝一份。可用 `--fw-root` 或
-环境变量 `XIAOZHI_FW_ROOT` 指定别处的固件根。
+环境变量 `YUHE_FW_ROOT` 指定别处的固件根。
 
 **版型作者仍然只放差异文件**：不要往 `boards/<id>/` 里塞固件源码，
 也不要手改 `<FW>/main/` 下任何文件——同步与注册由 `build.py` 统一负责。
@@ -26,7 +26,7 @@ hardware/sets/
 ├── README.md                 # 用户导航（怎么用）
 ├── SPEC.md                   # 本文件（怎么写版型）
 ├── build.py                  # 编译 + 烧录入口（唯一入口）
-├── xiaozhi-esp32/            # 固件源码副本 <FW>（仅源码；产物与依赖不入库）
+├── yuhe-esp32/            # 固件源码副本 <FW>（仅源码；产物与依赖不入库）
 └── boards/
     └── <id>/                 # 一个版型一个目录，id 用小写短横线
         ├── set.json          # 【必需】版型元数据，build.py 读它出菜单

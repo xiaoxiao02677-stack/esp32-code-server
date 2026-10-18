@@ -28,13 +28,13 @@ order_table_config (列配置存储)
 
 ### 2. 后端API ✅
 **7个RESTful端点已注册并响应**:
-- `GET /xiaozhi/order/page` - 分页查询
-- `GET /xiaozhi/order/{id}` - 订单详情
-- `POST /xiaozhi/order` - 新增订单
-- `PUT /xiaozhi/order/{id}` - 更新订单
-- `DELETE /xiaozhi/order/{id}` - 删除订单
-- `POST /xiaozhi/order/export` - 导出CSV
-- `GET /xiaozhi/order/stats` - 统计数据
+- `GET /yuhe/order/page` - 分页查询
+- `GET /yuhe/order/{id}` - 订单详情
+- `POST /yuhe/order` - 新增订单
+- `PUT /yuhe/order/{id}` - 更新订单
+- `DELETE /yuhe/order/{id}` - 删除订单
+- `POST /yuhe/order/export` - 导出CSV
+- `GET /yuhe/order/stats` - 统计数据
 
 **响应验证**: API端点正常返回JSON（401表示需要认证，路由已生效）
 
@@ -50,7 +50,7 @@ order_table_config (列配置存储)
 | 服务 | 地址 | 状态 |
 |------|------|------|
 | 前端页面 | http://sandyun.top:8101/order | ✅ 可访问 |
-| API接口 | http://sandyun.top:8101/xiaozhi/order/* | ✅ 已注册 |
+| API接口 | http://sandyun.top:8101/yuhe/order/* | ✅ 已注册 |
 | 数据库 | sandyun.top:22223 | ✅ 可连接 |
 
 ---
@@ -59,7 +59,7 @@ order_table_config (列配置存储)
 
 ### 后端（7个Java文件）
 ```
-G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/order/
+G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/order/
 ├── controller/OrderTableController.java
 ├── dao/OrderTableDao.java
 ├── dto/OrderTableDTO.java

@@ -22,7 +22,7 @@ from api_client import AdminAPIClient
 from sm2_helper import login
 
 # 配置
-BASE_URL = "https://sandyun.top:8001/xiaozhi"
+BASE_URL = "https://sandyun.top:8001/yuhe"
 USERNAME = "demo"
 PASSWORD = "P@ssword123"
 

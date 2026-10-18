@@ -9,12 +9,12 @@
 ## 一、当前项目情况
 
 ### 1. 总体架构
-- 仓库内容：xiaozhi-esp32 智能音箱固件 + 配套服务端（`manager-api` / `xiaozhi-server`）+ 管理后台。
+- 仓库内容：yuhe-esp32 智能音箱固件 + 配套服务端（`manager-api` / `yuhe-server`）+ 管理后台。
 - 固件端已拆分为两个 **AOCI 受管子项目**：
-  - **大屏** `code/big_secreen/xiaozhi-esp32`（板级源 `main/boards/bigscreen-s3/`）
-  - **小屏** `code/small_secreen/xiaozhi-esp32`（my-s3-tft 圆屏 + audio 引擎改造）
+  - **大屏** `code/big_secreen/yuhe-esp32`（板级源 `main/boards/bigscreen-s3/`）
+  - **小屏** `code/small_secreen/yuhe-esp32`（my-s3-tft 圆屏 + audio 引擎改造）
   - `code/super_small_screen` 为独立目录，**非 AOCI 项目**。
-- 服务端镜像 `code-server-mirror/`：Java `manager-api` + Python `xiaozhi-server`。
+- 服务端镜像 `code-server-mirror/`：Java `manager-api` + Python `yuhe-server`。
 - 管理后台：`console-v2`（含 `dist` 构建产物）、`cc-console`。
 
 ### 2. 固件进展
@@ -37,7 +37,7 @@
 
 1. **私钥安全**：gitee 旧快照曾上传两把证书私钥（`aoci-code/.../certs/*.key`），已从当前树清除，但历史上传记录可能残留，相关凭据**必须轮换 / 撤销**。
 2. **AOCI 基线归属**：`baseline.json` 被 `.gitignore` 意图忽略却已被 git 追踪，每次 reconcile 都会产生 diff，治理产物归属需理顺。
-3. **构建环境**：防病毒反复杀构建进程，需 ninja 前台直跑 + 增量续跑；`merged-binary.bin` 偶发滞后，全量烧录前须核对三产物（xiaozhi.bin / generated_assets.bin / merged-binary.bin）时间戳一致。
+3. **构建环境**：防病毒反复杀构建进程，需 ninja 前台直跑 + 增量续跑；`merged-binary.bin` 偶发滞后，全量烧录前须核对三产物（yuhe.bin / generated_assets.bin / merged-binary.bin）时间戳一致。
 4. **烧录规范**：assets 分区变更必须 USB **全量烧录**（OTA 只刷 app 分区，不改 assets），否则设备行为与 bin 不符。
 5. **串口独占**：小屏 COM12 单设备单 idf_monitor 会话，两个会话争用互报 `PermissionError(13)`；烧录前须确认无残留 monitor 进程。
 6. **Java 构建**：测试代码滞后于构造器，部署需 `-Dmaven.test.skip=true`；部署前核对 jar 内 Controller 数量，避免旧 jar 端点 404。

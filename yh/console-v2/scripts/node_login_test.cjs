@@ -16,7 +16,7 @@ function get(url) {
 }
 
 async function main() {
-  const pub = await get('https://sandyun.top:8001/xiaozhi/user/pub-config')
+  const pub = await get('https://sandyun.top:8001/yuhe/user/pub-config')
   const pk = pub.data.sm2PublicKey
   console.log('pubKey len=', pk.length, 'head=', pk.slice(0, 8))
   // 与 api.js:79 完全一致：原样传 pk
@@ -24,7 +24,7 @@ async function main() {
     const enc = '04' + sm2.doEncrypt('zN6xs' + 'P@ssword123', pk, 1)
     console.log('ENCRYPT_OK len=', enc.length)
     const body = JSON.stringify({ username: 'demo', password: enc, captchaId: 'probe-node' })
-    const u = new URL('https://sandyun.top:8001/xiaozhi/user/login')
+    const u = new URL('https://sandyun.top:8001/yuhe/user/login')
     const req = https.request({ hostname: u.hostname, port: 443, path: u.pathname, method: 'POST', rejectUnauthorized: false, headers: { 'Content-Type': 'application/json' } }, res => {
       let d = ''
       res.on('data', c => d += c)

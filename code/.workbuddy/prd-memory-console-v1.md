@@ -6,13 +6,13 @@
 | 作者 | 许清楚（Xu，产品经理） |
 | 状态 | 待评审 |
 | 关联任务 | #2 架构设计 / #3 双引擎移植 / #4 记忆管理 API / #5 控制台页面 / #6 测试 / #7 部署 |
-| 源码依据 | hermes-agent-main `plugins/memory/holographic`、`plugins/memory/mem0`；xiaozhi-server `core/providers/memory/*`；manager-api（Spring Boot, 8002）；manager-web（Vue） |
+| 源码依据 | hermes-agent-main `plugins/memory/holographic`、`plugins/memory/mem0`；yuhe-server `core/providers/memory/*`；manager-api（Spring Boot, 8002）；manager-web（Vue） |
 
 ---
 
 ## 1. 背景与问题
 
-小智（ESP32 语音设备）后台 xiaozhi-server 已有 `MemoryProviderBase` 抽象（`save_memory` / `query_memory` / `init_memory`），现有实现为 mem0ai（平台版）、mem_local_short（900 字压缩档案，全文一块、不可条目化管理）、mem_report_only、nomem。真实场景中，服务器需按 Agent 记住设备用户的姓名、习惯与历史，但存在三个问题：
+小智（ESP32 语音设备）后台 yuhe-server 已有 `MemoryProviderBase` 抽象（`save_memory` / `query_memory` / `init_memory`），现有实现为 mem0ai（平台版）、mem_local_short（900 字压缩档案，全文一块、不可条目化管理）、mem_report_only、nomem。真实场景中，服务器需按 Agent 记住设备用户的姓名、习惯与历史，但存在三个问题：
 
 1. **记忆不可见**：mem_local_short 是一整段 YAML 档案，管理员看不到"小智到底记住了什么"，无法逐条纠错（ASR 误识别的名字一旦写入会长期污染对话）。
 2. **记忆不可管**：控制台（manager-web）没有任何记忆管理页面；无法删除错误记忆、无法切换/配置记忆引擎。
@@ -50,7 +50,7 @@ hermes 记忆模块（移植源）提供了成熟解法：holographic 引擎（S
 
 | # | 需求 | 说明 |
 |---|---|---|
-| P0-1 | holographic 引擎移植（provider 名 `mem_holographic`） | 按 xiaozhi `MemoryProviderBase` 接口封装 hermes holographic：SQLite + FTS5 + 信任分 + 实体消解；`auto_extract` 从对话自动抽取事实；检索走"FTS5 + Jaccard（+HRR 可选）+ 信任分加权" |
+| P0-1 | holographic 引擎移植（provider 名 `mem_holographic`） | 按 yuhe `MemoryProviderBase` 接口封装 hermes holographic：SQLite + FTS5 + 信任分 + 实体消解；`auto_extract` 从对话自动抽取事实；检索走"FTS5 + Jaccard（+HRR 可选）+ 信任分加权" |
 | P0-2 | 记忆命名空间与多 Agent 隔离 | holographic 原为单用户库；接入后必须按 Agent 隔离（建议每 Agent 一个 SQLite 文件，见 4.1），试点 demo Agent 生效 |
 | P0-3 | mem0 引擎接入与优雅降级 | 保留/规范现有 mem0ai 平台版接入；未配置 api_key 时控制台明示"不可用"、服务端仅告警、不阻塞对话 |
 | P0-4 | 记忆管理页基础 CRUD | 按 Agent 查看/搜索/筛选/新增/编辑/删除记忆条目，字段见 4.2 |
@@ -79,7 +79,7 @@ hermes 记忆模块（移植源）提供了成熟解法：holographic 引擎（S
 
 ### 4.1 总体架构与概念模型
 
-**记忆命名空间（关键设计决策）**：现状 xiaozhi `init_memory(role_id=self.device_id)` 按设备隔离记忆；产品目标是"按 Agent 记住用户偏好"。v1 规定：
+**记忆命名空间（关键设计决策）**：现状 yuhe `init_memory(role_id=self.device_id)` 按设备隔离记忆；产品目标是"按 Agent 记住用户偏好"。v1 规定：
 
 - 记忆命名空间 = **Agent**（`agent_id`）。同一 Agent 绑定的多台设备共享记忆（家人换设备/换房间仍被记住）。
 - holographic 建议每 Agent 一个 SQLite 文件（如 `data/memory/{agent_id}.db`），最大程度复用 hermes 单用户 store 代码、天然隔离、便于按 Agent 备份；备选单库加 `agent_id` 列。**由架构师在 #2 确认，两种方案对本 PRD 字段与交互无影响。**
@@ -98,7 +98,7 @@ hermes 记忆模块（移植源）提供了成熟解法：holographic 引擎（S
 | status | text | ● `active`（生效）/ `rejected`（已驳回，不参与检索）——仅 holographic |
 | agent_id | text | ● 所属 Agent（每 Agent 一库时隐含，单库时为列） |
 | device_id | text | ● 产生该记忆的设备 |
-| session_id | text | ● 来源会话（对应 xiaozhi `session_id`，时间轴/溯源用） |
+| session_id | text | ● 来源会话（对应 yuhe `session_id`，时间轴/溯源用） |
 | retrieval_count / helpful_count | int | 检索次数 / 被标记有用次数（沿用 hermes） |
 | created_at / updated_at | timestamp | 创建/更新时间（沿用 hermes） |
 | 实体（entities/fact_entities） | 关联表 | 内容中抽取的人名/事物及别名，详情页展示 |
@@ -144,7 +144,7 @@ hermes 记忆模块（移植源）提供了成熟解法：holographic 引擎（S
 - **holographic 配置项**（对齐 hermes 参数，括号内默认值）：`db 根目录`（data/memory/）、`auto_extract`（开）、`default_trust`（0.5）、`min_trust_threshold`（0.3）、`review_threshold` 审核阈值（0.3，P1 生效）、`temporal_decay_half_life`（0=关，高级项折叠）。
 - **mem0 配置项**：`api_key`（密码框，脱敏回显）、平台地址（默认官方）。
 - **Agent 绑定**：Agent 编辑页增加"记忆引擎"选择（默认全局默认 provider，Agent 级可覆盖）。
-- **切换生效**：配置保存后，**新建设备连接生效**（xiaozhi 按 connection 加载 private_config），存量连接维持原引擎直至重连。控制台保存成功提示需包含该说明。
+- **切换生效**：配置保存后，**新建设备连接生效**（yuhe 按 connection 加载 private_config），存量连接维持原引擎直至重连。控制台保存成功提示需包含该说明。
 
 **mem0 优雅降级（P0-3，验收 A6）**：
 - api_key 缺失/无效：控制台 provider 卡片显示"未配置 API Key，该引擎不可用"黄色警示；Agent 若绑定 mem0，管理页引擎徽标置灰并提示。
@@ -190,7 +190,7 @@ hermes 记忆模块（移植源）提供了成熟解法：holographic 引擎（S
 
 - **同源实时**：管理端写操作必须作用于设备对话读取的同一数据源（SQLite/每 Agent 库），删除/驳回后下一次对话立即不引用；不允许"MySQL 镜像 + 定时同步"这类有延迟窗口的方案。
 - **并发安全**：hermes store 使用 WAL + 进程内 RLock；Java 侧（若直读 SQLite，sqlite-jdbc 需开 WAL）或 Python 侧提供内部管理 API，均不得破坏该约束。架构二选一由 #2 决策。
-- **部署**：SQLite 文件落 xiaozhi-server 数据目录（随代码同步至 sandyun.top），纳入现有备份策略；不引入新中间件。
+- **部署**：SQLite 文件落 yuhe-server 数据目录（随代码同步至 sandyun.top），纳入现有备份策略；不引入新中间件。
 - **降级依赖**：NumPy 缺失时 holographic 自动退化为 FTS+Jaccard（hermes 原生行为），功能可用，仅相似度精度下降，控制台不需要感知。
 
 ## 5. 边界与不做项
@@ -229,7 +229,7 @@ P0 验收 = A1~A6 + A9 + A10；P1 追加 A7、A8。
 | Q2 | 审核阈值 `review_threshold` 与检索阈值 `min_trust_threshold` 是否合一（均 0.3）？ | 合一为一个配置项，减少理解成本 |
 | Q3 | "记忆管理"菜单位置：一级菜单，还是挂在"智能体/Agent 管理"下的 Tab？ | 一级菜单（与知识库平级），便于角标提醒 |
 | Q4 | 引擎配置粒度：全局默认 provider + Agent 覆盖，还是仅 Agent 级？ | 全局默认 + Agent 覆盖（与现有 selected_module 机制一致） |
-| Q5 | Java 直读 SQLite（sqlite-jdbc + WAL）还是 xiaozhi-server 暴露内部管理 API？ | 倾向 Python 内部 API（复用 store 全部锁语义，Java 不重复实现信任分钳制/实体重抽取等规则），由 #2 架构师定 |
+| Q5 | Java 直读 SQLite（sqlite-jdbc + WAL）还是 yuhe-server 暴露内部管理 API？ | 倾向 Python 内部 API（复用 store 全部锁语义，Java 不重复实现信任分钳制/实体重抽取等规则），由 #2 架构师定 |
 | Q6 | sandyun.top 服务器是否已具备 NumPy（HRR 增强）？ | 缺失可接受，自动降级 FTS+Jaccard，不阻塞上线 |
 | Q7 | mem0 只读列表（P0 可降级项）本期是否保留？ | 若 #4 排期紧张，降级为仅配置状态徽标，列表功能顺延 P1 |
 

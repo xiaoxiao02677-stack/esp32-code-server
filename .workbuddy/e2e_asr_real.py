@@ -7,7 +7,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-API = "http://127.0.0.1:8002/xiaozhi"
+API = "http://127.0.0.1:8002/yuhe"
 
 
 def ssh(cmd, timeout=240):
@@ -45,7 +45,7 @@ print("2. convert to webm:", " ".join(out.split()[-4:]))
 # 3. POST to /models/asrRecognize (the exact browser path, via nginx too)
 out = ssh(
     f'TOKEN={token}; curl -s -m 90 -X POST '
-    f'"http://127.0.0.1:8001/xiaozhi/models/asrRecognize?modelId=ASR_Qwen3Flash" '
+    f'"http://127.0.0.1:8001/yuhe/models/asrRecognize?modelId=ASR_Qwen3Flash" '
     '-H "Authorization: Bearer $TOKEN" -H "Content-Type: audio/webm" '
     '--data-binary @/tmp/asr_test.webm')
 for line in out.splitlines():

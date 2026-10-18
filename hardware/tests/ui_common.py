@@ -14,7 +14,7 @@ import requests
 import ddddocr
 from gmssl import sm2
 
-BASE_URL = "https://sandyun.top:8001/xiaozhi"
+BASE_URL = "https://sandyun.top:8001/yuhe"
 FRONT_URL = "https://sandyun.top:8001/admincc/#/"
 REPORTS_DIR = "G:/demo/21_xiaozhi/code/reports"
 ARTIFACTS_DIR = "G:/demo/21_xiaozhi/code/artifacts"

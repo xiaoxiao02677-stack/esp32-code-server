@@ -147,7 +147,7 @@ FLASH_FULL_IMAGE = [
     ("0x0", "build/bootloader/bootloader.bin"),
     ("0x8000", "build/partition_table/partition-table.bin"),
     ("0xd000", "build/ota_data_initial.bin"),
-    ("0x20000", "build/xiaozhi.bin"),
+    ("0x20000", "build/yuhe.bin"),
     ("0x800000", "build/generated_assets.bin"),
 ]
 
@@ -807,14 +807,14 @@ def check_build_ready(fw_root: Path) -> Optional[str]:
     build_dir = fw_root / "build"
     if not build_dir.is_dir():
         return f"找不到编译目录: {build_dir}"
-    if not (fw_root / "build" / "xiaozhi.bin").is_file():
-        return f"缺少应用镜像: {build_dir / 'xiaozhi.bin'}"
+    if not (fw_root / "build" / "yuhe.bin").is_file():
+        return f"缺少应用镜像: {build_dir / 'yuhe.bin'}"
     return None
 
 
 def warn_board_mismatch(fw_root: Path, board: dict[str, Any]) -> None:
     """build/ 是全局共用目录，提醒产物其实属于别的版型。"""
-    fragment = fw_root / "build" / "xiaozhi-build.sdkconfig.defaults"
+    fragment = fw_root / "build" / "yuhe-build.sdkconfig.defaults"
     if not fragment.is_file():
         return
     try:
@@ -831,7 +831,7 @@ def warn_board_mismatch(fw_root: Path, board: dict[str, Any]) -> None:
 
 def show_build_server_env(fw_root: Path) -> None:
     """烧录前展示当前 build 产物连的是哪个服务器环境（生产/测试）。"""
-    fragment = fw_root / "build" / "xiaozhi-build.sdkconfig.defaults"
+    fragment = fw_root / "build" / "yuhe-build.sdkconfig.defaults"
     if not fragment.is_file():
         return
     try:
@@ -1303,8 +1303,8 @@ ONLY_ALIASES = {
     "pt": "partition-table.bin",
     "partition-table": "partition-table.bin",
     "otadata": "ota_data_initial.bin",
-    "app": "xiaozhi.bin",
-    "xiaozhi": "xiaozhi.bin",
+    "app": "yuhe.bin",
+    "yuhe": "yuhe.bin",
     "assets": "generated_assets.bin",
 }
 
@@ -1360,9 +1360,9 @@ def check_layout_consistency(fw_root: Path, targets: list[tuple[int, str, Path]]
             problems.append(f"{name} 有 {size} 字节，超过分区 {entry['name']} 的 {entry['size']} 字节")
 
     app_offsets = [entry["offset"] for entry in entries if entry["type"] == 0]
-    app_target = next((item for item in targets if item[1] == "xiaozhi.bin"), None)
+    app_target = next((item for item in targets if item[1] == "yuhe.bin"), None)
     if app_target is None:
-        problems.append("这份烧录计划里没有 app 镜像（xiaozhi.bin）：设备必然起不来")
+        problems.append("这份烧录计划里没有 app 镜像（yuhe.bin）：设备必然起不来")
     elif app_target[0] not in app_offsets:
         listed = "、".join(f"0x{item:x}" for item in app_offsets) or "（一个都没有）"
         problems.append(
@@ -2275,7 +2275,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     fw_root = sets_build.resolve_fw_root(args.fw_root)
     if fw_root is None:
         notice_bad("自动探测不到固件源码根目录（<FW>）")
-        say("请用 --fw-root 指定，或设置环境变量 XIAOZHI_FW_ROOT。已尝试的位置：")
+        say("请用 --fw-root 指定，或设置环境变量 YUHE_FW_ROOT。已尝试的位置：")
         for candidate in sets_build.FW_CANDIDATES:
             say(f"    {candidate}")
         return EXIT_ENV

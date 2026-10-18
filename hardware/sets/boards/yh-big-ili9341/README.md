@@ -19,7 +19,7 @@
 1. **读完整 16MB flash 并解析 NVS / 分区表**
    `esptool.py -p COM10 -b 921600 read_flash 0x0 0x1000000 full_16mb.bin`
    资料里已有的 `full_fw.bin` 只是 64KB 片段，信息不足。
-2. **解析 NVS 命名空间**：xiaozhi 固件会把 Wi-Fi、设备配置写进 NVS；
+2. **解析 NVS 命名空间**：yuhe 固件会把 Wi-Fi、设备配置写进 NVS；
    但**注意 NVS 里通常不存 GPIO**，这一步主要用于还原板型名称与历史配置，
    便于反查到对应的公开板型。
 3. **找原理图**：拿到板型号（资料里 MAC 为 `b8:1f:3f:c3:96:20`）后直接查同名开发板。

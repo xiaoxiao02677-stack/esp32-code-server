@@ -1,0 +1,23 @@
+
+--- [19] 一次性合并追加：dump 口径澄清 + 401 运行态语义 (2026-10-17 21:22 CST) ---
+本段为最后一次追加，[0]~[18] 原文逐字不变。含两项事实澄清：
+
+(A) dump 导出时刻与「两条回滚路径结果不同」
+  1) db/ai_tables_full.sql 与 db/ai_tables_4tables.sql 实际导出时刻 = 21:09 / 21:08 CST，并非 20:55 基线快照。
+  2) 这两份文件中 ai_device.44:bd:8d:7b:3a:e4 的 last_connected_at 已是 2026-10-17 13:03:01 (UTC, =21:03:01 CST)；
+     14:c1:9f:d1:33:48 仍为 2026-10-17 10:04:30 (UTC, =18:04:30 CST)。
+  3) 两条回滚路径结果不同，勿按同一预期核对：
+       PITR 回放到 13805375        -> 44:bd 变回 11:48:18 (UTC)，14:c1 变回 10:04:30
+       用 full/4tables 逻辑回灌     -> 44:bd 保持 13:03:01（dump 拍摄时已是新值），仅 14:c1 被改回 10:04:30
+  4) db/ai_tables.sql 为 20:55 导出，但只含 ai_agent + ai_device_config，不含 ai_device 行，不能用于核对设备行。
+  5) 业务影响 = 0（仅 last_connected_at 展示字段）；但按「全字段一致」验收会误判为回滚差异，
+     正确口径仍是只比 ai_device.agent_id 绑定与 app_version，不比对 last_connected_at。
+
+(B) POST /api/device-config/push 返回 401 的运行态含义
+  401 = 该新增路由已注册到 aiohttp 路由表 => 运行中的进程加载的确实是 26890 B / md5 1a8f01c8399d67bc6db62da1707fa25e
+  那份 core/http_server.py（而非仅磁盘 md5 对、内存仍持旧模块）。这是「文件级校验」到「运行态校验」的桥。
+  对照锚: GET /api/__nope__ 返回 404 证明 404 判定可信，排除整站兜底 401 造成的假 PASS。
+
+(C) 同步记录：ROLLBACK.sh 的 [0e] 文案已按事实修正（原文「设备重连」不成立）：
+  「需一次唤醒词保存或设备重连触发」-> 「需一次唤醒词保存，或设备建立一次真实 WS 会话（断电重启 / 说唤醒词）；心跳恢复与 OTA 不触发」
+  脚本改后: 16372 B / md5 a235de40bfaf44a17eeb4ea87ed412c2；diff 恰 1 行文本；bash -n rc=0；5 个 md5 常量与断言逻辑零改动。

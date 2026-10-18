@@ -1,7 +1,7 @@
 # Kawaii 控制台线上冒烟清单（任务 #18 · e-qa-smoke）
 
 > 状态：**准备完成，待 team-lead 下发「GO + 上线完成」后执行**。
-> 对象：sandyun.top:8001（nginx 8001，静态根 /var/www/xiaozhi-manager，/xiaozhi/ 反代 127.0.0.1:8002 Java manager-api）。
+> 对象：sandyun.top:8001（nginx 8001，静态根 /var/www/xiaozhi-manager，/yuhe/ 反代 127.0.0.1:8002 Java manager-api）。
 > 环境事实来源：`.workbuddy/deploy_memory_v1.md` 第 0 节 + `deploy_memory_v1_runlog.md`。
 > 关键坑（执行时逐条对照）：
 > 1. **MSYS 坑**：Git Bash 会把以 `/` 开头的参数转成 `C:/...`。所有含 `/root/...`、`/var/...`、`/tmp/...` 绝对路径的 ssh_run.py 命令**必须前缀 `MSYS_NO_PATHCONV=1`**。
@@ -41,16 +41,16 @@ curl -s -o /dev/null -w '%{http_code}' http://sandyun.top:8001/device-config-man
 - **PASS**：200（SPA fallback）；浏览器强刷后侧边栏出现新菜单项、页面渲染无白屏。
 - **FAIL**：浏览器白屏/菜单缺失 → 先执行"SW 强刷步骤"再复测；仍失败截图 A3-fail。
 
-### A4 login 流程不 500（经 nginx 反代 /xiaozhi/）
+### A4 login 流程不 500（经 nginx 反代 /yuhe/）
 ```bash
 # 公开端点探活
-curl -s -o /dev/null -w 'pub-config %{http_code}\n' http://sandyun.top:8001/xiaozhi/user/pub-config
-curl -s -o /dev/null -w 'captcha %{http_code}\n' "http://sandyun.top:8001/xiaozhi/user/captcha?uuid=smoke"
+curl -s -o /dev/null -w 'pub-config %{http_code}\n' http://sandyun.top:8001/yuhe/user/pub-config
+curl -s -o /dev/null -w 'captcha %{http_code}\n' "http://sandyun.top:8001/yuhe/user/captcha?uuid=smoke"
 # 空 body login：允许业务报错，不允许 500
-curl -s -w '\nlogin %{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{}' http://sandyun.top:8001/xiaozhi/user/login
+curl -s -w '\nlogin %{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{}' http://sandyun.top:8001/yuhe/user/login
 ```
 - **PASS**：三条 HTTP 均 200（login 空 body 时业务码非 0 属预期）；captcha 返回图片（Content-Type image/*）。
-- **FAIL**：任一 5xx / 连接拒绝 / 反代 404（`/xiaozhi/` 反代断链）→ 截图 A4-fail + 直接跳 B 段在部署机定位。
+- **FAIL**：任一 5xx / 连接拒绝 / 反代 404（`/yuhe/` 反代断链）→ 截图 A4-fail + 直接跳 B 段在部署机定位。
 
 ### A5 JS chunk 加载无 404（对照 dist 构建产物清单）
 ```bash
@@ -95,12 +95,12 @@ python "G:/demo/21_xiaozhi/code/.workbuddy/ssh_run.py" \
 - **PASS**：error.log 尾部无新增 worker 报错（部署时刻之后的行）；access.log 4xx/5xx 抽样仅含预期项（如 8003 外网 403 走的是 Python 不是 nginx）。
 - **FAIL**：出现 `no such file`/`open() ... failed` 指向 /var/www/xiaozhi-manager 下缺失文件 → 与 A5 交叉定位漏传文件。
 
-### B2 Java 端 /xiaozhi/ 探活
+### B2 Java 端 /yuhe/ 探活
 ```bash
 python "G:/demo/21_xiaozhi/code/.workbuddy/ssh_run.py" \
   "systemctl is-active xiaozhi-manager-api" \
-  "curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8002/xiaozhi/user/pub-config" \
-  "curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/xiaozhi/user/pub-config" \
+  "curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8002/yuhe/user/pub-config" \
+  "curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8001/yuhe/user/pub-config" \
   "tail -20 /opt/xiaozhi/logs/manager-api.log"
 ```
 - **PASS**：is-active=active；8002 与 8001 两条 pub-config 均 200；manager-api.log 尾部无 ERROR/exception（Liquibase 启动报错也会在这里现形）。
@@ -152,7 +152,7 @@ select count(*) from xiaozhi_esp32_server.ai_device_config limit 5;
 | # | 条件 | 回退动作（参照 deploy_memory_v1.md 阶段回滚） |
 |---|---|---|
 | 1 | 站点/chunk 大面积 404，白屏无法恢复（A1/A2/A5 FAIL 且非个别文件） | 前端回退：`rsync -a --delete <批次备份>/xiaozhi-manager-web/ /var/www/xiaozhi-manager/` |
-| 2 | /xiaozhi/ 反代全断（B2 8002 无响应且 Java 未 active） | Java 回退：`cp <批次备份>/xiaozhi-esp32-api.jar /opt/xiaozhi/ && systemctl restart xiaozhi-manager-api` |
+| 2 | /yuhe/ 反代全断（B2 8002 无响应且 Java 未 active） | Java 回退：`cp <批次备份>/xiaozhi-esp32-api.jar /opt/xiaozhi/ && systemctl restart xiaozhi-manager-api` |
 | 3 | Liquibase 执行失败 / 202610070010 异常致 Java 起不来 | 先保留 DB 现场（mysqldump 该 changeSet 相关表）；Java 回退旧 jar；DB 若已污染按批次备份 sql.gz 定点恢复，**不手工删 changelog 行** |
 | 4 | 冒烟失败且 30 分钟内无法定位根因 | 全量回退（前端 + Java），DB 保留现场，转 team-lead 裁定 |
 

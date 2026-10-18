@@ -8,7 +8,7 @@
 | 上游 | PRD（PM 任务 #1，若冲突以 team-lead 同步为准） |
 | 下游 | #3 设计系统 / #4 布局框架 / #5 批次1 / #6 批次2 / #7 配置同步后端 / #8 配置同步固件 |
 
-> 引用事实均基于实际侦察：`G:/demo/21_xiaozhi/code-server-mirror/`（manager-web / manager-api / xiaozhi-server 三仓镜像）与 `G:/demo/21_xiaozhi/code/xiaozhi-esp32/`（固件）。实施者发现偏差以实际代码为准并回报 team-lead。
+> 引用事实均基于实际侦察：`G:/demo/21_xiaozhi/code-server-mirror/`（manager-web / manager-api / yuhe-server 三仓镜像）与 `G:/demo/21_xiaozhi/code/yuhe-esp32/`（固件）。实施者发现偏差以实际代码为准并回报 team-lead。
 
 ---
 
@@ -198,7 +198,7 @@ MemoryManagement.vue（#5 批次1 改造时并入）
 
 ## 2. 文件清单（三栈新增/修改全列表）
 
-> manager-web 路径前缀 `manager-web/src/`；manager-api 前缀 `manager-api/src/main/java/xiaozhi/`（changelog 除外）；xiaozhi-server 前缀 `xiaozhi-server/`；固件前缀 `main/`（xiaozhi-esp32 仓库根）。
+> manager-web 路径前缀 `manager-web/src/`；manager-api 前缀 `manager-api/src/main/java/yuhe/`（changelog 除外）；yuhe-server 前缀 `yuhe-server/`；固件前缀 `main/`（yuhe-esp32 仓库根）。
 
 ### 2.1 Vue（manager-web）——A 线 + C 线前端
 
@@ -239,7 +239,7 @@ MemoryManagement.vue（#5 批次1 改造时并入）
 | J-7 | `modules/memory/service/impl/MemoryFactServiceImpl.java` | 改 | listAgents 填 memModelId（1 行） |
 | J-8 | `resources/db/changelog/2026xxxx_device_config.sql` + `db.changelog-master.yaml` | 新/改 | `ai_device_config` 建表 changeSet（DDL 见 §3.1） |
 
-### 2.3 Python（xiaozhi-server）——B 线
+### 2.3 Python（yuhe-server）——B 线
 
 | # | 文件 | 新/改 | 说明 |
 |---|---|---|---|
@@ -248,7 +248,7 @@ MemoryManagement.vue（#5 批次1 改造时并入）
 | P-3 | `config/manage_api_client.py` | 改 | +`report_device_config(instance, mac_address, config)`（仿 report()，api_guard 装饰，POST /config/device-config） |
 | P-4 | `core/connection.py` | 改 | `_initialize_private_config_async`：消费 `private_config.get("device_config")` 存 `self.device_config` 并 send `{"type":"device_config","payload":...}`（~10 行；在 `chat_history_conf` 消费块附近追加） |
 
-### 2.4 固件（xiaozhi-esp32/main）——B 线
+### 2.4 固件（yuhe-esp32/main）——B 线
 
 | # | 文件 | 新/改 | 说明 |
 |---|---|---|---|
@@ -313,7 +313,7 @@ if isinstance(device_config, dict) and device_config:
 
 ### 3.4 内部推送 API（P1 预留，本期不实现）
 
-`xiaozhi-server` 内部管理 handler（复用 memory_handler 的 AuthToken 模式）：`POST /api/device-config/push {mac_address, config}` → 定位活跃 conn → send device_config 消息（在线即时生效）。本期管理台改配置仅落库、开机生效；此接口在 `http_server.py` 路由表预留注释。
+`yuhe-server` 内部管理 handler（复用 memory_handler 的 AuthToken 模式）：`POST /api/device-config/push {mac_address, config}` → 定位活跃 conn → send device_config 消息（在线即时生效）。本期管理台改配置仅落库、开机生效；此接口在 `http_server.py` 路由表预留注释。
 
 ### 3.5 固件消费点（F-1~F-3）
 
@@ -428,7 +428,7 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
 | 6 | **上报竞态/乱序** | 同连接工具调用串行、上报 fire-and-forget，极端乱序 LWW 最终一致；不做版本号（复杂度不值）；上线后观察日志若有频繁抖动再加 debounce | #7 |
 | 7 | **C 线参数生效语义** | config 修改对新连接生效、不热更新当前连接——UI 必须明示（"设备重连或新会话后生效"）；P1 可选做 push 通知（复用 §3.4 思路触发 provider 重建） | #5 |
 | 8 | **MemVendor 参数面板范围** | 本期仅 mem_holographic 有可视化参数；mem0 平台参数（API Key 等）继续在模型配置页管理，不在记忆页重复；nomem/mem_local_short 显示引导文案 | #5 |
-| 9 | **主题与品牌图冲突** | HeaderBar 品牌区（xiaozhi-ai 六语言图）迁 Sidebar 后浅底适配；login 页 P1 才粉彩化，避免首期范围膨胀 | #4 |
+| 9 | **主题与品牌图冲突** | HeaderBar 品牌区（yuhe-ai 六语言图）迁 Sidebar 后浅底适配；login 页 P1 才粉彩化，避免首期范围膨胀 | #4 |
 | 10 | **固件其他板卡** | ApplyDeviceConfig 放 Board 基类，全部板型自动获得；但 zhengchen 等板也有开机 `SetOutputVolume(60/100/0)` 硬编码（唤醒/静音场景，属瞬时设置非默认值，语义不同）——**不改**，仅 my-s3-tft 的"上电默认值"硬编码必须删 | #8 |
 
 ---

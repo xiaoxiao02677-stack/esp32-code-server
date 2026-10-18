@@ -13,7 +13,7 @@
 用法：
   python tools/gen_yh_skin_assets.py \
       --src hardware/sets/boards/yh-n16r8-st7789/good_bg.c \
-      --out hardware/sets/xiaozhi-esp32/main/display/yh_skin/yh_skin_assets.c \
+      --out hardware/sets/yuhe-esp32/main/display/yh_skin/yh_skin_assets.c \
       --symbol yh_skin_bg
 """
 
@@ -31,7 +31,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="重命名 LVGL 图片 C 数组的符号")
     ap.add_argument("--src", default="hardware/sets/boards/yh-n16r8-st7789/good_bg.c")
     ap.add_argument("--out",
-                    default="hardware/sets/xiaozhi-esp32/main/display/yh_skin/yh_skin_assets.c")
+                    default="hardware/sets/yuhe-esp32/main/display/yh_skin/yh_skin_assets.c")
     ap.add_argument("--symbol", default="yh_skin_bg", help="目标 lv_image_dsc_t 符号名")
     ap.add_argument("--map-suffix", default="_map", help="像素数组后缀")
     args = ap.parse_args()

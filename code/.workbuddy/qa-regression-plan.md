@@ -6,7 +6,7 @@
 
 | 项 | 事实 | 来源 |
 |---|---|---|
-| Python 单测入口 | `xiaozhi-server` 内 `python -m pytest tests`（pytest 9.1.1，testpaths=tests，报告基线 29 项） | pyproject.toml `[tool.pytest.ini_options]` |
+| Python 单测入口 | `yuhe-server` 内 `python -m pytest tests`（pytest 9.1.1，testpaths=tests，报告基线 29 项） | pyproject.toml `[tool.pytest.ini_options]` |
 | 运行解释器 | `C:\Users\34808\.workbuddy\binaries\python\versions\3.13.12\python`（workbuddy python） | `which python` |
 | **坑 1** | 裸跑 pytest 时用户站点 `C:\Users\34808\AppData\Roaming\Python\Python313\site-packages\dash` 混入 → `No module named 'typing_extensions'`。解法：跑前设 `PYTHONNOUSERSITE=1` | 实测 |
 | **坑 2** | `data/.config.yaml` 含 manager-api 块（url+secret 2d7b6bde…，即 P0-1 待轮换的生产 secret）→ conftest L91-116 判「全模块部署」`sys.exit(2)`，收集都进不去。解法：跑前临时挪走该文件（mock 模式回落 config.yaml，缺 key 仅软告警可跑），跑完恢复；若 P0-1 已处理该文件则跳过挪动 | 实测 + conftest 源码 |
@@ -22,7 +22,7 @@
 ## 步骤 1 · Python 全量单测（上限 90s + 15s 前置）
 
 ```bash
-cd G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server
+cd G:/demo/21_xiaozhi/code-server-mirror/yuhe-server
 # 1a. 前置（~5s）：若 data/.config.yaml 仍含 manager-api 块且 P0-1 未处理：
 grep -q "manager-api" data/.config.yaml && cp data/.config.yaml data/.config.yaml.qa-bak
 # 1b. 执行（timeout 90）：
@@ -98,7 +98,7 @@ grep -rn "JSON_MERGE_PATCH" manager-api/ | head
 ## 步骤 6 · secret 模板与 .gitignore 生效（P0-1，~10s）
 
 ```bash
-cd G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server
+cd G:/demo/21_xiaozhi/code-server-mirror/yuhe-server
 # 6a. 旧生产 secret 仍明文存在（P0-1 未闭合的判据）
 grep -n "2d7b6bde" data/.config.yaml
 grep -rn "2d7b6bde" . --include=*.yaml --include=*.yml 2>/dev/null
@@ -152,7 +152,7 @@ timeout 45 node_modules/.bin/vitest run --reporter=basic   # 基线 7/7
 
 ```bash
 # 步骤 1（最终有效命令）
-cd G:/demo/21_xiaozhi/code-server-mirror/xiaozhi-server
+cd G:/demo/21_xiaozhi/code-server-mirror/yuhe-server
 # 前置：data/.config.yaml 临时裁剪为无 manager-api 块的 6 行版本（conftest exit2 守卫），
 #       原始 9 行版本完整备份 /tmp/qa_config_orig.yaml，跑完已恢复
 cp data/.config.yaml /tmp/qa_config_orig.yaml && head -6 data/.config.yaml > data/.config.yaml

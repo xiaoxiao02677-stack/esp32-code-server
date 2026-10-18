@@ -10,7 +10,7 @@
                 "CONFIG_YH_PROTOCOL_ENABLED=y",
                 "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
                 "CONFIG_YH_SERVER_PORT=12399",
-                "CONFIG_OTA_URL=\"http://sandyun.top:8002/xiaozhi/ota/\""
+                "CONFIG_OTA_URL=\"http://sandyun.top:8002/yuhe/ota/\""
             ]
         }
     ]

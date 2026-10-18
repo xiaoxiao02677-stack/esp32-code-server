@@ -5,8 +5,8 @@
 # 【必须人工在部署机（sandyun.top）执行】本脚本只随操作包落盘，制作阶段严禁运行。
 # 参考 deploy_memory_v1.md「环境事实」：
 #   - MySQL: root/123456, 库 xiaozhi_esp32_server, 表 sys_params (param_code='server.secret', param_value)
-#   - Python 配置: /root/xiaozhi-server/main/xiaozhi-server/data/.config.yaml L9 (manager-api.secret)
-#   - Java jar: /opt/xiaozhi/xiaozhi-esp32-api.jar, systemd: xiaozhi-manager-api / xiaozhi-server
+#   - Python 配置: /root/xiaozhi-server/main/yuhe-server/data/.config.yaml L9 (manager-api.secret)
+#   - Java jar: /opt/xiaozhi/xiaozhi-esp32-api.jar, systemd: xiaozhi-manager-api / yuhe-server
 #
 # 关键事实（代码走读 2026-10-06 验证）：
 #   - ServerSecretFilter.getServerSecret() = sysParamsService.getValue("server.secret", fromCache=true)
@@ -22,7 +22,7 @@
 set -euo pipefail
 
 # ---------- 常量（与部署手册一致，勿改） ----------
-PY_ROOT="/root/xiaozhi-server/main/xiaozhi-server"
+PY_ROOT="/root/xiaozhi-server/main/yuhe-server"
 CONFIG_FILE="${PY_ROOT}/data/.config.yaml"
 DB="xiaozhi_esp32_server"
 MYSQL="mysql -uroot -p123456"
@@ -44,7 +44,7 @@ step 0 "前置检查"
 [ -f "$CONFIG_FILE" ] || die "配置文件不存在：$CONFIG_FILE"
 command -v mysql >/dev/null || die "服务器缺少 mysql 客户端"
 systemctl is-active xiaozhi-manager-api >/dev/null || die "xiaozhi-manager-api 未 active"
-systemctl is-active xiaozhi-server >/dev/null || die "xiaozhi-server 未 active"
+systemctl is-active yuhe-server >/dev/null || die "yuhe-server 未 active"
 
 # 记录轮换前基线（双端一致性自检，防止带着脏状态开转）
 OLD_SECRET=$($MYSQL -N -e "select param_value from ${DB}.sys_params where param_code='${PARAM_CODE};" \
@@ -95,7 +95,7 @@ echo "CHECK-4 通过：YAML L9 已为新值（备份 ${BACKUP_DIR}/config.yaml.p
 step 5 "清 Redis sys_params 缓存（旧值）"
 REDIS_OK=1
 if command -v redis-cli >/dev/null 2>&1; then
-  # xiaozhi 默认未配 Redis 时 sysParamsRedis 为 no-op；若配了则键为 paramCode 本身或带前缀，逐个探
+  # yuhe 默认未配 Redis 时 sysParamsRedis 为 no-op；若配了则键为 paramCode 本身或带前缀，逐个探
   for K in "sys_params:${PARAM_CODE}" "${PARAM_CODE}" "server.secret"; do
     redis-cli -h 127.0.0.1 del "$K" >/dev/null 2>&1 || true
   done
@@ -107,17 +107,17 @@ else
 fi
 
 # ---------- 6. 重启两端服务（先 Java 后 Python；顺序与部署手册一致） ----------
-step 6 "重启 xiaozhi-manager-api 与 xiaozhi-server"
+step 6 "重启 xiaozhi-manager-api 与 yuhe-server"
 systemctl restart xiaozhi-manager-api
 sleep 25
 systemctl is-active xiaozhi-manager-api | grep -qx active || die "xiaozhi-manager-api 重启后未 active（看 /opt/xiaozhi/logs/manager-api.log，按 runbook 回滚）"
-systemctl restart xiaozhi-server
+systemctl restart yuhe-server
 sleep 5
-systemctl is-active xiaozhi-server | grep -qx active || die "xiaozhi-server 重启后未 active（看 data/app.log，按 runbook 回滚）"
+systemctl is-active yuhe-server | grep -qx active || die "yuhe-server 重启后未 active（看 data/app.log，按 runbook 回滚）"
 echo "CHECK-6 通过：两端服务均 active"
 
 # ---------- 7. 冒烟：新 secret 200 / 旧 secret 401 ----------
-step 7 "鉴权冒烟（8003 loopback 端点 /xiaozhi/ 鉴权面）"
+step 7 "鉴权冒烟（8003 loopback 端点 /yuhe/ 鉴权面）"
 # 无 key 本机请求 → 401（路由存在且鉴权生效）
 HTTP_NOKEY="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8003/api/memory/agents)"
 [ "$HTTP_NOKEY" = "401" ] || die "无 key 请求返回 ${HTTP_NOKEY}（预期 401；404 说明路由未挂载，查日志）"

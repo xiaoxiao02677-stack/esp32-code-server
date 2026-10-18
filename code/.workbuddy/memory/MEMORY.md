@@ -80,6 +80,22 @@
 - 服务端 `dispatch()` 曾不清 `sent/offline` 的补投队列 → 旧版本被 30s 巡检重投、把新图顶回旧图
 - 细节与不可达分支说明见 `2026-10-17.md` 的「18:1x 壁纸链路排查」
 
+## ★ 语音链路：打断/回声/自言自语（详见 2026-10-17/18.md）
+- **"服务端 AEC" 是虚设**：代码里无 AEC 实现，`conn.client_aec` 只是"打断判定在服务端"的开关；
+  Silero VAD 对原始上行 PCM 直判，设备播报回声=真人声
+- **abort 来源判别**：设备侧 abort 固件日志打 `Send abort speaking (reason=...)`（protocol.cc:72）；
+  日志无此行 + 服务端 `Abort message received` = 服务端触发
+- **打断三道防线（723ce515 后）**：起播保护窗 800ms → 人声确认窗（threshold×20ms）→
+  **回声探测**（确认窗满足后取 asr_audio 最近 3s 快速 ASR + echo_guard，回声放弃打断）；
+  日志 grep `打断探测` 看决策。0 档跳过探测保"立即"
+- **echo_guard 只护文本层（startToChat）**，VAD 音频层误打断必须靠探测拦——两层互补
+- **echo_guard v3（f189de30）**：字符层三通道 + 拼音层（同音字 琳→玲/补→不，ng→n 等归一，
+  仅 ≥8 字长句开放）+ **跨句拼接拼音子串**（ASR 拼音=相邻两句拼音拼接的连续子串且非单句子串
+  → 回声；真人说不出"句1尾+句2头"连续拼音串，零误杀）。pypinyin 惰性导入，缺依赖自动降级字符层
+- **fun_local ASR 返回 dict**（`{"content":..}` 非纯文本），消费方必须取 content；
+  本地 pytest 需 `data/.config.yaml` 占位（`printf '{}' > data/.config.yaml`）
+- 固件侧配套：播报期关本地唤醒检测（c1d36a52）+ tts stop 挂起等 Playback drained（6c6a6458）
+
 ## ★ 崩溃排查（速查，全文见 `topics/firmware-crash-cookbook.md`）
 - **先校验 elf 同源**：日志 `ELF file SHA256` 前 9 位 == `sha256sum build/xiaozhi.elf`；不一致时 addr2line 解出的符号是跨模块幻觉
 - `EXCVADDR=0x14` + `lv_event_mark_deleted(lv_event.c:323)` → `event_head` 并发悬垂/自环（现场 ①）
@@ -117,3 +133,9 @@
 `sftp_push.py x.py /root/a.py` → python 收到 `D:/INSTALL/.../PortableGit/root/a.py` → SFTP 报 ENOENT
 （伪"路径不存在"）。解法：`MSYS_NO_PATHCONV=1` 或 `MSYS2_ARG_CONV_EXCL='*'`，或脚本内剥前缀。
 **所有 `code/.workbuddy/*.py` 的远端路径参数都受此影响。**
+
+## ★ 推送调度（/admin/push-scheduler）
+- 入参 `device_ids` 顶层列表 + `content.topic_sources`（与 audio_url 二选一）；任务查 `GET /api/push/tasks/{id}`（`/api/push/queue` 是壁纸的）
+- **空闲设备 agent UUID→MAC 断链坑**：`_agent_device_cache` 鸡生蛋（成功后才填）、`_mac_from_plain` 只认 12hex → UUID 直查 return None、manager-api 根本没调。修复：反查链末级接 `wake_word_service._agent_devices`（设备断 WS 后仍保留，唯一稳定源）
+- 话题源全失败必降级 chat 兜底（本地开场白永不失败），别让空 audio_url 判 failed；`source=memory` 需 agent 配记忆模块，否则也走兜底
+- TTS 产物转 Ogg Opus mono（`_ensure_device_playable_audio`，固件 NotifyPlayer 限制）；URL 兜底链 public_audio_base_url → vision_explain 推 host → websocket 推 host:8003

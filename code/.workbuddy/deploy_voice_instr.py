@@ -10,8 +10,8 @@ import paramiko
 
 HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
 
-LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server"
-REMOTE_ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server"
+REMOTE_ROOT = "/root/xiaozhi-server/main/yuhe-server"
 
 FILES = [
     "core/connection.py",

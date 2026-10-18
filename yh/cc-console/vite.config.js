@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 8090,
     proxy: {
-      '/xiaozhi': {
+      '/yuhe': {
         target: 'http://sandyun.top:8001',
         changeOrigin: true,
       },

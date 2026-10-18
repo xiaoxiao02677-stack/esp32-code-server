@@ -2,7 +2,7 @@
 
 - 版本：v1.0
 - 日期：2026-10-15
-- 范围：console-v2 前端 / manager-api (Java) / xiaozhi-server (Python) / nginx
+- 范围：console-v2 前端 / manager-api (Java) / yuhe-server (Python) / nginx
 - 结论性质：可行性分析与实施方案，**不含任何代码改动**
 
 ---
@@ -17,7 +17,7 @@
 |---|---|---|---|
 | Web 前端 (Vue) | ✅ 本质如此 | 构建产物替换静态文件 | **0（无需重启任何服务）** |
 | nginx 配置 | ✅ | `nginx -s reload` | **0（零中断）** |
-| Python 服务 | ⚠️ 半热 | `systemctl restart xiaozhi-server` | ~30s（设备自动重连） |
+| Python 服务 | ⚠️ 半热 | `systemctl restart yuhe-server` | ~30s（设备自动重连） |
 | Java manager-api | ❌ 无法免重启 | jar 替换 + `systemctl restart` | 秒级 |
 
 ---
@@ -32,17 +32,17 @@
 
 ### 1.2 Java manager-api
 - Spring Boot 3.4.3 / Java 21 / Maven（`code-server-mirror/manager-api/pom.xml`），**无 spring-boot-devtools**。
-- 运行：测试 jar `/root/yh/deploy/opt-xiaozhi/xiaozhi-esp32-api.jar`、生产 `/opt/xiaozhi/xiaozhi-esp32-api.jar`，systemd 服务 `xiaozhi-manager-api`，端口 8002。
+- 运行：测试 jar `/root/yh/deploy/opt-yuhe/xiaozhi-esp32-api.jar`、生产 `/opt/xiaozhi/xiaozhi-esp32-api.jar`，systemd 服务 `xiaozhi-manager-api`，端口 8002。
 - 部署流程：`mvn package -Dmaven.test.skip=true` → 替换 jar → restart。
 
-### 1.3 Python xiaozhi-server
-- 入口 `app.py`（`code-server-mirror/xiaozhi-server/app.py`）：aiohttp `web.AppRunner`（`core/http_server.py:302`）+ WebSocketServer(8000) + HeartbeatServer(12399)，`asyncio.run(main())` 常驻。
-- 无 uvicorn，无 reload 机制；systemd 服务 `xiaozhi-server`。
+### 1.3 Python yuhe-server
+- 入口 `app.py`（`code-server-mirror/yuhe-server/app.py`）：aiohttp `web.AppRunner`（`core/http_server.py:302`）+ WebSocketServer(8000) + HeartbeatServer(12399)，`asyncio.run(main())` 常驻。
+- 无 uvicorn，无 reload 机制；systemd 服务 `yuhe-server`。
 - 设备依赖：重启后 30s 内自动重连心跳（10-14 已实测平滑）。
 
 ### 1.4 nginx
-- 生产：`/etc/nginx/snippets/xiaozhi-common.conf`，监听 9001/8443/9443/8001，前端 `/var/www/console-v2/{app,admin,firmware-flash}/`，**`/assets/` 固定 root → `/var/www/console-v2/app`**。
-- 测试：`/etc/nginx/sites-enabled/xiaozhi-test`，监听 8101/8144。
+- 生产：`/etc/nginx/snippets/yuhe-common.conf`，监听 9001/8443/9443/8001，前端 `/var/www/console-v2/{app,admin,firmware-flash}/`，**`/assets/` 固定 root → `/var/www/console-v2/app`**。
+- 测试：`/etc/nginx/sites-enabled/yuhe-test`，监听 8101/8144。
 - 已知坑：admin 入口必须部署 `dist-admin` 的 index.html，否则 `/assets` 落到 app 目录 → 404 白屏；两产物 bundle 同名，仅 index.html 引用前缀不同。
 
 ---
@@ -107,7 +107,7 @@ ssh root@<SERVER_IP> "sed 's#/assets/#/admincc/assets/#g' < dist/index.html > /v
 **浏览器缓存配套（必须做一次）**——index.html 禁缓存、/assets/ 长缓存，hash 文件名天然适配：
 
 ```nginx
-# 放到 /etc/nginx/snippets/xiaozhi-common.conf（生产）与 /etc/nginx/sites-enabled/xiaozhi-test（测试）
+# 放到 /etc/nginx/snippets/yuhe-common.conf（生产）与 /etc/nginx/sites-enabled/yuhe-test（测试）
 location = /index.html { add_header Cache-Control "no-store"; }
 location = /admin/index.html { add_header Cache-Control "no-store"; }
 location /assets/ {
@@ -128,14 +128,14 @@ aiohttp 进程内热重载（`importlib.reload`、动态重注册路由）**不�
 TARGET=${1:-test}
 PORT=$([ "$TARGET" = "prod" ] && echo 22222 || echo 22223)
 ssh -p $PORT root@sandyun.top '
-  systemctl restart xiaozhi-server && sleep 3 &&
-  systemctl is-active xiaozhi-server &&
+  systemctl restart yuhe-server && sleep 3 &&
+  systemctl is-active yuhe-server &&
   curl -s http://127.0.0.1:8003/ -o /dev/null -w "HTTP %{http_code}\n" || true
-  tail -n 20 /var/log/xiaozhi-server/*.log 2>/dev/null | tail -n 10
+  tail -n 20 /var/log/yuhe-server/*.log 2>/dev/null | tail -n 10
 '
 ```
 
-- 本地改文件 → `scp -P 22223 file.py root@sandyun.top:/root/yh/app/xiaozhi-server/对应路径/` → 跑 `bash restart-py.sh test`。
+- 本地改文件 → `scp -P 22223 file.py root@sandyun.top:/root/yh/app/yuhe-server/对应路径/` → 跑 `bash restart-py.sh test`。
 - 实测影响：重启 ~30s，设备 30s 内自动重连心跳（WS 在线时重连也平滑），推送任务若在执行中会标记失败，**避开整点推送时段重启**即可。
 
 ### 2.3 Java：诚实定位「秒级重启」，不追求真热加载
@@ -155,8 +155,8 @@ LOCAL=/g/demo/21_xiaozhi/code-server-mirror/manager-api
 ssh -p $PORT root@sandyun.top '
   cd /root/yh/app/manager-api &&
   mvn -q package -Dmaven.test.skip=true &&
-  cp deploy/opt-xiaozhi/xiaozhi-esp32-api.jar deploy/opt-xiaozhi/xiaozhi-esp32-api.jar.bak-$(date +%Y%m%dT%H%M%SZ) &&
-  cp target/*.jar deploy/opt-xiaozhi/xiaozhi-esp32-api.jar &&
+  cp deploy/opt-yuhe/xiaozhi-esp32-api.jar deploy/opt-yuhe/xiaozhi-esp32-api.jar.bak-$(date +%Y%m%dT%H%M%SZ) &&
+  cp target/*.jar deploy/opt-yuhe/xiaozhi-esp32-api.jar &&
   systemctl restart xiaozhi-manager-api &&
   sleep 8 &&
   curl -s http://127.0.0.1:8002/ -o /dev/null -w "HTTP %{http_code}\n" || tail -n 20 /opt/xiaozhi/logs/*.log | tail -n 10

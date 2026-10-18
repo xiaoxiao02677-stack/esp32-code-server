@@ -6,5 +6,5 @@ def sh(cmd, t=60):
     _, o, e = c.exec_command(cmd, timeout=t)
     return o.read().decode("utf-8","replace").strip()
 print("=== datasource ===")
-print(sh("grep -rn -A6 'datasource' /root/xiaozhi-server/main/xiaozhi-server/manager-api/src/main/resources/application.yml 2>/dev/null | head -20 || find / -name application.yml -path '*manager-api*' 2>/dev/null | head"))
+print(sh("grep -rn -A6 'datasource' /root/xiaozhi-server/main/yuhe-server/manager-api/src/main/resources/application.yml 2>/dev/null | head -20 || find / -name application.yml -path '*manager-api*' 2>/dev/null | head"))
 c.close()

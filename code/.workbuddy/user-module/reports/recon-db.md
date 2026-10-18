@@ -3,7 +3,7 @@
 > 目标：为「用户管理模块」新增表 DDL 设计提供现状依据。
 > 环境：ssh -p 22223 root@sandyun.top → MySQL 8.0.46-0ubuntu0.24.04.4，库 `xiaozhi_esp32_server`（root/123456）。
 > 侦察时间：2026-10-14（服务器时间 2026-10-14 00:25 CST）。全程只读（SHOW/DESC/SELECT）。
-> 后端栈：Java 21 + Spring Boot 3 + MyBatis-Plus（id-type: ASSIGN_ID 雪花ID）+ Shiro 2.0.2 + Druid + Liquibase 4.20.0（renren 框架底座），context-path `/xiaozhi`，端口 8002。
+> 后端栈：Java 21 + Spring Boot 3 + MyBatis-Plus（id-type: ASSIGN_ID 雪花ID）+ Shiro 2.0.2 + Druid + Liquibase 4.20.0（renren 框架底座），context-path `/yuhe`，端口 8002。
 
 ---
 
@@ -465,7 +465,7 @@ CREATE TABLE IF NOT EXISTS `ai_agent_wake_word` (
 - 新 changeSet 的 id 必须全局唯一且大于当前时间（服务器当前 2026-10-14，如 `20261014xxxx`），追加在 yaml 最末（当前最后一个是 202610100930）。
 - 服务器当前日期 2026-10-14，**id 前缀用 20261014xx**。
 
-**部署链路**：`/root/yh/app/manager-api`（源码）→ mvn package → `target/xiaozhi-esp32-api.jar` → 拷贝到 `/root/yh/deploy/opt-xiaozhi/xiaozhi-esp32-api.jar`（当前两 jar md5 一致：b7e14d6e024527a2d1b84540f820dc60），java -jar 启动时 Liquibase 自动执行。外置 `application-dev.yml` 无 liquibase 段（用的 jar 内默认）。
+**部署链路**：`/root/yh/app/manager-api`（源码）→ mvn package → `target/xiaozhi-esp32-api.jar` → 拷贝到 `/root/yh/deploy/opt-yuhe/xiaozhi-esp32-api.jar`（当前两 jar md5 一致：b7e14d6e024527a2d1b84540f820dc60），java -jar 启动时 Liquibase 自动执行。外置 `application-dev.yml` 无 liquibase 段（用的 jar 内默认）。
 
 ---
 
@@ -516,7 +516,7 @@ CREATE TABLE IF NOT EXISTS `ai_agent_wake_word` (
 
 ### 4.8 实体层（Java）约定
 - `SysXxxEntity extends BaseEntity`；BaseEntity 含 id/creator/createDate（INSERT fill），业务实体补 updater/updateDate（INSERT_UPDATE fill）。
-- `map-underscore-to-camel-case: true`；typeAliasesPackage `xiaozhi.modules.*.entity`。
+- `map-underscore-to-camel-case: true`；typeAliasesPackage `yuhe.modules.*.entity`。
 
 ---
 

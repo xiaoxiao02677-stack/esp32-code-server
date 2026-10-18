@@ -1,13 +1,13 @@
-package xiaozhi.modules.order.service;
+package yuhe.modules.order.service;
 
 import java.util.List;
 import java.util.Map;
 
-import xiaozhi.common.page.PageData;
-import xiaozhi.common.service.BaseService;
-import xiaozhi.modules.order.dto.OrderTableDTO;
-import xiaozhi.modules.order.entity.OrderTableEntity;
-import xiaozhi.modules.order.vo.OrderTableVO;
+import yuhe.common.page.PageData;
+import yuhe.common.service.BaseService;
+import yuhe.modules.order.dto.OrderTableDTO;
+import yuhe.modules.order.entity.OrderTableEntity;
+import yuhe.modules.order.vo.OrderTableVO;
 
 /**
  * 订单服务

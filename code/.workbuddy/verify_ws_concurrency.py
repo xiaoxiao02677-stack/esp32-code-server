@@ -11,10 +11,10 @@ from ssh_run import get_client  # noqa: E402
 
 SCRIPT = r'''
 import asyncio, time, sys, resource
-sys.path.insert(0, "/root/xiaozhi-server/main/xiaozhi-server")
+sys.path.insert(0, "/root/xiaozhi-server/main/yuhe-server")
 from websockets.asyncio.client import connect
 
-URL = "ws://127.0.0.1:8000/xiaozhi/v1/"
+URL = "ws://127.0.0.1:8000/yuhe/v1/"
 HEADERS = {"device-id": "stress-%d", "client-id": "stress-%d"}
 
 
@@ -68,7 +68,7 @@ asyncio.run(main())
 
 client = get_client()
 try:
-    cmd = ("cd /root/xiaozhi-server/main/xiaozhi-server && "
+    cmd = ("cd /root/xiaozhi-server/main/yuhe-server && "
            "cat > /tmp/_stress.py <<'PYEOF'\n" + SCRIPT + "\nPYEOF\n"
            ".venv/bin/python /tmp/_stress.py")
     _, out, err = client.exec_command(cmd, timeout=400)

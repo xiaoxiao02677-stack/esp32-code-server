@@ -1,10 +1,10 @@
 # 屿禾「小柚」LVGL 皮肤（hardware/sets）
 
-> 代码：`hardware/sets/xiaozhi-esp32/main/display/yh_skin/`
-> 视觉基准：`hardware/small_secreen/xiaozhi-esp32/main/boards/my-s3-tft/round_screen_display.{h,cc}`
+> 代码：`hardware/sets/yuhe-esp32/main/display/yh_skin/`
+> 视觉基准：`hardware/small_secreen/yuhe-esp32/main/boards/my-s3-tft/round_screen_display.{h,cc}`
 
 四个 `yh-*` 版型的屏幕界面统一由这份共享皮肤渲染。**上电第一帧就是品牌开机画面**，
-原生 xiaozhi 的状态栏 / 机器人 AI logo / 机型版本串在任何时刻都不会出现。
+原生 yuhe 的状态栏 / 机器人 AI logo / 机型版本串在任何时刻都不会出现。
 
 ---
 

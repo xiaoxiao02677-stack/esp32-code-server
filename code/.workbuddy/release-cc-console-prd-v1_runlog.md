@@ -20,12 +20,12 @@
 
 ## 后端改动（code-server-mirror）
 
-### Python（xiaozhi-server）——R2 LLM 阶段支撑
+### Python（yuhe-server）——R2 LLM 阶段支撑
 - **新增** `core/api/llm_preview_handler.py`：POST /api/llm/preview（Bearer server.secret + 回环中间件，同 tts_preview 安全模型；text≤500 字；调 core.utils.llm.create_instance 聚合流式回复，返回 {reply, elapsed_ms}）
 - **修改** `core/http_server.py`：注册 handler + /api/llm/ 路径纳入回环+鉴权中间件
 
 ### Java（manager-api）
-- **新增** `modules/model/controller/LlmPreviewController.java`：GET /xiaozhi/models/llmPreview?modelId&text&systemPrompt（Shiro 登录态 → 读模型 raw config → 代理转发 Python，凭据不回传）
+- **新增** `modules/model/controller/LlmPreviewController.java`：GET /yuhe/models/llmPreview?modelId&text&systemPrompt（Shiro 登录态 → 读模型 raw config → 代理转发 Python，凭据不回传）
 - **新增** `AgentController.deleteAgentChatSession`：DELETE /agent/{id}/chat-history/{sessionId}（权限校验 + 音频引用清理 + 会话记录删除）
 - **新增** `AgentChatHistoryService.deleteBySessionId` + Impl（LambdaQueryWrapper 按 agentId+sessionId 删记录，先清 audioId 引用）
 
@@ -40,7 +40,7 @@
 - 模板页：一键创建智能体（R3.6）
 
 ## 部署过程（按 PROJECT-HANDOFF §8 速查）
-1. Python：sftp_push 两个文件 → 服务器 py_compile OK → restart xiaozhi-server（45s，FunASR 加载）
+1. Python：sftp_push 两个文件 → 服务器 py_compile OK → restart yuhe-server（45s，FunASR 加载）
 2. Java：sftp_push 4 个文件（注意：中途一次目标文件名笔误 AgentChatHistoryServiceImpl.py.java，已删并重传正确名）→ mvn package 23s → 备份旧 jar 至 /root/backup/2026-10-08-doubao-v3/xiaozhi-esp32-api.jar.bak-20261007-ccconsole → cp /opt → restart
 3. Web：vite build（1.02s，32 modules）→ tar → sftp → 解包 /var/www/cc-console/ → 200
 

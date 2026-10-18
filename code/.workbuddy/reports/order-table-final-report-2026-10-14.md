@@ -15,7 +15,7 @@
 
 ### 2. 后端Java代码（7个文件）
 ```
-manager-api/src/main/java/xiaozhi/modules/order/
+manager-api/src/main/java/yuhe/modules/order/
 ├── controller/OrderTableController.java  # RESTful API
 ├── dao/OrderTableDao.java               # MyBatis Mapper接口
 ├── dto/OrderTableDTO.java               # 请求参数对象
@@ -28,13 +28,13 @@ manager-api/src/main/java/xiaozhi/modules/order/
 **API端点**:
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | /xiaozhi/order/page | 分页查询订单 |
-| GET | /xiaozhi/order/{id} | 查询订单详情 |
-| POST | /xiaozhi/order | 新增订单 |
-| PUT | /xiaozhi/order/{id} | 更新订单 |
-| DELETE | /xiaozhi/order/{id} | 软删除订单 |
-| POST | /xiaozhi/order/export | 导出CSV |
-| GET | /xiaozhi/order/stats | 统计数据 |
+| GET | /yuhe/order/page | 分页查询订单 |
+| GET | /yuhe/order/{id} | 查询订单详情 |
+| POST | /yuhe/order | 新增订单 |
+| PUT | /yuhe/order/{id} | 更新订单 |
+| DELETE | /yuhe/order/{id} | 软删除订单 |
+| POST | /yuhe/order/export | 导出CSV |
+| GET | /yuhe/order/stats | 统计数据 |
 
 ### 3. 前端Vue组件（6个文件）
 ```
@@ -126,7 +126,7 @@ ssh -p 22223 root@sandyun.top "systemctl restart xiaozhi-manager-api"
 
 ### 后端源码
 ```
-G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/xiaozhi/modules/order/
+G:/demo/21_xiaozhi/code-server-mirror/manager-api/src/main/java/yuhe/modules/order/
 ```
 
 ### 前端源码

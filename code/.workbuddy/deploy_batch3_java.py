@@ -38,8 +38,8 @@ def main():
         time.sleep(22)
         sh(client, "systemctl is-active xiaozhi-manager-api")
         print("\n== 4. 验活 ==")
-        sh(client, "curl -s -o /dev/null -w 'manager-api: %{http_code}\\n' http://127.0.0.1:8002/xiaozhi/user/pub-config")
-        sh(client, "unzip -p /opt/xiaozhi/xiaozhi-esp32-api.jar BOOT-INF/classes/xiaozhi/common/config/SwaggerConfig.class | strings | grep -c 屿禾 || echo 0")
+        sh(client, "curl -s -o /dev/null -w 'manager-api: %{http_code}\\n' http://127.0.0.1:8002/yuhe/user/pub-config")
+        sh(client, "unzip -p /opt/xiaozhi/xiaozhi-esp32-api.jar BOOT-INF/classes/yuhe/common/config/SwaggerConfig.class | strings | grep -c 屿禾 || echo 0")
         print("\nDEPLOY_JAVA_DONE")
     finally:
         client.close()

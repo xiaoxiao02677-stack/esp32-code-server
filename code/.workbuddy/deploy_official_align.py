@@ -10,8 +10,8 @@ import paramiko
 
 HOST, PORT, USER, PASSWORD = "sandyun.top", 22222, "root", "Ymm6088."
 
-LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server"
-REMOTE_ROOT = "/root/xiaozhi-server/main/xiaozhi-server"
+LOCAL_ROOT = r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server"
+REMOTE_ROOT = "/root/xiaozhi-server/main/yuhe-server"
 LOCAL_MISC = r"G:\demo\21_xiaozhi\code\.workbuddy"
 PY_FILE = "core/providers/tts/doubao_v3.py"
 
@@ -77,11 +77,11 @@ def main():
     print("=" * 64)
     print("步骤 4: 重启服务并验活")
     print("=" * 64)
-    sh("systemctl restart xiaozhi-server")
+    sh("systemctl restart yuhe-server")
     time.sleep(12)
-    sh("systemctl is-active xiaozhi-server")
+    sh("systemctl is-active yuhe-server")
     sh("ss -lntp | grep -E ':8000|:8003' | head")
-    sh("journalctl -u xiaozhi-server -n 12 --no-pager")
+    sh("journalctl -u yuhe-server -n 12 --no-pager")
 
     sftp.close()
     client.close()

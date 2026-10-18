@@ -204,7 +204,7 @@ export default {
   'firmwareDialog.firmwareFile': 'Firmware-Datei',
   'firmwareDialog.clickUpload': 'Zum Hochladen klicken',
   'firmwareDialog.uploadTip': 'Nur Firmware-Dateien (.bin/.apk) werden unterstützt, Größe sollte 100MB nicht überschreiten',
-  'firmwareDialog.uploadHint': 'Hinweis: Bitte die vorab zusammengeführte xiaozhi.bin-Datei hochladen, nicht die zusammengeführte merged-binary.bin-Datei',
+  'firmwareDialog.uploadHint': 'Hinweis: Bitte die vorab zusammengeführte yuhe.bin-Datei hochladen, nicht die zusammengeführte merged-binary.bin-Datei',
   'firmwareDialog.remark': 'Bemerkung',
   'firmwareDialog.remarkPlaceholder': 'Bitte Bemerkungsinformationen eingeben',
   'firmwareDialog.requiredFirmwareName': 'Bitte Firmware-Namen eingeben (Board + Version)',
@@ -298,7 +298,7 @@ export default {
 
   // Register page related
   'register.title': 'Konto erstellen',
-  'register.welcome': 'Willkommen bei XiaoZhi AI',
+  'register.welcome': 'Willkommen bei Yuhe AI',
   'register.usernamePlaceholder': 'Bitte Benutzernamen eingeben',
   'register.mobilePlaceholder': 'Bitte Handynummer eingeben',
   'register.captchaPlaceholder': 'Bitte Captcha eingeben',
@@ -584,7 +584,7 @@ export default {
   'button.close': 'Schließen',
 
   // System information
-  'system.name': 'XiaoZhi Service',
+  'system.name': 'Yuhe Service',
 
   // Voiceprint related
   'voiceprint.management': 'Stimmabdruckverwaltung',
@@ -723,7 +723,7 @@ export default {
 
   // Home page text
   'home.addAgent': 'Agent hinzufügen',
-  'home.greeting': 'Hallo XiaoZhi',
+  'home.greeting': 'Hallo Yuhe',
   'home.wish': 'Lassen Sie uns einen wunderbaren Tag haben!',
   'home.languageModel': 'LLM',
   'home.voiceModel': 'TTS',
@@ -796,7 +796,7 @@ export default {
   'paramManagement.deleteFailed': 'Löschen fehlgeschlagen, bitte versuchen Sie es erneut',
   'paramManagement.operationCancelled': 'Löschen abgebrochen',
   'paramManagement.operationClosed': 'Operation geschlossen',
-  'paramManagement.updateSuccess': 'Aktualisierung erfolgreich. Einige Konfigurationen werden erst nach Neustart des xiaozhi-server-Moduls wirksam.',
+  'paramManagement.updateSuccess': 'Aktualisierung erfolgreich. Einige Konfigurationen werden erst nach Neustart des yuhe-server-Moduls wirksam.',
   'paramManagement.addSuccess': 'Hinzufügen erfolgreich',
   'paramManagement.updateFailed': 'Aktualisierung fehlgeschlagen',
   'paramManagement.addFailed': 'Hinzufügen fehlgeschlagen',
@@ -1008,7 +1008,7 @@ export default {
   // Tooltip-Beschreibungen für Formularfelder
   'roleConfig.tooltip.agentName': 'Legen Sie den Namen Ihres KI-Agenten fest, um ihn zu identifizieren und wiederzuerkennen',
   'roleConfig.tooltip.roleTemplate': 'Wählen Sie aus voreingestellten Rollenvorlagen, um die Grundeinstellungen Ihres Agenten schnell zu konfigurieren',
-  'roleConfig.tooltip.contextProvider': 'Wenn XiaoZhi aktiviert wird, werden externe Systemdaten abgerufen und dynamisch in die Systemaufforderung des LLM eingefügt',
+  'roleConfig.tooltip.contextProvider': 'Wenn Yuhe aktiviert wird, werden externe Systemdaten abgerufen und dynamisch in die Systemaufforderung des LLM eingefügt',
   'roleConfig.tooltip.roleIntroduction': 'Definieren Sie die Rollenpositionierung, Persönlichkeitsmerkmale, Verhaltensnormen und beruflichen Wissenshintergründe des KI-Agenten',
   'roleConfig.tooltip.memoryHis': 'Zusammenfassung des Chatverlaufs',
   'roleConfig.tooltip.languageCode': 'Legen Sie Sprachcodes fest, z.B. de-DE, en-US usw., die für die Erkennung bestimmter Funktionen verwendet werden',
@@ -1097,7 +1097,7 @@ export default {
   'modelConfig.enableSuccess': 'Aktivieren erfolgreich',
   'modelConfig.disableSuccess': 'Deaktivieren erfolgreich',
   'modelConfig.operationFailed': 'Operation fehlgeschlagen',
-  'modelConfig.setDefaultSuccess': 'Standardmodell erfolgreich gesetzt, bitte starten Sie das xiaozhi-server-Modul zeitnah manuell neu',
+  'modelConfig.setDefaultSuccess': 'Standardmodell erfolgreich gesetzt, bitte starten Sie das yuhe-server-Modul zeitnah manuell neu',
   'modelConfig.itemsPerPage': '{items} Einträge/Seite',
   'modelConfig.firstPage': 'Erste Seite',
   'modelConfig.prevPage': 'Vorherige Seite',

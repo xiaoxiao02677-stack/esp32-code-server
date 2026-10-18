@@ -7,7 +7,7 @@
 
 ## 0. 范围与前提
 
-- 被测链路：模拟设备 → `ws://sandyun.top:8001/xiaozhi/v1/`（nginx 反代→8000 xiaozhi-server）→ LLM=DeepSeek（deepseek-flash）/ TTS=EdgeTTS（zh-CN-XiaoxiaoNeural）
+- 被测链路：模拟设备 → `ws://sandyun.top:8001/yuhe/v1/`（nginx 反代→8000 yuhe-server）→ LLM=DeepSeek（deepseek-flash）/ TTS=EdgeTTS（zh-CN-XiaoxiaoNeural）
 - 注入路径：**文本注入**（`listen detect text`），与 `verify_tts.py` 一致；Device-Id 复用真机 `14:c1:9f:d1:33:48`
 - ASR=FunASR 本轮不覆盖（见 §4 边界说明），不阻塞 GATE（主理人既定口径）
 - 判据校准基线（历史实测）：2026-10-04/05 两次全链路成功，短回复 **134~211 帧 / 21~35KB**，tts stop 正常收尾

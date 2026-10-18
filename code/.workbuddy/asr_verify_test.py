@@ -1,7 +1,7 @@
 import asyncio, json, subprocess, sys, os
 
-os.chdir('/root/xiaozhi-server/main/xiaozhi-server')
-sys.path.insert(0, '/root/xiaozhi-server/main/xiaozhi-server')
+os.chdir('/root/xiaozhi-server/main/yuhe-server')
+sys.path.insert(0, '/root/xiaozhi-server/main/yuhe-server')
 
 from core.providers.asr.fun_local import ASRProvider
 from core.providers.asr.base import ASRProviderBase

@@ -32,15 +32,15 @@ out = ssh("SECRET=$(mysql -N -uroot -p123456 xiaozhi_esp32_server -e \"select pa
 check("Q3 python model test auth+validation (400)", "400" in out, out.strip().replace("\n", " ")[:110])
 
 # 3. Java /models/modelTest route
-out = ssh("curl -s 'http://127.0.0.1:8002/xiaozhi/models/modelTest?modelId=x&modelType=TTS'")
+out = ssh("curl -s 'http://127.0.0.1:8002/yuhe/models/modelTest?modelId=x&modelType=TTS'")
 check("Q3 java modelTest route (code:401 unauth)", '"code":401' in out, out.strip()[:90])
 
 # 4. Java MCP test route
-out = ssh("curl -s 'http://127.0.0.1:8002/xiaozhi/agent/mcp/test/abc'")
+out = ssh("curl -s 'http://127.0.0.1:8002/yuhe/agent/mcp/test/abc'")
 check("Q5 java mcp test route (code:401 unauth)", '"code":401' in out, out.strip()[:90])
 
 # 5. device bind routes (bind by code + manual-add)
-out = ssh("curl -s -X POST 'http://127.0.0.1:8002/xiaozhi/device/bind/abc/123456'; echo; curl -s -X POST -H 'Content-Type: application/json' -d '{}' 'http://127.0.0.1:8002/xiaozhi/device/manual-add'")
+out = ssh("curl -s -X POST 'http://127.0.0.1:8002/yuhe/device/bind/abc/123456'; echo; curl -s -X POST -H 'Content-Type: application/json' -d '{}' 'http://127.0.0.1:8002/yuhe/device/manual-add'")
 check("Q1 device bind + manual-add routes (code:401)", '"code":401' in out, out.strip().replace("\n", " ")[:110])
 
 # 6. web bundle live
@@ -49,7 +49,7 @@ bundle = [s for s in out.split() if s.startswith("index-") and s.endswith(".js")
 check("Q2/Q4 web bundle live", bool(bundle), bundle[0] if bundle else out[:60])
 
 # 7. all services active
-out = ssh("systemctl is-active xiaozhi-server xiaozhi-manager-api nginx")
+out = ssh("systemctl is-active yuhe-server xiaozhi-manager-api nginx")
 check("all services active", out.count("active") >= 3, out.strip().replace("\n", " "))
 
 print()

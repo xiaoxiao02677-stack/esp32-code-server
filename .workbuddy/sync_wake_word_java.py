@@ -17,7 +17,7 @@ USER = "root"
 LOCAL_BASE = "G:/demo/21_xiaozhi/code-server-mirror/manager-api"
 REMOTE_BASE = "/root/xiaozhi-server/main/manager-api"
 FILES = [
-    "src/main/java/xiaozhi/modules/agent/entity/AgentEntity.java",
+    "src/main/java/yuhe/modules/agent/entity/AgentEntity.java",
     "src/main/resources/db/changelog/202610100930.sql",
     "src/main/resources/db/changelog/db.changelog-master.yaml",
 ]
@@ -63,7 +63,7 @@ def main():
 
         # 3. 校验：AgentEntity 含 wakeWords；master.yaml 含 202610100930；SQL 文件在位
         checks = [
-            (f"grep -c wakeWords {REMOTE_BASE}/src/main/java/xiaozhi/modules/agent/entity/AgentEntity.java",
+            (f"grep -c wakeWords {REMOTE_BASE}/src/main/java/yuhe/modules/agent/entity/AgentEntity.java",
              "AgentEntity.wakeWords"),
             (f"grep -c 202610100930 {REMOTE_BASE}/src/main/resources/db/changelog/db.changelog-master.yaml",
              "master.yaml changeSet 202610100930"),

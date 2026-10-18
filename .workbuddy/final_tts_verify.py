@@ -19,7 +19,7 @@ for i in range(3):
     out = ssh(
         'TOKEN=$(MYSQL_PWD=123456 mysql -uroot xiaozhi_esp32_server -N -e "SELECT token FROM sys_user_token ORDER BY update_date DESC LIMIT 1"); '
         'curl -s -m 90 -o /tmp/tts_check.bin -w "%{content_type} %{size_download} %{http_code}" '
-        '"http://127.0.0.1:8001/xiaozhi/models/ttsPreview?modelId=TTS_QwenTTS_Flash&voice=Cherry&text=%E4%BD%A0%E5%A5%BD%E5%91%80%EF%BD%8C%E4%BB%8A%E5%A4%A9%E6%9C%89%E4%BB%80%E4%B9%88%E6%83%B3%E8%81%8A%E7%9A%84%E5%98%9B" '
+        '"http://127.0.0.1:8001/yuhe/models/ttsPreview?modelId=TTS_QwenTTS_Flash&voice=Cherry&text=%E4%BD%A0%E5%A5%BD%E5%91%80%EF%BD%8C%E4%BB%8A%E5%A4%A9%E6%9C%89%E4%BB%80%E4%B9%88%E6%83%B3%E8%81%8A%E7%9A%84%E5%98%9B" '
         '-H "Authorization: Bearer $TOKEN"')
     line = [l for l in out.splitlines() if l.strip() and l.strip()[0] in "auh" or " " in l][-1] if out else ""
     ok = "audio" in line and "200" in line

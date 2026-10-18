@@ -3,7 +3,7 @@
 
 > 基线：v1 报告（`.workbuddy/KawaiiConsole-交付报告-v1.md`）。
 > 纪律：全部信息以各成员回报 + 磁盘实物为准；未落盘的一律标「未落盘/待补」，不虚构。
-> 仓库位置说明：服务器端三仓本地镜像位于 `G:/demo/21_xiaozhi/code-server-mirror/`（manager-web / manager-api / xiaozhi-server），固件仓在 `G:/demo/21_xiaozhi/code/xiaozhi-esp32/`。下文相对路径均以此为根。
+> 仓库位置说明：服务器端三仓本地镜像位于 `G:/demo/21_xiaozhi/code-server-mirror/`（manager-web / manager-api / yuhe-server），固件仓在 `G:/demo/21_xiaozhi/code/yuhe-esp32/`。下文相对路径均以此为根。
 
 ---
 
@@ -19,8 +19,8 @@
 
 | # | 项 | 负责 | 状态 | 产出物路径 / 说明（磁盘核验） |
 |---|---|---|---|---|
-| P0-1 | secret 轮换操作包 | e-secret-ops | ⚠️ 受限完成 | 三件套落盘：`.workbuddy/secret-rotation/{runbook.md, rotate-secret.sh, clean-history.md}`。轮换本身**未执行**（S-REF 登记引用，待部署窗口人工执行）；旧生产 secret `2d7b6bde…` 仍在 `xiaozhi-server/data/.config.yaml:9`（QA 步骤 6 确认）→ 遗留 R-1 |
-| P0-2 | 三栈真机联调（A5–A8） | e-fw-build / e-qa-regress | ⏳ 待人工执行 | 单元级：`manager…/../xiaozhi-server/tests/core/providers/tools/test_device_config_sync.py` 8 用例 **8/8 PASSED**；固件 `idf.py build` **EXIT=0**（2198 步约 19 分钟，`xiaozhi.bin` 2,702,656B，0 编译警告，`.workbuddy/fw_build.log`）；真机步骤就绪：`firmware-build-verify.md` §2 + `mqtt-gateway-verify.md`，**需人工部署机执行**（见 §6.2）→ 遗留 R-2/R-3 |
+| P0-1 | secret 轮换操作包 | e-secret-ops | ⚠️ 受限完成 | 三件套落盘：`.workbuddy/secret-rotation/{runbook.md, rotate-secret.sh, clean-history.md}`。轮换本身**未执行**（S-REF 登记引用，待部署窗口人工执行）；旧生产 secret `2d7b6bde…` 仍在 `yuhe-server/data/.config.yaml:9`（QA 步骤 6 确认）→ 遗留 R-1 |
+| P0-2 | 三栈真机联调（A5–A8） | e-fw-build / e-qa-regress | ⏳ 待人工执行 | 单元级：`manager…/../yuhe-server/tests/core/providers/tools/test_device_config_sync.py` 8 用例 **8/8 PASSED**；固件 `idf.py build` **EXIT=0**（2198 步约 19 分钟，`yuhe.bin` 2,702,656B，0 编译警告，`.workbuddy/fw_build.log`）；真机步骤就绪：`firmware-build-verify.md` §2 + `mqtt-gateway-verify.md`，**需人工部署机执行**（见 §6.2）→ 遗留 R-2/R-3 |
 | P1-1 | 果冻动效细则 | e-pi1-jelly | ✅ 完成 | `manager-web/src/styles/kawaii/jelly-motion.scss`：3 组关键帧（squash/lift/entrance）+ 7 个 `.kawaii-jelly-*` opt-in class，消费 15 个 `--kawaii-*` token（含 `--kawaii-squash-*` 形变系数），`prefers-reduced-motion` 双保险降级；已随 dist 上线（Hash 2560faa6） |
 | P1-2 | 移动端侧边栏抽屉 | e-pi2-drawer | ✅ 完成 | `manager-web/src/components/layout/KawaiiMobileDrawer.vue`（与 KawaiiLayout 同目录，桌面双栏 + 移动抽屉双形态；移动端断点 1023/767 三处，QA 步骤 4 确认）；tag-balance 8/8 含此文件 |
 | P1-3 | 按钮 / Logo 粉彩化 | e-pi3-assets | ✅ 完成 | 9 个 SVG 落盘 `manager-web/src/assets/kawaii/`：`logo-kawaii.svg`、`avatar-kawaii.svg`、`icon-module-{overview,agent,voice,model,contact,knowledge,system}.svg`（侧边栏七分组图标 + Logo + 头像） |
@@ -31,7 +31,7 @@
 
 **主理人代执行修复**（team-lead 汇总，磁盘核验）：
 - `manager-web/src/views/home.vue:167` `SEARCH_HISTORY_KEY: 'agentSearchHistory'`（v1 已修的隐性 bug 复核在位）
-- `xiaozhi-server/.gitignore` L2 `data/.config.yaml` + 模板 `xiaozhi-server/data/.config.yaml.example`
+- `yuhe-server/.gitignore` L2 `data/.config.yaml` + 模板 `yuhe-server/data/.config.yaml.example`
 - calc 残留 4 处清零（v1 遗留的 DeviceManagement/roleConfig/VoiceClone/VoiceResource 四页，QA 步骤 3b 曾判失败 → 修复后增量复核 4/4 PASS）
 
 ---
@@ -86,7 +86,7 @@
 
 - **范围**：A/B/C 三线 + P1 全量（P1-5 真机透传、P0-2 固件刷写不在本次范围）。对象 sandyun.top 生产。
 - **时间线**：四阶段约 25 分钟（runlog 时序 13:27 构建 → 13:36 冒烟移交）。时钟注记：runlog 标头记「开始 2026-10-07」，Liquibase `DATEEXECUTED` 显示 `2026-10-06 13:33:18`，两处时钟存在偏差，备份目录名为 `/root/backup/2026-10-07/`，以 runlog 时间线为准。
-- **阶段 0 备份 PASS**：web 基线 217 文件清单+md5、旧 jar md5 `b20af27b…`（85,327,777B）、`xiaozhi-server-src` 916M、web 15M、mysqldump 46.4M，合计 **1.1G** 回滚物料。
+- **阶段 0 备份 PASS**：web 基线 217 文件清单+md5、旧 jar md5 `b20af27b…`（85,327,777B）、`yuhe-server-src` 916M、web 15M、mysqldump 46.4M，合计 **1.1G** 回滚物料。
 - **阶段 1 构建 PASS**：Vue `--dest dist-new`（首次被 safe-delete 拦截，按预案处置）→ Hash **2560faa6**，48 chunk，index.html md5 `9c4b286e2d82f7f399732c7391473463`，`service-worker.js` 在包；Java mvn 首次 `-DskipTests` 因 `ConfigServiceImplTest` 构造器滞后 FAIL → `-Dmaven.test.skip=true` 重跑 **RC=0**（生产 jar 不含测试类），新 jar md5 `3c6ffb4f…`，包内 DeviceConfig 全套 class + 双 changelog SQL 验收通过。
 - **阶段 2 传输 PASS**：Python B 线 4 文件 md5 双端一致（`ee0ab60a…/8e440177…/d43d49bc…/d169b5d0…`）+ py_compile OK；web 217→**230 文件** rsync --delete，排除项（models 904M / music / config.yaml / data/.config.yaml / tts_notify.mp3 实际在 `config/assets/`）**全部存活**。
 - **阶段 3 服务 PASS**：Liquibase `202610060030`+`202610070010` 执行（DB 时钟 13:33:18），`ai_device_config` 建成（空表正常）；双 systemd **active**；8001=200、8000=200、8003 无 key=401 / 带 key=200（记忆契约在）；journalctl/app.log 错误计数 0。
@@ -118,7 +118,7 @@
 
 ### 6.2 三栈真机联调步骤（A5–A8，需人工部署机执行）
 
-> 前置已就绪：固件 `idf.py build` EXIT=0（`build/xiaozhi.bin` 2,702,656B + `flash_args`，烧录布局 0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data / 0x20000 xiaozhi.bin / 0x800000 assets，16MB flash）。
+> 前置已就绪：固件 `idf.py build` EXIT=0（`build/yuhe.bin` 2,702,656B + `flash_args`，烧录布局 0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data / 0x20000 yuhe.bin / 0x800000 assets，16MB flash）。
 
 依据 `firmware-build-verify.md` §2 + `mqtt-gateway-verify.md`：
 
@@ -127,7 +127,7 @@
 3. **hello + 下发断言**：联网后 `WS: Server hello`；控制台保存设备配置触发重连 → `Application: Received device_config: {…}` → `Board: 应用云端配置 volume=<N>` + `AudioCodec: Set output volume to <N>`；服务器侧 `ai_device_config` 落库（说话改音量 → `report_device_config` → 表内 config_json 变更）。
 4. **幂等复验**：改音量 30 → 重连见 `Set output volume to 30`；立即同值重发 → `Cloud device config matches local state, nothing to apply` 且无 SetOutputVolume 日志；**断电重启 → NVS 恢复 30**（A8 沿用验证）。
 5. **异常值防护**（可选）：服务端手工发 `{"volume":100.5}` → `Board: Ignore fractional/out-of-range device_config volume: 100.5`，硬件不变。
-6. **MQTT 网关透传**（`mqtt-gateway-verify.md`）：**方案 B 先行**（部署机跑 `verify_mqtt_gateway.py <MAC> --gateway` 模拟网关 WS 客户端，断言收不到 device_config + 服务端日志「跳过云端设备配置下发…MQTT网关透传」；无 `--gateway` 基线断言能收到）→ 方案 A（真实 xiaozhi-mqtt-gateway + EMQX）补端到端。前置：目标 MAC 已绑定 + 控制台已写入 device_config。
+6. **MQTT 网关透传**（`mqtt-gateway-verify.md`）：**方案 B 先行**（部署机跑 `verify_mqtt_gateway.py <MAC> --gateway` 模拟网关 WS 客户端，断言收不到 device_config + 服务端日志「跳过云端设备配置下发…MQTT网关透传」；无 `--gateway` 基线断言能收到）→ 方案 A（真实 yuhe-mqtt-gateway + EMQX）补端到端。前置：目标 MAC 已绑定 + 控制台已写入 device_config。
 
 ---
 
@@ -165,8 +165,8 @@
 | A 线粉彩资产 | `manager-web/src/assets/kawaii/`（9 SVG） |
 | P1-4 管理页 | `manager-web/src/views/device/DeviceConfigManager.vue` + `router/index.js:232` |
 | C 线记忆面板 | `manager-web/src/components/memory/MemoryEngineParams.vue` |
-| B 线 Python | `xiaozhi-server/core/providers/tools/device_config_sync.py`、`device_mcp/mcp_executor.py`、`config/manage_api_client.py`、`core/connection.py` + 契约测试 `tests/core/providers/tools/test_device_config_sync.py` |
+| B 线 Python | `yuhe-server/core/providers/tools/device_config_sync.py`、`device_mcp/mcp_executor.py`、`config/manage_api_client.py`、`core/connection.py` + 契约测试 `tests/core/providers/tools/test_device_config_sync.py` |
 | B 线 Java | `manager-api/.../modules/device/**`（Entity/Dao/Service/ServiceImpl/DTO/AdminController）、`modules/config/**`、`db/changelog/{202610060030,202610070010}.sql` |
-| B 线固件 | `xiaozhi-esp32/main/{application.cc, boards/common/board.cc, boards/my-s3-tft/my_s3_tft_board.cc, boards/common/board.h}`（未刷写） |
-| 固件认知索引 | `xiaozhi-esp32/aoci.code.txt`（1068 条 FRAS） |
+| B 线固件 | `yuhe-esp32/main/{application.cc, boards/common/board.cc, boards/my-s3-tft/my_s3_tft_board.cc, boards/common/board.h}`（未刷写） |
+| 固件认知索引 | `yuhe-esp32/aoci.code.txt`（1068 条 FRAS） |
 | 工具沉淀 | `.workbuddy/qa_memory/`、`manager-web/scripts/qa/{tag-balance-check.js, pwa-screenshot-compare.mjs}`、`.workbuddy/aoci_tmp/`、`qa-screenshots/` |

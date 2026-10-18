@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# test_internal_api.sh — xiaozhi-server 内部记忆管理 API 复验（部署后 #7 复用）
+# test_internal_api.sh — yuhe-server 内部记忆管理 API 复验（部署后 #7 复用）
 # 验收对应：A2 管理页 CRUD（服务端侧）、A3 搜索筛选、A7 审核流、A9 数据链路
 #
 # 端点：http://{HOST}:{PORT}/api/memory/**（默认 127.0.0.1:8003）
@@ -9,7 +9,7 @@
 # ⚠️ loopback 限制说明：http_server.py 的 memory_loopback_middleware 只放行
 #    127.0.0.1 / ::1。本脚本必须【在服务器本机】执行（ssh_run.py 到
 #    sandyun.top 后运行本脚本），从外网/局域网直连 8003 会先收到
-#    403 {"code":403,"msg":"禁止访问"}。manager-api 与 xiaozhi-server 同机部署，
+#    403 {"code":403,"msg":"禁止访问"}。manager-api 与 yuhe-server 同机部署，
 #    经 127.0.0.1 互调，故部署后从本机 curl 即为真实生产路径。
 #
 # 鉴权三态（脚本内置）：
@@ -35,7 +35,7 @@ PASS=0; FAIL=0; FAILED_NAMES=""
 
 if [ -z "$AUTH_KEY" ]; then
   echo "[FATAL] 请通过环境变量 AUTH_KEY 传入共享密钥（server.secret / manager-api.secret）"
-  echo "        例如: AUTH_KEY=\$(ssh 服务器 grep secret xiaozhi-server/data/.config.yaml) bash $0"
+  echo "        例如: AUTH_KEY=\$(ssh 服务器 grep secret yuhe-server/data/.config.yaml) bash $0"
   exit 2
 fi
 

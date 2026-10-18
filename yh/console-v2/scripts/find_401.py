@@ -13,7 +13,7 @@ from gmssl import sm2
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
-B = "http://sandyun.top:8001/xiaozhi"
+B = "http://sandyun.top:8001/yuhe"
 
 
 def http(m, p, body=None, tok=None, raw=False):

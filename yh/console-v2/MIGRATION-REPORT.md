@@ -45,7 +45,7 @@
 | OTA | /admin/ota | /otaMag | ✅ 空态正确（total=0） |
 | 字典 | /admin/dicts | /admin/dict/type/page + /data/type/{type} | ✅ 2 类型 / 54 条固件型号（name/key 契约修正后全渲染） |
 | 替换词 | /admin/correctwords | /correct-word/file/list | ✅ 空态正确（total=0） |
-| 服务器 | /admin/servers | /admin/server/server-list | ✅ ws://sandyun.top:8001/xiaozhi/v1/ 节点显示（字符串数组契约适配） |
+| 服务器 | /admin/servers | /admin/server/server-list | ✅ ws://sandyun.top:8001/yuhe/v1/ 节点显示（字符串数组契约适配） |
 | MCP | /admin/mcp | /agent/mcp/{address,tools,test}/{id} | ✅ 地址/工具/测试三按钮就位 |
 | 链路模拟 | /admin/linksim | /models/asrRecognize + llmPreview + ttsPreview | ✅ ASR/LLM/TTS 三面板，TTS blob 出声 |
 | API 调试 | /admin/apis | apiCatalog.js 142 接口 | ✅ 目录树 + 原始请求面板（搜索/路径参数/JSON body/响应展示） |

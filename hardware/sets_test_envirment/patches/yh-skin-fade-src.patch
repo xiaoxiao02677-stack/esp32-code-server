@@ -1,0 +1,98 @@
+--- a/main/display/yh_skin/yh_skin_boot.h
++++ b/main/display/yh_skin/yh_skin_boot.h
+@@ -19,8 +19,21 @@
+ 
+ #include "yh_skin_types.h"
+ 
++// ---- 诊断探针：淡出来源标记（仅诊断构建；见 patches/README-lv-event-probe.md）----
++// ★ 必须放在**全局作用域**且用 extern "C"：LVGL 侧（C 文件）以
++//   `__attribute__((weak)) extern volatile int g_yh_fade_src;` 引用，
++//   若放进 namespace 会被 mangle 成 _ZN7yh_skin…，C 侧解析为 0 → 日志永远是 -1。
++enum YhFadeSrc {
++    kYhFadeNone = 0,
++    kYhFadeSplash = 1,  // DismissSplash() 启动的 300ms 淡出
++    kYhFadeCards = 2,   // HideCards() 启动的 200ms 淡出
++};
++extern "C" volatile int g_yh_fade_src;   // 定义在 yh_skin_boot.cc 的全局作用域
++
+ namespace yh_skin {
+ 
++const char* FadeSrcName(int src);
++
+ struct SplashInfo {
+     const char* brand = "小柚";
+     const char* subtitle = "";
+--- a/main/display/yh_skin/yh_skin_boot.cc
++++ b/main/display/yh_skin/yh_skin_boot.cc
+@@ -13,7 +13,19 @@
+ 
+ #define TAG "YhSkinBoot"
+ 
++// ---- 诊断探针：淡出来源（全局作用域 + C 链接，供 LVGL 探针读取）----
++extern "C" volatile int g_yh_fade_src = kYhFadeNone;
++
+ namespace yh_skin {
++
++const char* FadeSrcName(int src) {
++    switch (src) {
++        case kYhFadeSplash: return "splash_fade";
++        case kYhFadeCards: return "cards_fade";
++        default: return "-";
++    }
++}
++
+ namespace {
+ 
+ // 品牌配色（与 yh_skin_display.h 的 kColor* 保持一致）
+@@ -59,9 +71,14 @@
+         g_bar = nullptr;
+         g_dismissing = false;
+     }
++    // EVDBG: 直接打印"这一刻是谁在收尾、要动哪个对象"，与 LVGL 侧 NONEMPTY 日志按 target 对齐
++    ESP_LOGI(TAG, "fade-out completed: target=%p src=%s valid=%d",
++             static_cast<void*>(target), FadeSrcName(::g_yh_fade_src),
++             lv_obj_is_valid(target) ? 1 : 0);
+     if (lv_obj_is_valid(target)) {
+         lv_obj_add_flag(target, LV_OBJ_FLAG_HIDDEN);
+     }
++    ::g_yh_fade_src = kYhFadeNone;   // EVDBG: 收尾后清标记
+ }
+ 
+ void SetFontIfAvailable(lv_obj_t* obj, const lv_font_t* font) {
+@@ -227,7 +244,9 @@
+         return;
+     }
+     g_dismissing = true;
+-    ESP_LOGI(TAG, "DismissSplash: start fade-out");
++    ::g_yh_fade_src = kYhFadeSplash;   // EVDBG: 标记 300ms 淡出来源
++    ESP_LOGI(TAG, "DismissSplash: start fade-out (src=%s, root=%p)",
++             FadeSrcName(::g_yh_fade_src), static_cast<void*>(g_root));
+     lv_anim_t a;
+     lv_anim_init(&a);
+     lv_anim_set_var(&a, g_root);
+--- a/main/display/yh_skin/yh_skin_cards.cc
++++ b/main/display/yh_skin/yh_skin_cards.cc
+@@ -1,5 +1,7 @@
+ #include "yh_skin_cards.h"
+ 
++#include "yh_skin_boot.h"   // EVDBG: 共享淡出来源标记（全局 extern "C" 变量）
++
+ #include <cstdio>
+ #include <cstring>
+ 
+@@ -287,6 +289,7 @@
+         return;
+     }
+     g_hiding = true;
++    ::g_yh_fade_src = kYhFadeCards;   // EVDBG: 标记 200ms 淡出来源
+ 
+     // 先置空指针再删对象：淡出期间若有新的 Show* 调用会走 EnsureCard 重建，
+     // 不会拿到一个正在被删的句柄。
+@@ -317,6 +320,7 @@
+         if (obj != nullptr && lv_obj_is_valid(obj)) {
+             lv_obj_delete_async(obj);
+         }
++        ::g_yh_fade_src = kYhFadeNone;   // EVDBG: 收尾后清标记
+     });
+     lv_anim_start(&a);
+ }

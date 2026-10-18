@@ -14,7 +14,7 @@ import socket, base64, os, time, struct
 HOST, PORT = "127.0.0.1", 8000
 key = base64.b64encode(os.urandom(16)).decode()
 req = (
-    "GET /xiaozhi/v1/ HTTP/1.1\r\n"
+    "GET /yuhe/v1/ HTTP/1.1\r\n"
     f"Host: {HOST}:{PORT}\r\n"
     "Upgrade: websocket\r\n"
     "Connection: Upgrade\r\n"
@@ -95,7 +95,7 @@ except Exception:
 
 client = get_client()
 try:
-    cmd = ("cd /root/xiaozhi-server/main/xiaozhi-server && "
+    cmd = ("cd /root/xiaozhi-server/main/yuhe-server && "
            "cat > /tmp/_pong_probe.py <<'PYEOF'\n" + SCRIPT + "\nPYEOF\n"
            ".venv/bin/python /tmp/_pong_probe.py")
     _, out, err = client.exec_command(cmd, timeout=200)

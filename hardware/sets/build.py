@@ -9,10 +9,10 @@
 烧录已拆分到同目录的 flash.py（多线程探测 COM 口 + esptool 烧录），
 本脚本结束后只打印下一步该执行的命令，不做任何串口操作。
 
-固件源码 <FW> 默认使用本目录自带的副本 hardware/sets/xiaozhi-esp32/，
+固件源码 <FW> 默认使用本目录自带的副本 hardware/sets/yuhe-esp32/，
 这样 sets 自成一体、不与上游工作区互相污染。副本缺失时回退到
-hardware/small_screen_camera/xiaozhi-esp32/（可用 --fw-root 或
-环境变量 XIAOZHI_FW_ROOT 覆盖）。
+hardware/small_screen_camera/yuhe-esp32/（可用 --fw-root 或
+环境变量 YUHE_FW_ROOT 覆盖）。
 
 副本按「仅源码」策略维护：不含 build/ 与 managed_components/。
 首次编译时若缺 managed_components/，脚本会自动从上游目录借一份
@@ -41,23 +41,23 @@ BOARDS_ROOT = SETS_ROOT / "boards"
 OUT_ROOT = SETS_ROOT / "out"
 
 # sets 自带的固件源码副本（推荐，sets 自成一体）
-BUNDLED_FW = SETS_ROOT / "xiaozhi-esp32"
+BUNDLED_FW = SETS_ROOT / "yuhe-esp32"
 
 # 上游固件工作区（借用 managed_components / 副本缺失时回退）
-UPSTREAM_FW = SETS_ROOT.parent / "small_screen_camera" / "xiaozhi-esp32"
+UPSTREAM_FW = SETS_ROOT.parent / "small_screen_camera" / "yuhe-esp32"
 
 # 固件源码根 <FW> 的候选位置（按顺序探测）
 FW_CANDIDATES = [
     BUNDLED_FW,
     UPSTREAM_FW,
-    SETS_ROOT.parent.parent / "hardware" / "small_screen_camera" / "xiaozhi-esp32",
-    SETS_ROOT.parent / "xiaozhi-esp32",
+    SETS_ROOT.parent.parent / "hardware" / "small_screen_camera" / "yuhe-esp32",
+    SETS_ROOT.parent / "yuhe-esp32",
 ]
 
 # 缺少 managed_components/ 时，可从这些目录借用（本地拷贝，免联网重下）
 COMPONENT_SOURCE_CANDIDATES = [
     UPSTREAM_FW,
-    SETS_ROOT.parent.parent / "hardware" / "small_screen_camera" / "xiaozhi-esp32",
+    SETS_ROOT.parent.parent / "hardware" / "small_screen_camera" / "yuhe-esp32",
 ]
 
 # Kconfig / CMakeLists 自动维护块标记
@@ -112,7 +112,7 @@ SERVER_ENVS: dict[str, dict[str, Any]] = {
         "label": "生产环境 (sandyun.top:8002 / YH 12399)",
         "host": "sandyun.top",
         "sdkconfig": [
-            'CONFIG_OTA_URL="http://sandyun.top:8002/xiaozhi/ota/"',
+            'CONFIG_OTA_URL="http://sandyun.top:8002/yuhe/ota/"',
             'CONFIG_YH_SERVER_HOST="sandyun.top"',
             "CONFIG_YH_SERVER_PORT=12399",
         ],
@@ -121,7 +121,7 @@ SERVER_ENVS: dict[str, dict[str, Any]] = {
         "label": "测试环境 (sandyun.top:8144 / YH 8199)",
         "host": "sandyun.top",
         "sdkconfig": [
-            'CONFIG_OTA_URL="http://sandyun.top:8144/xiaozhi/ota/"',
+            'CONFIG_OTA_URL="http://sandyun.top:8144/yuhe/ota/"',
             'CONFIG_YH_SERVER_HOST="sandyun.top"',
             "CONFIG_YH_SERVER_PORT=8199",
         ],
@@ -138,7 +138,7 @@ SYNC_EXCLUDE_NAMES = {"set.json", "readme.md"}
 # 编译产物（相对 <FW>）→ 归档文件名模板
 ARTIFACTS = [
     ("build/merged-binary.bin", "{name}-merged-binary.bin"),
-    ("build/xiaozhi.bin", "{name}-xiaozhi.bin"),
+    ("build/yuhe.bin", "{name}-yuhe.bin"),
     ("build/generated_assets.bin", "{name}-generated_assets.bin"),
     ("build/bootloader/bootloader.bin", "{name}-bootloader.bin"),
     ("build/partition_table/partition-table.bin", "{name}-partition-table.bin"),
@@ -827,7 +827,7 @@ def resolve_fw_root(explicit: Optional[str]) -> Optional[Path]:
     candidates: list[Path] = []
     if explicit:
         candidates.append(Path(explicit))
-    env_root = os.environ.get("XIAOZHI_FW_ROOT")
+    env_root = os.environ.get("YUHE_FW_ROOT")
     if env_root:
         candidates.append(Path(env_root))
     candidates.extend(FW_CANDIDATES)
@@ -1266,7 +1266,7 @@ def print_idf_help() -> None:
 
 def warn_stale_build_dir(fw_root: Path, board: dict[str, Any], server_env: str = "prod") -> None:
     """上次编译用的是别的版型/服务器环境时，提醒检查 build 目录。"""
-    fragment = fw_root / "build" / "xiaozhi-build.sdkconfig.defaults"
+    fragment = fw_root / "build" / "yuhe-build.sdkconfig.defaults"
     want = f"CONFIG_{board['kconfig_symbol']}"
     if not fragment.is_file():
         return
@@ -1293,7 +1293,7 @@ def warn_stale_build_dir(fw_root: Path, board: dict[str, Any], server_env: str =
     )
     if prev_ota and want_ota and prev_ota.group(1) != want_ota.strip('"'):
         prev_env = "未知环境" if prev_ota.group(1) not in (
-            "http://sandyun.top:8002/xiaozhi/ota/", "http://sandyun.top:8144/xiaozhi/ota/"
+            "http://sandyun.top:8002/yuhe/ota/", "http://sandyun.top:8144/yuhe/ota/"
         ) else ("生产" if ":8002" in prev_ota.group(1) else "测试")
         say()
         notice_warn(f"build/ 里的旧产物连{prev_env}（{prev_ota.group(1)}），本次编译目标为 {server_env}")
@@ -1530,7 +1530,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     fw_root = resolve_fw_root(args.fw_root)
     if fw_root is None:
         notice_bad("自动探测不到固件源码根目录（<FW>）")
-        say("请用 --fw-root 指定，或设置环境变量 XIAOZHI_FW_ROOT。")
+        say("请用 --fw-root 指定，或设置环境变量 YUHE_FW_ROOT。")
         say("已尝试的位置：")
         for candidate in FW_CANDIDATES:
             say(f"    {candidate}")

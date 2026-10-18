@@ -1,4 +1,4 @@
-package xiaozhi.modules.order.controller;
+package yuhe.modules.order.controller;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -25,20 +25,20 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import xiaozhi.common.constant.Constant;
-import xiaozhi.common.page.PageData;
-import xiaozhi.common.utils.Result;
-import xiaozhi.common.validator.ValidatorUtils;
-import xiaozhi.modules.order.dto.OrderTableDTO;
-import xiaozhi.modules.order.service.OrderTableService;
-import xiaozhi.modules.order.vo.OrderTableVO;
+import yuhe.common.constant.Constant;
+import yuhe.common.page.PageData;
+import yuhe.common.utils.Result;
+import yuhe.common.validator.ValidatorUtils;
+import yuhe.modules.order.dto.OrderTableDTO;
+import yuhe.modules.order.service.OrderTableService;
+import yuhe.modules.order.vo.OrderTableVO;
 
 /**
  * 订单管理
  */
 @AllArgsConstructor
 @RestController
-@RequestMapping("/xiaozhi/order")
+@RequestMapping("/yuhe/order")
 @Tag(name = "订单管理")
 public class OrderTableController {
 
@@ -46,7 +46,7 @@ public class OrderTableController {
 
     @GetMapping("/page")
     @Operation(summary = "分页查询订单")
-    @RequiresPermissions("xiaozhi:order:list")
+    @RequiresPermissions("yuhe:order:list")
     @Parameters({
             @Parameter(name = "keyword", description = "搜索关键字（用户姓名/联系方式/商品）"),
             @Parameter(name = "shippingStatus", description = "发货状态：0-待发货 1-已发货 2-已签收 3-已取消"),
@@ -62,7 +62,7 @@ public class OrderTableController {
 
     @GetMapping("/{id}")
     @Operation(summary = "获取订单详情")
-    @RequiresPermissions("xiaozhi:order:list")
+    @RequiresPermissions("yuhe:order:list")
     public Result<OrderTableVO> get(@PathVariable("id") Long id) {
         OrderTableVO vo = orderTableService.get(id);
         return new Result<OrderTableVO>().ok(vo);
@@ -70,7 +70,7 @@ public class OrderTableController {
 
     @PostMapping
     @Operation(summary = "新增订单")
-    @RequiresPermissions("xiaozhi:order:add")
+    @RequiresPermissions("yuhe:order:add")
     public Result<Void> save(@RequestBody OrderTableDTO dto) {
         ValidatorUtils.validateEntity(dto);
         orderTableService.save(dto);
@@ -79,7 +79,7 @@ public class OrderTableController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新订单")
-    @RequiresPermissions("xiaozhi:order:update")
+    @RequiresPermissions("yuhe:order:update")
     public Result<Void> update(@PathVariable("id") Long id, @RequestBody OrderTableDTO dto) {
         dto.setId(id);
         ValidatorUtils.validateEntity(dto);
@@ -89,7 +89,7 @@ public class OrderTableController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除订单（软删）")
-    @RequiresPermissions("xiaozhi:order:delete")
+    @RequiresPermissions("yuhe:order:delete")
     public Result<Void> delete(@PathVariable("id") Long id) {
         orderTableService.delete(id);
         return new Result<>();
@@ -97,7 +97,7 @@ public class OrderTableController {
 
     @PostMapping("/export")
     @Operation(summary = "导出订单CSV")
-    @RequiresPermissions("xiaozhi:order:list")
+    @RequiresPermissions("yuhe:order:list")
     @Parameters({
             @Parameter(name = "keyword", description = "搜索关键字（用户姓名/联系方式/商品）"),
             @Parameter(name = "shippingStatus", description = "发货状态：0-待发货 1-已发货 2-已签收 3-已取消"),
@@ -146,7 +146,7 @@ public class OrderTableController {
 
     @GetMapping("/stats")
     @Operation(summary = "订单统计数据")
-    @RequiresPermissions("xiaozhi:order:list")
+    @RequiresPermissions("yuhe:order:list")
     @Parameters({
             @Parameter(name = "startDate", description = "开始时间（yyyy-MM-dd）"),
             @Parameter(name = "endDate", description = "结束时间（yyyy-MM-dd）")

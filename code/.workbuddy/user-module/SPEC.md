@@ -6,9 +6,9 @@
 
 ## 0. 技术底线（不可违反）
 
-- 后端：Spring Boot 3 + Shiro + MyBatis-Plus（ASSIGN_ID 雪花）+ Liquibase，源码 `G:/demo/21_xiaozhi/code-server-mirror/manager-api`，包根 `xiaozhi.modules.sys`
+- 后端：Spring Boot 3 + Shiro + MyBatis-Plus（ASSIGN_ID 雪花）+ Liquibase，源码 `G:/demo/21_xiaozhi/code-server-mirror/manager-api`，包根 `yuhe.modules.sys`
 - 前端：Vue3 + vite + hash 路由，源码 `G:/demo/21_xiaozhi/console-v2`
-- 服务器：`ssh -p 22223 root@sandyun.top`，后端 8002（context-path /xiaozhi），MySQL root/123456 xiaozhi_esp32_server
+- 服务器：`ssh -p 22223 root@sandyun.top`，后端 8002（context-path /yuhe），MySQL root/123456 xiaozhi_esp32_server
 - 所有响应 `Result<T>`：`{code:0成功, msg, data}`，HTTP 恒 200；401/403 也走 body code
 - 新 changeSet id：`202610140100`（建表+种子）与 `202610140200`（sys_user ALTER）
 - 严禁修改既有 changeSet；严禁动服务器数据库（Liquibase 启动时自动执行）
@@ -107,7 +107,7 @@ ALTER TABLE `sys_user`
 
 ## 4. API 契约（后端实现与前端 api.js 封装必须逐字对齐）
 
-Controller 相对路径（context /xiaozhi 已由 nginx 剥离）。分页参数 page/limit；列表返回 `data:{list,total}`。
+Controller 相对路径（context /yuhe 已由 nginx 剥离）。分页参数 page/limit；列表返回 `data:{list,total}`。
 
 ### 4.1 角色（rbac agent，新文件 SysRoleController）
 | 方法 | 路径 | 权限 | 说明 |
@@ -171,7 +171,7 @@ configJson 字段级权限格式（前后端共同遵守）：
 | PUT | /admin/custom-models/quota | {id,quotaLimit(int|null)} |
 | GET | /admin/custom-voices/page、POST /admin/custom-voices/audit | 同构 |
 
-**加密规范**：AES-256-GCM，密钥从配置 `security.user-module.api-key-secret`（application.yml 默认值 `xzh-user-module-aes-key-2026-CHANGE-ME`，部署时外置 yml 覆盖）。存储格式 `base64(iv[12] + ciphertext+tag)`，工具类 `xiaozhi.common.utils.AesGcmUtils`（encrypt/decrypt/mask 三静态方法）。
+**加密规范**：AES-256-GCM，密钥从配置 `security.user-module.api-key-secret`（application.yml 默认值 `xzh-user-module-aes-key-2026-CHANGE-ME`，部署时外置 yml 覆盖）。存储格式 `base64(iv[12] + ciphertext+tag)`，工具类 `yuhe.common.utils.AesGcmUtils`（encrypt/decrypt/mask 三静态方法）。
 
 ### 4.5 审计（audit agent）
 | 方法 | 路径 | 权限 |
@@ -222,7 +222,7 @@ roleUpdate:(b)=>api.put('/admin/role/update',b), roleDelete:(ids)=>api.post('/ad
 userCreate:(b)=>api.post('/admin/users',b), userDetail:(id)=>api.get(`/admin/users/${id}`),
 userAssignRoles:(b)=>api.put('/admin/users/roles',b), userRestore:(id)=>api.put(`/admin/users/restore/${id}`),
 userImport:(list)=>api.post('/admin/users/import',list),
-userExportUrl:(p)=>`/xiaozhi/admin/users/export?${new URLSearchParams(p)}`,
+userExportUrl:(p)=>`/yuhe/admin/users/export?${new URLSearchParams(p)}`,
 userSessions:(p)=>api.get('/admin/users/sessions',p), userForceLogout:(id)=>api.post(`/admin/users/forceLogout/${id}`,{}),
 displayConfigGet:(p)=>api.get('/admin/display-config',p), displayConfigSave:(b)=>api.put('/admin/display-config',b),
 userDefaultGet:(p)=>api.get('/admin/user-default',p), userDefaultSave:(b)=>api.put('/admin/user-default',b),

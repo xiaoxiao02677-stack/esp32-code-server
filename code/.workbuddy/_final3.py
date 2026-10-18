@@ -6,7 +6,7 @@ def sh(cmd, t=120):
     _, o, e = c.exec_command(cmd, timeout=t)
     return o.read().decode("utf-8","replace").strip(), e.read().decode("utf-8","replace").strip()
 time.sleep(75)
-out = sh(r"grep -E 'conn - Headers' /root/xiaozhi-server/main/xiaozhi-server/data/app.log")[0]
+out = sh(r"grep -E 'conn - Headers' /root/xiaozhi-server/main/yuhe-server/data/app.log")[0]
 rows=[]
 for line in out.splitlines():
     m = re.match(r"(\d{6} \d{2}:\d{2}:\d{2}).*?-INFO-(\S+) conn - Headers: (.*)", line)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Advanced xiaozhi TTS verification: latency, sentence stats, stability.
+"""Advanced yuhe TTS verification: latency, sentence stats, stability.
 
 Usage: python verify_tts_adv.py "<text>" [timeout_sec] [label]
 Prints structured RESULT lines for automated collection.
@@ -12,7 +12,7 @@ import time
 import websockets
 
 DEVICE_ID = "14:c1:9f:d1:33:48"
-WS_URL = "ws://sandyun.top:8001/xiaozhi/v1/"
+WS_URL = "ws://sandyun.top:8001/yuhe/v1/"
 
 
 async def run_session(text: str, timeout_sec: float, label: str) -> dict:

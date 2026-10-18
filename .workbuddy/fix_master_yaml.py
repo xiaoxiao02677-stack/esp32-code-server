@@ -61,7 +61,7 @@ def main():
         rc, out, err = run(client, "systemctl show xiaozhi-manager-api -p NRestarts")
         print(f"restarts: {out}")
         rc, out, err = run(client,
-            "curl -s -o /dev/null -w 'HTTP=%{http_code}' http://127.0.0.1:8002/xiaozhi/")
+            "curl -s -o /dev/null -w 'HTTP=%{http_code}' http://127.0.0.1:8002/yuhe/")
         print(f"health: {out}")
         rc, out, err = run(client,
             "tail -30 /opt/xiaozhi/logs/error.log | grep -E 'Caused by|Exception|ERROR' | tail -5")

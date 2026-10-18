@@ -11,4 +11,4 @@ SET `param_value` = '{
     "frame_duration": 60
   }
 }'
-WHERE `id` = 309 AND `param_code` = 'xiaozhi';
+WHERE `id` = 309 AND `param_code` = 'yuhe';

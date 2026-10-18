@@ -318,7 +318,7 @@ void InitializeMCPController() { ... }   // 非 static，外部链接
 | `CONFIG_YH_PROTOCOL_ENABLED` | `y` | 启用屿禾私有协议 |
 | `CONFIG_YH_SERVER_HOST` | `"sandyun.top"` | 协议服务器 |
 | `CONFIG_YH_SERVER_PORT` | `12399` | 协议端口 |
-| `CONFIG_OTA_URL` | `"http://sandyun.top:8002/xiaozhi/ota/"` | OTA 地址 |
+| `CONFIG_OTA_URL` | `"http://sandyun.top:8002/yuhe/ota/"` | OTA 地址 |
 
 ### 8.2 语音打断防护组 ⚠ 不要随意删除
 

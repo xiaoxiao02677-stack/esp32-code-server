@@ -8,7 +8,7 @@
 2026-10-17 17:36 那版固件在 `Assets: Refreshing display theme...` 之后
 `Core 1 panic'ed (InstrFetchProhibited)`，`EXCVADDR = 0x0`、`PC = 0x0`，`rst:0xc` 无限重启。
 
-用 `ELF file SHA256: e0de67621` 校验过 `build/xiaozhi.elf` 一致后 addr2line：
+用 `ELF file SHA256: e0de67621` 校验过 `build/yuhe.elf` 一致后 addr2line：
 
 ```
 PC      : 0x00000000          ← 跳到地址 0 执行
@@ -43,7 +43,7 @@ A0      : 0x820d3d50          ← lv_font.c:163  lv_font_get_glyph_width
 ## 应用 / 回滚
 
 ```bash
-cd hardware/sets/xiaozhi-esp32
+cd hardware/sets/yuhe-esp32
 git apply --check --reverse ../patches/lv-font-null-glyph-guard.patch   # 已应用时应通过
 git apply ../patches/lv-font-null-glyph-guard.patch                    # 未应用时应用
 git apply -R ../patches/lv-font-null-glyph-guard.patch                 # 回滚

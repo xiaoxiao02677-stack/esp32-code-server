@@ -9,7 +9,7 @@ import asyncio
 import json
 import sys
 
-sys.path.insert(0, "/root/xiaozhi-server/main/xiaozhi-server")
+sys.path.insert(0, "/root/xiaozhi-server/main/yuhe-server")
 
 from core.providers.tts.doubao_v3 import TTSProvider  # noqa: E402
 

@@ -1,0 +1,23 @@
+{
+    "type": "my-s3-tft",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "my-s3-tft",
+            "sdkconfig_append": [
+                "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
+                "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\"",
+                "CONFIG_YH_PROTOCOL_ENABLED=y",
+                "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
+                "CONFIG_YH_SERVER_PORT=12399",
+                "CONFIG_OTA_URL=\"http://sandyun.top:8002/yuhe/ota/\"",
+                "CONFIG_USE_CUSTOM_WAKE_WORD=y",
+                "CONFIG_SR_MN_CN_MULTINET7_QUANT=y",
+                "CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS=n",
+                "CONFIG_CUSTOM_WAKE_WORD=\"ni hao xiao he\"",
+                "CONFIG_CUSTOM_WAKE_WORD_DISPLAY=\"你好小禾\"",
+                "CONFIG_CUSTOM_WAKE_WORD_THRESHOLD=40"
+            ]
+        }
+    ]
+}

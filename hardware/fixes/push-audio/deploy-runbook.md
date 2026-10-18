@@ -22,19 +22,19 @@
 
 ```bash
 # 1) 备份原版（带 UTC 时间戳）
-ssh -p 22222 root@sandyun.top 'cp /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py.bak-$(date -u +%Y%m%dT%H%M%SZ)'
+ssh -p 22222 root@sandyun.top 'cp /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py.bak-$(date -u +%Y%m%dT%H%M%SZ)'
 
 # 2) 上传补丁版本
-scp -P 22222 G:/demo/21_xiaozhi/code/fixes/push-audio/topic_generator.py.fixed root@sandyun.top:/root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py
+scp -P 22222 G:/demo/21_xiaozhi/code/fixes/push-audio/topic_generator.py.fixed root@sandyun.top:/root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py
 
 # 3) 语法校验 + md5 确认
-ssh -p 22222 root@sandyun.top '/root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python -m py_compile /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py && echo COMPILE_OK'
+ssh -p 22222 root@sandyun.top '/root/xiaozhi-server/main/yuhe-server/.venv/bin/python -m py_compile /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py && echo COMPILE_OK'
 
 # 4) 重启服务（WS 设备瞬断 10-30s，心跳设备自动重连）
-ssh -p 22222 root@sandyun.top 'systemctl restart xiaozhi-server && sleep 3 && systemctl is-active xiaozhi-server'
+ssh -p 22222 root@sandyun.top 'systemctl restart yuhe-server && sleep 3 && systemctl is-active yuhe-server'
 
 # 5) 健康检查：日志无 ERROR、设备开始重连
-ssh -p 22222 root@sandyun.top 'sleep 10; tail -30 /root/xiaozhi-server/main/xiaozhi-server/tmp/server.log | grep -aiE "error|exception" | head; echo "---"; grep -ac "hello" /root/xiaozhi-server/main/xiaozhi-server/tmp/server.log'
+ssh -p 22222 root@sandyun.top 'sleep 10; tail -30 /root/xiaozhi-server/main/yuhe-server/tmp/server.log | grep -aiE "error|exception" | head; echo "---"; grep -ac "hello" /root/xiaozhi-server/main/yuhe-server/tmp/server.log'
 ```
 
 ## 验证（部署后）
@@ -44,7 +44,7 @@ ssh -p 22222 root@sandyun.top 'sleep 10; tail -30 /root/xiaozhi-server/main/xiao
 #    topic_sources 任选（memory/weather/chat），设备选在线设备
 
 # B) 确认产物为 .ogg
-ssh -p 22222 root@sandyun.top 'ls -la --time-style=+%T /root/xiaozhi-server/main/xiaozhi-server/tmp/topic-*.ogg | tail -3'
+ssh -p 22222 root@sandyun.top 'ls -la --time-style=+%T /root/xiaozhi-server/main/yuhe-server/tmp/topic-*.ogg | tail -3'
 
 # C) 模拟器判定（固件语义）
 cd G:/demo/21_xiaozhi/code && python tests/push_chain_simulator.py check http://sandyun.top:8003/audio/<新文件名>.ogg
@@ -58,14 +58,14 @@ cd G:/demo/21_xiaozhi/code && python tests/push_chain_simulator.py check http://
 ## 回滚
 
 ```bash
-ssh -p 22222 root@sandyun.top 'BAK=$(ls -t /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py.bak-* | head -1) && cp "$BAK" /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py && /root/xiaozhi-server/main/xiaozhi-server/.venv/bin/python -m py_compile /root/xiaozhi-server/main/xiaozhi-server/core/services/topic_generator.py && systemctl restart xiaozhi-server && systemctl is-active xiaozhi-server'
+ssh -p 22222 root@sandyun.top 'BAK=$(ls -t /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py.bak-* | head -1) && cp "$BAK" /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py && /root/xiaozhi-server/main/yuhe-server/.venv/bin/python -m py_compile /root/xiaozhi-server/main/yuhe-server/core/services/topic_generator.py && systemctl restart yuhe-server && systemctl is-active yuhe-server'
 ```
 
 ## 观察期（24h）
 
 ```bash
 # 转码成功/降级频率
-ssh -p 22222 root@sandyun.top 'grep -a "推送音频" /root/xiaozhi-server/main/xiaozhi-server/tmp/server.log | tail -20'
+ssh -p 22222 root@sandyun.top 'grep -a "推送音频" /root/xiaozhi-server/main/yuhe-server/tmp/server.log | tail -20'
 ```
 
 ## 遗留风险（本次不处理，已记录）

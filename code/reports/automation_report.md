@@ -23,13 +23,13 @@
 
 ### 2.1 技术栈
 - 前端：Vue 3 + Vite，部署 `/admincc/`，含「体验端」+「管理员视图」双模式（hash 路由 #/admin/xxx）
-- 后端：Java Spring Boot（manager-api，context-path /xiaozhi）+ Python aiohttp（xiaozhi-server）
+- 后端：Java Spring Boot（manager-api，context-path /yuhe）+ Python aiohttp（yuhe-server）
 - 数据库：MySQL + Redis；加密 SM2(C1C3C2)；验证码 SpecCaptcha 5 位
 
 ### 2.2 登录方式（直调 API，不走 UI）
-- `GET /xiaozhi/user/pub-config` 获取 SM2 公钥
-- `GET /xiaozhi/user/captcha?uuid=xx` 获取验证码图，ddddocr 识别
-- `POST /xiaozhi/user/login`（SM2 加密 验证码+密码）→ 返回 {token, expire, clientHash}
+- `GET /yuhe/user/pub-config` 获取 SM2 公钥
+- `GET /yuhe/user/captcha?uuid=xx` 获取验证码图，ddddocr 识别
+- `POST /yuhe/user/login`（SM2 加密 验证码+密码）→ 返回 {token, expire, clientHash}
 - 注入 `localStorage['cc_token']` → 打开应用即登录
 
 ### 2.3 菜单（17 项管理员路由）

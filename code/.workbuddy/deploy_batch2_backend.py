@@ -13,14 +13,14 @@ JAR_LOCAL = r"G:\demo\21_xiaozhi\code-server-mirror\manager-api\target\xiaozhi-e
 JAR_REMOTE = "/opt/xiaozhi/xiaozhi-esp32-api.jar"
 
 PY_FILES = [
-    (r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server\core\heartbeat.py",
-     "/root/xiaozhi-server/main/xiaozhi-server/core/heartbeat.py"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server\core\connection.py",
-     "/root/xiaozhi-server/main/xiaozhi-server/core/connection.py"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server\core\utils\wakeup_word.py",
-     "/root/xiaozhi-server/main/xiaozhi-server/core/utils/wakeup_word.py"),
-    (r"G:\demo\21_xiaozhi\code-server-mirror\xiaozhi-server\app.py",
-     "/root/xiaozhi-server/main/xiaozhi-server/app.py"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server\core\heartbeat.py",
+     "/root/xiaozhi-server/main/yuhe-server/core/heartbeat.py"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server\core\connection.py",
+     "/root/xiaozhi-server/main/yuhe-server/core/connection.py"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server\core\utils\wakeup_word.py",
+     "/root/xiaozhi-server/main/yuhe-server/core/utils/wakeup_word.py"),
+    (r"G:\demo\21_xiaozhi\code-server-mirror\yuhe-server\app.py",
+     "/root/xiaozhi-server/main/yuhe-server/app.py"),
 ]
 STAMP = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 
@@ -55,7 +55,7 @@ def main():
 
         print("\n== 3. Python 语法检查（服务器 venv）==")
         rc, _ = sh(client,
-                   "cd /root/xiaozhi-server/main/xiaozhi-server && "
+                   "cd /root/xiaozhi-server/main/yuhe-server && "
                    ".venv/bin/python -m py_compile core/heartbeat.py core/connection.py "
                    "core/utils/wakeup_word.py app.py && echo PY_COMPILE_OK")
 
@@ -65,15 +65,15 @@ def main():
         sh(client, "systemctl is-active xiaozhi-manager-api")
 
         print("\n== 5. 重启 Python ==")
-        sh(client, "pkill -f 'xiaozhi-server/main/xiaozhi-server'; pkill -f 'venv/bin/python app.py'; sleep 3; true")
-        sh(client, "cd /root/xiaozhi-server/main/xiaozhi-server && "
-                   "setsid nohup .venv/bin/python app.py > /tmp/xiaozhi-server.log 2>&1 < /dev/null & echo PY_STARTED",
+        sh(client, "pkill -f 'yuhe-server/main/yuhe-server'; pkill -f 'venv/bin/python app.py'; sleep 3; true")
+        sh(client, "cd /root/xiaozhi-server/main/yuhe-server && "
+                   "setsid nohup .venv/bin/python app.py > /tmp/yuhe-server.log 2>&1 < /dev/null & echo PY_STARTED",
             timeout=20)
         time.sleep(12)
         sh(client, "ps -eo pid,etime,cmd | grep '[a]pp.py' | head -3")
 
         print("\n== 6. 验活 ==")
-        sh(client, "curl -s -o /dev/null -w 'manager-api 8002: %{http_code}\\n' http://127.0.0.1:8002/xiaozhi/user/pub-config")
+        sh(client, "curl -s -o /dev/null -w 'manager-api 8002: %{http_code}\\n' http://127.0.0.1:8002/yuhe/user/pub-config")
         sh(client, "ss -lnt | grep -E ':(8000|8003|12399)' || echo '端口未监听!'")
         sh(client, "journalctl -u xiaozhi-manager-api -n 8 --no-pager | tail -8")
 

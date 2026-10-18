@@ -24,18 +24,18 @@
 ```
 ┌─ Web 前端(Vue3) ─ Vite build ── scp ── nginx 8101/8001 ──┐
 │                                                           │
-├─ Python(xiaozhi-server) ── aiohttp WS:8000 / HTTP:8003 ──┤── WebSocket/心跳12399 ─ ESP32 固件
-├─ Java(manager-api) ── Spring Boot:8002 /context-path=/xiaozhi ─┤── MySQL / Redis
+├─ Python(yuhe-server) ── aiohttp WS:8000 / HTTP:8003 ──┤── WebSocket/心跳12399 ─ ESP32 固件
+├─ Java(manager-api) ── Spring Boot:8002 /context-path=/yuhe ─┤── MySQL / Redis
 └─ nginx 反向代理 ── 80/8101/8144 ──────────────────────────┘
 ```
 
 - **生产**：`ssh -p 22222 root@sandyun.top`（192.168.50.10）
   - Java jar：`/opt/xiaozhi/xiaozhi-esp32-api.jar`，systemd `xiaozhi-manager-api`
-  - Python：`/root/xiaozhi-server/main/xiaozhi-server/`，systemd `xiaozhi-server`
+  - Python：`/root/xiaozhi-server/main/yuhe-server/`，systemd `yuhe-server`
   - 前端：`/var/www/console-v2/{app,admin,firmware-flash}/`
 - **测试**：`ssh -p 22223 root@sandyun.top`（192.168.50.20）
-  - Java 源码/运行：`/root/yh/app/manager-api/`、`/root/yh/deploy/opt-xiaozhi/xiaozhi-esp32-api.jar`
-  - Python：`/root/yh/app/xiaozhi-server/`
+  - Java 源码/运行：`/root/yh/app/manager-api/`、`/root/yh/deploy/opt-yuhe/xiaozhi-esp32-api.jar`
+  - Python：`/root/yh/app/yuhe-server/`
 
 ---
 
@@ -46,7 +46,7 @@
 **启动与部署**
 - 打包产物：`xiaozhi-esp32-api.jar`（spring-boot-maven-plugin 可执行 jar）
 - 运行：`java -jar` + systemd（`xiaozhi-manager-api`），`--spring.profiles.active=dev`
-- 配置拆分：`application.yml`（内置，服务端口 8002、context-path=/xiaozhi）+ 外置 `/opt/xiaozhi/application-dev.yml`（Spring 按 key 合并覆盖）
+- 配置拆分：`application.yml`（内置，服务端口 8002、context-path=/yuhe）+ 外置 `/opt/xiaozhi/application-dev.yml`（Spring 按 key 合并覆盖）
 - DB 迁移：**Liquibase 启动时自动执行**（`liquibase-core 4.20.0`；changelog 里含 202610140100/202610140200 等）
 
 **热加载能力判定 → 无**
@@ -57,13 +57,13 @@
 - 重启代价：3-10s（JVM 启动 + Liquibase + 连接池），期间 `:8002` 请求 5xx
 - 设备端：ESP32 只在 WS/心跳建立时依赖 Java（OTA 版本检查、模型/TTS 配置下发），重启期间设备不会崩溃，恢复后自动重连
 
-### 3.2 Python xiaozhi-server（纯 aiohttp + asyncio，170 个 .py）
+### 3.2 Python yuhe-server（纯 aiohttp + asyncio，170 个 .py）
 
 **启动与部署**
 - 入口：`app.py` → `asyncio.run(main())`，纯手写 asyncio 全异步（**非 uvicorn/FastAPI**）
 - 端口：WebSocket 8000 / HTTP 8003 / 心跳 TCP-UDP 12399
 - 配置：`config.yaml`（1190 行）+ `config_from_api.yaml` + `read_config_from_api` 开关（生产开启，配置从 Java API 下发）
-- 进程管理：systemd `xiaozhi-server`
+- 进程管理：systemd `yuhe-server`
 
 **热加载能力判定 → 无**
 - 已 grep 全仓：**无 `uvicorn --reload`、无 watchdog、无 importlib.reload 热更钩子**
@@ -114,7 +114,7 @@
 |---|---|---|
 | 1 | `/opt/xiaozhi/` | 发布新版本时先把旧 jar 拷为 `xiaozhi-esp32-api.jar.bak`（保持既有备份惯例） |
 | 2 | systemd `xiaozhi-manager-api.service` | 增加 `Restart=on-failure` + `RestartSec=3`（若未配） |
-| 3 | 灰度脚本（新增 `/root/scripts/java-switch.sh`） | `cp new.jar xiaozhi-esp32-api.jar && systemctl restart xiaozhi-manager-api && sleep 8 && curl -f http://127.0.0.1:8002/xiaozhi/... && echo OK \|\| (cp .bak 回滚 + restart)` |
+| 3 | 灰度脚本（新增 `/root/scripts/java-switch.sh`） | `cp new.jar xiaozhi-esp32-api.jar && systemctl restart xiaozhi-manager-api && sleep 8 && curl -f http://127.0.0.1:8002/yuhe/... && echo OK \|\| (cp .bak 回滚 + restart)` |
 
 **效果**：一键发布 + 自动健康检查 + 失败秒回滚；单次切换业务中断 3-10s。
 
@@ -128,8 +128,8 @@
 
 | # | 文件 | 改动 |
 |---|---|---|
-| 1 | 生产 systemd `xiaozhi-server.service` | 确认已有 `Restart=always`（若无则加，10-14 平滑重启已证明安全） |
-| 2 | 新增 `/root/scripts/py-restart.sh` | `cd /root/xiaozhi-server/main/xiaozhi-server && systemctl restart xiaozhi-server` |
+| 1 | 生产 systemd `yuhe-server.service` | 确认已有 `Restart=always`（若无则加，10-14 平滑重启已证明安全） |
+| 2 | 新增 `/root/scripts/py-restart.sh` | `cd /root/xiaozhi-server/main/yuhe-server && systemctl restart yuhe-server` |
 | 3 | （可选）watchdog 监听 | `watchdog` 库或 systemd `PathChanged`/inotify 监控 `core/**/*.py` mtime → 变更即 `systemctl restart` |
 
 **效果**：改 Python 代码 → 文件保存 → 3s 内自动重启 → 30s 服务恢复 → 设备自动重连。
@@ -142,10 +142,10 @@
 
 | # | 文件 | 改动 |
 |---|---|---|
-| 1 | `yh/xiaozhi-server/core/handle/receiveAudioHandle.py`（消息处理入口） | 在每个 topic 分支处理前，加"变更检测 → `importlib.reload(HandlerModule)`"钩子 |
-| 2 | `yh/xiaozhi-server/plugins_func/loadplugins.py` | `auto_import_modules()` 扩展为 `reload_all()`：对已注册模块 `importlib.reload`；插件新增免重启 |
-| 3 | `yh/xiaozhi-server/core/utils/llm.py` / `asr.py` / `memory.py` / `vad.py`（provider 抽象工厂） | 每次 get_provider() 前对 provider 模块做 mtime 检测 + reload（或在 manager 里注册 reload 回调） |
-| 4 | 新增 `yh/xiaozhi-server/core/hot_reload.py` | 文件变更轮询（mtime/sha256 对比，异步定时任务），对**白名单目录**（core/handle、plugins_func/functions、providers）diff → reload 受影响模块 + 重新绑定到连接 |
+| 1 | `yh/yuhe-server/core/handle/receiveAudioHandle.py`（消息处理入口） | 在每个 topic 分支处理前，加"变更检测 → `importlib.reload(HandlerModule)`"钩子 |
+| 2 | `yh/yuhe-server/plugins_func/loadplugins.py` | `auto_import_modules()` 扩展为 `reload_all()`：对已注册模块 `importlib.reload`；插件新增免重启 |
+| 3 | `yh/yuhe-server/core/utils/llm.py` / `asr.py` / `memory.py` / `vad.py`（provider 抽象工厂） | 每次 get_provider() 前对 provider 模块做 mtime 检测 + reload（或在 manager 里注册 reload 回调） |
+| 4 | 新增 `yh/yuhe-server/core/hot_reload.py` | 文件变更轮询（mtime/sha256 对比，异步定时任务），对**白名单目录**（core/handle、plugins_func/functions、providers）diff → reload 受影响模块 + 重新绑定到连接 |
 | 5 | app.py | `main()` 中启动 hot_reload 后台任务（`asyncio.create_task(hot_reload.run())`），config 热更可顺带支持 |
 
 **切口的正确性（关键）**
@@ -209,15 +209,15 @@ bash /root/scripts/java-switch.sh /路径/新jar   # 自动替换→重启→健
 
 ### 7.3 生产重启 Python（方案 C after）
 ```bash
-ssh -p 22222 root@sandyun.top "systemctl restart xiaozhi-server"
+ssh -p 22222 root@sandyun.top "systemctl restart yuhe-server"
 # 或自动版：保存文件后 watchdog 自动触发；设备 30s 内自动重连心跳+WS
 ```
 
 ### 7.4 模块热加载（方案 D after，测试环境）
 ```bash
-# 改 /root/yh/app/xiaozhi-server/core/handle/*.py 等白名单文件 → 保存
+# 改 /root/yh/app/yuhe-server/core/handle/*.py 等白名单文件 → 保存
 # 无需任何命令，hot_reload 协程检测变更 → reload → 下次对话即用新逻辑
-tail -f /root/yh/app/xiaozhi-server/tmp/server.log | grep hot_reload
+tail -f /root/yh/app/yuhe-server/tmp/server.log | grep hot_reload
 ```
 
 ---
@@ -237,8 +237,8 @@ tail -f /root/yh/app/xiaozhi-server/tmp/server.log | grep hot_reload
 | 项 | 文件 | 关键结论 |
 |---|---|---|
 | Java 无 devtools | `yh/manager-api/pom.xml` | 依赖列表无 spring-boot-devtools；spring-boot-maven-plugin 构建可执行 jar |
-| Java 入口/配置 | `AdminApplication.java`、`application.yml` | Spring Boot 3.4.3、JDK21、:8002、/xiaozhi、Liquibase |
-| Python 入口 | `yh/xiaozhi-server/app.py` | `asyncio.run(main())`，无 uvicorn/reload；多服务布署（WS/HTTP/心跳/推送/ClawBot） |
+| Java 入口/配置 | `AdminApplication.java`、`application.yml` | Spring Boot 3.4.3、JDK21、:8002、/yuhe、Liquibase |
+| Python 入口 | `yh/yuhe-server/app.py` | `asyncio.run(main())`，无 uvicorn/reload；多服务布署（WS/HTTP/心跳/推送/ClawBot） |
 | Python 无热更钩子 | grep reload/watchdog/importlib | 仅 `loadplugins.py` 启动时动态导入；providers (`llm.py` 等) 用 importlib 工厂 |
 | 前端构建 | `yh/console-v2/vite.config.js`、`package.json` | Vite5 dev:5180 HMR；build: dist/dist-admin 双产物；deploy.sh scp |
 | 分区/运维基准 | 项目记忆（2026-10-14/10-15） | 生产/测试端口、systemd 服务名、平滑重启实证、双环境同步经验 |

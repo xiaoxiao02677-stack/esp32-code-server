@@ -5,7 +5,7 @@ c.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=20, look_fo
 def sh(cmd, t=60):
     _, o, e = c.exec_command(cmd, timeout=t)
     return o.read().decode("utf-8","replace").strip()
-print(sh("ls /root/xiaozhi-server/main/xiaozhi-server | head -30"))
+print(sh("ls /root/xiaozhi-server/main/yuhe-server | head -30"))
 print("--- yml ---")
 print(sh("find /root/xiaozhi-server -maxdepth 5 -name 'application*.yml' 2>/dev/null | head"))
 print("--- dscfg ---")

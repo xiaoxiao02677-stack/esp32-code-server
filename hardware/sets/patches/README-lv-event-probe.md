@@ -99,7 +99,7 @@ xtensa-esp32s3-elf-objdump -d build/<proj>.elf --start-address=<PC-0x20> --stop-
 
 ## 4. 应用 / 回退
 
-工作目录：`hardware/sets/xiaozhi-esp32`
+工作目录：`hardware/sets/yuhe-esp32`
 
 ```bash
 # 干跑 → 应用（顺序无关）
@@ -121,7 +121,7 @@ PowerShell 下若 `patch` 不可用，用 Git Bash 执行。
 **`src=` 字段自检（重要）**：`g_yh_fade_src` 必须落在**全局作用域 + `extern "C"`**，否则 C 侧 weak 引用解析为 0、日志永远是 `src=-1`（看着有来源、其实没有）。应用第二个补丁后验证符号名未 mangle：
 
 ```bash
-nm -C build/xiaozhi.elf | grep g_yh_fade_src
+nm -C build/yuhe.elf | grep g_yh_fade_src
 # 期望：恰好一行、形如 00000000 B g_yh_fade_src
 # 若看到 _ZN7yh_skin... 说明声明/定义被放进了 namespace，必须改回全局作用域
 ```

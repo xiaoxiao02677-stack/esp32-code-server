@@ -71,7 +71,7 @@
 G:/demo/21_xiaozhi/
 ├── cc-console/          # Vue 3 前端
 └── 网页后台/
-    └── xiaozhi-esp32-server/main/manager-api/  # Spring Boot 后端
+    └── yuhe-esp32-server/main/manager-api/  # Spring Boot 后端
 ```
 
 ### API 清单 (约 139 个接口)

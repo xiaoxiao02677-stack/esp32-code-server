@@ -8,7 +8,7 @@ $env:ESP_IDF_VERSION='6.1.0'
 $env:TEMP='D:\INSTALL\esp\tmp'
 $env:TMP='D:\INSTALL\esp\tmp'
 $env:PATH='D:\INSTALL\esp\tools\python\v6.1\venv\Scripts;D:\INSTALL\esp\tools\cmake\4.0.3\bin;D:\INSTALL\esp\tools\ninja\1.12.1;D:\INSTALL\Git\cmd;C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem'
-Set-Location 'G:\demo\21_xiaozhi\code\small_secreen\xiaozhi-esp32'
+Set-Location 'G:\demo\21_xiaozhi\code\small_secreen\yuhe-esp32'
 # 重试循环：进程被杀（防病毒）则自动重启构建，ninja 增量续跑
 for ($i = 1; $i -le 10; $i++) {
     Write-Output "===== 构建尝试 $i ====="

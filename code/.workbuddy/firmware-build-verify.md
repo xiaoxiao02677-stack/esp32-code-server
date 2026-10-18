@@ -2,15 +2,15 @@
 
 - 任务：#14 工程师：固件构建验证
 - 执行：e-fw-build，2026-10-06
-- 固件仓：`G:/demo/21_xiaozhi/code/xiaozhi-esp32`（ESP-IDF v6.1，target=esp32s3，board=my-s3-tft）
+- 固件仓：`G:/demo/21_xiaozhi/code/yuhe-esp32`（ESP-IDF v6.1，target=esp32s3，board=my-s3-tft）
 - 构建日志：`.workbuddy/fw_build.log`
 
 ## 1. 结论：本机可编 ✅
 
 - 本机（G 盘机）装完整 ESP-IDF v6.1 工具链：`D:\INSTALL\esp`（esp-clang esp-21.1.3、xtensa-esp-elf esp-15.2.0、cmake 4.0.3、ninja 1.12.1、idf venv）。
 - `idf.py build` 全量完成：**EXIT=0，约 19 分钟（2198 步）**，产物齐全：
-  - `build/xiaozhi.bin`（2,702,656 B）、`build/bootloader/bootloader.bin`、`build/flash_args`
-  - 烧录布局：`0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data_initial / 0x20000 xiaozhi.bin / 0x800000 generated_assets.bin`（16MB flash）
+  - `build/yuhe.bin`（2,702,656 B）、`build/bootloader/bootloader.bin`、`build/flash_args`
+  - 烧录布局：`0x0 bootloader / 0x8000 partition-table / 0xd000 ota_data_initial / 0x20000 yuhe.bin / 0x800000 generated_assets.bin`（16MB flash）
 - 4 个改动文件全部编译通过（ninja 记录）：
   | 文件 | 构建步 | 结果 |
   |---|---|---|
@@ -30,7 +30,7 @@
 
 ### 2.1 烧录
 ```bat
-cd /d G:\demo\21_xiaozhi\code\xiaozhi-esp32
+cd /d G:\demo\21_xiaozhi\code\yuhe-esp32
 yh_flash.bat            :: 自动探测 CP210x/CH340/USB-JTAG 串口；或 yh_flash.bat COM5
 ```
 等效命令（yf_flash.bat 内部实现，esp32s3 + 16MB flash）：
@@ -78,7 +78,7 @@ D:\INSTALL\esp\tools\python\v6.1\venv\Scripts\python.exe D:\INSTALL\esp\v6.1\esp
 # 且需 PATH 前置 D:/INSTALL/esp/tools/cmake/4.0.3/bin;D:/INSTALL/esp/tools/ninja/1.12.1
 # 本次成功构建即按此姿势执行（约 19 分钟全量）。
 ```
-CI/部署机增量构建：同一命令即可（CMakeCache 已对齐当前路径 `G:/demo/21_xiaozhi/code/xiaozhi-esp32`）。
+CI/部署机增量构建：同一命令即可（CMakeCache 已对齐当前路径 `G:/demo/21_xiaozhi/code/yuhe-esp32`）。
 
 ## 3. 已知风险
 1. **`dv == std::floor(dv)` 整性判断**：对大数值 double 与 NaN 安全（NaN 比较为 false，会被拒），但依赖 JSON 数值先被 cJSON 存为 double；服务端若下发字符串 `"volume":"50"` 会走 `cJSON_IsNumber` false 分支被忽略并打 `Ignore invalid ... volume value` 警告——需要服务端严格下发 number 类型（建议 e-pi4-config-ui/e-pi5-mqtt 校验下发序列化）。

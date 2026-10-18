@@ -381,7 +381,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     else:
         flash.notice_warn("读 flash-id 失败，跳过容量检查")
 
-    local_app = (build_dir / "xiaozhi.bin").read_bytes()
+    local_app = (build_dir / "yuhe.bin").read_bytes()
     app_size = len(local_app) if args.full_app else APP_HEAD_SIZE
     boot_dump = read_region(session_call, BOOT_BASE, BOOT_SIZE, "bootloader/分区表区")
     app_dump = read_region(session_call, APP_BASE, app_size, "app 区")
@@ -457,11 +457,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             "stale": flash.yellow("[另一份构建]"),
         }.get(state, flash.yellow("[未知]"))
         scope = "全量" if args.full_app else f"头部 {APP_HEAD_SIZE // 1024}KB"
-        flash.say(f"  {'xiaozhi.bin':<22} 0x{APP_BASE:<7x} {tag}  {extra or detail}（{scope}）")
+        flash.say(f"  {'yuhe.bin':<22} 0x{APP_BASE:<7x} {tag}  {extra or detail}（{scope}）")
         if state == "stale":
-            stale.append(f"xiaozhi.bin（0x{APP_BASE:x}）{extra}")
+            stale.append(f"yuhe.bin（0x{APP_BASE:x}）{extra}")
         elif state != "ok":
-            verdict.append(f"xiaozhi.bin（0x{APP_BASE:x}）{detail}")
+            verdict.append(f"yuhe.bin（0x{APP_BASE:x}）{detail}")
     else:
         verdict.append("app 区域回读失败，无法比对")
 
