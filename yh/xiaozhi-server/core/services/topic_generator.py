@@ -141,9 +141,18 @@ class TopicGenerator:
                 )
                 fallback_used = True
 
+        # 兜底：所有选中源都失败时降级到 chat 源（本地随机开场白，永不失败），
+        # 而不是返回空文本——push_scheduler 对空 audio_url 直接判 failed，
+        # 单选"记忆"而智能体未配记忆模块的推送会 100% 失败（用户实测路径）。
+        # chat 兜底保证任务至少能推一条开场白，generation_meta.source 如实
+        # 标记 chat，webUI 详情可见实际使用的源。
         if text is None:
-            logger.error("[%s] 所有话题源均失败，跳过本次生成", TAG)
-            return self._empty_result(device_id)
+            logger.warning(
+                "[%s] 所有选中话题源均失败，降级到 chat 兜底源", TAG
+            )
+            text = await self._fetch_topic_text("chat", location)
+            used_source = "chat"
+            fallback_used = True
 
         # TTS 合成
         try:
@@ -242,6 +251,25 @@ class TopicGenerator:
             return ":".join(p[i:i + 2] for i in range(0, 12, 2))
         return None
 
+    def _mac_from_agent_devices(self, agent_id: str) -> Optional[str]:
+        """经 wake_word_service._agent_devices（agent -> 设备集合）反查 MAC。
+
+        设备 WS 断开后 _connections 清空但 _agent_devices 保留，
+        是设备空闲期 agent UUID -> MAC 的唯一稳定来源。取该 agent
+        任一设备 MAC 供 manager-api 反查配置（同 agent 共用配置）。
+        """
+        wws = self._wake_word_service
+        if wws is None:
+            return None
+        try:
+            devices = getattr(wws, "_agent_devices", {}).get(agent_id)
+            if devices:
+                # 集合无序，取排序首个保证可复现
+                return sorted(devices)[0]
+        except Exception as e:
+            logger.warning("[%s] _agent_devices 反查 MAC 失败: %s", TAG, e)
+        return None
+
     async def _get_agent_cfg_from_api(self, mac_or_agent: str) -> Optional[dict]:
         """经 manager-api 取设备差异化配置（带缓存）。
 
@@ -253,9 +281,17 @@ class TopicGenerator:
         cached = self._agent_cfg_cache.get(mac_or_agent)
         if cached is not None:
             return cached
-        # agent UUID -> MAC 反查
+        # agent UUID -> MAC 反查（三级）：
+        # 1) 历史反查缓存（首次成功调 manager-api 后填充）
+        # 2) 12 位无分隔符 hex（xiaozhi-<mac> 前缀格式）
+        # 3) wake_word_service._agent_devices（agent -> 设备集合）。
+        #    设备 WS 断开后 _connections 被清，但 _agent_devices 保留
+        #    （unregister_connection 只清 _connections），是设备空闲期
+        #    agent UUID -> MAC 的唯一稳定来源——推送执行时设备大多空闲。
         mac = mac_or_agent if ":" in mac_or_agent else (
-            self._agent_device_cache.get(mac_or_agent) or self._mac_from_plain(mac_or_agent)
+            self._agent_device_cache.get(mac_or_agent)
+            or self._mac_from_plain(mac_or_agent)
+            or self._mac_from_agent_devices(mac_or_agent)
         )
         if not mac:
             return None
@@ -267,6 +303,10 @@ class TopicGenerator:
                 aid = str(cfg["agent_id"])
                 self._agent_cfg_cache[aid] = cfg
                 self._agent_cfg_cache[mac] = cfg
+                # 原始查询键（可能是 32hex UUID 形态）也写缓存，避免
+                # 每次推送都重新走 _agent_devices 反查
+                if mac_or_agent != aid and mac_or_agent != mac:
+                    self._agent_cfg_cache[mac_or_agent] = cfg
                 self._agent_device_cache[aid] = mac
                 return cfg
         except Exception as e:

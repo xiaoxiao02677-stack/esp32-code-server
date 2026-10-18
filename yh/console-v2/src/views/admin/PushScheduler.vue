@@ -127,6 +127,9 @@
                 {{ src.label }}
               </label>
             </div>
+            <p class="hint-block">
+              「记忆」需要目标设备绑定的智能体配置了记忆模型，未配置时该源不可用（自动降级到其他源，全部不可用时用闲聊开场白兜底）。
+            </p>
           </div>
           <!-- 字幕 -->
           <div class="form-group">
@@ -428,6 +431,7 @@ onUnmounted(stopTimer)
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
 .req { color: #dc2626; }
 .hint-inline { font-weight: 400; font-size: 12px; color: #94a3b8; margin-left: 4px; }
+.hint-block { font-size: 12px; color: #94a3b8; margin: 6px 0 0; line-height: 1.5; }
 
 .dev-picker { display: flex; flex-wrap: wrap; gap: 8px; border: 1px dashed #e2e8f0; border-radius: 10px; padding: 10px; }
 .dev-check { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; background: #f8fafc; cursor: pointer; font-size: 13px; }
