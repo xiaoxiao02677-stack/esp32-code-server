@@ -829,6 +829,37 @@ def warn_board_mismatch(fw_root: Path, board: dict[str, Any]) -> None:
     say("        继续烧录会把上一个版型的固件写进设备；如确认无误请加 --yes 或直接回车确认。")
 
 
+def show_build_server_env(fw_root: Path) -> None:
+    """烧录前展示当前 build 产物连的是哪个服务器环境（生产/测试）。"""
+    fragment = fw_root / "build" / "xiaozhi-build.sdkconfig.defaults"
+    if not fragment.is_file():
+        return
+    try:
+        text = fragment.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    ota = re.search(r'^CONFIG_OTA_URL="([^"]*)"$', text, re.MULTILINE)
+    yh_port = re.search(r"^CONFIG_YH_SERVER_PORT=(\d+)$", text, re.MULTILINE)
+    if not ota and not yh_port:
+        return
+    matched = None
+    for env_key, env in sets_build.SERVER_ENVS.items():
+        env_ota = re.search(r'CONFIG_OTA_URL="([^"]*)"', "\n".join(env["sdkconfig"]))
+        env_port = re.search(r"CONFIG_YH_SERVER_PORT=(\d+)", "\n".join(env["sdkconfig"]))
+        if ota and env_ota and ota.group(1) == env_ota.group(1):
+            matched = env_key
+            break
+        if yh_port and env_port and yh_port.group(1) == env_port.group(1):
+            matched = env_key
+            break
+    say(f"  产物环境  : {sets_build.bold(matched or '未知')}（OTA {ota.group(1) if ota else '?'}"
+        + (f"，YH 端口 {yh_port.group(1)}" if yh_port else "") + "）")
+    if matched == "test":
+        say(sets_build.yellow("        这是连测试服务器的固件（--server test 编译产物），勿刷到生产设备。"))
+    elif matched is None and ota:
+        say(sets_build.yellow("        产物里的服务器地址不在已知环境表内，请人工确认。"))
+
+
 def _esptool_ok(python: str) -> bool:
     try:
         completed = subprocess.run(
@@ -2267,6 +2298,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         if board:
             say(f"  指定版型  : {board['id']} — {board['name']}")
         if not list_mode:
+            show_build_server_env(fw_root)
             if board:
                 warn_board_mismatch(fw_root, board)
             reason = check_build_ready(fw_root)

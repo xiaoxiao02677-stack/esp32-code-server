@@ -45,13 +45,30 @@ PATH 一并交给编译子进程。所以用系统里任意一个 python 启动�
 python hardware/sets/build.py
 ```
 
-跟着菜单走即可：输入编号或版型 id。
+跟着菜单走即可：输入编号或版型 id，然后选目标服务器环境（回车默认生产）。
 
 不想交互的话直接指定版型并跳过确认：
 
 ```bat
 python hardware/sets/build.py --board yh-cam --yes
 ```
+
+编译连**测试环境**的固件（OTA 走 8144、YH 心跳走 8199，产物归档到
+`out/<id>-test/`，不与生产固件混放）：
+
+```bat
+python hardware/sets/build.py --board yh-cam --server test --yes
+```
+
+| 环境 | 参数 | OTA 地址 | YH 心跳端口 |
+|---|---|---|---|
+| 生产（默认） | `--server prod` | `http://sandyun.top:8002/xiaozhi/ota/` | 12399 |
+| 测试 | `--server test` | `http://sandyun.top:8144/xiaozhi/ota/` | 8199 |
+
+> 测试环境 8101 是 TLS 端口、明文 HTTP 设备连不上，设备入口一律走 8144；
+> 测试 VM 的 YH 心跳口是 8199（`.config.yaml` 的 `heartbeat_port`），不是生产的 12399。
+> 烧录时 flash.py 会读 build 产物里的 `CONFIG_OTA_URL` 打印「产物环境」，测试
+> 固件会额外黄字提醒「勿刷到生产设备」。
 
 第一次拿到板子、只想验证「这套文件能不能被识别、能不能同步」时，用下面这条
 （**不编译**，不会碰 ESP-IDF）：
