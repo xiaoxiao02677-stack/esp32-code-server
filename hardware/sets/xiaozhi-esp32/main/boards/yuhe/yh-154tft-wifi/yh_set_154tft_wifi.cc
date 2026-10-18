@@ -12,6 +12,7 @@
 
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
+#include <esp_timer.h>
 
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
@@ -28,6 +29,7 @@ private:
     PowerManager* power_manager_;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
     esp_lcd_panel_handle_t panel_ = nullptr;
+    esp_timer_handle_t tick_timer_ = nullptr;
 
     void InitializePowerManager() {
         power_manager_ = new PowerManager(POWER_CHARGE_DETECT_GPIO);
@@ -84,11 +86,13 @@ private:
                 return;
             }
             app.ToggleChatState();
+            HandleKeyEvent(0);  // 皮肤层：预置「我在听...」+ laughing 表情
         });
 
         // 长按 BOOT：唤醒 + 强制进入配网模式（重置 Wi-Fi 配置）
         boot_button_.OnLongPress([this]() {
             power_save_timer_->WakeUp();
+            HandleKeyEvent(2);  // 长按皮肤反馈（待机静音提示 / 聆听取消）
             auto& app = Application::GetInstance();
             app.SetDeviceState(kDeviceStateWifiConfiguring);
             EnterWifiConfigMode();
@@ -154,9 +158,38 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, true));
 
-        display_ = new YhSetLcdDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
-            DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
-        display_->SetupHighTempWarningPopup();
+        // 共享「小柚」皮肤：240x240 圆屏、本板有电池（ADC8 + 充电检测）
+        display_ = new YhSetLcdDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                       DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                       DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                       YhSkinProfile::Round240(true));
+    }
+
+    // 皮肤层按键反馈：原状态机逻辑优先，这里只加可见反馈
+    void HandleKeyEvent(int ev) {
+        if (display_ != nullptr) {
+            display_->HandleKeyEvent(ev);
+        }
+    }
+
+    // 1 秒节拍：彩蛋超时恢复 + 早晚问候（皮肤层的自动行为）
+    void InitializeTickTimer() {
+        if (display_ == nullptr) {
+            return;
+        }
+        esp_timer_create_args_t args = {
+            .callback =
+                [](void* arg) {
+                    static_cast<YhSkinDisplay*>(arg)->Tick1s();
+                },
+            .arg = display_,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "yh_skin_tick",
+            .skip_unhandled_events = true,
+        };
+        if (esp_timer_create(&args, &tick_timer_) == ESP_OK) {
+            esp_timer_start_periodic(tick_timer_, 1000000);
+        }
     }
 
     void InitializeTools() {
@@ -172,6 +205,7 @@ public:
         InitializeSpi();
         InitializeButtons();
         InitializeSt7789Display();
+        InitializeTickTimer();
         InitializeTools();
         GetBacklight()->RestoreBrightness();
     }

@@ -25,10 +25,10 @@
         <div class="blob-3d">👤</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🔑" label="密码状态" :value="user.mustChangePwd === 1 ? '待修改' : '正常'" :note="user.mustChangePwd === 1 ? '管理员要求修改' : '定期更换更安全'" />
-        <StatCard icon="🧩" label="自定义模型" :value="models.length" note="本人创建" />
-        <StatCard icon="🎙" label="自定义音色" :value="voicesCount" note="本人创建" />
-        <StatCard icon="🛡" label="会话安全" value="Bearer" note="令牌自动过期" />
+        <StatCard icon="key" label="密码状态" :value="user.mustChangePwd === 1 ? '待修改' : '正常'" :note="user.mustChangePwd === 1 ? '管理员要求修改' : '定期更换更安全'" />
+        <StatCard icon="grid" label="自定义模型" :value="models.length" note="本人创建" />
+        <StatCard icon="mic" label="自定义音色" :value="voicesCount" note="本人创建" />
+        <StatCard icon="shield" label="会话安全" value="Bearer" note="令牌自动过期" />
       </div>
     </div>
 

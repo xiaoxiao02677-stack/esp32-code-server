@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>模型 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">契约对齐 /cc/：9 类型 / 供应器动态表单 / 新增编辑删除 / 启停测试</p>
+        <p class="sub">管理各类型模型的供应器配置与启停</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" @click="openCreate">＋ 新增{{ activeType }}模型</button>
@@ -12,19 +12,19 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🧩" label="模型总数" :value="totalCount" :note="`当前 ${activeType}`" />
-      <StatCard icon="✅" label="启用中" :value="enabledCount" :note="`${activeType} 类型`" />
-      <StatCard icon="🔌" label="连通测试" :value="lastTest || '—'" />
+      <StatCard icon="grid" label="模型总数" :value="totalCount" :note="`当前 ${activeType}`" />
+      <StatCard icon="check-circle" label="启用中" :value="enabledCount" :note="`${activeType} 类型`" />
+      <StatCard icon="plug" label="连通测试" :value="lastTest || '—'" />
     </div>
 
     <!-- 契约对齐 cc-console MODEL_TYPES：9 类型（预加载全量计数） -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <div v-for="t in MODEL_TYPES" :key="t.value" class="chip" :class="{ active: activeType === t.value }" @click="pickType(t.value)">
+      <button type="button" v-for="t in MODEL_TYPES" :key="t.value" class="chip" :class="{ active: activeType === t.value }" @click="pickType(t.value)">
         {{ t.label }} ({{ modelTypeCount(t.value) }})
-      </div>
+      </button>
     </div>
 
-    <DataTable title="模型列表" :total="models.length" :page="1" :pages="1">
+    <DataTable title="模型列表" :total="models.length" :page="1" :pages="1" :loading="loading">
       <template #actions>
         <button class="link-btn" @click="loadAll" :disabled="loading">{{ loading ? '加载中…' : '↻ 刷新' }}</button>
       </template>
@@ -58,7 +58,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="models.length === 0" class="empty-state"><div class="empty-icon">🧩</div><strong>此类型暂无模型</strong><p>点右上「＋ 新增{{ activeType }}模型」创建</p></div>
+      <div v-if="models.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="grid" /></div><strong>此类型暂无模型</strong><p>点右上「＋ 新增{{ activeType }}模型」创建</p></div>
     </DataTable>
 
     <!-- 模型编辑弹窗（契约对齐 cc-console openModelEdit/saveModelConfig） -->
@@ -109,6 +109,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
@@ -396,8 +397,10 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
-.chip { padding: 8px 14px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 12.5px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input, .form-row select { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; font-family: var(--font); background: #fff; }

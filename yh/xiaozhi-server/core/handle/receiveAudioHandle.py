@@ -13,6 +13,11 @@ from core.handle.sendAudioHandle import send_stt_message, SentenceType
 
 TAG = __name__
 
+# 服务端打断的播放起始保护窗（毫秒）。TTS 刚开始时服务端 AEC（互相关+Wiener）
+# 尚未收敛，设备自己的播报声会被 VAD 判成人声，导致播报被自己掐断。
+# 与固件侧 kSpeakingInterruptGuardMs（CONFIG_YH_INTERRUPT_GUARD_MS=800）同语义。
+SERVER_INTERRUPT_GUARD_MS = 800
+
 
 async def handleAudioMessage(conn: "ConnectionHandler", pcm_frame):
     # 当前片段是否有人说话
@@ -25,13 +30,62 @@ async def handleAudioMessage(conn: "ConnectionHandler", pcm_frame):
             conn.vad_resume_task = asyncio.create_task(resume_vad_detection(conn))
         return
     # 服务端AEC功能需要实时触发打断
-    if conn.client_aec and have_voice:
+    if conn.client_aec:
         if conn.client_is_speaking and conn.client_listen_mode != "manual":
-            await handleAbortMessage(conn)
+            if have_voice:
+                await _maybe_server_interrupt(conn)
+            else:
+                # 确认窗按"连续人声"计量：人声一断，计窗立即归零。
+                # 不复位的话，"先说100ms、隔5秒再说100ms"会被拼成连续人声误打断
+                # （模拟时序验证发现的缺陷）。保护窗不受影响（按播报起始时刻算）。
+                if getattr(conn, "interrupt_voice_since_ms", 0):
+                    conn.interrupt_voice_since_ms = 0
     # 设备长时间空闲检测，用于say goodbye
     await no_voice_close_connect(conn, have_voice)
     # 接收音频
     await conn.asr.receive_audio(conn, pcm_frame, have_voice)
+
+
+async def _maybe_server_interrupt(conn: "ConnectionHandler"):
+    """服务端人声打断（带灵敏度确认窗 + 起播保护窗）。
+
+    灵敏度语义与固件完全一致：管理端 interrupt_threshold(0~100) × 20ms
+    = 人声确认窗。0=立即打断，100=需连续 2000ms 人声才打断，15≈默认 300ms。
+    确认窗防的是：设备扬声器残留回声经服务端 AEC 衰减后仍偶发过 VAD 阈值
+    （单帧尖峰），持续确认可滤除；真正的用户说话轻松持续超过窗长。
+    """
+    now = time.time() * 1000
+
+    # 起播保护窗：client_is_speaking 置位（tts start 下发）后的保护期内不判打断
+    started_at = getattr(conn, "client_speaking_since_ms", 0)
+    if started_at and now - started_at < SERVER_INTERRUPT_GUARD_MS:
+        return
+
+    # 人声确认窗：连续检测到人声须超过阈值设定才触发。
+    # 0 档 = 立即打断（与固件语义一致：confirm_ms=0 任何 VAD 抬升即打断，
+    # 只剩起播保护窗兜底）——必须当帧触发，"先记时再判"会把 0ms 窗拖成
+    # 至少一帧（60ms），时序模拟验证发现的偏差。
+    confirm_ms = getattr(conn, "interrupt_confirm_ms", 300)
+    if confirm_ms <= 0:
+        conn.interrupt_voice_since_ms = 0
+        await handleAbortMessage(conn)
+        return
+
+    first_seen = getattr(conn, "interrupt_voice_since_ms", 0)
+    if not first_seen:
+        conn.interrupt_voice_since_ms = now
+        return
+    if now - first_seen < confirm_ms:
+        return
+
+    conn.interrupt_voice_since_ms = 0  # 触发即复位，下段播报重新计时
+    await handleAbortMessage(conn)
+
+
+def reset_interrupt_tracking(conn: "ConnectionHandler"):
+    """播报结束/打断触发后清零人声确认计窗（下一轮重新累计）。"""
+    if hasattr(conn, "interrupt_voice_since_ms"):
+        conn.interrupt_voice_since_ms = 0
 
 
 async def resume_vad_detection(conn: "ConnectionHandler"):

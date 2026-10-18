@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>智能体 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">全量迁移自 /cc/：12 项模型配置 / 音色联动 / 设备绑定</p>
+        <p class="sub">配置智能体的模型、音色与设备绑定</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" @click="openCreate">＋ 新增智能体</button>
@@ -12,12 +12,12 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🤖" label="智能体" :value="agents.length" />
-      <StatCard icon="📡" label="绑定设备" :value="boundTotal" />
-      <StatCard icon="💬" label="会话" :value="sessionCount" note="选中智能体" />
+      <StatCard icon="bot" label="智能体" :value="agents.length" />
+      <StatCard icon="device" label="绑定设备" :value="boundTotal" />
+      <StatCard icon="chat" label="会话" :value="sessionCount" note="选中智能体" />
     </div>
 
-    <DataTable title="智能体清单" :total="agents.length" :page="1" :pages="1">
+    <DataTable title="智能体清单" :total="agents.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead><tr><th>智能体</th><th>模型</th><th>操作</th></tr></thead>
         <tbody>
@@ -39,7 +39,7 @@
         </tbody>
       </table>
       <div v-if="agents.length === 0" class="empty-state">
-        <div class="empty-icon">🤖</div><strong>暂无智能体</strong>
+        <div class="empty-icon"><YhIcon name="bot" /></div><strong>暂无智能体</strong>
         <p>点击右上角「新增智能体」创建第一个</p>
       </div>
     </DataTable>
@@ -120,6 +120,24 @@
           <p class="field-hint">设备待机唤醒由固件本地模型负责；此处唤醒词用于服务器识别与快速应答</p>
         </div>
 
+        <div class="form-row"><label>唤醒词阈值（0~100，0 最灵敏，100 最不灵敏）</label>
+          <input v-model.number="editor.wakeWordThreshold" type="number" min="0" max="100"
+                 placeholder="留空使用设备默认（40）" />
+          <p class="field-hint">保存后立即下发到绑定设备热生效，无需重启；数值越小越容易唤醒</p>
+        </div>
+
+        <div class="form-row">
+          <label>实时打断阈值（0~100，拉选调节）</label>
+          <div class="slider-row">
+            <input v-model.number="editor.interruptThreshold" type="range" min="0" max="100" step="1"
+                   class="slider" :style="{ '--pct': editor.interruptThreshold + '%' }" />
+            <span class="slider-value">{{ editor.interruptThreshold }}</span>
+          </div>
+          <p class="field-hint">
+            播放时用户说话打断的灵敏度：0 最灵敏（立即打断）· 100 最难打断（连续 2 秒人声才打断）· 默认 15 ≈ 300ms
+          </p>
+        </div>
+
         <div class="form-row"><label>人设提示词（它怎么说话）</label>
           <textarea v-model="form.systemPrompt" rows="5" placeholder="比如：你是温柔可爱的助手，说话简短口语化"></textarea>
         </div>
@@ -166,6 +184,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import StatCard from '../../components/StatCard.vue'
@@ -183,8 +202,10 @@ const boundTotal = ref(0)
 const sessionCount = ref(0)
 const sessions = reactive({ show: false, agentName: '', agentId: null, list: [] })
 
-// 编辑弹窗状态（契约字段与 cc-console editForm 一致；wakeWords 分号分隔，空=默认「你好」）
-const editor = reactive({ show: false, id: '', wakeWords: '' })
+// 编辑弹窗状态（契约字段与 cc-console editForm 一致；wakeWords 分号分隔，空=默认「你好」；
+// wakeWordThreshold 唤醒词阈值 0~100（0=最灵敏），interruptThreshold 实时打断阈值
+// 0~100（0=最容易打断）；两者 未设置时显示设备默认）
+const editor = reactive({ show: false, id: '', wakeWords: '', wakeWordThreshold: '', interruptThreshold: 15 })
 const form = reactive({
   agentName: '', llmModelId: '', ttsModelId: '', ttsVoiceId: '',
   memModelId: '', intentModelId: '', asrModelId: '',
@@ -268,6 +289,8 @@ async function openCreate() {
   resetForm()
   editor.id = ''
   editor.wakeWords = ''
+  editor.wakeWordThreshold = ''
+  editor.interruptThreshold = 15
   boundDevices.value = []
   bindCode.value = ''
   editor.show = true
@@ -292,6 +315,10 @@ async function openEdit(a) {
   })
   editor.id = d.id || a.id
   editor.wakeWords = d.wakeWords || ''
+  // 阈值回显：0 是合法值（最灵敏），必须用 ?? 而非 ||；null/undefined 显示为空（设备默认）
+  editor.wakeWordThreshold = d.wakeWordThreshold ?? ''
+  // 打断阈值进度条：未设置时回落默认 15（≈300ms，与固件出厂一致）
+  editor.interruptThreshold = d.interruptThreshold ?? 15
   bindCode.value = ''
   manual.board = ''; manual.appVersion = ''; manual.macAddress = ''
   editor.show = true
@@ -314,6 +341,22 @@ async function persist() {
     ttsRate: form.ttsRate,
     wakeWords: editor.wakeWords || ''
   }
+  // 唤醒词阈值：留空不发键（保持不变）；填了则校验 0~100
+  const t = editor.wakeWordThreshold
+  if (t !== '' && t !== null && t !== undefined) {
+    if (!Number.isInteger(t) || t < 0 || t > 100) {
+      toast('唤醒词阈值需为 0~100 的整数（0 最灵敏）', 'error')
+      return false
+    }
+    payload.wakeWordThreshold = t
+  }
+  // 实时打断阈值（进度条）：总为 0~100 整数，保存即下发
+  const it = editor.interruptThreshold
+  if (!Number.isInteger(it) || it < 0 || it > 100) {
+    toast('实时打断阈值需为 0~100 的整数（0 最容易打断）', 'error')
+    return false
+  }
+  payload.interruptThreshold = it
   if (editor.id) {
     await adminApi.updateAgent(editor.id, payload)
   } else {
@@ -428,6 +471,29 @@ onMounted(load)
 }
 .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
+/* 实时打断阈值进度条：--pct 由 v-bind 传入，用于渐变填充宽度 */
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider {
+  -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 999px;
+  background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--pct, 15%),
+              #E6EAF2 var(--pct, 15%), #E6EAF2 100%);
+  outline: none; cursor: pointer; padding: 0; border: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  cursor: grab;
+}
+.slider::-webkit-slider-thumb:active { cursor: grabbing; }
+.slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  border: 2.5px solid var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.18); cursor: grab;
+}
+.slider-value {
+  flex: 0 0 44px; text-align: center; font-size: 13px; font-weight: 700;
+  color: var(--primary); background: #fff; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 4px 0; font-variant-numeric: tabular-nums;
+}
 .bind-box { border: 1.5px solid var(--border); border-radius: 16px; padding: 14px 16px; margin: 8px 0 16px; background: var(--bg-soft, #F8FAFD); }
 .bind-label { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 .bind-empty { font-size: 12.5px; color: #B45309; margin: 6px 0 10px; line-height: 1.5; }

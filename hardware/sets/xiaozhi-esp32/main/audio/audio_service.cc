@@ -989,6 +989,14 @@ void AudioService::SetWakeWordDuration(int duration) {
     }
 }
 
+void AudioService::SetInterruptThreshold(int threshold) {
+    // 引擎未就绪时也要落到引擎对象上：SetInterruptThreshold 只写原子成员
+    // （人声确认窗），不依赖 AFE 已创建，Initialize 后立即生效
+    if (audio_engine_) {
+        audio_engine_->SetInterruptThreshold(threshold);
+    }
+}
+
 bool AudioService::InitializeAudioEngine() {
     if (!audio_engine_) {
         return false;

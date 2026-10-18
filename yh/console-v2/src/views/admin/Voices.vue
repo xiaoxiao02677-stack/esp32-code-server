@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>音色 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">契约对齐 /cc/：TTS 引擎切换 / 音色 CRUD / ttsVoice 试听（blob）</p>
+        <p class="sub">管理 TTS 音色：切换引擎、增改与试听</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="!activeModelId" @click="openCreate">＋ 新增音色</button>
@@ -12,18 +12,18 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🎙" label="TTS 引擎" :value="ttsModels.length" />
+      <StatCard icon="mic" label="TTS 引擎" :value="ttsModels.length" />
       <StatCard icon="🗣" label="当前引擎音色" :value="voices.length" :note="activeModelName" />
-      <StatCard icon="🔊" label="默认引擎" :value="defaultTtsName" />
+      <StatCard icon="volume" label="默认引擎" :value="defaultTtsName" />
     </div>
 
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px">
-      <div v-for="m in ttsModels" :key="m.id" class="chip" :class="{ active: activeModelId === m.id }" @click="pickModel(m)">
+      <button type="button" v-for="m in ttsModels" :key="m.id" class="chip" :class="{ active: activeModelId === m.id }" @click="pickModel(m)">
         {{ m.modelName }}{{ m.isDefault ? ' ⭐' : '' }}
-      </div>
+      </button>
     </div>
 
-    <DataTable title="音色列表">
+    <DataTable title="音色列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>音色</th><th>代码</th><th>语言</th><th>操作</th></tr></thead>
         <tbody>
@@ -47,7 +47,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="voices.length === 0" class="empty-state"><div class="empty-icon">🎙</div><strong>此引擎暂无音色</strong></div>
+      <div v-if="voices.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="mic" /></div><strong>此引擎暂无音色</strong></div>
     </DataTable>
 
     <!-- 音色编辑（契约对齐 cc-console openVoiceEdit/saveVoice：payload 带 ttsModelId） -->
@@ -84,6 +84,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
@@ -205,8 +206,10 @@ onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; }

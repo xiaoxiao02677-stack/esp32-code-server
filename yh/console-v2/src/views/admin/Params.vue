@@ -3,21 +3,21 @@
     <div class="page-head">
       <div>
         <h1>系统 <span style="color:var(--primary)">参数</span></h1>
-        <p class="sub">迁移自 /cc/ 系统参数页：分页列表 / 编辑保存 / 自定义增删</p>
+        <p class="sub">查看与调整系统运行参数</p>
       </div>
       <div class="head-actions">
-        <input v-model="paramFilter" placeholder="搜索参数编码/名称…" style="border:1.5px solid var(--border);border-radius:999px;padding:8px 16px;font-size:13px;outline:none;width:220px" />
+        <input v-model="paramFilter" placeholder="搜索参数编码/名称…" class="filter-input" style="width:220px;font-size:13px;padding:8px 16px" />
         <button class="btn btn-primary" @click="openCreate">＋ 新增参数</button>
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="⚙️" label="参数总数" :value="params.length" />
+      <StatCard icon="sliders" label="参数总数" :value="params.length" />
       <StatCard icon="✏️" label="本次修改" :value="dirtyCount" note="未保存" />
     </div>
 
-    <DataTable title="参数列表">
+    <DataTable title="参数列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>参数编码</th><th>名称</th><th>值</th><th>类型</th><th>操作</th></tr></thead>
         <tbody>
@@ -26,7 +26,7 @@
             <td>{{ p.paramName || p.remark || '—' }}</td>
             <td>
               <span v-if="editingId !== p.id">{{ p.paramValue }}</span>
-              <input v-else v-model="p._newValue" style="width:140px;border:1.5px solid var(--primary);border-radius:8px;padding:6px 10px;font-size:13px" />
+              <input v-else v-model="p._newValue" style="width:140px;border:1.5px solid var(--primary);border-radius:8px;padding:6px 10px;font-size:13px" @keyup.enter="saveParam(p)" @keydown.esc.prevent="cancelEdit" />
             </td>
             <td><span class="type-tag">{{ p.type || 'string' }}</span></td>
             <td>
@@ -44,7 +44,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="params.length === 0" class="empty-state"><div class="empty-icon">⚙️</div><strong>暂无参数</strong></div>
+      <div v-if="params.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="sliders" /></div><strong>暂无参数</strong></div>
     </DataTable>
 
     <!-- 新增参数（契约：POST /admin/params，api.js adminApi.createParam） -->
@@ -74,6 +74,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

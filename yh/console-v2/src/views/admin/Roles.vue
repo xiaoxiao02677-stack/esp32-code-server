@@ -21,16 +21,16 @@
         <div class="blob-3d">🎭</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🎭" label="角色总数" :value="total" />
-        <StatCard icon="🧩" label="本页" :value="roles.length" note="当前页" />
-        <StatCard icon="✅" label="启用中" :value="enabledCount" />
+        <StatCard icon="badge" label="角色总数" :value="total" />
+        <StatCard icon="grid" label="本页" :value="roles.length" note="当前页" />
+        <StatCard icon="check-circle" label="启用中" :value="enabledCount" />
         <StatCard icon="🔒" label="内置角色" :value="builtinCount" />
       </div>
     </div>
 
-    <DataTable title="角色清单" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
+    <DataTable title="角色清单" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <template #actions>
-        <input v-model="keyword" placeholder="搜索编码 / 名称" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none" @keyup.enter="search" />
+        <input v-model="keyword" placeholder="搜索编码 / 名称" class="filter-input" @keyup.enter="search" />
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="search">搜索</button>
       </template>
       <table class="data-table">
@@ -68,7 +68,7 @@
         </tbody>
       </table>
       <div v-if="roles.length === 0" class="empty-state">
-        <div class="empty-icon">🎭</div>
+        <div class="empty-icon"><YhIcon name="badge" /></div>
         <strong>暂无角色</strong>
         <p>点击右上角「新增角色」创建第一个</p>
       </div>
@@ -131,6 +131,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

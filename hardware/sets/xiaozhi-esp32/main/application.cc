@@ -381,7 +381,11 @@ void Application::Run() {
                 auto led = Board::GetInstance().GetLed();
                 led->OnStateChanged();
             } else if (GetDeviceState() == kDeviceStateSpeaking) {
-                if (!IsVoiceDetected()) {
+                if (aec_mode_ != kAecOnDeviceSide) {
+                    // 服务端 AEC / 关闭态：打断判断交给服务器（receiveAudioHandle 的
+                    // client_aec 分支），本地 VAD 事件只用于状态展示，不做打断决策
+                    // ——单工板开着本地 VAD 必然被自己的播报声触发。
+                } else if (!IsVoiceDetected()) {
                     // VAD 是双向上报的：语音结束（下降沿）同样会置 MAIN_EVENT_VAD_CHANGE。
                     // 只有真正"检测到人声"才允许打断，否则用户一说完话就会把自己
                     // 的播报掐掉 —— 这是误打断的一个主要来源。
@@ -1436,9 +1440,25 @@ void Application::HandleStateChangedEvent() {
         case kDeviceStateSpeaking:
             display->SetStatus(Lang::Strings::SPEAKING);
 
-            // 只有 Realtime 模式且设备侧 AEC 真正生效时才"边播边听"。若 AEC 不生效
-            // （无回采通道 / 未启用），播放期间开着 VAD 必然被自己的声音打断。
-            if (listening_mode_ != kListeningModeRealtime || !audio_service_.IsDeviceAecEffective()) {
+            // Speaking 态的"边播边听"分三种情况（与 GetDefaultListeningMode 的
+            // aec_mode_ 判定一一对应）：
+            //   1. 服务端 AEC（CONFIG_USE_SERVER_AEC）：麦克风持续推流给服务器，
+            //      回声消除与打断判断都在服务端做（receiveAudioHandle:
+            //      client_aec && have_voice && client_is_speaking → abort）。
+            //      本地 VAD 必须关——单工板没有回采通道，开着必然被自己打断。
+            //   2. 设备侧 AEC 真正生效（有回采通道）：本地 VAD + 服务器双路并行。
+            //   3. 都没有：关语音处理，只剩唤醒词打断（application.cc:1266）。
+            if (listening_mode_ == kListeningModeRealtime &&
+                audio_service_.IsDeviceAecEffective()) {
+                // 设备侧 AEC 生效：保持 VAD（本地打断 + 推流都开）
+            } else if (aec_mode_ == kAecOnServerSide) {
+                // 服务端 AEC：麦克风持续推流给服务器（服务器做回声消除与打断
+                // 判断），本地 VAD 必须关——单工板没有回采通道，开着必然被
+                // 自己的播报声触发。唤醒词检测保持开启：它是播报期唯一可靠
+                // 的本地打断兜底（不依赖 AEC，AFE 唤醒词不会被自声误触发）。
+                audio_service_.EnableVoiceProcessing(true);
+                audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
+            } else {
                 audio_service_.EnableVoiceProcessing(false);
                 // Only AFE wake word can be detected in speaking mode
                 audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());

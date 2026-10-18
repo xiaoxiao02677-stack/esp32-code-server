@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>聊天 <span style="color:var(--primary)">记录</span></h1>
-        <p class="sub">契约对齐 /cc/：chatType 消息流 / JSON 内容解析 / 语音两段式播放 / 删会话</p>
+        <p class="sub">按智能体查看会话与消息记录，支持语音回放</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
@@ -13,24 +13,24 @@
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
       <!-- 左：智能体 + 会话（契约：sessionId/title/createdAt/chatCount） -->
       <div style="flex:0 0 260px">
-        <DataTable title="智能体">
+        <DataTable title="智能体" :loading="loading">
           <div v-for="a in agents" :key="a.id" class="chat-agent" :class="{ active: agentId === a.id }" @click="pickAgent(a)">
             <span>{{ a.name }}</span><small>{{ a.id.slice(0, 8) }}</small>
           </div>
-          <div v-if="!agents.length" class="empty-state"><div class="empty-icon">💬</div><strong>暂无智能体</strong></div>
+          <div v-if="!agents.length" class="empty-state"><div class="empty-icon"><YhIcon name="chat" /></div><strong>暂无智能体</strong></div>
         </DataTable>
-        <DataTable title="会话" style="margin-top:16px">
+        <DataTable title="会话" style="margin-top:16px" :loading="loading">
           <div v-for="s in sessions" :key="s.sessionId" class="chat-agent" :class="{ active: sessionId === s.sessionId }" @click="pickSession(s)">
             <span style="font-size:12px">{{ s.title || s.sessionId.slice(0, 14) }}</span>
             <small v-if="s.createdAt">{{ s.createdAt }} · {{ s.chatCount }} 条</small>
           </div>
-          <div v-if="agentId && !sessions.length" class="empty-state"><strong>暂无会话，去跟设备说句话吧～</strong></div>
+          <div v-if="agentId && !sessions.length" class="empty-state"><strong>暂无会话，去跟设备说句话吧</strong></div>
         </DataTable>
       </div>
 
       <!-- 右：消息流（契约：m.chatType===1 用户侧，content JSON 需 parseChatText） -->
       <div style="flex:1;min-width:300px">
-        <DataTable title="消息流">
+        <DataTable title="消息流" :loading="loading">
           <div style="max-height:480px;overflow:auto">
             <div v-for="(m, i) in messages" :key="i" class="chat-msg" :class="m.chatType === 1 ? 'user' : 'assistant'">
               <div class="msg-bubble">{{ m.content }}</div>
@@ -53,6 +53,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import DataTable from '../../components/DataTable.vue'

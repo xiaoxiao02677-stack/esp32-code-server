@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>记忆 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">契约对齐 /cc/：引擎配置 / 列表·时间轴·图谱三视图 / 审核编辑 / 信任度</p>
+        <p class="sub">配置记忆引擎，浏览与审核智能体记忆</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="!currentAgentId" @click="creator.show = true">＋ 新增记忆</button>
@@ -37,9 +37,9 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      <div v-for="a in memoryAgents" :key="a.agent_id" class="chip" :class="{ active: currentAgentId === a.agent_id }" @click="selectMemAgent(a.agent_id)">
+      <button type="button" v-for="a in memoryAgents" :key="a.agent_id" class="chip" :class="{ active: currentAgentId === a.agent_id }" @click="selectMemAgent(a.agent_id)">
         {{ a.name || '未命名' }}（{{ a.fact_count }}条）
-      </div>
+      </button>
     </div>
 
     <!-- 筛选工具条 + 三视图切换（契约同 cc-console mem-toolbar / mem-view-switch） -->
@@ -64,7 +64,7 @@
       </div>
     </div>
 
-    <DataTable title="记忆事实" :hint="factsHint">
+    <DataTable title="记忆事实" :hint="factsHint" :loading="loading">
       <!-- 时间轴视图（移植 cc-console MemoryTimeline：日期分组倒序 + 组内时间倒序） -->
       <div v-if="memViewMode === 'timeline'" class="mem-timeline-wrap">
         <div class="mem-timeline-track">
@@ -145,7 +145,7 @@
           </div>
         </div>
         <div v-else class="empty-state">
-          <div class="empty-icon">🧠</div>
+          <div class="empty-icon"><YhIcon name="memory" /></div>
           <template v-if="hasFilter && selectedAgentCount > 0">
             <strong>当前筛选条件下没有匹配的记忆</strong>
             <p>该智能体共有 {{ selectedAgentCount }} 条记忆，试试清除分类/状态筛选</p>
@@ -198,6 +198,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
@@ -619,8 +620,10 @@ onUnmounted(() => { clearRetry('load'); clearRetry('facts') })
 <style scoped>
 /* 快速总结按钮（小尺寸，对齐全局 .btn 设计令牌） */
 .btn-sm { padding: 7px 16px; font-size: 13px; }
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .mini-select { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; outline: none; background: #fff; }
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }

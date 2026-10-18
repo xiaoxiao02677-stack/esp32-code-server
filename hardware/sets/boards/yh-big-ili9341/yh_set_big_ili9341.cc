@@ -12,6 +12,7 @@
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
 #include "display/lcd_display.h"
+#include "display/yh_skin/yh_skin_display.h"
 #include "application.h"
 #include "button.h"
 #include "mcp_server.h"
@@ -84,11 +85,13 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY));
         ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
 
-        display_ = new SpiLcdDisplay(panel_io, panel,
+        // 共享「小柚」皮肤：2.8 寸 320x240 横屏（矩形，不走圆屏安全区）
+        display_ = new YhSkinDisplay(panel_io, panel,
                                      DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
                                      DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
-                                     DISPLAY_SWAP_XY);
+                                     DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Wide320x240());
     }
 
     void InitializeButtons() {

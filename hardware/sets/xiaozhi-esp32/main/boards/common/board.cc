@@ -87,7 +87,38 @@ static bool HanziToPinyin(const std::string& hanzi, std::string& pinyin_out) {
         if (c > 127) { all_ascii = false; break; }
     }
     if (all_ascii) {
-        pinyin_out = hanzi;
+        // 服务端直接下发拼音：清洗成引擎唯一接受的形态。
+        // esp_mn 只认小写音节，'Ni Hao' / 'ni  hao' 会被静默拒绝；'|' 是 NVS
+        // 列表分隔符，混进命令词会把一条拆成两条；控制字符同理。
+        std::string clean;
+        clean.reserve(hanzi.size());
+        bool last_space = true;  // 前导空格不放行
+        for (unsigned char c : hanzi) {
+            if (c == '|' || c < 0x20 || c == 0x7F) {
+                continue;
+            }
+            char ch = static_cast<char>(c);
+            if (ch == ' ') {
+                if (!clean.empty() && !last_space) {
+                    clean += ' ';
+                    last_space = true;
+                }
+                continue;
+            }
+            if (ch >= 'A' && ch <= 'Z') {
+                ch = static_cast<char>(ch - 'A' + 'a');
+            }
+            clean += ch;
+            last_space = false;
+        }
+        if (!clean.empty() && clean.back() == ' ') {
+            clean.pop_back();
+        }
+        if (clean.empty()) {
+            ESP_LOGW(TAG, "Wake-word pinyin payload is empty after sanitizing");
+            return false;
+        }
+        pinyin_out = clean;
         return true;
     }
     pinyin_out.clear();
@@ -219,7 +250,22 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
         ESP_LOGW(TAG, "Ignore invalid device_config brightness value");
     }
 
-    // 服务器下发动态唤醒词（MultiNet 引擎）：字符串或字符串数组，多词任意一个命中即唤醒
+    // 服务器下发动态唤醒词（MultiNet 引擎）：字符串或字符串数组，多词任意一个命中即唤醒。
+    //   wake_word         —— 识别命令词：无调拼音（推荐，如 "ni hao xiao he"，任意中文词可用）；
+    //                        也兼容汉字（旧数据，走内置字表转换，仅覆盖常见字）
+    //   wake_word_display —— 展示原文（可选，如 "你好小禾"）：唤醒后作为 detect text 上报
+    //                        给服务端（问候语/日志），不是待机屏文案。按索引与 wake_word
+    //                        对齐；缺省或数量不匹配时回落用 wake_word 原值
+    // 注意：下面这个 if 没有 else，唤醒词共有三种语义，本轮排查中已被多人读串，
+    // 写代码/排查前务必分清（三者的设备侧后果完全不同）：
+    //   1) 缺键（payload 里没有 wake_word）—— 不进 if，不 update 也不 clear，
+    //      设备保留 NVS 里上一次成功生效的词；表现为"改了词但设备还认旧的"
+    //   2) 空数组/空串（"wake_word": [] 或 [""]）—— 进 if 但 has_any_word 为 false，
+    //      落到 else 分支调 ClearWakeWordCommands，清空并恢复本地默认词
+    //   3) 有词但全部转不出拼音 —— 进 if 且 has_any_word 为 true，卡在转换环节
+    //      只打 "云端唤醒词全部无法转换为拼音，忽略"、随后自然跳出 if；既不 update 也不 clear，
+    //      设备同样保留旧表（和 1 的后果一样，但日志完全不同，别混）
+    // 服务端超 5 项时整块 config 会被跳过 ⇒ 属于 1)；表外字导致整词丢弃 ⇒ 属于 3)。
     auto wake_word = cJSON_GetObjectItem(payload, "wake_word");
     if (cJSON_IsString(wake_word) || cJSON_IsArray(wake_word)) {
         std::vector<std::string> hanzi_words;
@@ -231,12 +277,51 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
         } else {
             cJSON* item = nullptr;
             cJSON_ArrayForEach(item, wake_word) {
-                if (cJSON_IsString(item) && item->valuestring[0] != '\0') {
-                    hanzi_words.push_back(item->valuestring);
-                }
+                // 保留位置：空串也 push，保证与 wake_word_display 的下标严格对齐。
+                // 这里若直接过滤空串，而 display 数组按原始下标填充，
+                // 就会出现"喊 A 显示 B"（例：['a','','c'] + ['甲','乙','丙']
+                // → 压缩成 ['a','c'] 却仍按 0/1 取 display，c 显示成"乙"）。
+                // 空占位在下面的转拼音循环里按位置跳过。
+                hanzi_words.push_back(cJSON_IsString(item) ? item->valuestring : "");
             }
         }
-        if (!hanzi_words.empty()) {
+
+        // 展示文案：按索引与 hanzi_words 配对。少于命令词时缺位逐条回落原值
+        // （Python 侧允许只给前几条 display）；多于时截断多余项（不能补齐，否则串位）
+        std::vector<std::string> display_words;
+        auto wake_word_display = cJSON_GetObjectItem(payload, "wake_word_display");
+        if (cJSON_IsString(wake_word_display)) {
+            const char* d = wake_word_display->valuestring;
+            if (d[0] != '\0' && hanzi_words.size() == 1) {
+                display_words.emplace_back(d);
+            } else if (d[0] != '\0') {
+                ESP_LOGW(TAG, "wake_word_display 为字符串但 wake_word 有 %zu 项，回落用 wake_word 作展示",
+                         hanzi_words.size());
+            }
+        } else if (cJSON_IsArray(wake_word_display)) {
+            cJSON* d = nullptr;
+            cJSON_ArrayForEach(d, wake_word_display) {
+                display_words.push_back(cJSON_IsString(d) ? d->valuestring : "");
+            }
+            if (display_words.size() > hanzi_words.size()) {
+                ESP_LOGW(TAG, "wake_word_display 数量(%zu)多于 wake_word(%zu)，多余项忽略",
+                         display_words.size(), hanzi_words.size());
+                display_words.resize(hanzi_words.size());
+            }
+        } else if (wake_word_display != nullptr && !cJSON_IsNull(wake_word_display)) {
+            ESP_LOGW(TAG, "wake_word_display 类型非法（仅支持字符串/字符串数组），回落用 wake_word 作展示");
+        }
+
+        // 全为空占位（如 [""]）等价于"清空"：必须落到 else 分支调 ClearWakeWordCommands，
+        // 否则清空唤醒词的指令会被静默吞掉（改成保留占位后引入的回归）。
+        bool has_any_word = false;
+        for (const auto& w : hanzi_words) {
+            if (!w.empty()) {
+                has_any_word = true;
+                break;
+            }
+        }
+        if (has_any_word) {
             auto& app = Application::GetInstance();
             auto& audio = app.GetAudioService();
             // 不预查 SupportsDynamicWakeWords：引擎未初始化时 AudioService 内部会
@@ -247,14 +332,27 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
             // 其余才是引擎真不支持。
             std::vector<std::string> pinyins;
             std::vector<std::string> displays;
-            for (const auto& w : hanzi_words) {
+            // 用原数组索引：转拼音失败的词被丢弃时，pinyins/displays 同步跳过，
+            // 两边长度始终一致，不会出现命令词与展示文本错位
+            for (size_t i = 0; i < hanzi_words.size(); ++i) {
+                const std::string& w = hanzi_words[i];
+                if (w.empty()) {
+                    // 服务端下发的空占位：按位置跳过（display 同步不取），保持两数组对齐。
+                    // 正常情况下不会出现——Python push_wake_words / push_device_config
+                    // 已按下标成对剔除空项，此处纯防御。
+                    continue;
+                }
                 std::string py;
                 if (HanziToPinyin(w, py)) {
                     pinyins.push_back(py);
-                    displays.push_back(w);
+                    displays.push_back(i < display_words.size() && !display_words[i].empty()
+                                           ? display_words[i]
+                                           : w);
                 } else {
                     // 明示丢弃的词，避免误判为"未变化，跳过更新"
-                    ESP_LOGW(TAG, "唤醒词 '%s' 含未收录字，无法转拼音，已丢弃该词", w.c_str());
+                    ESP_LOGW(TAG, "唤醒词 '%s' 含未收录字，无法转拼音，已丢弃该词"
+                                  "（服务端改发无调拼音 + wake_word_display 即可绕过内置表）",
+                             w.c_str());
                 }
             }
             if (!pinyins.empty()) {
@@ -276,7 +374,9 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
             }
         } else {
             // 空字符串/空数组语义：清空云端下发的唤醒词，恢复本地默认词
-            // （index.json 或 Kconfig 中的"你好小禾"），并删除 NVS 缓存
+            // （index.json 或 Kconfig 中的"你好小禾"），并删除 NVS 缓存。
+            // 注意：只有这里会清空。缺键和"全部转不出拼音"都不会走到这里，
+            // 它们保留 NVS 旧表（详见上方 wake_word 取值前三类语义的注释）。
             auto& app = Application::GetInstance();
             auto& audio = app.GetAudioService();
             if (audio.ClearWakeWordCommands()) {
@@ -291,11 +391,13 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
     // Extension point: future cloud-managed keys (e.g. theme) get a new case here.
 
     // 唤醒词阈值动态调整（服务器下发）
+    // 用户区间 0~100：0=最灵敏、100=最不灵敏（固件侧 0 夹取到 esp-sr 最低有效值 0.01）
+    // NVS 命名空间上限 15 字符（NVS_NS_NAME_MAX_SIZE=16 含 null），改名须 ≤15
     auto threshold = cJSON_GetObjectItem(payload, "wake_word_threshold");
     if (cJSON_IsNumber(threshold)) {
         int t = threshold->valueint;
-        if (t >= 1 && t <= 100) {
-            Settings settings("wake_word_config", true);
+        if (t >= 0 && t <= 100) {
+            Settings settings("wake_word_cfg", true);
             settings.SetInt("threshold", t);
             auto& app = Application::GetInstance();
             auto& audio = app.GetAudioService();
@@ -309,13 +411,31 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
     if (cJSON_IsNumber(duration)) {
         int d = duration->valueint;
         if (d >= 500 && d <= 5000) {
-            Settings settings("wake_word_config", true);
+            Settings settings("wake_word_cfg", true);
             settings.SetInt("duration", d);
             auto& app = Application::GetInstance();
             auto& audio = app.GetAudioService();
             audio.SetWakeWordDuration(d);
             changed = true;
             ESP_LOGI(TAG, "云端唤醒词时长已更新: %dms", d);
+        }
+    }
+
+    // 实时打断灵敏度动态调整（服务器下发）：0~100，0=最灵敏、100=最难打断。
+    // 映射到 VAD 人声确认窗 0~2000ms（AfeAudioEngine::SetInterruptThreshold）。
+    // 注意 "interrupt_config" 是 16 字符、超 NVS 命名空间上限（15），曾导致
+    // nvs_open 静默失败 → SetInt 拿无效句柄 abort 重启；因此命名为 "interrupt_cfg"。
+    auto interrupt = cJSON_GetObjectItem(payload, "interrupt_threshold");
+    if (cJSON_IsNumber(interrupt)) {
+        int it = interrupt->valueint;
+        if (it >= 0 && it <= 100) {
+            Settings settings("interrupt_cfg", true);
+            settings.SetInt("threshold", it);
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            audio.SetInterruptThreshold(it);
+            changed = true;
+            ESP_LOGI(TAG, "云端实时打断阈值已更新: %d", it);
         }
     }
 

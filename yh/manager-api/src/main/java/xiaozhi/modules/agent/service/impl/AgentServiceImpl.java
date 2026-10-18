@@ -11,8 +11,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -30,6 +36,7 @@ import xiaozhi.common.service.impl.BaseServiceImpl;
 import xiaozhi.common.user.UserDetail;
 import xiaozhi.common.utils.ConvertUtils;
 import xiaozhi.common.utils.JsonUtils;
+import xiaozhi.common.utils.WakeWordPinyinUtils;
 import xiaozhi.modules.agent.dao.AgentDao;
 import xiaozhi.modules.agent.dao.AgentTagDao;
 import xiaozhi.modules.agent.dto.AgentCreateDTO;
@@ -56,6 +63,7 @@ import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.model.dto.ModelProviderDTO;
 import xiaozhi.modules.model.dto.VoiceDTO;
 import xiaozhi.modules.model.entity.ModelConfigEntity;
+import xiaozhi.modules.sys.service.SysParamsService;
 import xiaozhi.modules.model.service.ModelConfigService;
 import xiaozhi.modules.model.service.ModelProviderService;
 import xiaozhi.modules.security.user.SecurityUser;
@@ -80,6 +88,81 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     private final CorrectWordFileService correctWordFileService;
     private final AgentSnapshotService agentSnapshotService;
     private final xiaozhi.modules.device.service.DeviceConfigService deviceConfigService;
+    private final RestTemplate restTemplate;
+    private final SysParamsService sysParamsService;
+
+    /** Python xiaozhi-server 内部推送端口（与 WakeWordController 同源） */
+    private static final String DEVICE_CONFIG_HTTP_PORT_PARAM = "server.http_port";
+    private static final String DEVICE_CONFIG_HTTP_PORT_DEFAULT = "8003";
+
+    /**
+     * 把一组 device_config 键写入该智能体所有绑定设备的云端配置（ai_device_config），
+     * 并推送给在线设备热生效。唤醒词阈值 / 实时打断阈值等"改设备本地配置"的入口共用。
+     * 持久层复用 B 线 upsertByMac（JSON_MERGE_PATCH 原子合并），设备重连时经
+     * ConfigServiceImpl 下发白名单注入 device_config；单台失败仅记日志不阻断。
+     */
+    private void applyDeviceConfigToDevices(String agentId, Map<String, Object> config, String logTag) {
+        if (config == null || config.isEmpty()) {
+            return;
+        }
+        try {
+            List<DeviceEntity> devices = deviceService.getDevicesByAgentId(agentId);
+            if (devices == null || devices.isEmpty()) {
+                return;
+            }
+            for (DeviceEntity device : devices) {
+                try {
+                    deviceConfigService.upsertByMac(device.getMacAddress(), config);
+                } catch (Exception e) {
+                    System.err.println("[AgentService] " + logTag + "同步设备失败 mac="
+                            + device.getMacAddress() + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AgentService] " + logTag + "设备表同步异常 agentId=" + agentId
+                    + ": " + e.getMessage());
+        }
+        pushDeviceConfigToDevices(agentId, config, logTag);
+    }
+
+    /**
+     * 推送一组 device_config 给该智能体的在线设备（Python 侧 WS 直投，热生效无需重连）。
+     * 与 WakeWordController.pushWakeWordsToDevices 同模式：server.secret 鉴权，
+     * 调 Python /api/device-config/push；失败只记日志（持久层已落库，离线/推送失败设备
+     * 重连时经 device_config 兜底）。
+     */
+    private void pushDeviceConfigToDevices(String agentId, Map<String, Object> payload, String logTag) {
+        try {
+            String httpPort = sysParamsService.getValue(DEVICE_CONFIG_HTTP_PORT_PARAM, true);
+            if (httpPort == null || httpPort.isBlank()) {
+                httpPort = DEVICE_CONFIG_HTTP_PORT_DEFAULT;
+            }
+            String secret = sysParamsService.getValue(Constant.SERVER_SECRET, true);
+            if (secret == null || secret.isBlank()) {
+                return;
+            }
+            String url = String.format("http://127.0.0.1:%s/api/device-config/push", httpPort);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + secret);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            Map<String, Object> body = new HashMap<>();
+            body.put("agent_id", agentId);
+            body.put("payload", payload);
+            body.put("log_tag", logTag);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("[AgentService] " + logTag + "推送成功 agentId=" + agentId
+                        + " payload=" + payload);
+            } else {
+                System.err.println("[AgentService] " + logTag + "推送失败 agentId=" + agentId
+                        + " status=" + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            System.err.println("[AgentService] " + logTag + "推送异常 agentId=" + agentId
+                    + ": " + e.getMessage());
+        }
+    }
 
     /**
      * 将智能体唤醒词同步写入该智能体下所有设备的云端配置（ai_device_config.wake_word）。
@@ -102,11 +185,27 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             if (words.isEmpty()) {
                 return;
             }
-            // 设备侧 wake_word 上限 5 词（DeviceConfigServiceImpl 白名单），超出截断
-            if (words.size() > 5) {
-                words = words.subList(0, 5);
+            // 设备侧上限 5 词（MultiNet 契约），超出截断
+            if (words.size() > WakeWordPinyinUtils.MAX_WORD_COUNT) {
+                words = words.subList(0, WakeWordPinyinUtils.MAX_WORD_COUNT);
             }
-            Map<String, Object> config = Map.of("wake_word", words);
+            // 成对转换：wake_word 存无调拼音（设备建命令表），wake_word_display 存汉字
+            // （唤醒后上报/展示）。转不出固件可用拼音的词跳过，全部失败则保留设备原配置，
+            // 绝不下发空表（空表等于清空唤醒词，比不生效更糟）。
+            List<String[]> pairs = WakeWordPinyinUtils.toFirmwarePairs(words);
+            if (pairs.isEmpty()) {
+                System.err.println("[AgentService] 唤醒词全部无法转为固件可用拼音，保留设备原配置: " + wakeWordsStr);
+                return;
+            }
+            List<String> pinyins = new ArrayList<>(pairs.size());
+            List<String> displays = new ArrayList<>(pairs.size());
+            for (String[] pair : pairs) {
+                pinyins.add(pair[0]);
+                displays.add(pair[1]);
+            }
+            Map<String, Object> config = new HashMap<>();
+            config.put("wake_word", pinyins);
+            config.put("wake_word_display", displays);
             for (xiaozhi.modules.device.entity.DeviceEntity device : devices) {
                 try {
                     deviceConfigService.upsertByMac(device.getMacAddress(), config);
@@ -116,6 +215,35 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             }
         } catch (Exception e) {
             System.err.println("[AgentService] 唤醒词设备表同步异常 agentId=" + agentId + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取智能体绑定设备上的某个 device_config 整数键（如 wake_word_threshold /
+     * interrupt_threshold）。这些值按设备统一写（applyDeviceConfigToDevices），
+     * 任取一台绑定设备即可；无绑定设备、无配置记录或键不存在时返回 null
+     * （前端显示为空 = 使用固件默认）。异常吞掉返回 null，不影响详情接口主流程。
+     */
+    private Integer readDeviceConfigInt(String agentId, String key) {
+        try {
+            List<DeviceEntity> devices = deviceService.getDevicesByAgentId(agentId);
+            if (devices == null || devices.isEmpty()) {
+                return null;
+            }
+            xiaozhi.modules.device.entity.DeviceConfigEntity deviceConfig =
+                    deviceConfigService.getByDeviceId(devices.get(0).getId());
+            if (deviceConfig == null || StringUtils.isBlank(deviceConfig.getConfigJson())) {
+                return null;
+            }
+            Map<String, Object> configMap = JsonUtils.parseMap(deviceConfig.getConfigJson());
+            if (configMap != null && configMap.get(key) instanceof Integer value) {
+                return value;
+            }
+            return null;
+        } catch (Exception e) {
+            System.err.println("[AgentService] 读取设备配置 " + key + " 异常 agentId=" + agentId
+                    + ": " + e.getMessage());
+            return null;
         }
     }
 
@@ -153,6 +281,12 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         List<String> correctWordFileIds = correctWordFileService.getAgentCorrectWordFileIds(id);
         agent.setCorrectWordFileIds(correctWordFileIds);
         agent.setCurrentVersionNo(agentSnapshotService.getCurrentVersionNo(id));
+
+        // 唤醒词阈值 / 实时打断阈值回显：取绑定设备的 ai_device_config
+        // （applyDeviceConfigToDevices 写入所有绑定设备，值一致，任取一台即可）；
+        // 无绑定设备或未设置时为 null（前端显示空 = 使用固件默认）
+        agent.setWakeWordThreshold(readDeviceConfigInt(id, "wake_word_threshold"));
+        agent.setInterruptThreshold(readDeviceConfigInt(id, "interrupt_threshold"));
 
         // 无需额外查询插件列表，已通过SQL查询出来
         return agent;
@@ -490,6 +624,25 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             existingEntity.setWakeWords(dto.getWakeWords());
             // 编辑页保存路径同样触发设备表联动（与专用唤醒词接口行为一致）
             syncWakeWordsToDeviceConfig(agentId, dto.getWakeWords());
+        }
+        if (dto.getWakeWordThreshold() != null) {
+            // 唤醒词阈值（0~100，0=最灵敏）：先落设备配置持久层，再推在线设备热生效。
+            // 越界值不落库不下发（与 B 线宽松策略一致，前端已限 0~100）
+            Integer threshold = dto.getWakeWordThreshold();
+            if (threshold >= 0 && threshold <= 100) {
+                applyDeviceConfigToDevices(agentId, Map.of("wake_word_threshold", threshold), "唤醒词阈值");
+            } else {
+                System.err.println("[AgentService] 忽略越界唤醒词阈值 agentId=" + agentId + " threshold=" + threshold);
+            }
+        }
+        if (dto.getInterruptThreshold() != null) {
+            // 实时打断灵敏度（0~100，0=最灵敏 / 100=最难打断）：映射设备 VAD 人声确认窗
+            Integer interrupt = dto.getInterruptThreshold();
+            if (interrupt >= 0 && interrupt <= 100) {
+                applyDeviceConfigToDevices(agentId, Map.of("interrupt_threshold", interrupt), "实时打断阈值");
+            } else {
+                System.err.println("[AgentService] 忽略越界实时打断阈值 agentId=" + agentId + " threshold=" + interrupt);
+            }
         }
         if (dto.getChatHistoryConf() != null) {
             existingEntity.setChatHistoryConf(dto.getChatHistoryConf());

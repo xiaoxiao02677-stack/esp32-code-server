@@ -5,7 +5,7 @@
 #include "button.h"
 #include "config.h"
 #include "power_save_timer.h"
-#include "round_screen_display.h"
+#include "display/yh_skin/yh_skin_display.h"
 
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
@@ -15,7 +15,8 @@
 #include <esp_timer.h>
 
 // 第一代小方块（ESP32-S3-N16R8 / ST7789 240x240）圆屏皮肤版
-// 显示层移植自 my-s3-tft 的 RoundScreenDisplay，硬件引脚与旧版完全一致：
+// 显示层用 main/display/yh_skin 的共享皮肤（视觉基准同 my-s3-tft 的 RoundScreenDisplay），
+// 硬件引脚与旧版完全一致：
 //   LCD SDA=47 SCL=21 RST=45 DC=40 CS=41 BL=42
 //   INMP441 WS=4 SCK=5 DIN=6 / MAX98357A DOUT=7 BCLK=15 LRCK=16 / BOOT=GPIO0
 #define TAG "YH_SET_N16R8_ST7789"
@@ -23,7 +24,7 @@
 class YhSetN16R8Board : public WifiBoard {
 private:
     Button boot_button_;
-    RoundScreenDisplay* display_ = nullptr;  // 圆屏皮肤（240x240）
+    YhSkinDisplay* display_ = nullptr;  // 共享「小柚」皮肤（240x240 圆屏、无电池）
     PowerSaveTimer* power_save_timer_ = nullptr;
     esp_timer_handle_t tick_timer_ = nullptr;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
@@ -117,7 +118,7 @@ private:
         });
     }
 
-    // 皮肤层按键增强反馈：圆屏统一转发给 RoundScreenDisplay
+    // 皮肤层按键增强反馈：统一转发给共享皮肤
     void HandleKeyEvent(int ev) {
         if (display_ != nullptr) {
             display_->HandleKeyEvent(ev);
@@ -133,7 +134,7 @@ private:
         esp_timer_create_args_t args = {
             .callback =
                 [](void* arg) {
-                    auto* disp = static_cast<RoundScreenDisplay*>(arg);
+                    auto* disp = static_cast<YhSkinDisplay*>(arg);
                     disp->Tick1s();
                 },
             .arg = display_,
@@ -170,10 +171,11 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, true));
 
         // 圆屏皮肤：240x240 安全区布局（时间/电量/表情/气泡/提示 + good.jpg 背景）
-        display_ = new RoundScreenDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
-                                          DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
-                                          DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
-        ESP_LOGI(TAG, "LCD ready (%dx%d, RoundScreenDisplay)", DISPLAY_WIDTH, DISPLAY_HEIGHT);
+        display_ = new YhSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                     DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Round240(false));
+        ESP_LOGI(TAG, "LCD ready (%dx%d, YhSkinDisplay round)", DISPLAY_WIDTH, DISPLAY_HEIGHT);
     }
 
 public:

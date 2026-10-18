@@ -60,6 +60,12 @@ WHITELIST: dict[str, dict] = {
         "kinds": {"A_ONLY"},
         "reason": "A 侧旧版型目录；B 已整体改名为 boards/yuhe/**（zhengchen→yuhe），属目录级改名对，非删除",
     },
+    "display/yh_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "屿禾「小柚」皮肤共享层：A 侧把同一套皮肤内联在 boards/my-s3-tft/round_screen_display.*，"
+                  "B 侧抽成跨 4 个 yh-* 版型复用的一份实现（display/yh_skin/yh_skin_display|boot|cards|assets），"
+                  "A 侧无该目录；视觉基准仍为 A 的 my-s3-tft 实现，仅新增开机首帧接管与系统态卡片",
+    },
     "boards/lckfb/szpi-esp32s3/config.json": {
         "kinds": {"DIFF"},
         "reason": "板型元数据：补 sdkconfig_append（YH 协议 / 16MB 分区 / 自定义唤醒词 / 设备 AEC），不参与 C++ 同源判定",
@@ -106,7 +112,7 @@ WHITELIST: dict[str, dict] = {
     # ---- 构建系统（注册块 / 改名 / 换行）----
     "CMakeLists.txt": {
         "kinds": {"DIFF"},
-        "reason": "SETS-BOARDS 注册块（4 个 yuhe_set 板型）+ zhengchen→yuhe 改名；当前 +31/-8（=39 行），"
+        "reason": "SETS-BOARDS 注册块（4 个 yuhe_set 板型）+ zhengchen→yuhe 改名 + 皮肤共享层 4 个 source/1 个 include；当前 +31/-8（=39 行），"
                   "工作区 blob f42eafbf 与基线一致（P0-2 只改换行、内容零变化，无增量）；两侧均为纯 LF，不含换行噪声",
     },
     "Kconfig.projbuild": {
@@ -672,26 +678,32 @@ def audit_sync_drift() -> list[SyncDrift]:
     return drifts
 
 
-# ------------- 旁证：圆屏（yh-n16r8-st7789）修复特征串断言 -------------
+# ------------- 旁证：圆屏皮肤修复特征串断言 -------------
 # 行号会随并行修改漂移，故用特征串断言代替行号比对（board-port 提供，2026-10-17 核对）
-ROUND_SCREEN_REL = "hardware/sets/boards/yh-n16r8-st7789/round_screen_display.cc"
+#
+# 2026-10-17 皮肤统稿：B 侧把圆屏皮肤从 boards/yuhe/yh-n16r8-st7789/round_screen_display.cc
+# 提升为 main/display/yh_skin/yh_skin_display.cc（4 版型共用），断言目标随之切换；
+# D1/D2/D3/D5 的可观测不变量保持原样，D4 由「占位对象必须创建」承接。
+ROUND_SCREEN_REL = "hardware/sets/xiaozhi-esp32/main/display/yh_skin/yh_skin_display.cc"
 ROUND_SCREEN_POSITIVE = [
     ("D2 码点上限保持 72", "constexpr size_t kBubbleMaxCodepoints = 72;"),
     ("D2 保持 WRAP（未改 DOT）", "lv_label_set_long_mode(bubble_label_, LV_LABEL_LONG_WRAP);"),
-    ("D1 截断在 SetChatMessage 生效", "TruncateUtf8ToCodepoints(content, kBubbleMaxCodepoints)"),
-    ("D4 SetupUI 前 SetTheme 有保护", "if (!setup_ui_called_ || round_time_label_ == nullptr) {"),
-    ("D4 保护分支走 Display::SetTheme", "Display::SetTheme(theme);"),
-    ("D5 底部提示 y=-18", "lv_obj_align(round_hint_label_, LV_ALIGN_BOTTOM_MID, 0, -18);"),
+    ("D1 截断在 SetChatMessage 生效", "TruncateUtf8(content, kBubbleMaxCodepoints)"),
+    ("D4 占位对象族仍创建（防 SetTheme 空指针）", "container_ = lv_obj_create(screen);"),
+    ("D4 SetTheme 后重绑皮肤字体", "ApplyFonts();"),
+    ("D5 底部提示按 18 基准缩放", "profile_.scaled(18)"),
     ("D3 电量纯数字无图标", 'snprintf(buf, sizeof(buf), "%d%%", battery_level);'),
-    ("D4 占位只隐藏不置空", "lv_obj_add_flag(chat_message_label_, LV_OBJ_FLAG_HIDDEN);"),
-    ("背景符号已改名", "extern const lv_image_dsc_t yh_round_bg_good;"),
+    ("开机首帧接管", "BuildSplash(lv_screen_active()"),
+    ("原生态 UA 串必须丢弃", "LooksLikeUserAgent"),
+    ("背景符号为共享层", "lv_image_set_src(bg_image_, &yh_skin_bg);"),
 ]
 # 负向：非注释行中出现即判定回归（注释里提到该词不算）
 ROUND_SCREEN_NEGATIVE = [
     ("D4 不得把占位置空", "chat_message_label_ = nullptr"),
     ("D2 不得固定气泡高度（会致短句上移）", "set_height(bubble_label_"),
     ("D2 不得改用 DOT（终裁为 WRAP）", "LV_LABEL_LONG_DOT"),
-    ("D3 代码里不得出现闪电符号", "⚡"),
+    ("D3 代码里不得出现闪电符号（内置字体无该字形）", "⚡"),
+    ("不得回退到原生状态栏布局", "lv_obj_create(top_bar_"),
 ]
 
 
@@ -709,7 +721,7 @@ def check_round_screen(tokens_positive=None, tokens_negative=None) -> tuple[str,
     path = REPO_ROOT / ROUND_SCREEN_REL
     if not path.is_file():
         # 同步后若 staging 被清理，退回固件树同名文件
-        alt = SRC_B / "boards/yuhe/yh-n16r8-st7789/round_screen_display.cc"
+        alt = SRC_B / "display/yh_skin/yh_skin_display.cc"
         path = alt if alt.is_file() else path
     if not path.is_file():
         return str(path), []
@@ -730,14 +742,14 @@ def check_round_screen(tokens_positive=None, tokens_negative=None) -> tuple[str,
 
     # 顺序型断言：SetTheme 里的补锁必须位于基类调用之后、字体重绑之前
     text = "\n".join(lines)
-    marker = "void RoundScreenDisplay::SetTheme("
+    marker = "void YhSkinDisplay::SetTheme("
     pos = text.find(marker)
     if pos >= 0:
         nxt = text.find("\nvoid ", pos + len(marker))
         body = text[pos: nxt if nxt > 0 else len(text)]
         i_base = body.find("LcdDisplay::SetTheme(theme);")
         i_lock = body.find("DisplayLockGuard lock(this);")
-        i_font = body.find("lv_obj_set_style_text_font(round_time_label_")
+        i_font = body.find("ApplyFonts();")
         ordered = -1 < i_base < i_lock and (i_font < 0 or i_lock < i_font)
         checks.append(TokenCheck(
             "D6 SetTheme 基类返回后补锁（递归锁）",
@@ -791,7 +803,10 @@ def audit_wallpaper_gate() -> WallpaperGate:
         return False
 
     include_cond = _inside("#include <lvgl.h>")
-    decl_cond = _inside("virtual void SetWallpaper")
+    # 只关心"声明在哪"，不锁死返回类型：需求二后续把 SetWallpaper 从 void 改成 bool
+    # （返回值 = 显示层是否真的接管了这张图），用返回类型做锚点会让本项误报成
+    # "已移出条件块"。锚在参数类型上，签名演进不影响判定。
+    decl_cond = _inside("SetWallpaper(const lv_img_dsc_t")
     macro_present = "WALLPAPER_HAS_LVGL_DISPLAY" in wm_text
 
     if decl_cond:

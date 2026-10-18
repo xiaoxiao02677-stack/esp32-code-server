@@ -28,6 +28,11 @@ public:
     virtual bool IsAfeWakeWord() const = 0;
     virtual size_t GetFeedSize() const = 0;
 
+    // 设备侧 AEC 是否真正生效（已启用且 codec 提供了回采参考通道）。
+    // 只有 AEC 生效时"边播边听"（Realtime 人声打断）才成立；否则播放期间
+    // 必须关闭语音处理，否则设备会被自己的声音打断。默认不支持 AEC。
+    virtual bool IsAecEffective() const { return false; }
+
     virtual void OnWakeWordDetected(std::function<void(const std::string& wake_word)> callback) = 0;
     virtual void OnOutput(std::function<void(std::vector<int16_t>&& data)> callback) = 0;
     virtual void OnVadStateChange(std::function<void(bool speaking)> callback) = 0;
@@ -54,6 +59,8 @@ public:
     // 服务器动态调整唤醒词参数（阈值 0.01-1.0，时长 500-5000ms）
     virtual void SetThreshold(float threshold) { (void)threshold; }
     virtual void SetDuration(int duration) { (void)duration; }
+    // 实时打断灵敏度（0~100，0=最灵敏）；仅 AFE 引擎有 VAD 打断判定，其余为空实现
+    virtual void SetInterruptThreshold(int threshold) { (void)threshold; }
 };
 
 #endif

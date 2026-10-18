@@ -2,8 +2,8 @@
   <div>
     <div class="page-head">
       <div>
-        <h1>智能体 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">智能体与设备管理</p>
+        <h1>我的智能体</h1>
+        <p class="sub">创建智能体、绑定设备、配置模型</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="creating" @click="openCreateModal">{{ creating ? '创建中…' : '＋ 新增智能体' }}</button>
@@ -25,14 +25,14 @@
         <div class="blob-3d">🤖</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="🤖" label="智能体" :value="agents.length" note="已创建" />
-        <StatCard icon="📡" label="设备" :value="deviceCount" note="已绑定" />
-        <StatCard icon="🎙" label="音色" :value="voices" note="可用" />
-        <StatCard icon="💎" label="可用积分" value="—" note="敬请期待" />
+        <StatCard icon="bot" label="智能体" :value="agents.length" note="已创建" />
+        <StatCard icon="device" label="设备" :value="deviceCount" note="已绑定" />
+        <StatCard icon="mic" label="音色" :value="voices" note="可用" />
+        <StatCard icon="grid" label="可用模型" :value="llmModels.length" note="平台启用 + 自定义" />
       </div>
     </div>
 
-    <DataTable title="智能体清单" hint="管理你的智能体配置" :total="agents.length" :page="1" :pages="1">
+    <DataTable title="智能体清单" hint="管理你的智能体配置" :total="agents.length" :page="1" :pages="1" :loading="loading">
       <template #actions>
         <button class="btn btn-ghost" style="padding:7px 16px;font-size:13px" @click="openCreateModal">新增</button>
       </template>
@@ -61,7 +61,7 @@
         </tbody>
       </table>
       <div v-if="agents.length === 0" class="empty-state">
-        <div class="empty-icon">🤖</div>
+        <div class="empty-icon"><YhIcon name="bot" /></div>
         <strong>暂无智能体</strong>
         <p>点击右上角「新增智能体」创建第一个智能体</p>
       </div>
@@ -95,6 +95,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
@@ -179,7 +180,7 @@ async function createAgent() {
     // LLM 模型（/user/resources 提供时）随创建一并提交
     if (draft.value.llmModelId) body.llmModelId = draft.value.llmModelId
     await customerApi.createAgent(body)
-    toast('已创建')
+    toast(`智能体「${draft.value.name.trim()}」已创建`)
     showCreate.value = false
     draft.value = { name: '', prompt: '', llmModelId: '' }
     load()
@@ -210,7 +211,7 @@ function openCreateModal() {
   if (!llmModels.value.length) loadLlmModels()
 }
 
-onMounted(load)
+onMounted(() => { load(); loadLlmModels() })
 </script>
 
 <style scoped>

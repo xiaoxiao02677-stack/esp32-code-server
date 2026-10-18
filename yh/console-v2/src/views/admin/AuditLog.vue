@@ -20,23 +20,23 @@
         <div class="blob-3d">📜</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="📜" label="日志总数" :value="total" />
-        <StatCard icon="✅" label="成功" :value="successCount" note="本页" />
+        <StatCard icon="scroll" label="日志总数" :value="total" />
+        <StatCard icon="check-circle" label="成功" :value="successCount" note="本页" />
         <StatCard icon="❌" label="失败" :value="failCount" note="本页" />
         <StatCard icon="🧭" label="模块" :value="modules.length" note="已载入" />
       </div>
     </div>
 
-    <DataTable title="审计日志" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize">
+    <DataTable title="审计日志" :total="total" :pages="pages" v-model:page="page" v-model:pageSize="pageSize" :loading="loading">
       <template #actions>
-        <select v-model="query.module" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12.5px;outline:none">
+        <select v-model="query.module" class="filter-select">
           <option value="">全部模块</option>
           <option v-for="m in modules" :key="m" :value="m">{{ m }}</option>
         </select>
-        <input v-model="query.operation" placeholder="操作（如 save / login）" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none" @keyup.enter="search" />
-        <input v-model="query.userId" placeholder="用户ID" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12.5px;outline:none;width:110px" @keyup.enter="search" />
-        <input v-model="query.startDate" type="date" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12.5px;outline:none" />
-        <input v-model="query.endDate" type="date" style="border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;font-size:12.5px;outline:none" />
+        <input v-model="query.operation" placeholder="操作（如 save / login）" class="filter-input" @keyup.enter="search" />
+        <input v-model="query.userId" placeholder="用户ID" class="filter-input" style="width:110px" @keyup.enter="search" />
+        <input v-model="query.startDate" type="date" class="filter-select" />
+        <input v-model="query.endDate" type="date" class="filter-select" />
         <button class="btn btn-ghost" style="padding:6px 14px;font-size:12.5px" @click="search">搜索</button>
       </template>
       <table class="data-table">
@@ -71,7 +71,7 @@
         </tbody>
       </table>
       <div v-if="logs.length === 0" class="empty-state">
-        <div class="empty-icon">📜</div>
+        <div class="empty-icon"><YhIcon name="scroll" /></div>
         <strong>暂无审计日志</strong>
         <p>调整筛选条件试试</p>
       </div>
@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

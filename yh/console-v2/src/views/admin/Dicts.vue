@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>数据 <span style="color:var(--primary)">字典</span></h1>
-        <p class="sub">契约对齐 /cc/：类型 / 数据增改删（save/update 分路径）</p>
+        <p class="sub">维护平台字典的类型与数据项</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="!activeType" @click="openCreate">＋ 新增字典项</button>
@@ -12,17 +12,17 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="📚" label="字典类型" :value="types.length" />
-      <StatCard icon="📄" label="当前类型数据" :value="datas.length" :note="activeType" />
+      <StatCard icon="book" label="字典类型" :value="types.length" />
+      <StatCard icon="file" label="当前类型数据" :value="datas.length" :note="activeType" />
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      <div v-for="t in types" :key="t.id" class="chip" :class="{ active: activeType === t.dictType }" @click="pickType(t)">
+      <button type="button" v-for="t in types" :key="t.id" class="chip" :class="{ active: activeType === t.dictType }" @click="pickType(t)">
         {{ t.dictName || t.dictType }}
-      </div>
+      </button>
     </div>
 
-    <DataTable title="字典数据">
+    <DataTable title="字典数据" :loading="loading">
       <table class="data-table">
         <thead><tr><th>标签</th><th>值</th><th>排序</th><th>备注</th><th>操作</th></tr></thead>
         <tbody>
@@ -41,7 +41,7 @@
         </tbody>
       </table>
       <div v-if="activeType && datas.length === 0" class="empty-state"><strong>此类型暂无数据</strong></div>
-      <div v-if="!activeType" class="empty-state"><div class="empty-icon">📚</div><strong>先选择字典类型</strong></div>
+      <div v-if="!activeType" class="empty-state"><div class="empty-icon"><YhIcon name="book" /></div><strong>先选择字典类型</strong></div>
     </DataTable>
 
     <!-- 编辑/新增（契约：有 id → POST /admin/dict/data/update；无 id → /save） -->
@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
@@ -137,8 +138,10 @@ onMounted(load)
 </script>
 
 <style scoped>
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 .form-row input { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; outline: none; }

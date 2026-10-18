@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>替换词 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">契约对齐 /cc/：fileName + content（词条内容）增改删</p>
+        <p class="sub">维护发音纠正词条，修正设备播报中的误读</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" @click="openCreate">＋ 新建</button>
@@ -15,7 +15,7 @@
       <StatCard icon="🔤" label="替换词文件" :value="files.length" />
     </div>
 
-    <DataTable title="文件列表">
+    <DataTable title="文件列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>文件名</th><th>内容预览</th><th>操作</th></tr></thead>
         <tbody>

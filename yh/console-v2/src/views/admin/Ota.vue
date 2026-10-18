@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>OTA <span style="color:var(--primary)">固件</span></h1>
-        <p class="sub">契约对齐 /cc/：上传 .bin/.apk / 下载 / 删除</p>
+        <p class="sub">上传与管理固件升级包</p>
       </div>
       <div class="head-actions">
         <label class="btn btn-primary" style="cursor:pointer">
@@ -15,11 +15,11 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="📦" label="固件包" :value="otas.length" />
-      <StatCard icon="⬆️" label="最高版本" :value="maxVersion" />
+      <StatCard icon="package" label="固件包" :value="otas.length" />
+      <StatCard icon="upload" label="最高版本" :value="maxVersion" />
     </div>
 
-    <DataTable title="固件列表">
+    <DataTable title="固件列表" :loading="loading">
       <table class="data-table">
         <thead><tr><th>版本</th><th>文件</th><th>时间</th><th>操作</th></tr></thead>
         <tbody>
@@ -36,12 +36,13 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="otas.length === 0" class="empty-state"><div class="empty-icon">📦</div><strong>暂无固件</strong></div>
+      <div v-if="otas.length === 0" class="empty-state"><div class="empty-icon"><YhIcon name="package" /></div><strong>暂无固件</strong></div>
     </DataTable>
   </div>
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
@@ -52,7 +53,17 @@ const askConfirm = inject('askConfirm')
 const otas = ref([])
 const loading = ref(false)
 const uploading = ref(false)
-const maxVersion = computed(() => otas.value.map(o => o.firmwareVersion || o.appVersion || o.version).filter(Boolean).sort().pop() || '—')
+// 版本比较：按数值段比较，避免字符串排序把 "2.10.0" 排到 "2.9.0" 前面
+const cmpVer = (a, b) => {
+  const pa = String(a).split('.').map(n => parseInt(n, 10) || 0)
+  const pb = String(b).split('.').map(n => parseInt(n, 10) || 0)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0)
+    if (d) return d
+  }
+  return 0
+}
+const maxVersion = computed(() => otas.value.map(o => o.firmwareVersion || o.appVersion || o.version).filter(Boolean).sort(cmpVer).pop() || '—')
 
 async function load() {
   loading.value = true

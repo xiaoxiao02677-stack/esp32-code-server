@@ -91,8 +91,17 @@ public:
     // 默认空实现 → 不支持的显示驱动自动忽略（NFR-9 兼容）。
     // emote 风格构建无 lvgl.h、也无壁纸渲染能力，故不声明这两个接口；
     // 调用侧（wallpaper_manager.cc）用 WALLPAPER_HAS_LVGL_DISPLAY 条件闸对齐。
-    virtual void SetWallpaper(const lv_img_dsc_t* image) { (void)image; }
-    virtual void ClearWallpaper() {}
+    // 返回值 = 显示层是否真的接管了这张图，调用方（wallpaper_manager）据此决定
+    // 「记账为已应用」还是「回滚 + 回 fail:render」。默认实现返回 true：
+    // 没有壁纸能力的历史驱动保持"接受但不做事"的原语义，不会让服务端刷失败。
+    virtual bool SetWallpaper(const lv_img_dsc_t* image) { (void)image; return true; }
+    // 返回 false = 没能解除对旧图的引用（拿不到锁/UI 未就绪）。
+    // 调用方必须放弃释放旧 buffer，否则 LVGL 会去渲染一块已释放的 PSRAM。
+    virtual bool ClearWallpaper() { return true; }
+    // 当前已绑定的用户壁纸（nullptr = 无，用默认背景）。
+    // 供开机画面取图：splash 想直接以用户壁纸打底时，从这里拿指针——
+    // 缓冲归 WallpaperManager 所有，调用方只读、不 free（FR-2.22 同一所有权约定）。
+    virtual const lv_img_dsc_t* GetWallpaper() const { return nullptr; }
 #endif
 
     inline int width() const { return width_; }
@@ -113,10 +122,12 @@ protected:
 
 class DisplayLockGuard {
 public:
-    explicit DisplayLockGuard(Display* display)
-        : display_(display), locked_(display_->Lock(30000)) {
+    explicit DisplayLockGuard(Display* display) : display_(display), locked_(Acquire(display)) {
         if (!locked_) {
-            ESP_LOGE("Display", "Failed to lock display");
+            // 打出来的是"放弃了"，不是"等了 30 秒"。持有者多半已经病态（见下方注释）。
+            ESP_LOGE("Display",
+                     "Failed to lock display after %d ms; caller must skip LVGL work (owner task stuck?)",
+                     kTotalWaitMs);
         }
     }
     ~DisplayLockGuard() {
@@ -128,9 +139,35 @@ public:
     DisplayLockGuard(const DisplayLockGuard&) = delete;
     DisplayLockGuard& operator=(const DisplayLockGuard&) = delete;
 
+    // 供调用方 fail-closed：拿不到锁就**别碰 LVGL**。
+    // 原来的写法是等满 30 秒后打印一行然后无锁继续，这是本案的放大器：
+    // LVGL 在本工程是 LV_OS_NONE（sdkconfig 无 CONFIG_LV_USE_OS），内部零加锁，
+    // event_head 是单个全局链表、节点是各任务栈上的局部变量。两个任务同时
+    // push/pop 会把 head 还原成"另一个任务早已返回的栈槽"，该槽被复用后
+    // lv_event_push 会写出 e->prev = &e 的自环 → lv_event_mark_deleted 的
+    // while(e) 永不终止（实测卡死 30s+，WDT 每 10s 打同一栈）；若该槽内容
+    // 是小整数则表现为 LoadProhibited / EXCVADDR=0x14。
+    // 所以"等不到锁还继续写"比"这次不更新界面"危险得多。
+    bool locked() const { return locked_; }
     explicit operator bool() const { return locked_; }
 
 private:
+    // 分片重试而不是一次性长等：
+    //   · 正常竞争（毫秒级）仍然能拿到，行为不变；
+    //   · 真病态持锁时尽早返回 false，让调用方跳过，而不是把调用者
+    //     连同主任务一起钉死 30 秒（那期间按键、协议、看门狗全被拖住）。
+    static bool Acquire(Display* display) {
+        for (int waited = 0; waited < kTotalWaitMs; waited += kSliceMs) {
+            if (display->Lock(kSliceMs)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static constexpr int kSliceMs = 500;
+    static constexpr int kTotalWaitMs = 2000;
+
     Display* display_;
     bool locked_;
 };

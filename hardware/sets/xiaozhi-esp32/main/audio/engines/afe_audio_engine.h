@@ -33,6 +33,8 @@ public:
     void EnableWakeWordDetection(bool enable) override;
     void EnableVoiceProcessing(bool enable) override;
     void EnableDeviceAec(bool enable) override;
+    // 实时打断灵敏度（0~100）：映射人声确认窗 0~2000ms，0=最灵敏
+    void SetInterruptThreshold(int threshold) override;
 
     bool HasWakeWord() const override;
     bool IsWakeWordDetectionEnabled() const override;
@@ -85,8 +87,11 @@ private:
     // AEC 尚未收敛阶段与播放起停瞬态产生的几帧尖峰。
     bool vad_candidate_ = false;
     int64_t vad_candidate_since_us_ = 0;
-    // 连续人声确认窗 / 连续静音确认窗，可通过 CONFIG_YH_VAD_*_CONFIRM_MS 调整。
-    static constexpr int kVadSpeechConfirmMs = CONFIG_YH_VAD_SPEECH_CONFIRM_MS;
+    // 连续人声确认窗 / 连续静音确认窗。
+    // 人声确认窗可运行时下发（device_config.interrupt_threshold，0~100 → 0~2000ms，
+    // 0=最灵敏/立即打断、100=最难打断），用于现场调"实时打断"灵敏度；
+    // 默认值仍取 CONFIG_YH_VAD_SPEECH_CONFIRM_MS。静音窗不参与打断判定，保持编译期。
+    std::atomic<int> vad_speech_confirm_ms_{CONFIG_YH_VAD_SPEECH_CONFIRM_MS};
     static constexpr int kVadSilenceConfirmMs = CONFIG_YH_VAD_SILENCE_CONFIRM_MS;
     std::atomic<bool> device_aec_enabled_{false};
     // Deferred AFE buffer reset, performed by ProcessingTask (see UpdateActiveState)

@@ -13,7 +13,7 @@
                 "CONFIG_LV_USE_FONT_COMPRESSED=y",
                 "CONFIG_LV_USE_FONT_PLACEHOLDER=y",
                 "CONFIG_USE_AUDIO_PROCESSOR=y",
-                "CONFIG_USE_SERVER_AEC=n",
+                "CONFIG_USE_SERVER_AEC=y",
                 "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
                 "CONFIG_PARTITION_TABLE_CUSTOM=y",
                 "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\"",

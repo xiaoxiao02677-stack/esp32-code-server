@@ -79,6 +79,12 @@ public class AgentUpdateDTO implements Serializable {
     @Schema(description = "智能体自定义唤醒词，分号分隔；为空则使用全局 wakeup_words（默认「你好」）", example = "你好;早上好", nullable = true)
     private String wakeWords;
 
+    @Schema(description = "唤醒词阈值（0~100，0=最灵敏、100=最不灵敏）；下发设备热生效并持久化到 ai_device_config，不传保持不变", example = "40", nullable = true)
+    private Integer wakeWordThreshold;
+
+    @Schema(description = "实时打断灵敏度（0~100，0=最灵敏/最容易打断、100=最难打断）；下发设备热生效并持久化到 ai_device_config，不传保持不变", example = "15", nullable = true)
+    private Integer interruptThreshold;
+
     @Schema(description = "聊天记录配置（0不记录 1仅记录文本 2记录文本和语音）", example = "3", nullable = true)
     private Integer chatHistoryConf;
 

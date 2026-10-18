@@ -21,14 +21,14 @@
         <div class="blob-3d">📚</div>
       </div>
       <div class="stats-grid">
-        <StatCard icon="📚" label="知识库" :value="datasets.length" />
-        <StatCard icon="📄" label="本页文档" :value="docTotal" note="当前页" />
-        <StatCard icon="🧱" label="分块" :value="chunkTotal" />
-        <StatCard icon="🔢" label="文档总数" :value="total" note="全库" />
+        <StatCard icon="book" label="知识库" :value="datasets.length" />
+        <StatCard icon="file" label="本页文档" :value="docTotal" note="当前页" />
+        <StatCard icon="grid" label="分块" :value="chunkTotal" />
+        <StatCard icon="hash" label="文档总数" :value="total" note="全库" />
       </div>
     </div>
 
-    <DataTable title="知识库清单" :total="datasets.length" :page="1" :pages="Math.max(1, Math.ceil(datasets.length / 4))">
+    <DataTable title="知识库清单" :total="datasets.length" :page="1" :pages="1" :loading="loading">
       <table class="data-table">
         <thead>
           <tr><th>知识库</th><th>文档数</th><th>分块数</th><th>状态</th><th>操作</th></tr>
@@ -57,7 +57,7 @@
         </tbody>
       </table>
       <div v-if="datasets.length === 0" class="empty-state">
-        <div class="empty-icon">📚</div>
+        <div class="empty-icon"><YhIcon name="book" /></div>
         <strong>暂无知识库</strong>
         <p>点击「新建知识库」开始</p>
       </div>
@@ -103,7 +103,7 @@
         </table>
         <div v-if="docs.list.length === 0" class="empty-state" style="padding:24px 0">
           <strong>暂无文档</strong>
-          <p>上传文档请在原控制台完成（接口 POST /datasets/{id}/documents 已契约）</p>
+          <p>暂无文档，上传入口即将开放</p>
         </div>
         <div class="modal-actions" style="margin-top:14px">
           <button class="btn btn-ghost" @click="docs.show = false">关闭</button>
@@ -161,6 +161,7 @@
 </template>
 
 <script setup>
+import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'

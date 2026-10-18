@@ -191,6 +191,7 @@ import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
+const askConfirm = inject('askConfirm')
 
 const tasks = ref([])
 const onlineDevices = ref([])
@@ -347,11 +348,18 @@ async function createTask() {
 }
 
 // ---------- 删除任务 ----------
-async function deleteTask(task) {
-  if (!confirm(`确定删除任务 ${task.push_id}？`)) return
-  // 后端未提供 DELETE 端点：cron 任务删除需走 Python 内部；此处给出明确提示
-  // 预留：后端补充 DELETE /api/push/tasks/{id} 后改为真实调用
-  toast('当前后端暂未开放删除接口（cron 任务将随服务重启清除）')
+function deleteTask(task) {
+  askConfirm({
+    title: '删除推送任务',
+    message: `确定删除任务 ${task.push_id} 吗？`,
+    danger: true,
+    okText: '删除',
+    onOk: () => {
+      // 后端未提供 DELETE 端点：cron 任务删除需走 Python 内部；此处给出明确提示
+      // 预留：后端补充 DELETE /api/push/tasks/{id} 后改为真实调用
+      toast('当前后端暂未开放删除接口（cron 任务将随服务重启清除）')
+    }
+  })
 }
 
 // ---------- 自动刷新 ----------
@@ -440,7 +448,7 @@ onUnmounted(stopTimer)
 .mono { font-family: ui-monospace, monospace; font-size: 13px; }
 
 .btn-sm { padding: 6px 12px; font-size: 13px; }
-.btn-danger { background: #dc2626; color: white; border: none; }
+/* .btn-danger 已收敛到 global.css（token 化，避免 #dc2626 硬编码） */
 .push-tip {
   margin-top: 4px; padding: 10px 12px; border-radius: 10px;
   background: #eff6ff; color: #1e40af; font-size: 12.5px; line-height: 1.6;

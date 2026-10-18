@@ -43,6 +43,7 @@ import AdminOrders from './views/admin/Orders.vue'
 import CustomerProfile from './views/customer/Profile.vue'
 import CustomerMyModels from './views/customer/MyModels.vue'
 import Login from './views/Login.vue'
+import NotFound from './views/NotFound.vue'
 
 // 老登录态身份补全：TokenDTO 缺角色字段的旧登录态，刷新后用 /user/info 异步修正按钮可见性
 if (getToken()) refreshUserInfo().catch(() => {})
@@ -86,7 +87,9 @@ const router = createRouter({
     { path: '/admin/timeline-chart', component: AdminTimelineChart },
     { path: '/admin/push-scheduler', component: AdminPushScheduler },
     { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw },
-    { path: '/admin/wechat-claw', component: AdminWeChatClaw }
+    { path: '/admin/wechat-claw', component: AdminWeChatClaw },
+    // 404 兜底：未知路径不再渲染空白页
+    { path: '/:pathMatch(.*)*', component: NotFound }
   ]
 })
 

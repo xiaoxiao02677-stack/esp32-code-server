@@ -11,6 +11,7 @@
 #include <esp_vadn_models.h>
 
 #include "audio_service.h"
+#include "settings.h"
 #include "wake_words/custom_wake_word.h"
 
 #define TAG "AfeAudioEngine"
@@ -62,6 +63,19 @@ bool AfeAudioEngine::Initialize(AudioCodec* codec, int frame_duration_ms,
     codec_ = codec;
     frame_samples_ = frame_duration_ms * 16000 / 1000;
     output_buffer_.reserve(frame_samples_);
+
+    // 恢复云端下发的实时打断灵敏度（board.cc 收到 device_config.interrupt_threshold
+    // 时写入 NVS "interrupt_cfg"）；无缓存则保持 CONFIG_YH_VAD_SPEECH_CONFIRM_MS。
+    // 设备重启后不回退，网页上拉过的进度条才"一直有效"。
+    // （曾用名 "interrupt_config" 16 字符超 NVS 上限 15，nvs_open 永远失败。）
+    {
+        Settings settings("interrupt_cfg", true);
+        int saved_threshold = settings.GetInt("threshold", -1);
+        if (saved_threshold >= 0 && saved_threshold <= 100) {
+            SetInterruptThreshold(saved_threshold);
+            ESP_LOGI(TAG, "Restored interrupt threshold %d from NVS", saved_threshold);
+        }
+    }
 
     if (models_list == nullptr) {
         models_ = esp_srmodel_init("model");
@@ -294,6 +308,19 @@ void AfeAudioEngine::EnableWakeWordDetection(bool enable) {
     UpdateActiveState();
 }
 
+void AfeAudioEngine::SetInterruptThreshold(int threshold) {
+    if (threshold < 0 || threshold > 100) {
+        ESP_LOGW(TAG, "Invalid interrupt threshold: %d (range 0-100)", threshold);
+        return;
+    }
+    // 0~100 → 人声确认窗 0~2000ms 线性映射（与 CONFIG_YH_VAD_SPEECH_CONFIRM_MS
+    // 的 Kconfig range 0~2000 对齐）。0=立即确认（最灵敏，任何 VAD 抬升都打断），
+    // 100=连续 2s 人声才打断（最难被打断）。15 ≈ 出厂默认 300ms。
+    const int confirm_ms = threshold * 20;
+    vad_speech_confirm_ms_.store(confirm_ms);
+    ESP_LOGI(TAG, "Interrupt threshold set: %d -> speech confirm %d ms", threshold, confirm_ms);
+}
+
 void AfeAudioEngine::EnableVoiceProcessing(bool enable) {
     if (enable) {
         ResetVadState();
@@ -325,7 +352,7 @@ void AfeAudioEngine::UpdateVadState(bool speech) {
         return;  // 还没到需要翻转的方向，或已经上报过
     }
 
-    const int confirm_ms = speech ? kVadSpeechConfirmMs : kVadSilenceConfirmMs;
+    const int confirm_ms = speech ? vad_speech_confirm_ms_.load() : kVadSilenceConfirmMs;
     if ((now_us - vad_candidate_since_us_) / 1000 < confirm_ms) {
         return;  // 持续时间不够，暂不上报（滤除瞬时回声尖峰）
     }

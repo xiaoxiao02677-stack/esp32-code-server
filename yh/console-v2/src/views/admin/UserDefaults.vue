@@ -12,9 +12,9 @@
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🌐" label="当前作用域" :value="SCOPES.find(s => s.value === scopeType)?.label || '—'" />
-      <StatCard icon="🎯" label="目标对象" :value="scopeName" />
-      <StatCard icon="🧠" label="默认 LLM" :value="llmName || '未设置'" />
+      <StatCard icon="globe" label="当前作用域" :value="SCOPES.find(s => s.value === scopeType)?.label || '—'" />
+      <StatCard icon="target" label="目标对象" :value="scopeName" />
+      <StatCard icon="memory" label="默认 LLM" :value="llmName || '未设置'" />
       <StatCard icon="🔒" label="锁定策略" :value="lockPolicy ? '已锁定' : '未锁定'" :note="lockPolicy ? '下级不可覆盖' : '下级可覆盖'" />
     </div>
 
@@ -22,9 +22,9 @@
     <div class="panel" style="margin-bottom:20px">
       <div class="panel-head"><h3>作用域<span class="hint">保存到对应层级的默认配置</span></h3></div>
       <div class="scope-row">
-        <div v-for="s in SCOPES" :key="s.value" class="chip" :class="{ active: scopeType === s.value }" @click="pickScope(s.value)">
+        <button type="button" v-for="s in SCOPES" :key="s.value" class="chip" :class="{ active: scopeType === s.value }" @click="pickScope(s.value)">
           {{ s.label }}
-        </div>
+        </button>
         <select v-if="scopeType === 1" v-model="roleId" class="scope-select">
           <option :value="''" disabled>选择角色</option>
           <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.roleName }}</option>
@@ -285,8 +285,10 @@ onMounted(() => {
 
 <style scoped>
 .scope-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 20px 16px; }
-.chip { padding: 8px 16px; border-radius: 999px; background: var(--bg-card); border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; }
-.chip.active { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* .chip 已收敛到 global.css */
+
+/* .chip 已收敛到 global.css */
+
 .scope-select {
   border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 12px;
   font-size: 13px; outline: none; background: #fff; color: var(--text); min-width: 170px;

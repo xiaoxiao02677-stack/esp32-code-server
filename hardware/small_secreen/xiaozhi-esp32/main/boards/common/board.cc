@@ -291,10 +291,11 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
     // Extension point: future cloud-managed keys (e.g. theme) get a new case here.
 
     // 唤醒词阈值动态调整（服务器下发）
+    // 用户区间 0~100：0=最灵敏、100=最不灵敏（固件侧 0 夹取到 esp-sr 最低有效值 0.01）
     auto threshold = cJSON_GetObjectItem(payload, "wake_word_threshold");
     if (cJSON_IsNumber(threshold)) {
         int t = threshold->valueint;
-        if (t >= 1 && t <= 100) {
+        if (t >= 0 && t <= 100) {
             Settings settings("wake_word_config", true);
             settings.SetInt("threshold", t);
             auto& app = Application::GetInstance();
@@ -316,6 +317,22 @@ void Board::ApplyDeviceConfig(const cJSON* payload) {
             audio.SetWakeWordDuration(d);
             changed = true;
             ESP_LOGI(TAG, "云端唤醒词时长已更新: %dms", d);
+        }
+    }
+
+    // 实时打断灵敏度动态调整（服务器下发）：0~100，0=最灵敏、100=最难打断。
+    // 映射到 VAD 人声确认窗 0~2000ms（AfeAudioEngine::SetInterruptThreshold）。
+    auto interrupt = cJSON_GetObjectItem(payload, "interrupt_threshold");
+    if (cJSON_IsNumber(interrupt)) {
+        int it = interrupt->valueint;
+        if (it >= 0 && it <= 100) {
+            Settings settings("interrupt_config", true);
+            settings.SetInt("threshold", it);
+            auto& app = Application::GetInstance();
+            auto& audio = app.GetAudioService();
+            audio.SetInterruptThreshold(it);
+            changed = true;
+            ESP_LOGI(TAG, "云端实时打断阈值已更新: %d", it);
         }
     }
 

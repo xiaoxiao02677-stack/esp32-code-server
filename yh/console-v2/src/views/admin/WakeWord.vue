@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>唤醒词 <span style="color:var(--primary)">管理</span></h1>
-        <p class="sub">配置智能体的自定义唤醒词，支持多词，最多 10 个，每个不超过 30 字符</p>
+        <p class="sub">配置智能体的自定义唤醒词，支持多词，最多 10 个，每个不超过 8 个汉字</p>
       </div>
       <div class="head-actions">
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
@@ -13,19 +13,19 @@
     <div class="wake-word-guide">
       <div class="guide-title">ℹ️ 唤醒词生效说明</div>
       <ul class="guide-list">
-        <li><b>硬件唤醒词</b>：设备待机时喊它唤醒设备（前 5 个生效，单词 ≤32 字符）。保存后在线设备实时更新；离线设备下次连接时自动生效。</li>
+        <li><b>硬件唤醒词</b>：设备待机时喊它唤醒设备（前 5 个生效，单词 ≤8 个汉字）。保存后在线设备实时更新；离线设备下次连接时自动生效。</li>
         <li><b>寒暄词</b>：对话进行中说这些词，获得简短回应，不唤醒待机设备（第 6 个起仅作寒暄词）。</li>
         <li>自定义唤醒词请使用常见汉字（如"你好小智"），生僻字可能不被设备语音模型支持。</li>
       </ul>
     </div>
 
     <div class="stats-grid" style="margin-bottom:20px">
-      <StatCard icon="🔊" label="智能体总数" :value="agents.length" />
-      <StatCard icon="✅" label="已配置唤醒词" :value="configuredCount" />
-      <StatCard icon="📡" label="在线设备" :value="onlineDevices.length" note="实时状态" />
+      <StatCard icon="volume" label="智能体总数" :value="agents.length" />
+      <StatCard icon="check-circle" label="已配置唤醒词" :value="configuredCount" />
+      <StatCard icon="device" label="在线设备" :value="onlineDevices.length" note="实时状态" />
     </div>
 
-    <DataTable title="智能体唤醒词配置">
+    <DataTable title="智能体唤醒词配置" :loading="loading">
       <table class="data-table">
         <thead><tr><th>智能体</th><th>唤醒词列表</th><th>操作</th></tr></thead>
         <tbody>
@@ -49,7 +49,7 @@
         </tbody>
       </table>
       <div v-if="agents.length === 0" class="empty-state">
-        <div class="empty-icon">🔊</div><strong>暂无智能体</strong>
+        <div class="empty-icon"><YhIcon name="volume" /></div><strong>暂无智能体</strong>
         <p>请先在「智能体管理」中创建智能体</p>
       </div>
     </DataTable>
@@ -60,7 +60,7 @@
         <h3>编辑唤醒词 — {{ editor.agentName }}</h3>
 
         <div class="form-row">
-          <label>唤醒词列表 <span class="field-hint">（最多 10 个，每个 ≤30 字符，分号分隔）</span></label>
+          <label>唤醒词列表 <span class="field-hint">（最多 10 个，每个 ≤8 个汉字，用逗号或换行分隔）</span></label>
           <textarea
             v-model="editor.rawInput"
             rows="6"
@@ -78,38 +78,23 @@
           <p v-if="editor.preview.length > 5" class="field-hint warn-hint">硬件唤醒词上限 5 个，第 6 个起仅作为寒暄词生效（对话中回应，不唤醒待机设备）。</p>
         </div>
 
-        <!-- 阈值与时长设置 -->
-        <div class="config-row">
-          <div class="config-field">
-            <label>识别阈值 <span class="field-hint">灵敏度（越高越严格）</span></label>
-            <div class="slider-group">
-              <input type="range" min="0" max="100" v-model.number="threshold" class="range-input">
-              <span class="range-value">{{ threshold }}%</span>
-            </div>
-          </div>
-          <div class="config-field">
-            <label>唤醒词最短时长 <span class="field-hint">ms（过滤噪声）</span></label>
-            <div class="slider-group">
-              <input type="range" min="100" max="2000" step="100" v-model.number="duration" class="range-input">
-              <span class="range-value">{{ duration }}ms</span>
-            </div>
-          </div>
-        </div>
+        <!-- 阈值入口说明：原「识别阈值 / 最短时长」两个滑块绑定的键
+             Python /api/wake-word/push 并不接收（handler 只读 agent_id/device_id/
+             wake_words/wake_word_display/tts_rate），是纯空操作控件，已移除。
+             唤醒词灵敏度请去「智能体」页配置（走 device_config.wake_word_threshold，
+             0~100，真正下发到固件并持久 NVS）。 -->
+        <div class="config-row" v-if="false"></div>
 
-        <!-- 设备选择 -->
+        <!-- 下发范围：恒为该智能体绑定的全部在线设备。
+             原「设备列表 + 勾选」整块删除，因为它是双重失效：
+               ① 数据源 /api/wake-word/devices 返回的是 deviceId 字符串数组，
+                  模板却按 {name, deviceId, online} 对象取值 → 永远渲染成空名 + 离线；
+               ② 勾选结果传的 deviceIds 键 Python handler 根本不读（只读 device_id），
+                  所以勾不勾选对下发范围毫无影响。
+             留着只会让用户以为能按选下发。按选下发需 Python 侧支持 device_ids，另行排期。 -->
         <div class="form-row">
-          <label>动态下发至设备</label>
-          <div class="device-select-box">
-            <div v-if="allDevices.length === 0" class="field-hint">暂无可用设备</div>
-            <div v-else class="device-grid">
-              <label v-for="d in allDevices" :key="d.id" class="device-item" :class="{ active: pushTarget.includes(d.id) }">
-                <input type="checkbox" :value="d.id" :checked="pushTarget.includes(d.id)" @change="toggleDeviceSelect(d.id)">
-                <span class="device-name">{{ d.name || d.deviceId }}</span>
-                <span class="device-status" :class="d.online ? 'online' : 'offline'">{{ d.online ? '在线' : '离线' }}</span>
-              </label>
-            </div>
-            <div v-if="pushTarget.length > 0" class="selected-count">已选 {{ pushTarget.length }} 台</div>
-          </div>
+          <label>下发范围</label>
+          <p class="field-hint">保存后自动下发到该智能体绑定的全部在线设备；离线设备重连后自动补投。</p>
         </div>
 
         <div class="form-row" v-if="editor.error">
@@ -118,7 +103,7 @@
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="editor.show = false">取消</button>
           <button class="btn btn-primary" :disabled="saving || pushing" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-          <button class="btn btn-success" :disabled="pushing || pushTarget.length === 0" @click="pushToDevice({ id: editor.agentId })">{{ pushing ? '下发中…' : '保存并下发' }}</button>
+          <button class="btn btn-success" :disabled="pushing" @click="pushToDevice({ id: editor.agentId })">{{ pushing ? '下发中…' : '保存并下发' }}</button>
         </div>
       </div>
     </div>
@@ -126,20 +111,26 @@
 </template>
 
 <script setup>
-import { inject, onMounted, reactive, ref, watch } from 'vue'
+import YhIcon from '../../components/YhIcon.vue'
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi, getToken } from '../../lib/api'
+import { adminApi } from '../../lib/api'
 
 const toast = inject('toast')
 const agents = ref([])
+// 顶部统计卡「已配置唤醒词」：模板一直引用 configuredCount，但它从未声明，
+// 渲染出来是 undefined（Vue 只打警告不报错，所以长期没被发现）
+const configuredCount = computed(
+  () => agents.value.filter(a => (a.wakeWords || []).length > 0).length
+)
 const loading = ref(false)
 const saving = ref(false)
 const onlineDevices = ref([])
-const allDevices = ref([])
-const threshold = ref(60)
-const duration = ref(500)
-const pushTarget = ref([]) // selected device ids
+// 注：原 threshold / duration 两个 ref 已移除——它们绑定的键 Python push 端点不接收，
+// 是纯空操作控件（唤醒词灵敏度请走「智能体」页的 wake_word_threshold）
+// allDevices / pushTarget / toggleDeviceSelect 也已移除：设备区数据源从未对上
+//（返回 deviceId 字符串数组，模板按对象取 name/online），已整块删除
 const pushing = ref(false)
 const editor = reactive({
   show: false,
@@ -162,8 +153,11 @@ watch(() => editor.rawInput, (val) => {
   editor.error = ''
   if (words.length > 10) {
     editor.error = '最多输入 10 个唤醒词'
-  } else if (words.some(w => w.length > 30)) {
-    editor.error = '每个唤醒词最多 30 个字符'
+  } else if (words.some(w => w.length > 8)) {
+    // 改 8：设备按拼音识别，单条上限 60 字符。最坏音节 zhuang（6 字母）时
+    // N 个音节长 7N-1，N=8 → 55 字符安全，N=9 → 62 超限会被服务端丢弃。
+    // 原阈值 30 个汉字（最坏 209 字符）必然被丢弃，是静默失效。
+    editor.error = '每个唤醒词最多 8 个汉字（设备按拼音识别，超长会失效）'
   }
 })
 
@@ -175,16 +169,13 @@ async function load() {
       ...a,
       wakeWords: a.wakeWords ? a.wakeWords.split(';').filter(Boolean) : []
     }))
-    // 加载在线设备
+    // 「在线设备」统计卡：必须走 adminApi（/xiaozhi 前缀，由 manager-api 注入 server secret）。
+    // 原来直接 fetch('/api/wake-word/devices') 有三个错：少了 /xiaozhi 前缀打到静态站
+    // 返回 200 text/html（json 解析抛错被空 catch 吞掉）、没带 agent_id、用的是用户 JWT
+    // 而 Python 只认 server auth_key ⇒ 该卡片长期恒为 0。
     try {
-      const devRes = await fetch('/api/wake-word/devices', {
-        headers: { Authorization: 'Bearer ' + getToken() }
-      })
-      if (devRes.ok) {
-        const d = await devRes.json()
-        onlineDevices.value = d.data?.devices || []
-        allDevices.value = d.data?.devices || []
-      }
+      const devRes = await adminApi.wakeWordDevices()
+      onlineDevices.value = devRes.data?.devices || []
     } catch {}
   } catch (e) {
     toast(e.msg || '加载失败', 'error')
@@ -215,7 +206,9 @@ async function save() {
   }
   saving.value = true
   try {
-    const words = editor.preview.filter(w => w.length > 0 && w.length <= 30)
+    // 不再在这里按 30 过滤：超长判定已由 watch 的 8 汉字校验拦截（editor.error），
+  // 两处阈值不一致会让"界面不报错但词被悄悄丢掉"
+  const words = editor.preview.filter(w => w.length > 0)
     if (words.length === 0) {
       toast('唤醒词不能为空', 'error')
       return
@@ -237,30 +230,29 @@ async function save() {
 
 onMounted(load)
 
-async function toggleDeviceSelect(deviceId) {
-  const idx = pushTarget.value.indexOf(deviceId)
-  if (idx >= 0) pushTarget.value.splice(idx, 1)
-  else pushTarget.value.push(deviceId)
-}
-
 async function pushToDevice(agent) {
-  if (pushTarget.value.length === 0) {
-    toast('请先选择目标设备', 'error')
+  if (editor.error) {
+    toast(editor.error, 'error')
+    return
+  }
+  // 不再在这里按 30 过滤：超长判定已由 watch 的 8 汉字校验拦截（editor.error），
+  // 两处阈值不一致会让"界面不报错但词被悄悄丢掉"
+  const words = editor.preview.filter(w => w.length > 0)
+  if (words.length === 0) {
+    toast('请填写唤醒词', 'error')
     return
   }
   pushing.value = true
   try {
-    const words = editor.preview.filter(w => w.length > 0 && w.length <= 30)
-    await adminApi.wakeWordPush(agent.id, {
-      deviceIds: pushTarget.value,
-      wakeWords: words,
-      threshold: threshold.value,
-      duration: duration.value
-    })
-    const count = pushTarget.value.length
-    toast(`已下发至 ${count} 台设备`, 'success', 3000)
+    // 必须走 manager-api（POST /agent/wake-word/{id}）：汉字→无调拼音的转换在那一侧，
+    // 且它负责写 ai_device_config（离线设备重连的唯一持久源）再转发 Python 推送。
+    // 直连 Python /api/wake-word/push 有两个硬问题：
+    //   ① 传上去的是汉字，固件 MultiNet 只认拼音 → 下发即失效；
+    //   ② deviceIds / threshold / duration 三个键 Python handler 根本不读，
+    //      所以"选设备下发"从来就是空操作（device_id 为 None 反而是全部设备）。
+    await adminApi.setAgentWakeWords(agent.id, words)
+    toast('已保存并下发至该智能体的全部在线设备', 'success', 3000)
     editor.show = false
-    pushTarget.value = []
     load()
   } catch (e) {
     toast(e.msg || '下发失败', 'error')

@@ -1,18 +1,19 @@
 <template>
   <div v-if="booting" class="boot-bar"><div class="boot-bar-fill"></div></div>
   <div v-else class="app-shell" :class="[roleClass, { 'shell-compact': compact }]">
-    <div class="app-canvas">
+    <a href="#main-content" class="skip-link">跳到主内容</a>
+    <main class="app-canvas" id="main-content">
       <TopBar :role="role" @switch-role="switchRole" />
       <router-view />
       <DockNav :role="role" @toggle-compact="onToggleCompact" />
       <Toasts ref="toastsRef" />
-      <div v-if="confirm.show" class="modal-mask" @click.self="confirm.show = false">
+      <div v-if="confirm.show" class="modal-mask" @click.self="confirm.show = false" @keydown.esc.window="confirm.show && (confirm.show = false)">
         <div class="modal confirm">
           <h3>{{ confirm.title }}</h3>
           <p>{{ confirm.message }}</p>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="confirm.show = false">取消</button>
-            <button class="btn btn-primary" :class="{ danger: confirm.danger }" @click="runConfirmOk">
+            <button ref="confirmOkBtn" class="btn btn-primary" :class="{ danger: confirm.danger }" @click="runConfirmOk">
               {{ confirm.okText || '确定' }}
             </button>
           </div>
@@ -33,12 +34,12 @@
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TopBar from './components/TopBar.vue'
 import DockNav from './components/DockNav.vue'
@@ -77,6 +78,12 @@ function runConfirmOk() {
   if (cb) cb()
 }
 
+// 确认弹窗打开时聚焦确认按钮（键盘可达），ESC 关闭
+const confirmOkBtn = ref(null)
+watch(() => confirm.show, async (v) => {
+  if (v) { await nextTick(); confirmOkBtn.value?.focus() }
+})
+
 function switchRole(r) {
   router.push(r === 'admin' ? '/admin' : '/customer')
 }
@@ -87,7 +94,8 @@ function onToggleCompact(val) {
 }
 
 onMounted(() => {
-  setTimeout(() => { booting.value = false }, 300)
+  // 路由就绪即撤掉启动进度条（不再假等 300ms）
+  router.isReady().then(() => { booting.value = false })
   // 强制改密：booting 结束后检查 /user/info.mustChangePwd（有 token 才查，静默失败）
   setTimeout(() => { checkForcePwd() }, 400)
 })
@@ -132,7 +140,7 @@ watch(() => forcePwd.show, (v) => {
 
 <style>
 /* A8 booting 进度条 */
-.boot-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 10000; padding: 4px 10px; }
+.boot-bar { position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-boot); padding: 4px 10px; }
 .boot-bar-fill {
   height: 4px; border-radius: 4px;
   background: linear-gradient(90deg, var(--primary), var(--teal-3));
@@ -140,7 +148,7 @@ watch(() => forcePwd.show, (v) => {
 }
 @keyframes boot-fill { from { width: 8%; } to { width: 100%; } }
 
-.modal-mask { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: grid; place-items: center; z-index: 150; }
+.modal-mask { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: grid; place-items: center; z-index: var(--z-modal); }
 .modal { background: #fff; border-radius: 20px; padding: 26px; width: min(440px, 92vw); box-shadow: 0 24px 60px rgba(0,0,0,.2); }
 .modal.confirm h3 { font-size: 17px; margin-bottom: 10px; }
 .modal.confirm p { color: var(--text-sub); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
@@ -148,7 +156,7 @@ watch(() => forcePwd.show, (v) => {
 .btn.danger { background: var(--danger); box-shadow: 0 4px 14px rgba(240,83,77,.35); }
 
 /* 强制改密弹窗 */
-.force-mask { z-index: 300; }
+.force-mask { z-index: var(--z-force); }
 .force-tip { color: var(--text-sub); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
 .force-mask .form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .force-mask .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }

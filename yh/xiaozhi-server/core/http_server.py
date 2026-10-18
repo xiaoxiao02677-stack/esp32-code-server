@@ -473,6 +473,10 @@ class SimpleHttpServer:
                                 "/api/wake-word/push",
                                 self.wake_word_handler.handle_push,
                             ),
+                            web.post(
+                                "/api/device-config/push",
+                                self.wake_word_handler.handle_push_device_config,
+                            ),
                             web.get(
                                 "/api/wake-word/devices",
                                 self.wake_word_handler.handle_list_devices,

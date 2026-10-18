@@ -25,6 +25,10 @@ set(SOURCES "audio/audio_codec.cc"
             "display/lvgl_display/lvgl_font.cc"
             "display/lvgl_display/dynamic_glyph_cache.cc"
             "display/lvgl_display/lvgl_image.cc"
+            "display/yh_skin/yh_skin_display.cc"
+            "display/yh_skin/yh_skin_boot.cc"
+            "display/yh_skin/yh_skin_cards.cc"
+            "display/yh_skin/yh_skin_assets.c"
             "display/lvgl_display/gif/lvgl_gif.cc"
             "display/lvgl_display/gif/gifdec.c"
             "display/lvgl_display/jpg/image_to_jpeg.cpp"
@@ -49,7 +53,7 @@ if(CONFIG_YH_PROTOCOL_ENABLED)
     list(APPEND SOURCES "yh/yh_protocol.cc" "yh/yh_ws2812_led.cc")
 endif()
 
-set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols" "yh")
+set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "display/yh_skin" "audio" "audio/demuxer" "protocols" "yh")
 
 # Add board common files
 list(APPEND SOURCES

@@ -59,6 +59,8 @@ public:
     // 服务器动态调整唤醒词参数（阈值 0.01-1.0，时长 500-5000ms）
     virtual void SetThreshold(float threshold) { (void)threshold; }
     virtual void SetDuration(int duration) { (void)duration; }
+    // 实时打断灵敏度（0~100，0=最灵敏）；仅 AFE 引擎有 VAD 打断判定，其余为空实现
+    virtual void SetInterruptThreshold(int threshold) { (void)threshold; }
 };
 
 #endif
