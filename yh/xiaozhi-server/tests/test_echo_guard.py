@@ -127,6 +127,48 @@ def test_empty_and_no_track():
     print("  OK 空态放行")
 
 
+def test_music_mixed_full_echo():
+    """2026-10-18 15:51:45 漏网案例：播放音乐时整段播报回声，
+    ASR 混入幻觉字（'高'），ratio=0.949 差 0.001 没过整句复读阈值。
+    长句完整复现 + ratio 分层（≥8 字放宽到 0.90）必须拦截。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "你呀，连安静都要学我一句？随你吧，")
+    register_spoken_sentence(conn, "那就这么呆着，让风把话都替咱们说了。")
+    echo = "你呀连安静高学我一句随你吧，那就这么呆着，让风把话都替咱们说了。"
+    assert check_echo(conn, echo), "音乐混合整段回声漏判（15:51:45 案例）"
+    print("  OK 拦截音乐混合整段回声")
+
+
+def test_merged_multi_sentence_echo():
+    """多句合并回声：整轮播报（多句）作为一条 ASR 结果回来，
+    单句比对被摊薄（0.65/0.35），拼接比对整体命中（1.00）。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "刚把话都说完了，正安静呆着呢，")
+    register_spoken_sentence(conn, "等着你再开口呀。")
+    echo = "刚把话都说完了，正安静呆着呢，等着你再开口呀。"
+    assert check_echo(conn, echo), "多句合并回声漏判（15:59:08 案例）"
+    print("  OK 拦截多句合并回声")
+
+
+def test_short_confirmation_not_killed():
+    """确认式短应答保护：'今天天气怎么样'（7 字用户复述式接话，
+    ratio=0.93）在长句分层下仍放行——长度分层只对 ≥8 字放宽。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "今天天气怎么样呀")
+    assert not check_echo(conn, "今天天气怎么样"), "误杀确认式短应答"
+    print("  OK 放行确认式短应答")
+
+
+def test_asr_cover_channel():
+    """ASR 覆盖率通道：截断型回声（cover<0.8）ratio 不足但
+    ASR 内容全部来自播报句时拦截。"""
+    conn = FakeConn()
+    register_spoken_sentence(conn, "一言为定，那就谁都不出声了，让歌替咱们说话。")
+    echo = "一言为定，那就谁都不出声了，让哥替咱们说话。"
+    assert check_echo(conn, echo), "覆盖率通道未拦截幻觉字替换回声"
+    print("  OK 拦截覆盖率通道回声")
+
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         print(f"== {name}")
