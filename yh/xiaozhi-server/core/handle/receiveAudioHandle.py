@@ -19,6 +19,12 @@ TAG = __name__
 # 与固件侧 kSpeakingInterruptGuardMs（CONFIG_YH_INTERRUPT_GUARD_MS=800）同语义。
 SERVER_INTERRUPT_GUARD_MS = 800
 
+# 回声探测窗长（毫秒）。确认窗满足后取最近这么多上行音频做快速 ASR。
+# 确认窗结束时 asr_audio 里至少已有 (guard + confirm) 毫秒的声音段，
+# 3s 足以覆盖一句播报回声（60ms/帧 × 50 帧）。
+INTERRUPT_PROBE_WINDOW_MS = 3000
+INTERRUPT_PROBE_FRAME_COUNT = INTERRUPT_PROBE_WINDOW_MS // 60
+
 
 async def handleAudioMessage(conn: "ConnectionHandler", pcm_frame):
     # 当前片段是否有人说话
@@ -48,12 +54,21 @@ async def handleAudioMessage(conn: "ConnectionHandler", pcm_frame):
 
 
 async def _maybe_server_interrupt(conn: "ConnectionHandler"):
-    """服务端人声打断（带灵敏度确认窗 + 起播保护窗）。
+    """服务端人声打断（带灵敏度确认窗 + 起播保护窗 + 回声探测）。
 
     灵敏度语义与固件完全一致：管理端 interrupt_threshold(0~100) × 20ms
     = 人声确认窗。0=立即打断，100=需连续 2000ms 人声才打断，15≈默认 300ms。
     确认窗防的是：设备扬声器残留回声经服务端 AEC 衰减后仍偶发过 VAD 阈值
     （单帧尖峰），持续确认可滤除；真正的用户说话轻松持续超过窗长。
+
+    但确认窗只滤单帧尖峰，滤不掉"整段播报回声"——2026-10-18 16:57 实录：
+    SERVER_AEC 板 Speaking 态持续推流，设备扬声器播报声被麦克风拾取回传，
+    VAD 对原始上行 PCM 直判（无 AEC），连续 2000ms 回声过阈直接把 6 句
+    播报掐断。所以确认窗满足后不再直接打断，改为"回声探测"：取最近 3s
+    上行音频快速 ASR → echo_guard 与播报句比对——回声 → 放弃打断继续播；
+    非回声文本 → 真人插话，照常打断。探测由 VAD 信号驱动（人声一断计窗
+    归零，探测不会在静音期触发），生产 ASR 为本地 SenseVoice（~300ms），
+    不增加 API 成本。
     """
     now = time.time() * 1000
 
@@ -65,7 +80,8 @@ async def _maybe_server_interrupt(conn: "ConnectionHandler"):
     # 人声确认窗：连续检测到人声须超过阈值设定才触发。
     # 0 档 = 立即打断（与固件语义一致：confirm_ms=0 任何 VAD 抬升即打断，
     # 只剩起播保护窗兜底）——必须当帧触发，"先记时再判"会把 0ms 窗拖成
-    # 至少一帧（60ms），时序模拟验证发现的偏差。
+    # 至少一帧（60ms），时序模拟验证发现的偏差。0 档依赖 VAD 实时性，
+    # 跳过回声探测（探测本身要数百毫秒，会破坏"立即"语义）。
     confirm_ms = getattr(conn, "interrupt_confirm_ms", 300)
     if confirm_ms <= 0:
         conn.interrupt_voice_since_ms = 0
@@ -80,6 +96,73 @@ async def _maybe_server_interrupt(conn: "ConnectionHandler"):
         return
 
     conn.interrupt_voice_since_ms = 0  # 触发即复位，下段播报重新计时
+    await _interrupt_with_echo_probe(conn)
+
+
+def _asr_result_to_text(result) -> str:
+    """把 ASR 返回值归一为纯文本。
+
+    fun_local（生产在用）经 lang_tag_filter 返回 {"content":...} dict；
+    其余 provider 返回 str（可能带声纹 JSON）。dict/JSON 都取 content，
+    否则原样返回——echo_guard 的 _extract_content 只认 JSON 字符串，
+    dict 直接传进去会污染比对。
+    """
+    if isinstance(result, dict):
+        return str(result.get("content") or "")
+    s = str(result or "").strip()
+    if s.startswith("{") and s.endswith("}"):
+        try:
+            data = json.loads(s)
+            if isinstance(data, dict) and data.get("content"):
+                return str(data["content"])
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return s
+
+
+async def _interrupt_with_echo_probe(conn: "ConnectionHandler"):
+    """打断前的回声探测：是回声就放弃打断。
+
+    数据源：conn.asr_audio（VAD/ASR 共享缓存，60ms PCM 帧列表，播报期回声
+    全在里面——2026-10-18 16:57 实录确认窗满足时 asr_audio 累计已达数秒）。
+    取最近 3s 帧交给本地 ASR 快速识别，echo_guard 与播报句比对：
+      - 识别为回声 → 放弃打断，继续播报（16:57:25 实录 echo_guard 多句
+        合并通道 ratio 0.89/1.00，回声必被拦下）
+      - 识别出非回声文本 → 真人插话，照常 abort
+      - 识别为空/异常 → 保守放行（宁可不打断，不再让播报被自己掐断）
+    """
+    frames = list(getattr(conn, "asr_audio", []) or [])
+    probe_bytes = b"".join(frames[-INTERRUPT_PROBE_FRAME_COUNT:])
+    if len(probe_bytes) < 1920:  # < 60ms 数据不足以识别，保守放行不打断
+        conn.logger.bind(tag=TAG).info(
+            f"打断探测: 上行音频不足({len(probe_bytes)}B)，放行不打断"
+        )
+        return
+
+    text = None
+    try:
+        result = await conn.asr.speech_to_text_wrapper(
+            [probe_bytes], conn.session_id
+        )
+        if result and not isinstance(result[0], Exception):
+            text = _asr_result_to_text(result[0])
+    except Exception as e:
+        conn.logger.bind(tag=TAG).warning(f"打断探测 ASR 失败: {e}")
+
+    text = (text or "").strip()
+    if not text:
+        conn.logger.bind(tag=TAG).info("打断探测: 无文本，放行不打断")
+        return
+
+    if check_echo(conn, text):
+        conn.logger.bind(tag=TAG).info(
+            f"打断探测: ASR『{text}』为播报回声，放弃打断继续播"
+        )
+        return
+
+    conn.logger.bind(tag=TAG).info(
+        f"打断探测: ASR『{text}』非回声，确认真人插话，执行打断"
+    )
     await handleAbortMessage(conn)
 
 
