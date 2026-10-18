@@ -5,9 +5,9 @@
 #include <mutex>
 #include <string>
 
-// 壁纸槽位种类（wallpaper/wallpaper_manager.h）。enum class 可前向声明，
-// 本头只需要它做 SendWallpaperResult 的参数类型。
-enum class WallpaperKind;
+// 壁纸槽位种类定义。SendWallpaperResult 的默认参数 WallpaperKind::Idle 需要
+// 枚举完整定义（前向声明不够）；wallpaper_manager.h 只依赖标准库，无循环依赖。
+#include "wallpaper/wallpaper_manager.h"
 
 // YH Device Protocol v1 适配层。
 //

@@ -22,9 +22,9 @@
 #include "device_state_machine.h"
 #include "notify/notify_player.h"
 
-// 壁纸槽位种类（wallpaper/wallpaper_manager.h）。enum class 可前向声明，
-// 这里只需要它做 SendWallpaperAck 的默认参数类型，不必引入整个头。
-enum class WallpaperKind;
+// 壁纸槽位种类定义。SendWallpaperAck 的默认参数 WallpaperKind::Idle 需要
+// 枚举完整定义（前向声明不够）；本头无循环依赖（wallpaper_manager.h 只依赖标准库）。
+#include "wallpaper/wallpaper_manager.h"
 
 // Main event bits
 #define MAIN_EVENT_SCHEDULE             (1 << 0)
