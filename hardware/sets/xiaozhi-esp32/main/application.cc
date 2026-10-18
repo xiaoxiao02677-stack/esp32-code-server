@@ -1280,8 +1280,10 @@ void Application::HandleWakeWordDetectedEvent() {
             // Re-enable wake word detection as it was stopped by the detection itself
             audio_service_.EnableWakeWordDetection(true);
         } else {
-            // Play popup sound and start listening again
-            play_popup_on_listening_ = true;
+            // Speaking 态被唤醒词打断（真实用户唤醒或回声误触发），转听音时
+            // 不再补播 OGG_POPUP"滴"声：误触发场景下它是凭空噪声且掐断了
+            // 播报，真实唤醒场景的反馈交给屏幕状态与 LED（对齐 410 行语音
+            // 打断的静默化原则）。
             SetListeningMode(GetDefaultListeningMode());
         }
     } else if (state == kDeviceStateActivating) {
@@ -1454,10 +1456,14 @@ void Application::HandleStateChangedEvent() {
             } else if (aec_mode_ == kAecOnServerSide) {
                 // 服务端 AEC：麦克风持续推流给服务器（服务器做回声消除与打断
                 // 判断），本地 VAD 必须关——单工板没有回采通道，开着必然被
-                // 自己的播报声触发。唤醒词检测保持开启：它是播报期唯一可靠
-                // 的本地打断兜底（不依赖 AEC，AFE 唤醒词不会被自声误触发）。
+                // 自己的播报声触发。唤醒词检测同样必须关：播报声经 AEC 残留
+                // 回声仍会偶发触发 AFE 唤醒模型（实测"播到一半滴一声被打断"，
+                // 即 HandleWakeWordDetectedEvent 在 Speaking 态误触发 →
+                // AbortSpeaking + 进 Listening 补播 OGG_POPUP）。播报期打断
+                // 完全交给服务器人声确认窗（interrupt_confirm_ms）；播报结束
+                // 回 Idle/Listening 时会重新开启唤醒词检测。
                 audio_service_.EnableVoiceProcessing(true);
-                audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
+                audio_service_.EnableWakeWordDetection(false);
             } else {
                 audio_service_.EnableVoiceProcessing(false);
                 // Only AFE wake word can be detected in speaking mode
