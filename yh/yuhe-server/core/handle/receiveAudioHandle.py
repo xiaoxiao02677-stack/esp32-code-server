@@ -19,6 +19,13 @@ TAG = __name__
 # 与固件侧 kSpeakingInterruptGuardMs（CONFIG_YH_INTERRUPT_GUARD_MS=800）同语义。
 SERVER_INTERRUPT_GUARD_MS = 800
 
+# 播报结束后的尾部回声窗（毫秒）。realtime 板播报期持续推流，tts stop 后
+# 麦克风里的残留回声仍在 ASR 在途：VAD 停止→ASR 转写→startToChat 完成时
+# client_is_speaking 已翻回 False，播报期守卫拦不到（2026-10-19 15:41 实录：
+# tts stop 后 1s 失真回声「之后好好好」漏网进对话）。取 2s 覆盖
+# "播报尾句 + ASR 在途" 的最坏时延；开关 OFF 时窗口内上行文本丢弃。
+TAIL_ECHO_GUARD_MS = 2000
+
 # 回声探测窗长（毫秒）。确认窗满足后取最近这么多上行音频做快速 ASR。
 # 确认窗结束时 asr_audio 里至少已有 (guard + confirm) 毫秒的声音段，
 # 3s 足以覆盖一句播报回声（60ms/帧 × 50 帧）。
@@ -233,16 +240,25 @@ async def startToChat(conn: "ConnectionHandler", text):
             await max_out_size(conn)
             return
 
-    # 实时打断开关 OFF：播报期间的上行文本（回声漏网/真人插话）整体丢弃——
-    # 不 abort 播报、不进对话。开关已短路 _maybe_server_interrupt 的人声打断，
-    # 但 realtime 板播报期持续推流，回声被 ASR 转写走到这里原本会无条件 abort
-    # 掐断播报（2026-10-19 15:07 实录：回声「我只是欢乐图」漏网 → 自打断
-    # 换话题）。开关语义"播放期任何人声都不打断"含真人插话：播报结束
-    # （tts stop）后恢复正常对话。
+    # 实时打断开关 OFF：播报期间及播报结束后短窗口内的上行文本（回声漏网/
+    # 真人插话）整体丢弃——不 abort 播报、不进对话。开关已短路
+    # _maybe_server_interrupt 的人声打断，但 realtime 板播报期持续推流，回声
+    # 被 ASR 转写走到这里原本会无条件 abort 掐断播报（2026-10-19 15:07 实录：
+    # 回声「我只是欢乐图」漏网 → 自打断换话题）。播报结束后仍有在途回声
+    # （15:41 实录：tts stop 后 1s「之后好好好」漏网），以 client_speak_ended_ms
+    # 起算 TAIL_ECHO_GUARD_MS 尾部窗一并拦截。开关语义"播放期任何人声都不
+    # 打断"含真人插话：尾部窗过后恢复正常对话。
     if (
-        conn.client_is_speaking
-        and conn.client_listen_mode != "manual"
+        conn.client_listen_mode != "manual"
         and getattr(conn, "interrupt_enabled", None) is False
+        and (
+            conn.client_is_speaking
+            or (
+                getattr(conn, "client_speak_ended_ms", 0)
+                and time.time() * 1000 - conn.client_speak_ended_ms
+                < TAIL_ECHO_GUARD_MS
+            )
+        )
     ):
         conn.logger.bind(tag=TAG).info(
             f"实时打断已关闭: 播报期间丢弃上行文本『{text[:50]}』"

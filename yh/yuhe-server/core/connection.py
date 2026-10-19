@@ -1892,6 +1892,11 @@ class ConnectionHandler:
         # 下一轮播报从起播保护窗重新开始
         self.client_speaking_since_ms = 0.0
         self.interrupt_voice_since_ms = 0.0
+        # 尾部回声窗口起点：realtime 板播报期持续推流，播报结束后麦克风里的
+        # 残留回声仍在网络/ASR 在途，ASR 完成时 client_is_speaking 已翻回 False，
+        # 播报期守卫拦不到（2026-10-19 15:41 实录：tts stop 后 1s 回声
+        # 「之后好好好」漏网进对话）。receiveAudioHandle 的尾部窗口据此丢弃。
+        self.client_speak_ended_ms = time.time() * 1000
         self.logger.bind(tag=TAG).debug(f"清除服务端讲话状态")
 
     async def close(self, ws=None):

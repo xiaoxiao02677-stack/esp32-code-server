@@ -221,6 +221,45 @@ def test_starttochat_off_idle_still_chats(monkeypatch):
 
     conn = _mk_speaking_conn(enabled=False)
     conn.client_is_speaking = False  # 空闲态
+    conn.client_speak_ended_ms = 0  # 从未播报
     asyncio.run(startToChat(conn, "讲个新故事"))
     assert calls == [], "空闲态本就不 abort"
     assert chatted, "OFF 只挡播报期，空闲态对话不受影响"
+
+
+def test_starttochat_off_tail_window_drops_echo(monkeypatch, monkeypatch_noop=None):
+    """开关 OFF：播报刚结束（尾部窗内）的在途回声也丢弃。
+
+    2026-10-19 15:41 实录：tts stop 后 1s 失真回声「之后好好好」漏网，
+    client_is_speaking 已 False，播报期守卫拦不到。尾部窗以
+    client_speak_ended_ms 起算 TAIL_ECHO_GUARD_MS。
+    """
+    import time as _time
+
+    calls = _make_abort_recorder(monkeypatch)
+    chatted = []
+
+    async def fake_intent(conn, text):
+        chatted.append(text)
+        return False
+
+    async def fake_stt(conn, text):
+        chatted.append(text)
+
+    monkeypatch.setattr("core.handle.receiveAudioHandle.handle_user_intent", fake_intent)
+    monkeypatch.setattr("core.handle.receiveAudioHandle.send_stt_message", fake_stt)
+
+    from core.handle.receiveAudioHandle import startToChat, TAIL_ECHO_GUARD_MS
+
+    conn = _mk_speaking_conn(enabled=False)
+    conn.client_is_speaking = False  # 播报已结束
+    conn.client_speak_ended_ms = _time.time() * 1000 - (TAIL_ECHO_GUARD_MS / 2)  # 窗内
+    asyncio.run(startToChat(conn, "之后好好好"))
+    assert calls == [] and chatted == [], "尾部窗内在途回声应丢弃"
+
+    # 窗外（结束后超过 TAIL_ECHO_GUARD_MS）：恢复正常对话
+    conn2 = _mk_speaking_conn(enabled=False)
+    conn2.client_is_speaking = False
+    conn2.client_speak_ended_ms = _time.time() * 1000 - (TAIL_ECHO_GUARD_MS + 500)
+    asyncio.run(startToChat(conn2, "讲个新故事"))
+    assert chatted, "尾部窗外应恢复正常对话"
