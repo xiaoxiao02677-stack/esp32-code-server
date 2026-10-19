@@ -136,3 +136,91 @@ def test_push_config_hot_sync_hook(monkeypatch):
     conn = _mkconn(enabled=None)
     captured["on_sent"](conn)
     assert conn.interrupt_enabled is False
+
+
+def _mk_speaking_conn(enabled):
+    """播报中的 realtime 连接替身（startToChat 拦截用）。"""
+    conn = _mkconn(enabled=enabled)
+    conn.client_is_speaking = True
+    conn.client_listen_mode = "realtime"
+    conn.need_bind = False
+    conn.max_output_size = 0
+    conn.current_speaker = None
+    conn.logger = __import__("loguru").logger.bind(tag="test")
+    conn.executor = __import__("concurrent.futures", fromlist=["ThreadPoolExecutor"]).ThreadPoolExecutor(max_workers=1)
+    conn.chat = lambda text: chatted.append(("chat", text))
+    return conn
+
+
+def test_starttochat_off_drops_text_while_speaking(monkeypatch):
+    """开关 OFF：播报期间上行文本整体丢弃，不 abort、不进对话。
+
+    2026-10-19 15:07 生产实录：回声「我只是欢乐图」漏网进 startToChat，
+    无条件 abort 掐断正在播的故事。开关 OFF 时必须在 abort 之前 return。
+    """
+    calls = _make_abort_recorder(monkeypatch)
+    chatted = []
+
+    async def fake_intent(conn, text):
+        chatted.append(text)
+        return False
+
+    async def fake_stt(conn, text):
+        chatted.append(text)
+
+    monkeypatch.setattr("core.handle.receiveAudioHandle.handle_user_intent", fake_intent)
+    monkeypatch.setattr("core.handle.receiveAudioHandle.send_stt_message", fake_stt)
+
+    from core.handle.receiveAudioHandle import startToChat
+
+    conn = _mk_speaking_conn(enabled=False)
+    asyncio.run(startToChat(conn, "我只是欢乐图"))
+    assert calls == [], "OFF 播报期不得 abort"
+    assert chatted == [], "OFF 播报期上行文本不得进对话"
+
+
+def test_starttochat_on_aborts_and_chats_while_speaking(monkeypatch):
+    """开关 ON（默认）：播报期间上行文本照常 abort 并进对话（原行为不变）。"""
+    calls = _make_abort_recorder(monkeypatch)
+    chatted = []
+
+    async def fake_intent(conn, text):
+        chatted.append(text)
+        return False
+
+    async def fake_stt(conn, text):
+        chatted.append(text)
+
+    monkeypatch.setattr("core.handle.receiveAudioHandle.handle_user_intent", fake_intent)
+    monkeypatch.setattr("core.handle.receiveAudioHandle.send_stt_message", fake_stt)
+
+    from core.handle.receiveAudioHandle import startToChat
+
+    conn = _mk_speaking_conn(enabled=True)
+    asyncio.run(startToChat(conn, "别讲了换个话题"))
+    assert len(calls) == 1, "ON 播报期应照常 abort"
+    assert chatted, "ON 播报期上行文本应进对话"
+
+
+def test_starttochat_off_idle_still_chats(monkeypatch):
+    """开关 OFF 只挡播报期：空闲态（非 speaking）上行文本照常进对话。"""
+    calls = _make_abort_recorder(monkeypatch)
+    chatted = []
+
+    async def fake_intent(conn, text):
+        chatted.append(text)
+        return False
+
+    async def fake_stt(conn, text):
+        chatted.append(text)
+
+    monkeypatch.setattr("core.handle.receiveAudioHandle.handle_user_intent", fake_intent)
+    monkeypatch.setattr("core.handle.receiveAudioHandle.send_stt_message", fake_stt)
+
+    from core.handle.receiveAudioHandle import startToChat
+
+    conn = _mk_speaking_conn(enabled=False)
+    conn.client_is_speaking = False  # 空闲态
+    asyncio.run(startToChat(conn, "讲个新故事"))
+    assert calls == [], "空闲态本就不 abort"
+    assert chatted, "OFF 只挡播报期，空闲态对话不受影响"

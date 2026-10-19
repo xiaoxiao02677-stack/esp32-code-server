@@ -233,6 +233,22 @@ async def startToChat(conn: "ConnectionHandler", text):
             await max_out_size(conn)
             return
 
+    # 实时打断开关 OFF：播报期间的上行文本（回声漏网/真人插话）整体丢弃——
+    # 不 abort 播报、不进对话。开关已短路 _maybe_server_interrupt 的人声打断，
+    # 但 realtime 板播报期持续推流，回声被 ASR 转写走到这里原本会无条件 abort
+    # 掐断播报（2026-10-19 15:07 实录：回声「我只是欢乐图」漏网 → 自打断
+    # 换话题）。开关语义"播放期任何人声都不打断"含真人插话：播报结束
+    # （tts stop）后恢复正常对话。
+    if (
+        conn.client_is_speaking
+        and conn.client_listen_mode != "manual"
+        and getattr(conn, "interrupt_enabled", None) is False
+    ):
+        conn.logger.bind(tag=TAG).info(
+            f"实时打断已关闭: 播报期间丢弃上行文本『{text[:50]}』"
+        )
+        return
+
     # manual 模式下不打断正在播放的内容
     if conn.client_is_speaking and conn.client_listen_mode != "manual":
         await handleAbortMessage(conn)
