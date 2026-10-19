@@ -1504,7 +1504,7 @@ class ConnectionHandler:
             for response in llm_responses:
                 if self.client_abort:
                     break
-                if self.intent_type == "function_call" and functions is not None:
+                if self.intent_type in ("function_call", "nointent") and functions is not None:
                     content, tools_call = response
                     if "content" in response:
                         content = response["content"]
