@@ -350,6 +350,8 @@ export const adminApi = {
   deviceUpdate: (id, body) => api.put(`/device/update/${id}`, body),
   deviceManualAdd: (body) => api.post('/device/manual-add', body),
   deviceUnbind: (body) => api.post('/device/unbind', body),
+  // 单台设备 OTA 定向配置（指定固件/主题轨道，superAdmin）
+  deviceOtaTarget: (id, body) => api.put(`/device/ota-target/${id}`, body),
 
   // ===== 系统参数 =====
   paramPage: (params) => api.get('/admin/params/page', params || { page: 1, limit: 100 }),
@@ -427,6 +429,8 @@ export const adminApi = {
 
   // ===== OTA =====
   otaPage: (params) => api.get('/otaMag', params || { page: 1, limit: 100 }),
+  // 注册固件记录（上传文件只是第一步；不注册 ai_ota 设备永远查不到固件）
+  otaSave: (body) => api.post('/otaMag', body),
   uploadOta: (file) => {
     const form = new FormData()
     form.append('file', file)

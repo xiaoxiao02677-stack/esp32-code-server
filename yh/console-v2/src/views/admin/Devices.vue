@@ -33,6 +33,7 @@
             <td>
               <div class="row-actions">
                 <button class="link-btn" @click="openRename(d)">✎ 改名</button>
+                <button class="link-btn" @click="openOta(d)">⬆ OTA</button>
                 <button class="link-btn" @click="openBind(d)">⇄ 绑定</button>
                 <button class="link-btn danger" @click="unbind(d)">⤫ 解绑</button>
               </div>
@@ -73,6 +74,42 @@
       </div>
     </div>
 
+    <!-- OTA 定向配置弹窗 -->
+    <div v-if="ota.show" class="modal-mask" @click.self="ota.show = false">
+      <div class="modal">
+        <h3>OTA 定向配置</h3>
+        <p class="bind-sub">{{ ota.device.name }}（{{ ota.device.mac }}）· 当前版本 {{ ota.device.appVersion || '未知' }} / 轨道 {{ ota.device.board || '未知' }}</p>
+
+        <div class="form-row">
+          <label>单台指定固件（优先级最高，升级到位后自动解除）</label>
+          <select v-model="ota.targetOtaId">
+            <option value="">不指定（按轨道自动更新）</option>
+            <option v-for="f in ota.firmwares" :key="f.id" :value="f.id">
+              {{ f.firmwareName }} · {{ f.type }} · v{{ f.version }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>主题轨道（autoUpdate 开启时按此轨道更新；与设备当前主题不同会强制切换）</label>
+          <select v-model="ota.otaType">
+            <option value="">跟随设备上报（默认）</option>
+            <option v-for="t in ota.tracks" :key="t" :value="t">{{ t }}</option>
+          </select>
+        </div>
+
+        <p class="ota-hint">
+          单台指定用于把这一台设备切到任意固件（含跨主题）；主题轨道用于让它持续跟随某条轨道自动更新。
+          两者都设置时单台指定优先，完成后再走轨道。
+        </p>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="ota.show = false">取消</button>
+          <button class="btn btn-primary" :disabled="saving" @click="doOtaTarget">{{ saving ? '保存中…' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 手动添加弹窗 -->
     <div v-if="manual.show" class="modal-mask" @click.self="manual.show = false">
       <div class="modal">
@@ -108,6 +145,7 @@ const saving = ref(false)
 const rename = reactive({ show: false, id: null, name: '' })
 const bind = reactive({ show: false, device: null, agentId: '' })
 const manual = reactive({ show: false, mac: '', name: '' })
+const ota = reactive({ show: false, device: null, targetOtaId: '', otaType: '', firmwares: [], tracks: [] })
 
 async function load() {
   loading.value = true
@@ -174,7 +212,11 @@ function normalize(d, onlineSet) {
     agentId: d.agentId,
     agentName: d.agentName || d.bindUserName,
     online: onlineSet ? onlineSet.has(normMac(mac)) : false,
-    lastSeen: d.recentChatTime || d.lastSeen || d.updateDate
+    lastSeen: d.recentChatTime || d.lastSeen || d.updateDate,
+    appVersion: d.appVersion || '',
+    board: d.board || '',
+    targetOtaId: d.targetOtaId || '',
+    otaType: d.otaType || ''
   }
 }
 
@@ -226,6 +268,43 @@ async function doManualAdd() {
   finally { saving.value = false }
 }
 
+// ── OTA 定向配置 ──
+async function openOta(d) {
+  ota.device = d
+  ota.targetOtaId = d.targetOtaId || ''
+  ota.otaType = d.otaType || ''
+  ota.firmwares = []
+  ota.tracks = []
+  ota.show = true
+  try {
+    // 已注册固件列表（选择 pin 目标 + 推导可选轨道）
+    const res = await adminApi.otaPage({ page: 1, limit: 200 })
+    const list = (res.data && (res.data.list || res.data)) || []
+    ota.firmwares = list
+    // 轨道候选 = 固件记录里出现过的去重 type + 设备当前上报的 board
+    const trackSet = new Set(list.map(f => f.type).filter(Boolean))
+    if (d.board) trackSet.add(d.board)
+    ota.tracks = [...trackSet].sort()
+  } catch (e) {
+    toast(e.msg || '固件列表加载失败', 'error')
+  }
+}
+
+async function doOtaTarget() {
+  if (!ota.device) return
+  saving.value = true
+  try {
+    await adminApi.deviceOtaTarget(ota.device.id, {
+      targetOtaId: ota.targetOtaId || '',
+      otaType: ota.otaType || ''
+    })
+    toast('OTA 配置已保存，设备下次上报生效')
+    ota.show = false
+    load()
+  } catch (e) { toast(e.msg || '保存失败', 'error') }
+  finally { saving.value = false }
+}
+
 function unbind(d) {
   askConfirm({
     title: '解绑设备', message: `确定解绑「${d.name || d.mac}」吗？`, danger: true,
@@ -250,5 +329,6 @@ onMounted(() => { load(); loadAgents() })
 }
 .form-row input:focus, .form-row select:focus { border-color: var(--primary); }
 .bind-sub { color: var(--text-sub); font-size: 13px; margin-bottom: 16px; }
+.ota-hint { color: var(--text-sub); font-size: 12px; line-height: 1.6; background: var(--bg-soft, #f7f7fa); border-radius: 10px; padding: 10px 12px; margin: 4px 0 2px; }
 .modal h3 { font-size: 17px; margin-bottom: 18px; }
 </style>

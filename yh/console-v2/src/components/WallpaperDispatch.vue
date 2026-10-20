@@ -648,13 +648,26 @@ function unwrap(res) {
   if (res && typeof res === 'object' && !Array.isArray(res) && 'code' in res && 'data' in res) return res.data
   return res
 }
+// 预览图 URL 归一为同源相对路径：管理台是 HTTPS（如 https://host:8101），而库里的
+// thumbUrl 按 sys_params.server.ota 推导、面向设备是 http://host:8144 绝对地址——
+// HTTPS 页面直接加载 HTTP 图片会被浏览器按混合内容拦截（Chrome 自动升级到
+// https://8144 又无 TLS 服务，必失败），表现为缩略图/放大预览全空。
+// 只取路径部分让浏览器用当前页面 origin 加载；设备固件下载的 url 字段不受影响。
+function toPreviewUrl(u) {
+  if (!u) return ''
+  const m = String(u).match(/^https?:\/\/[^/]+(\/.*)$/i)
+  return m ? m[1] : String(u)
+}
+
 function normalizeWallpaper(w) {
   const o = w || {}
+  // 预览兜底只认 .png 缩略图；url 是 RGB565 .bin（octet-stream），img 渲染不出
+  const fallback = (o.url && String(o.url).endsWith('.png')) ? o.url : ''
   return {
     id: o.id,
     name: o.name || '未命名壁纸',
     url: o.url || '',
-    thumbUrl: o.thumbUrl || o.url || '',
+    thumbUrl: toPreviewUrl(o.thumbUrl || fallback),
     md5: o.md5 || '',
     size: Number(o.size) || 0,
     width: Number(o.width) || 0,
