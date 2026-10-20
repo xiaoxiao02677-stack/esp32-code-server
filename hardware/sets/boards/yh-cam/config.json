@@ -37,7 +37,8 @@
                 "CONFIG_YH_VAD_MIN_NOISE_MS=100",
                 "CONFIG_YH_VAD_SPEECH_CONFIRM_MS=300",
                 "CONFIG_YH_VAD_SILENCE_CONFIRM_MS=300",
-                "CONFIG_YH_INTERRUPT_GUARD_MS=800"
+                "CONFIG_YH_INTERRUPT_GUARD_MS=800",
+                "CONFIG_YH_UI_THEME_XIAOYOU=y"
             ]
         }
     ]

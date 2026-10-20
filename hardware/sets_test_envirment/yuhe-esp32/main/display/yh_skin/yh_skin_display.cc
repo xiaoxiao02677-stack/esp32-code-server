@@ -4,6 +4,7 @@
 #include "assets/lang_config.h"
 #include "board.h"
 #include "system_info.h"
+#include "wallpaper/wallpaper_manager.h"
 #include "yh_skin_boot.h"
 #include "yh_skin_cards.h"
 
@@ -335,19 +336,20 @@ void YhSkinDisplay::SetupUI() {
     BuildMainScreen();
     AttachHiddenPlaceholders();
 
+    // ★ boot 壁纸 flash 早期恢复（联网前、splash 建立前）：
+    //   splash 是 boot 壁纸的唯一展示面，而它马上就要建了 —— 必须在这里把
+    //   flash 里的图读进 boot 槽，ShowBootSplash 才有图可用。同步读 115KB
+    //   + MD5 约 50ms，开机阶段可接受（此时屏幕还没亮任何东西）。
+    //   无图 / 校验失败 / 分区不适用 → nullptr，splash 回落 idle 壁纸/品牌
+    //   底纹，联网后走网络重拉（旧行为，不变）。
+    //   幂等：重复 SetupUI（主题切换重建）时槽里已有图，函数内部直接回指针。
+    WallpaperManager::GetInstance().EarlyRestoreBootWallpaper();
+
     // 首帧即品牌画面：此时 Application 还会继续做音频/网络初始化，
     // splash 会一直盖着，直到首次进入待机（见 DismissSplashIfNeeded）。
-    yh_skin::SplashInfo info;
-    info.brand = "小柚";
-    info.subtitle = "AI 陪伴助手";
-    const std::string version(esp_app_get_description()->version);
-    info.version = version.c_str();
-    // 开机首帧底图回落链：boot 壁纸 > idle 壁纸（本次运行早段 device_config /
-    // NVS 恢复竞速成功时非空）。全空 nullptr 回落品牌底纹。注意两个槽此时
-    // 通常都为空——重启后壁纸需从服务器重拉，真正的"开机即壁纸"由拉取完成
-    // 后的 RebindCurrent/UpdateSplashBackground 路径兑现。
-    info.background = boot_wallpaper_ != nullptr ? boot_wallpaper_ : user_wallpaper_;
-    yh_skin::BuildSplash(lv_screen_active(), profile_, CurrentFonts(), info);
+    // 走虚分发：子类皮肤（像素宠物 PetSkinDisplay）覆写 ShowBootSplash()
+    // 即可换掉开机画面，不必复制整个 SetupUI。
+    ShowBootSplash();
 }
 
 void YhSkinDisplay::BuildMainScreen() {
@@ -525,12 +527,19 @@ void YhSkinDisplay::ShowBootSplash() {
     DisplayLockGuard lock(this);
     if (!lock) { return; }  // fail-closed：拿不到 LVGL 锁就不碰对象树
     yh_skin::SplashInfo info;
-    info.brand = "小柚";
+    info.brand = "琳琳";
     info.subtitle = "AI 陪伴助手";
     info.version = esp_app_get_description()->version;
     // 开机底图回落链：boot 壁纸 > idle 壁纸（指针只读不接管）。
     // 全空时 SplashInfo::background 为 nullptr，splash 内部回落 yh_skin_bg。
-    info.background = boot_wallpaper_ != nullptr ? boot_wallpaper_ : user_wallpaper_;
+    // ★ flash 早期恢复的图在 WallpaperManager boot 槽里（SetupUI 里刚调过
+    //   EarlyRestoreBootWallpaper），boot_wallpaper_ 成员此刻还是空 ——
+    //   主动拉一次。已应用过的会话里两者相同，取成员优先（少一次锁）。
+    const lv_img_dsc_t* boot_image = boot_wallpaper_;
+    if (boot_image == nullptr) {
+        boot_image = WallpaperManager::GetInstance().EarlyRestoreBootWallpaper();
+    }
+    info.background = boot_image != nullptr ? boot_image : user_wallpaper_;
     yh_skin::BuildSplash(lv_screen_active(), profile_, CurrentFonts(), info);
 }
 
@@ -784,7 +793,6 @@ void YhSkinDisplay::ApplyFonts() {
 
 bool YhSkinDisplay::ApplyBackground() {
     const lv_img_dsc_t* image = nullptr;
-    int scale = 256;
 
     if (user_wallpaper_ != nullptr) {
         image = user_wallpaper_;
@@ -800,16 +808,35 @@ bool YhSkinDisplay::ApplyBackground() {
         // UI 还没建 / 图像不可用：什么都没改，如实告诉调用方
         return false;
     }
+    if (!BindBackgroundImage(image)) {
+        return false;
+    }
+    // splash 还盖在屏上时同步换它的底图：壁纸通常在开机阶段（splash 亮着、
+    // 还没进待机）被下发，SetWallpaper 成功走完这里，让用户壁纸立刻上屏，
+    // 而不是只换掉被盖住的背景、等下次开机才看到。ShowBootSplash 重建场景
+    // 传的 background 也是同一条回落链，两条路殊途同归。
+    ApplySplashBackground();
+    return true;
+}
+
+// 已持锁调用：把指定图绑到主界面 bg_image_（set_src + 回读确认 + 等比缩放
+// + 显式标脏）。ApplyBackground 的正常回落链与 SetBootWallpaper 的"splash
+// 已收起"兜底共用。返回 false = lv_image_set_src 被拒（UI 未建/图无效）。
+bool YhSkinDisplay::BindBackgroundImage(const lv_img_dsc_t* image) {
+    if (image == nullptr || bg_image_ == nullptr) {
+        return false;
+    }
     lv_image_set_src(bg_image_, image);
     // LVGL 会在 set_src 里做解码校验，失败时保留旧 src 并打日志。
     // 用 get_src 回读确认"真的换过去了"，这是 SetWallpaper 返回值的唯一依据 ——
     // 没有这一步，'已应用' 就只能靠猜，而猜错的代价是之后永远跳过。
     if (lv_image_get_src(bg_image_) != static_cast<const void*>(image)) {
-        ESP_LOGE(TAG, "ApplyBackground: lv_image_set_src rejected %p (src=%p)", (const void*)image,
-                 lv_image_get_src(bg_image_));
+        ESP_LOGE(TAG, "BindBackgroundImage: lv_image_set_src rejected %p (src=%p)",
+                 (const void*)image, lv_image_get_src(bg_image_));
         return false;
     }
     // 用户壁纸尺寸由服务端下发，按短边等比放大到刚好铺满
+    int scale = 256;
     if (image->header.w > 0) {
         int need = 256 * profile_.long_side() / image->header.w;
         if (need > 256) {
@@ -824,11 +851,6 @@ bool YhSkinDisplay::ApplyBackground() {
     // 这里保留是为了防御将来版本对同 src 做短路优化，并覆盖"同一个 &dsc 地址
     // 换了内容后重绑"这种情况 —— 没有它就可能出现"调了 SetWallpaper 但一帧没重画"。
     lv_obj_invalidate(bg_image_);
-    // splash 还盖在屏上时同步换它的底图：壁纸通常在开机阶段（splash 亮着、
-    // 还没进待机）被下发，SetWallpaper 成功走完这里，让用户壁纸立刻上屏，
-    // 而不是只换掉被盖住的背景、等下次开机才看到。ShowBootSplash 重建场景
-    // 传的 background 也是同一条回落链，两条路殊途同归。
-    ApplySplashBackground();
     return true;
 }
 
@@ -872,11 +894,22 @@ bool YhSkinDisplay::SetBootWallpaper(const lv_img_dsc_t* image) {
     }
     DisplayLockGuard lock(this);
     if (!lock) { return false; }
-    // splash 已淡出后再设 boot 壁纸：图缓存进 boot_wallpaper_（下次 ShowBootSplash
-    // 重建时用），屏幕上没有 splash 可换，直接算成功。仅 splash 可见时才要求
-    // UpdateSplashBackground 真正换图 —— 后者无返回值，无法逐次验证，
-    // 但 SplashVisible()==true 已保证 g_root/g_bg 有效，set_src 不会被拒。
     boot_wallpaper_ = image;
+    // splash 已淡出后再设 boot 壁纸：屏幕上已没有开机画面可换。
+    // 老行为是"只缓存指针等下次开机"，用户看到的就是"下发了、成功了、
+    // 屏幕毫无变化"。兜底：idle 槽没有自己的壁纸时，把 boot 图投到主界面
+    // 背景作为可见反馈；idle 槽有图时保持 idle 图（用户显式设置的待机
+    // 壁纸优先级更高，boot 图只等下次开机展示）。
+    if (!yh_skin::SplashVisible() && user_wallpaper_ == nullptr && bg_image_ != nullptr) {
+        ESP_LOGI(TAG, "SetBootWallpaper: splash gone, mirroring to background as feedback");
+        if (!BindBackgroundImage(image)) {
+            // ★ 零残留失败协议：绑定被拒必须回滚成员——调用方（ApplyToDisplay）
+            //   会据此回滚并释放新 buffer，若 boot_wallpaper_ 还指着它就是悬垂。
+            boot_wallpaper_ = nullptr;
+            return false;
+        }
+        return true;
+    }
     ApplySplashBackground();
     return true;
 }
@@ -888,7 +921,18 @@ bool YhSkinDisplay::ClearBootWallpaper() {
     }
     DisplayLockGuard lock(this);
     if (!lock) { return false; }
+    // ★ 镜像兜底的解绑义务：splash 收起后到达的 boot 图曾被镜像到主界面背景
+    //   （见 SetBootWallpaper）。此刻若 bg_image_ 还绑着它（idle 槽无图、
+    //   src 指向 boot_wallpaper_），必须先解绑再让调用方 free —— 否则渲染
+    //   线程下一帧就读已释放的 PSRAM。boot_wallpaper_ 尚未置空时比对才有效，
+    //   顺序不能反。
+    const bool mirrored = (user_wallpaper_ == nullptr && bg_image_ != nullptr &&
+                           boot_wallpaper_ != nullptr &&
+                           lv_image_get_src(bg_image_) == static_cast<const void*>(boot_wallpaper_));
     boot_wallpaper_ = nullptr;
+    if (mirrored) {
+        ApplyBackground();  // idle 槽无图 → 主题背景 / good.jpg
+    }
     ApplySplashBackground();
     return true;
 }

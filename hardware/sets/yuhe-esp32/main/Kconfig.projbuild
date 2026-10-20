@@ -84,6 +84,34 @@ menu "YH Voice Interrupt Tuning"
             会重新计时，因此长句之间的间隙也会各获得一段保护。
 endmenu
 
+choice YH_UI_THEME
+    prompt "UI Theme (display skin)"
+    default YH_UI_THEME_XIAOYOU
+    help
+        编译期皮肤选择：三套皮肤共用同一显示骨架（壁纸双槽/字体退休池/
+        锁纪律/占位族），只换视觉层。build.py --theme xiaoyou|pixel-pet|emopet
+        注入对应 sdkconfig 行（后写获胜）。
+
+    config YH_UI_THEME_XIAOYOU
+        bool "Original (xiaoyou/linlin)"
+        help
+            原主题：背景图 + emoji 表情 + 品牌 splash（琳琳 AI 陪伴助手）。
+
+    config YH_UI_THEME_PIXELPET
+        bool "Pixel Pet"
+        help
+            像素宠物主题：全屏 canvas 自绘像素宠物（猫/熊/云兽三皮肤）、
+            3.8s 出生开机动画、五态表情、双击轮换皮肤、说话嘴部拟态。
+            移植自 hardware/sets/theme/像素宠物。
+
+    config YH_UI_THEME_EMOPET
+        bool "EMOpet robot eyes"
+        help
+            EMOpet 主题：机器人发光眼（15 态表情，形状/大小/辉光/倾角
+            四维表达）、三层辉光模拟、眨眼/呼吸/说话跳动拟态、双击轮换
+            眼睛配色。移植自 hardware/sets/theme/EMOpet。
+endchoice
+
 choice
     prompt "Flash Assets"
     default FLASH_DEFAULT_ASSETS if !USE_EMOTE_MESSAGE_STYLE

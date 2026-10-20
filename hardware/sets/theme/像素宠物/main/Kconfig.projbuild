@@ -1,0 +1,88 @@
+menu "女友聊天机 · 硬件配置"
+
+    menu "LCD (ST7789 240x240 SPI)"
+        config LCD_SPI_HOST
+            int "SPI 主机号 (SPI2_HOST=1 / SPI3_HOST=2)"
+            default 1
+        config LCD_PIN_SCLK
+            int "SCLK GPIO"
+            default 12
+        config LCD_PIN_MOSI
+            int "MOSI GPIO"
+            default 11
+        config LCD_PIN_CS
+            int "CS GPIO"
+            default 10
+        config LCD_PIN_DC
+            int "DC GPIO"
+            default 13
+        config LCD_PIN_RST
+            int "RST GPIO"
+            default 14
+        config LCD_PIN_BLK
+            int "背光 BLK GPIO"
+            default 15
+        config LCD_SPI_FREQ_MHZ
+            int "SPI 时钟 (MHz)"
+            range 20 80
+            default 60
+        config LCD_GAP_X
+            int "面板 X 偏移 (set_gap x)"
+            default 0
+        config LCD_GAP_Y
+            int "面板 Y 偏移 (set_gap y)"
+            default 0
+        config LCD_MIRROR_X
+            bool "水平镜像"
+            default n
+        config LCD_MIRROR_Y
+            bool "垂直镜像"
+            default n
+    endmenu
+
+    menu "按键"
+        config KEY_BOOT_GPIO
+            int "BOOT 键 GPIO"
+            default 0
+        config KEY_VOLUP_GPIO
+            int "VOL+ 键 GPIO"
+            default 4
+        config KEY_VOLDN_GPIO
+            int "VOL- 键 GPIO"
+            default 5
+        config KEY_ACTIVE_LOW
+            bool "按键低电平有效（按下接地）"
+            default y
+    endmenu
+
+    menu "麦克风 (I2S INMP441 / 同类)"
+        config MIC_ENABLE
+            bool "启用麦克风采集"
+            default y
+        config MIC_I2S_NUM
+            int "I2S 端口号"
+            default 0
+        config MIC_PIN_BCLK
+            int "BCLK GPIO"
+            default 41
+        config MIC_PIN_WS
+            int "WS / LRCL GPIO"
+            default 42
+        config MIC_PIN_DIN
+            int "DIN GPIO"
+            default 2
+        config MIC_SAMPLE_RATE
+            int "采样率 (Hz)"
+            default 16000
+    endmenu
+
+    menu "行为"
+        config PET_BOOT_ANIM_ENABLE
+            bool "启用 3.8s 开机动画"
+            default y
+        config PET_FAKE_AUDIO
+            bool "无麦克风时用模拟能量驱动动画（调试用）"
+            default n
+    endmenu
+
+endmenu

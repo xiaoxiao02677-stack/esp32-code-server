@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 A · 开机动画预览 · ESP32 方屏 240×240</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f14; color: #e6e9ef;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+    min-height: 100vh; padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: .3px; }
+  h1 span { color: #ff9682; }
+  .sub { color: #8b93a3; font-size: 14px; margin-top: 8px; line-height: 1.7; }
+  .sub b { color: #78c8dc; font-weight: 500; }
+
+  .stage { display: flex; gap: 40px; align-items: flex-start; margin-top: 28px; flex-wrap: wrap; }
+  .device {
+    background: linear-gradient(160deg, #1b1e26, #12141a);
+    border: 1px solid #262a34; border-radius: 20px; padding: 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.55); flex-shrink: 0;
+  }
+  .bezel {
+    background: #05070a; border-radius: 12px; padding: 10px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,.9), 0 0 0 1px #31363f;
+  }
+  #screen {
+    display: block; border-radius: 5px;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    width: 360px; height: 360px; transition: width .25s, height .25s;
+  }
+  #screen.actual { width: 240px; height: 240px; }
+  .devcap { text-align: center; color: #6b7383; font-size: 12px; margin-top: 14px; letter-spacing: .5px; }
+
+  .panel { flex: 1; min-width: 380px; }
+  .timenow { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+  .tcode { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 30px; color: #ff9682; font-variant-numeric: tabular-nums; }
+  .scene { font-size: 15px; color: #c8cfdb; }
+  .scene em { font-style: normal; color: #ff9682; }
+
+  input[type=range] {
+    width: 100%; margin: 14px 0 4px; -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px; background: #23262e; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #ff9682; cursor: pointer; border: 2px solid #0d0f14;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #ff9682;
+    cursor: pointer; border: 2px solid #0d0f14;
+  }
+
+  .tl { display: flex; height: 30px; border-radius: 5px; overflow: hidden; margin-top: 12px; font-size: 10px; }
+  .tl div { display: flex; align-items: center; justify-content: center; color: #2a211c; font-weight: 600; white-space: nowrap; overflow: hidden; }
+  .tl div.act { outline: 2px solid #ff9682; outline-offset: -2px; }
+
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  button {
+    background: #1c2029; color: #d6dce6; border: 1px solid #2c313c;
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: .15s;
+  }
+  button:hover { background: #262b36; border-color: #3b4250; }
+  button.on { background: #ff9682; color: #1a1210; border-color: #ff9682; font-weight: 600; }
+  button.primary { background: #ff9682; color: #1a1210; border-color: #ff9682; font-weight: 600; }
+  button.primary:hover { background: #ff8a72; }
+
+  .sect { margin-top: 26px; }
+  .sect h3 { font-size: 13px; color: #6b7383; font-weight: 500; letter-spacing: 1px; margin-bottom: 10px; }
+
+  .frames { display: flex; gap: 10px; flex-wrap: wrap; }
+  .frames canvas {
+    width: 84px; height: 84px; border-radius: 6px; background: #05070a;
+    image-rendering: pixelated; cursor: pointer; border: 2px solid #23262e; transition: .15s;
+  }
+  .frames canvas:hover { border-color: #ff9682; transform: translateY(-2px); }
+  .flabel { font-size: 10px; color: #6b7383; text-align: center; margin-top: 5px; }
+
+  .note {
+    margin-top: 30px; background: #141820; border: 1px solid #23262e;
+    border-left: 3px solid #ff9682; border-radius: 8px; padding: 16px 18px;
+    font-size: 13px; line-height: 1.85; color: #9aa3b2;
+  }
+  .note b { color: #d6dce6; }
+  .note code { font-family: ui-monospace, Menlo, Consolas, monospace; background: #0d0f14; padding: 1px 5px; border-radius: 3px; color: #78c8dc; font-size: 12px; }
+  .fitem { margin-bottom: 4px; }
+
+  .diff {
+    margin-top: 18px; background: #101820; border: 1px solid #1e2730;
+    border-left: 3px solid #78c8dc; border-radius: 8px; padding: 16px 18px;
+    font-size: 13px; line-height: 1.85; color: #9aa3b2;
+  }
+  .diff b { color: #d6dce6; }
+  .diff table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  .diff th { text-align: left; color: #6b7383; font-weight: 500; padding: 6px 8px 6px 0; }
+  .diff td { padding: 6px 8px 6px 0; color: #b6bdc9; border-top: 1px solid #1c222a; }
+  .diff td.k { color: #78c8dc; width: 90px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>方案 A · 开机动画 <span>Boot Sequence</span></h1>
+  <div class="sub">
+    ESP32-S3 + <b>240×240 方形 IPS</b>（ST7789 / ILI9341）· 软萌像素宠物 · 全长 <b>3.80s</b><br>
+    暗底发光登场 → 屏幕「开灯」→ 五官依次点亮 → 睁眼问候 → 落位待机
+  </div>
+
+  <div class="stage">
+    <div class="device">
+      <div class="bezel"><canvas id="screen" width="240" height="240"></canvas></div>
+      <div class="devcap">240 × 240 SQUARE IPS · ST7789</div>
+    </div>
+
+    <div class="panel">
+      <div class="timenow">
+        <div class="tcode" id="tcode">0.00s</div>
+        <div class="scene" id="scene">黑屏 · 硬件初始化</div>
+      </div>
+      <input type="range" id="scrub" min="0" max="3800" value="0" step="1">
+      <div class="tl" id="tl"></div>
+
+      <div class="btns">
+        <button class="primary" id="play">▶ 播放</button>
+        <button id="replay">↻ 重播</button>
+        <button id="skip">⏭ 跳过（单击 BOOT）</button>
+      </div>
+
+      <div class="sect">
+        <h3>播放速度</h3>
+        <div class="btns" style="margin-top:0">
+          <button class="spd" data-s="0.25">0.25×</button>
+          <button class="spd" data-s="0.5">0.5×</button>
+          <button class="spd on" data-s="1">1×</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>分支路径</h3>
+        <div class="btns" style="margin-top:0">
+          <button class="br on" data-b="full">完整开机 3.8s</button>
+          <button class="br" data-b="wake">深度唤醒 0.6s</button>
+          <button class="br" data-b="wifi">未配网 · 结尾二维码</button>
+          <button class="br" data-b="birth">纪念日 · 撒花彩蛋</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>显示尺寸</h3>
+        <div class="btns" style="margin-top:0">
+          <button class="sz on" data-a="0">放大 360px（看细节）</button>
+          <button class="sz" data-a="1">实际 240px（1:1 物理）</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>关键帧（点击查看）</h3>
+        <div class="frames" id="frames"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diff">
+    <b>方屏相对圆屏，改了什么：</b>
+    <table>
+      <tr><th>元素</th><th>圆屏版</th><th>方屏版（当前）</th></tr>
+      <tr><td class="k">四角</td><td>物理不可见，浪费</td><td><b>可用</b> — 加了取景框角标，落位时淡入</td></tr>
+      <tr><td class="k">状态栏</td><td>挤在顶部弧内</td><td>顶栏整行：左时间 / 右 Wi-Fi + 电量</td></tr>
+      <tr><td class="k">音量</td><td>沿屏幕边缘的圆弧</td><td><b>底部直线进度条</b>（弧线在方屏会切掉四角，很别扭）</td></tr>
+      <tr><td class="k">气泡</td><td>受内切圆限制，窄</td><td>可拉到 200px 宽，一行能放 10 个字</td></tr>
+      <tr><td class="k">宠物</td><td>受 r&lt;60 约束</td><td>可放大到 rx 72，回应时下移让位空间更足</td></tr>
+      <tr><td class="k">菜单</td><td>环形四宫格</td><td>改 2×2 网格或纵向列表（方屏列表更好读）</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>三处最值得盯的细节：</b>
+    <div class="fitem">① <b>1.50s 开灯</b> —— 填充注入与背景提亮的两条曲线严格同步，此帧是全片情绪高点。若接喇叭，<code>play_boot_chime()</code> 就落在这里。</div>
+    <div class="fitem">② <b>1.00–1.50s 轮廓</b> —— 从 12 点<b>双向展开</b>最后在底部合拢，不是单向画一圈。单向画圆看起来像进度条，双向合拢才是"成形"。</div>
+    <div class="fitem">③ <b>2.45s 睁眼</b> —— 必须放在最后。睁眼 = 意识上线，提前就只是动画，放最后才是"它醒了"。</div>
+    <div style="margin-top:10px; color:#7a8494">节奏是<b>慢—快—收</b>：前 1.5s 慢（悬念），1.5–2.9s 连续四连击，最后 0.9s 归于日常。匀速播完的开机动画会显得廉价。</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════ 配色 ══════════════════════════
+const C = {
+  bgDark:  [26, 20, 18],
+  bgLit:   [255, 243, 228],
+  lineD:   [255, 195, 168],
+  lineL:   [190, 118, 100],
+  face:    [255, 202, 184],
+  ink:     [74, 59, 55],
+  sub:     [196, 158, 138],
+  pink:    [255, 158, 158],
+  acc:     [255, 150, 130],
+  seed:    [255, 210, 180],
+  white:   [255, 255, 255],
+  track:   [238, 216, 198],
+};
+const rgb = (c, a=1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const mix = (a, b, p) => [a[0]+(b[0]-a[0])*p, a[1]+(b[1]-a[1])*p, a[2]+(b[2]-a[2])*p];
+
+// ══════════════════════════ 缓动 ══════════════════════════
+const clamp = (x, a=0, b=1) => Math.max(a, Math.min(b, x));
+const easeOut   = p => 1 - Math.pow(1-p, 3);
+const easeInOut = p => p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2;
+const backOut   = p => { const c=1.70158; return 1 + (c+1)*Math.pow(p-1,3) + c*Math.pow(p-1,2); };
+
+// ══════════════════════════ 时间轴 ══════════════════════════
+const TL = {
+  full: { dur: 3.80,
+    seed:[0.20,0.60], ripple:[0.60,1.00], outline:[1.00,1.50], fill:[1.50,1.90],
+    bg:[1.55,1.90], ear:[1.90,2.20], blush:[2.20,2.45], eye:[2.45,2.85],
+    bubble:[2.85,3.40], settle:[3.40,3.80] },
+  wake: { dur: 0.60,
+    seed:[-1,0], ripple:[-1,0], outline:[-1,0], fill:[-1,0], bg:[-1,0],
+    ear:[0.00,0.18], blush:[0.06,0.18], eye:[0.10,0.40], bubble:[-1,0], settle:[0.40,0.60] },
+  wifi: { dur: 3.80,
+    seed:[0.20,0.60], ripple:[0.60,1.00], outline:[1.00,1.50], fill:[1.50,1.90],
+    bg:[1.55,1.90], ear:[1.90,2.20], blush:[2.20,2.45], eye:[2.45,2.85],
+    bubble:[2.85,3.40], settle:[3.40,3.80] },
+  birth:{ dur: 4.40,
+    seed:[0.20,0.60], ripple:[0.60,1.00], outline:[1.00,1.50], fill:[1.50,1.90],
+    bg:[1.55,1.90], ear:[1.90,2.20], blush:[2.20,2.45], eye:[2.45,2.85],
+    bubble:[2.85,3.40], settle:[3.40,3.90], confetti:[3.50,4.40] },
+};
+
+const SCENES = [
+  [0.00, 0.20, '黑屏 · 硬件初始化'],
+  [0.20, 0.60, '① 种子微光'],
+  [0.60, 1.00, '② 涟漪扩散'],
+  [1.00, 1.50, '③ 轮廓生长'],
+  [1.50, 1.90, '④ 开灯 · 填充注入'],
+  [1.90, 2.20, '⑤ 耳朵弹出'],
+  [2.20, 2.45, '⑥ 腮红点亮'],
+  [2.45, 2.85, '⑦ 睁眼'],
+  [2.85, 3.40, '⑧ 问候气泡'],
+  [3.40, 9.99, '⑨ 落位待机'],
+];
+
+// ══════════════════════════ 状态 ══════════════════════════
+let branch = 'full', speed = 1, playing = false;
+let t = 0, lastMs = 0;
+
+function prog(s) {
+  const T = TL[branch];
+  const g = k => { const [a,b] = T[k]; return clamp((s-a)/(b-a)); };
+  return {
+    seed: easeOut(g('seed')), ripple: easeOut(g('ripple')),
+    outline: easeInOut(g('outline')), fill: easeOut(g('fill')), bg: easeInOut(g('bg')),
+    ear: backOut(g('ear')), blush: g('blush'), eye: backOut(g('eye')),
+    bubble: backOut(g('bubble')), settle: easeOut(g('settle')),
+    confetti: T.confetti ? easeOut(g('confetti')) : 0,
+  };
+}
+
+// ══════════════════════════ 像素绘制工具 ══════════════════════════
+function pixelEllipse(ctx, cx, cy, rx, ry, px, color, alpha=1) {
+  ctx.fillStyle = rgb(color, alpha);
+  const x0 = Math.floor((cx-rx)/px)*px, y0 = Math.floor((cy-ry)/px)*px;
+  for (let y = y0; y <= cy+ry; y += px)
+    for (let x = x0; x <= cx+rx; x += px) {
+      const dx = (x + px/2 - cx)/rx, dy = (y + px/2 - cy)/ry;
+      if (dx*dx + dy*dy <= 1) ctx.fillRect(x, y, px, px);
+    }
+}
+function pxRect(ctx, x, y, w, h, color, alpha=1) {
+  ctx.fillStyle = rgb(color, alpha);
+  ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
+}
+
+// ══════════════════════════ 布局常量（方屏 240×240） ══════════════════════════
+const CY_BASE  = 126;   // 待机 / 聆听时宠物中心
+const CY_SPEAK = 156;   // 回应时下移，给气泡让位
+const FACE_RX  = 70, FACE_RY = 62;   // 方屏可放大（圆屏受 r<60 限制只能 62）
+const TOPBAR_Y = 22;
+const VOL_Y    = 218;   // 底部音量条
+
+function drawCornerMarks(ctx, alpha) {   // 方屏专属：取景框角标，圆屏做不了
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.strokeStyle = rgb(C.sub, alpha * 0.55);
+  ctx.lineWidth = 2; ctx.lineCap = 'square';
+  const L = 14, m = 9;
+  const corners = [[m,m,1,1], [240-m,m,-1,1], [m,240-m,1,-1], [240-m,240-m,-1,-1]];
+  for (const [x,y,sx,sy] of corners) {
+    ctx.beginPath();
+    ctx.moveTo(x + sx*L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy*L);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTopBar(ctx, alpha) {
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.font = '12px ui-monospace, Menlo, monospace';
+  ctx.textBaseline = 'middle';
+  // 左：时间
+  ctx.textAlign = 'left';
+  ctx.fillStyle = rgb(C.sub, alpha);
+  ctx.fillText('20:14', 16, TOPBAR_Y);
+  // 右：Wi-Fi 弧 + 电量
+  ctx.strokeStyle = rgb(C.sub, alpha); ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) {
+    const r = 4 + i*3.5;
+    ctx.beginPath(); ctx.arc(196, TOPBAR_Y - 2, r, Math.PI*1.25, Math.PI*1.75); ctx.stroke();
+  }
+  ctx.strokeStyle = rgb(C.sub, alpha); ctx.lineWidth = 1;
+  ctx.strokeRect(216, TOPBAR_Y - 7, 18, 11);
+  ctx.fillStyle = rgb(C.sub, alpha);
+  ctx.fillRect(218, TOPBAR_Y - 5, 11, 7);
+  ctx.fillRect(235, TOPBAR_Y - 3, 2, 3);
+  ctx.restore();
+}
+
+function drawVolumeBar(ctx, alpha, v=0.6) {
+  if (alpha <= 0.01) return;
+  ctx.save();
+  const x0 = 40, w = 160, h = 6, y = VOL_Y;
+  ctx.fillStyle = rgb(C.track, alpha);
+  ctx.beginPath(); ctx.roundRect(x0, y, w, h, 3); ctx.fill();
+  ctx.fillStyle = rgb(C.acc, alpha);
+  ctx.beginPath(); ctx.roundRect(x0, y, w * v, h, 3); ctx.fill();
+  ctx.restore();
+}
+
+// ══════════════════════════ 主绘制 ══════════════════════════
+function draw(ctx, s, branchName=branch, greeting='你回来啦') {
+  const p = prog(s);
+  const bg = mix(C.bgDark, C.bgLit, p.bg);
+  const dark = p.bg < 0.55;
+  const line = mix(C.lineD, C.lineL, p.bg);
+
+  // 宠物中心：回应时下移让位给气泡，落位时回归
+  const cy = CY_BASE + (CY_SPEAK - CY_BASE) * easeOut(p.bubble) * (1 - p.settle);
+
+  ctx.save();
+  ctx.clearRect(0, 0, 240, 240);
+  ctx.fillStyle = rgb(bg);
+  ctx.fillRect(0, 0, 240, 240);
+
+  // ── ① 种子微光
+  const seedOp = p.seed * (1 - easeInOut(p.ripple));
+  if (seedOp > 0.02 && p.bg < 0.9) {
+    const r = 4 + 3 * Math.abs(Math.sin(s * 6));
+    ctx.shadowColor = rgb(C.seed, seedOp);
+    for (let k = 3; k >= 1; k--) {
+      ctx.shadowBlur = 10 * k;
+      ctx.fillStyle = rgb(C.seed, seedOp * (0.5/k + 0.2));
+      ctx.beginPath(); ctx.arc(120, cy, r * (1 + (k-1)*0.55), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // ── ② 涟漪
+  if (p.bg < 0.9) {
+    for (let k = 0; k < 3; k++) {
+      const pk = clamp(p.ripple * 3 - k * 0.35);
+      if (pk <= 0) continue;
+      const rr = 8 + 70 * easeOut(pk);
+      ctx.strokeStyle = rgb(C.seed, 0.6 * (1-pk) * (1-p.bg));
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(120, cy, rr, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+
+  // ── ⑤ 耳朵（画在脸之下，根部被脸盖住）
+  const earScale = p.ear * (1 - 0.15 * p.settle);
+  if (earScale > 0.01) {
+    const sc = earScale;
+    for (const [sx, sgn] of [[86,-1],[154,1]]) {
+      const baseY = cy - 46, tipY = cy - 66 - 8;
+      const ax = sx + sgn*10, ay = tipY + 22;
+      const tri = (pts, col) => {
+        ctx.fillStyle = rgb(col);
+        ctx.beginPath();
+        pts.forEach(([x,y],i) => {
+          const nx = (x-ax)*sc + ax, ny = (y-ay)*sc + ay;
+          i ? ctx.lineTo(nx,ny) : ctx.moveTo(nx,ny);
+        });
+        ctx.closePath(); ctx.fill();
+      };
+      tri([[sx-6,baseY],[sx+6,baseY],[sx+sgn*27,tipY]], line);
+      tri([[sx-1,baseY],[sx+5,baseY],[sx+sgn*19,tipY+6]], C.face);
+    }
+  }
+
+  // ── ③ 轮廓：从 12 点双向展开（暗底为发光虚影）
+  if (p.outline > 0.01 && p.bg < 0.98) {
+    const e = p.outline * 180;
+    const alpha = 1 - clamp((p.bg - 0.5) / 0.4);
+    if (alpha > 0.01) {
+      ctx.strokeStyle = rgb(line, alpha);
+      ctx.lineCap = 'round';
+      if (dark) { ctx.shadowColor = rgb(line, alpha); ctx.shadowBlur = 12; }
+      ctx.lineWidth = 8;
+      // 用缩放把圆变成椭圆（脸是椭圆，非正圆）
+      ctx.save();
+      ctx.translate(120, cy); ctx.scale(FACE_RX/62, FACE_RY/54); ctx.translate(-120, -cy);
+      ctx.beginPath(); ctx.arc(120, cy, 62, -Math.PI/2, -Math.PI/2 + e*Math.PI/180); ctx.stroke();
+      ctx.beginPath(); ctx.arc(120, cy, 62, -Math.PI/2 - e*Math.PI/180, -Math.PI/2); ctx.stroke();
+      ctx.restore();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // ── ④ 填充：中心扩散遮罩注入
+  if (p.fill > 0.01) {
+    ctx.save();
+    const R = FACE_RX * p.fill;
+    ctx.beginPath(); ctx.arc(120, cy, Math.max(0.1, R), 0, Math.PI*2); ctx.clip();
+    pixelEllipse(ctx, 120, cy, FACE_RX, FACE_RY, 8, C.face);
+    ctx.restore();
+  }
+
+  // ── ④′ 描边像素化：虚影 → 实体
+  const solidP = clamp((p.bg - 0.55) / 0.35);
+  if (solidP > 0.01) {
+    ctx.save();
+    const R2 = (FACE_RX + 12) * easeOut(clamp((p.fill - 0.55) / 0.45));
+    ctx.beginPath(); ctx.arc(120, cy, Math.max(0.1, R2), 0, Math.PI*2); ctx.clip();
+    pixelEllipse(ctx, 120, cy, FACE_RX + 4, FACE_RY + 4, 8, C.lineL);
+    pixelEllipse(ctx, 120, cy, FACE_RX,     FACE_RY,     8, C.face);
+    ctx.restore();
+  }
+
+  // ── ⑥ 腮红（左右错开 0.05s）
+  if (p.blush > 0.01) {
+    for (const [i, bx] of [[0,76],[1,164]]) {
+      const lp = clamp((p.blush - i*0.05) / 0.95);
+      if (lp <= 0) continue;
+      for (let k = 0; k < 3; k++)
+        pxRect(ctx, bx - 8 + k*8, cy + 20, 6, 6, C.pink, 0.67 * lp);
+    }
+  }
+
+  // ── ⑦ 眼睛 + 嘴
+  const ep = p.eye;
+  if (ep > 0.01 || p.settle > 0) {
+    const h = 6 + 18 * clamp(ep), w = 18 - 2 * clamp(ep), yc = cy - 7 - clamp(ep);
+    for (const ex of [98, 142]) {
+      pxRect(ctx, ex - w/2, yc - h/2, w, h, C.ink, clamp(ep*1.4));
+      if (ep > 0.7) pxRect(ctx, ex - 4, yc - h/2 + 4, 3, 4, C.white, (ep-0.7)/0.3);
+    }
+    if (ep > 0.5) {
+      const mh = 2 + 6 * (clamp(ep) - 0.5) / 0.5;
+      ctx.fillStyle = rgb(C.ink);
+      ctx.beginPath(); ctx.ellipse(120, cy + 30, 9, mh, 0, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // ── ⑧ 气泡（方屏可拉到 200px 宽）
+  if (p.bubble > 0.01) {
+    const op = clamp(p.bubble) * (1 - clamp(p.settle * 1.25));
+    if (op > 0.01) {
+      const yo = -8 * (1 - clamp(p.bubble));
+      const bx = 20, bw = 200, by = 26 + yo, bh = 50;
+      ctx.fillStyle = rgb(C.white, op);
+      ctx.strokeStyle = rgb(C.lineL, op); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill(); ctx.stroke();
+      // 尾巴偏左一点，避开宠物的右耳
+      ctx.beginPath();
+      ctx.moveTo(104, by + bh - 1); ctx.lineTo(120, by + bh - 1); ctx.lineTo(110, by + bh + 15);
+      ctx.closePath();
+      ctx.fillStyle = rgb(C.white, op); ctx.fill();
+      ctx.font = '16px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = rgb(C.ink, op);
+      ctx.fillText(greeting, 120, by + bh/2);
+    }
+  }
+
+  // ── ⑨ 落位：顶栏 + 音量条 + 四角角标 + 底部提示
+  if (p.settle > 0.01) {
+    drawTopBar(ctx, p.settle);
+    drawVolumeBar(ctx, p.settle, 0.6);
+    drawCornerMarks(ctx, p.settle);
+    if (p.settle > 0.6) {
+      const a = (p.settle - 0.6) / 0.4;
+      ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = rgb(C.sub, a);
+      ctx.fillText('Zzz · 按 BOOT 说话', 120, 232);
+    }
+  }
+
+  // ── 分支：未配网 → 结尾二维码（方屏放二维码最合适）
+  if (branchName === 'wifi' && p.settle > 0.35) {
+    const a = clamp((p.settle - 0.35) / 0.4);
+    ctx.fillStyle = rgb(C.white, a * 0.97);
+    ctx.beginPath(); ctx.roundRect(48, 42, 144, 144, 6); ctx.fill();
+    let sd = 20250818;
+    const rnd = () => { sd = (sd * 1103515245 + 12345) & 0x7fffffff; return sd / 0x7fffffff; };
+    const n = 21, cell = 144 / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const inFinder = (i<7&&j<7) || (i>=n-7&&j<7) || (i<7&&j>=n-7);
+      if (inFinder) continue;
+      if (rnd() > 0.52) { ctx.fillStyle = rgb([40,32,28], a); ctx.fillRect(48 + i*cell, 42 + j*cell, cell, cell); }
+    }
+    const finder = (ox, oy) => {
+      ctx.fillStyle = rgb([40,32,28], a); ctx.fillRect(48 + ox*cell, 42 + oy*cell, 7*cell, 7*cell);
+      ctx.fillStyle = rgb(C.white, a);    ctx.fillRect(48 + (ox+1)*cell, 42 + (oy+1)*cell, 5*cell, 5*cell);
+      ctx.fillStyle = rgb([40,32,28], a); ctx.fillRect(48 + (ox+2)*cell, 42 + (oy+2)*cell, 3*cell, 3*cell);
+    };
+    finder(0,0); finder(n-7,0); finder(0,n-7);
+    ctx.font = '13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = rgb(C.ink, a); ctx.fillText('扫码配网', 120, 200);
+  }
+
+  // ── 分支：纪念日撒花
+  if (p.confetti > 0.01) {
+    const cols = [C.acc, C.pink, [255,205,120], [180,200,255]];
+    let sd = 777; const rnd = () => { sd = (sd*1103515245+12345)&0x7fffffff; return sd/0x7fffffff; };
+    for (let i = 0; i < 34; i++) {
+      const x0 = 18 + rnd()*204, spd = 0.5 + rnd()*0.8, c = cols[(rnd()*4)|0];
+      const fall = ((p.confetti * spd * 1.4 + rnd()*0.3) % 1);
+      const x = x0 + Math.sin(fall*6 + i) * 6;
+      const y = 14 + fall * 214;
+      ctx.fillStyle = rgb(c, 0.92 * (1 - fall*0.35));
+      const k = 2 + ((rnd()*3)|0);
+      ctx.fillRect(x|0, y|0, k, k);
+    }
+    if (p.confetti > 0.05) {
+      ctx.font = '12px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = rgb(C.sub, clamp(p.confetti*2)); ctx.fillText('纪念日快乐', 120, 232);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ══════════════════════════ 循环 ══════════════════════════
+const cv = document.getElementById('screen');
+const ctx = cv.getContext('2d');
+const tcode = document.getElementById('tcode');
+const sceneEl = document.getElementById('scene');
+const scrub = document.getElementById('scrub');
+
+function greetingFor(b) {
+  if (b === 'birth') return '生日快乐！';
+  const h = new Date().getHours();
+  if (h < 6)  return '还没睡呀';
+  if (h < 11) return '早呀';
+  if (h < 14) return '午安';
+  if (h < 18) return '下午好';
+  return '你回来啦';
+}
+
+function render() {
+  const dur = TL[branch].dur;
+  scrub.max = Math.round(dur * 1000);
+  draw(ctx, t, branch, greetingFor(branch));
+  tcode.textContent = t.toFixed(2) + 's';
+  let sc = SCENES[SCENES.length-1][2];
+  for (const [a, b, n] of SCENES) if (t >= a && t < b) { sc = n; break; }
+  sceneEl.innerHTML = sc.includes('·') ? sc.replace('·', '<em>·</em>') : sc;
+  if (playing) scrub.value = Math.round(t * 1000);
+}
+
+function tick(ms) {
+  if (!playing) { lastMs = ms; requestAnimationFrame(tick); return; }
+  const dt = Math.min(0.05, (ms - lastMs) / 1000) * speed;
+  lastMs = ms;
+  t += dt;
+  if (t >= TL[branch].dur) { t = TL[branch].dur; playing = false; document.getElementById('play').textContent = '▶ 播放'; }
+  render();
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ══════════════════════════ 交互 ══════════════════════════
+document.getElementById('play').onclick = () => {
+  if (t >= TL[branch].dur - 0.001) t = 0;
+  playing = !playing;
+  document.getElementById('play').textContent = playing ? '⏸ 暂停' : '▶ 播放';
+  lastMs = performance.now();
+};
+document.getElementById('replay').onclick = () => { t = 0; playing = true; document.getElementById('play').textContent = '⏸ 暂停'; lastMs = performance.now(); };
+document.getElementById('skip').onclick = () => { t = TL[branch].dur; playing = false; document.getElementById('play').textContent = '▶ 播放'; render(); };
+scrub.oninput = () => { playing = false; document.getElementById('play').textContent = '▶ 播放'; t = scrub.value / 1000; render(); };
+
+document.querySelectorAll('.spd').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.spd').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); speed = parseFloat(b.dataset.s);
+});
+document.querySelectorAll('.br').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.br').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); branch = b.dataset.b; t = 0; playing = true;
+  document.getElementById('play').textContent = '⏸ 暂停'; lastMs = performance.now();
+  buildTL(); buildFrames();
+});
+document.querySelectorAll('.sz').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.sz').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  cv.classList.toggle('actual', b.dataset.a === '1');
+});
+
+function buildTL() {
+  const el = document.getElementById('tl');
+  const segs = branch === 'wake'
+    ? [['唤醒',0.10,'#FFD9A0'],['睁眼',0.30,'#4A3B37'],['落位',0.20,'#FFF3E4']]
+    : [['硬件',0.20,'#3A3F48'],['①种子',0.40,'#7A5A48'],['②涟漪',0.40,'#9A6A50'],['③轮廓',0.50,'#C08A60'],
+       ['④开灯',0.50,'#FFD9A0'],['⑤耳朵',0.30,'#FFCAB8'],['⑥腮红',0.25,'#FF9E9E'],['⑦睁眼',0.40,'#4A3B37'],
+       ['⑧问候',0.55,'#FF9682'],['⑨落位',0.30,'#FFF3E4']];
+  const tot = segs.reduce((a,s)=>a+s[1],0);
+  el.innerHTML = segs.map(([n,d,c]) => `<div style="flex:${d/tot};background:${c}">${n}</div>`).join('');
+}
+const BSS = { wake:[0.10,0.30,0.20], full:[0.20,0.40,0.40,0.50,0.50,0.30,0.25,0.40,0.55,0.30] };
+function markTL() {
+  const segs = [...document.querySelectorAll('#tl div')];
+  const bs = BSS[branch] || BSS.full;
+  const dur = TL[branch].dur, tot = bs.reduce((a,b)=>a+b,0);
+  let acc = 0;
+  segs.forEach((el, i) => {
+    const a = acc * dur / tot, b = (acc + bs[i]) * dur / tot;
+    acc += bs[i];
+    el.classList.toggle('act', t >= a && t < b);
+  });
+}
+setInterval(markTL, 60);
+buildTL();
+
+function buildFrames() {
+  const box = document.getElementById('frames');
+  const dur = TL[branch].dur;
+  const n = branch === 'wake' ? 4 : 10;
+  box.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const s = dur * i / (n - 1);
+    const c = document.createElement('canvas'); c.width = c.height = 240;
+    draw(c.getContext('2d'), s, branch, greetingFor(branch));
+    const w = document.createElement('div');
+    w.appendChild(c);
+    const lb = document.createElement('div'); lb.className = 'flabel';
+    lb.textContent = s.toFixed(2) + 's'; w.appendChild(lb);
+    c.onclick = () => { playing = false; document.getElementById('play').textContent = '▶ 播放'; t = s; render(); };
+    box.appendChild(w);
+  }
+}
+buildFrames();
+render();
+</script>
+</body>
+</html>

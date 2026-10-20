@@ -84,35 +84,26 @@ public:
     // 可见性唯一真源是 yh_skin::SplashVisible()（看 g_root 是否存在）。
     // 早期版本另存过一份 splash_visible_ 成员，淡出 300ms 内两者会不一致，
     // 让「正在连接」这类状态文案漏进气泡 —— 该成员与其转发函数均已删除。
-    void ShowBootSplash();
-    void DismissBootSplash();
+    // virtual：PetSkinDisplay（像素宠物主题）覆写为 3.8s 宠物出生动画。
+    virtual void ShowBootSplash();
+    virtual void DismissBootSplash();
 
     // ---- 单 BOOT 键三事件皮肤反馈（0=短按 1=双击 2=长按）----
-    void HandleKeyEvent(int ev);
+    virtual void HandleKeyEvent(int ev);
 
     // ---- 表情彩蛋轮播（待机双击）----
-    void NextEasterEgg();
+    virtual void NextEasterEgg();
 
     // ---- 1 秒节拍（板级 esp_timer 调用）----
-    void Tick1s();
+    virtual void Tick1s();
 
     const YhSkinProfile& profile() const { return profile_; }
 
-private:
-    void BuildMainScreen();
-    void AttachHiddenPlaceholders();
-    void SetBubbleText(const char* text);          // 已持锁调用
-    bool ApplyBackground();                        // 已持锁调用：壁纸 > 主题背景 > good.jpg
-                                                   // 返回 false = 没作用到显示层（UI 未建/拿不到锁）
-    // 已持锁调用：splash 底图（boot 壁纸 > idle 壁纸 > 品牌底纹）。
-    // splash 不存在时 lv_image_set_src 不会执行，如实返回 false。
-    bool ApplySplashBackground();
-    void ApplyFonts();                             // 已持锁调用：把 skin 自建对象重绑到当前主题字体
-    YhSkinFonts CurrentFonts() const;
-    void DismissSplashIfNeeded();                  // 待机/连接成功时收起开机画面
-
-    YhSkinProfile profile_;
-
+protected:
+    // ---- 子类皮肤定制点（PetSkinDisplay 等主题复用基类骨架）----
+    // 基类 SetupUI 已建好：占位对象族（SetTheme/ShowNotification 防崩）、
+    // 壁纸链（SetWallpaper/ApplyBackground）、气泡/时间/电量/提示、开机 splash。
+    // 子类只替换视觉层，以下成员与工具开放给子类直接操作。
     lv_obj_t* bg_image_ = nullptr;      // 背景图对象（缩放铺满，不用 bg_image_src）
     lv_obj_t* avatar_box_ = nullptr;    // 表情容器
     lv_obj_t* bubble_ = nullptr;        // 气泡容器
@@ -120,6 +111,25 @@ private:
     lv_obj_t* time_label_ = nullptr;    // 顶部时间
     lv_obj_t* battery_text_ = nullptr;  // 顶部电量（has_battery=false 时隐藏）
     lv_obj_t* hint_label_ = nullptr;    // 底部操作提示
+
+    YhSkinFonts CurrentFonts() const;                // 主题四字体（assets 加载后会变）
+    void SetBubbleText(const char* text);            // 自带锁的气泡原语
+
+private:
+    void BuildMainScreen();
+    void AttachHiddenPlaceholders();
+    bool ApplyBackground();                        // 已持锁调用：壁纸 > 主题背景 > good.jpg
+                                                   // 返回 false = 没作用到显示层（UI 未建/拿不到锁）
+    // 已持锁调用：把指定图绑到主界面 bg_image_（set_src 回读确认 + 等比缩放 +
+    // 显式标脏）。ApplyBackground 回落链与 SetBootWallpaper 兜底共用。
+    bool BindBackgroundImage(const lv_img_dsc_t* image);
+    // 已持锁调用：splash 底图（boot 壁纸 > idle 壁纸 > 品牌底纹）。
+    // splash 不存在时 lv_image_set_src 不会执行，如实返回 false。
+    bool ApplySplashBackground();
+    void ApplyFonts();                             // 已持锁调用：把 skin 自建对象重绑到当前主题字体
+    void DismissSplashIfNeeded();                  // 待机/连接成功时收起开机画面
+
+    YhSkinProfile profile_;
 
     const lv_img_dsc_t* user_wallpaper_ = nullptr;   // idle 槽：主界面背景
     const lv_img_dsc_t* boot_wallpaper_ = nullptr;   // boot 槽：splash 底图

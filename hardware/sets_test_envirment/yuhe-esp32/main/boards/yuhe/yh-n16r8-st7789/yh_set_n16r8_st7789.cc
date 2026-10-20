@@ -6,6 +6,11 @@
 #include "config.h"
 #include "power_save_timer.h"
 #include "display/yh_skin/yh_skin_display.h"
+#if CONFIG_YH_UI_THEME_PIXELPET
+#include "display/pet_skin/pet_skin_display.h"
+#elif CONFIG_YH_UI_THEME_EMOPET
+#include "display/emo_skin/emo_skin_display.h"
+#endif
 
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
@@ -170,11 +175,24 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, true));
 
-        // 圆屏皮肤：240x240 安全区布局（时间/电量/表情/气泡/提示 + good.jpg 背景）
+        // 皮肤按编译期主题选择（build.py --theme）：xiaoyou=原圆屏皮肤，
+        // pixel-pet=像素宠物，emopet=EMOpet 机器人眼（同一构造签名，240 圆屏布局自动换算）
+#if CONFIG_YH_UI_THEME_PIXELPET
+        display_ = new PetSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                     DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Round240(false));
+#elif CONFIG_YH_UI_THEME_EMOPET
+        display_ = new EmoSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                     DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Round240(false));
+#else
         display_ = new YhSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
                                      DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
                                      YhSkinProfile::Round240(false));
+#endif
         ESP_LOGI(TAG, "LCD ready (%dx%d, YhSkinDisplay round)", DISPLAY_WIDTH, DISPLAY_HEIGHT);
     }
 

@@ -1,6 +1,7 @@
 #include "wallpaper_manager.h"
 
 #include "board.h"
+#include "boot_wallpaper_store.h"
 #include "display.h"
 #include "settings.h"
 
@@ -418,6 +419,21 @@ void WallpaperManager::Impl::ProcessSet(WallpaperSlot& slot,
         settings.SetString("url", request.url);
         settings.SetString("md5", request.md5);
     }
+    // ★ boot 槽追加：图片本体落 flash（assets 分区尾部，见 boot_wallpaper_store）。
+    //   不落 flash 的后果就是本次开机看到的时序死锁：splash 在联网前建好、
+    //   时间同步后即收起，网络重拉的图永远赶不上本次开机；重启后 PSRAM 又
+    //   丢了，还得再赛跑一次。flash 是"下次开机首帧即用户图"的唯一载体。
+    //   失败只打日志：flash 是加速器不是正确性依赖，坏了回落网络重拉。
+    if (request.kind == WallpaperKind::Boot) {
+        uint8_t flash_md5[ESP_ROM_MD5_DIGEST_LEN];
+        if (ParseMd5(request.md5, flash_md5)) {
+            boot_wallpaper_store::Save(buffer, flash_md5);
+        } else {
+            // ParseMd5 上面校验链已挡过一遍，这里失败说明 request.md5 空串
+            // （clear 语义路径不走这里），防御性抹掉避免 flash 留旧图
+            boot_wallpaper_store::Erase();
+        }
+    }
     finish(true, "");
 }
 
@@ -614,6 +630,11 @@ void WallpaperManager::Impl::ProcessClear(WallpaperSlot& slot, WallpaperKind kin
         settings.EraseKey("url");
         settings.EraseKey("md5");
     }
+    // ★ boot 槽清除时同步抹 flash 持久化区：否则 NVS 说"没壁纸"、flash 里
+    //   还有旧图，下次开机 EarlyRestoreBootWallpaper 读出来又"复活"了。
+    if (kind == WallpaperKind::Boot) {
+        boot_wallpaper_store::Erase();
+    }
     if (callback) {
         callback(true, "");
     }
@@ -771,6 +792,17 @@ void WallpaperManager::RestoreFromNvsAsync() {
                 request.version == slot.applied_version) {
                 continue;
             }
+            // ★ boot 槽专属：flash 早期恢复的图 MD5 与 NVS 一致 → 屏上（splash）
+            //   已经是这张图，网络重下 115KB 纯属浪费流量。applied_version 在
+            //   EarlyRestore 里对账后与 NVS 同源，上面的判重已覆盖"完全对齐"
+            //   的情况；这里再按 MD5 兜一层，覆盖 flash 版本号缺失/漂移但图
+            //   本身就是最新版的情况（version 与 md5 是不同粒度的幂等键）。
+            if (kind == WallpaperKind::Boot && slot.dsc_valid && !request.md5.empty() &&
+                request.md5 == slot.applied_md5) {
+                // 只补记 url（ EarlyRestore 可能填的是空 url），不重下
+                slot.applied_url = request.url;
+                continue;
+            }
             // 本次开机已尝试过该版本（失败也不再反复重拉，避免重连风暴）
             if (!request.version.empty() && slot.restore_version == request.version) {
                 continue;
@@ -793,4 +825,77 @@ void WallpaperManager::RestoreFromNvsAsync() {
 std::string WallpaperManager::applied_version(WallpaperKind kind) {
     std::lock_guard<std::mutex> lock(impl_->mutex);
     return impl_->slots[Impl::SlotIndexOf(kind)].applied_version;
+}
+
+const YhWallpaperImage* WallpaperManager::EarlyRestoreBootWallpaper() {
+#if !WALLPAPER_HAS_LVGL_DISPLAY
+    // emote 风格构建：boot 壁纸无从展示，也从未写进 flash，直接判无图
+    return nullptr;
+#else
+    WallpaperSlot& slot = impl_->slots[Impl::SlotIndexOf(WallpaperKind::Boot)];
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        // 幂等：本会话已恢复过（或已应用同版本）直接回 dsc
+        if (slot.dsc_valid) {
+            return &slot.dsc;
+        }
+    }
+
+    // flash → PSRAM（同步读 115KB + MD5 校验，约 50ms）
+    uint8_t flash_md5[ESP_ROM_MD5_DIGEST_LEN];
+    uint8_t* buffer = boot_wallpaper_store::Load(flash_md5);
+    if (buffer == nullptr) {
+        return nullptr;
+    }
+
+    // 拿 NVS 元数据（version/url/md5）对账：flash 里的图是哪个版本。
+    // NVS 为空说明 flash 图是旧会话残留（服务端已 clear 但设备没收到）——
+    // 仍然展示（图是真的，且 clear 命令会走 ProcessClear 抹 flash），
+    // 但 applied_version 记 flash 真实状态，网络恢复后由重拉/下发对齐。
+    WallpaperRequest meta;
+    {
+        Settings settings("wallpaper_boot", false);
+        meta.version = settings.GetString("version");
+        meta.url = settings.GetString("url");
+        meta.md5 = settings.GetString("md5");
+    }
+    char flash_md5_hex[ESP_ROM_MD5_DIGEST_LEN * 2 + 1];
+    Md5ToHex(flash_md5, flash_md5_hex);
+    if (meta.md5 != flash_md5_hex) {
+        ESP_LOGW(TAG, "boot wallpaper: flash md5 != nvs md5, keep image; "
+                 "server will re-sync after network up (flash=%s nvs=%s)",
+                 flash_md5_hex, meta.md5.empty() ? "(empty)" : meta.md5.c_str());
+        meta.version = "flash:" + std::string(flash_md5_hex, 8);  // 伪版本：只做记账不去重
+    }
+
+    lv_img_dsc_t dsc{};
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    dsc.header.w = kWidth;
+    dsc.header.h = kHeight;
+    dsc.header.stride = kWidth * 2;
+    dsc.data_size = static_cast<uint32_t>(kImageBytes);
+    dsc.data = buffer;
+
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        if (slot.dsc_valid) {
+            // 竞态：等锁期间已被并发路径填充（理论不可达，防御性兜底）
+            heap_caps_free(buffer);
+            return &slot.dsc;
+        }
+        slot.buffer = buffer;
+        slot.dsc = dsc;
+        slot.dsc_valid = true;
+        slot.applied_version = meta.version;
+        slot.applied_url = meta.url;
+        // ★ 记图的真实摘要（flash md5），不能记 NVS 的：RestoreFromNvsAsync 用
+        //   request.md5 == applied_md5 判"屏上已是这张图"，若这里记成 NVS 值，
+        //   flash 旧图 + NVS 新 md5 的错位场景会被误判"已对齐"而永不重拉。
+        slot.applied_md5 = flash_md5_hex;
+    }
+    ESP_LOGI(TAG, "wallpaper: early restore boot kind=boot version=%s (from flash)",
+             meta.version.c_str());
+    return &slot.dsc;
+#endif  // WALLPAPER_HAS_LVGL_DISPLAY
 }

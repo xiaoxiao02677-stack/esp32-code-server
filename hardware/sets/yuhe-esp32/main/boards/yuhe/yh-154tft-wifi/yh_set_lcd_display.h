@@ -4,23 +4,44 @@
 #include "display/yh_skin/yh_skin_display.h"
 #include "lvgl_theme.h"
 
+#if CONFIG_YH_UI_THEME_PIXELPET
+#include "display/pet_skin/pet_skin_display.h"
+#elif CONFIG_YH_UI_THEME_EMOPET
+#include "display/emo_skin/emo_skin_display.h"
+#endif
+
 #include <esp_lvgl_port.h>
 
-// 屿禾小方块 1.54 寸 TFT：共享「小柚」皮肤 + 芯片高温警告弹窗。
+// 屿禾小方块 1.54 寸 TFT：共享皮肤 + 芯片高温警告弹窗。
 //
-// 为什么做成 YhSkinDisplay 的子类而不是把弹窗塞进共享层：
+// 为什么做成皮肤类的子类而不是把弹窗塞进共享层：
 //   高温告警只有这一块板有（power_manager 读 NTC），共享层不该为单一硬件
 //   背上看门狗式的 UI。子类只做「基类建好界面 → 追加一个浮层」这一件事。
+//
+// 主题条件编译：YhSetLcdDisplay 始终继承「当前主题的皮肤基类」——
+// xiaoyou（默认）= YhSkinDisplay，pixel-pet = PetSkinDisplay，
+// emopet = EmoSkinDisplay。高温弹窗等板级浮层对三套主题同样生效。
+#if CONFIG_YH_UI_THEME_PIXELPET
+class YhSetLcdDisplay : public PetSkinDisplay {
+public:
+    using PetSkinDisplay::PetSkinDisplay;
+    using SkinBase = PetSkinDisplay;
+#elif CONFIG_YH_UI_THEME_EMOPET
+class YhSetLcdDisplay : public EmoSkinDisplay {
+public:
+    using EmoSkinDisplay::EmoSkinDisplay;
+    using SkinBase = EmoSkinDisplay;
+#else
 class YhSetLcdDisplay : public YhSkinDisplay {
 public:
-    YhSetLcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel, int width,
-                    int height, int offset_x, int offset_y, bool mirror_x, bool mirror_y,
-                    bool swap_xy, const YhSkinProfile& profile)
-        : YhSkinDisplay(panel_io, panel, width, height, offset_x, offset_y, mirror_x, mirror_y,
-                        swap_xy, profile) {}
+    using YhSkinDisplay::YhSkinDisplay;
+    using SkinBase = YhSkinDisplay;
+#endif
 
     void SetupUI() override {
-        YhSkinDisplay::SetupUI();
+        // ★ SkinBase 而非 YhSkinDisplay：主题子类的 SetupUI 负责建
+        //   宠物/发光眼 canvas，限定到 YhSkinDisplay 会整层跳过。
+        SkinBase::SetupUI();
         // ★ 必须自己再拿一次锁：基类 SetupUI() 内部的 DisplayLockGuard 在它
         //   返回时就析构了，锁已经放掉。而这里的调用方是 application.cc 的
         //   主任务，此刻 taskLVGL 已经在跑 lv_timer_handler —— 下面

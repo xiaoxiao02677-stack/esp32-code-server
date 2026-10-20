@@ -2,6 +2,11 @@
 #include "audio/codecs/box_audio_codec.h"
 #include "display/lcd_display.h"
 #include "display/yh_skin/yh_skin_display.h"
+#if CONFIG_YH_UI_THEME_PIXELPET
+#include "display/pet_skin/pet_skin_display.h"
+#elif CONFIG_YH_UI_THEME_EMOPET
+#include "display/emo_skin/emo_skin_display.h"
+#endif
 #include "application.h"
 #include "button.h"
 #include "led/single_led.h"
@@ -225,21 +230,45 @@ private:
             // 横屏模式
             esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
             esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-            // 横屏 320x240：共享「小柚」皮肤的宽屏画像
+            // 横屏 320x240：皮肤按编译期主题选择（build.py --theme）
+#if CONFIG_YH_UI_THEME_PIXELPET
+            display_ = new PetSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                         DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_EMOPET
+            display_ = new EmoSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                         DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
+#else
             display_ = new YhSkinDisplay(panel_io, panel,
                                          DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
                                          DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
+#endif
 
         } else {
             // 竖屏模式
             esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY_1);
             esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1);
-            // 竖屏 240x320：同一套皮肤的竖屏画像（非圆屏，四角不裁）
+            // 竖屏 240x320：皮肤按编译期主题选择（build.py --theme）
+#if CONFIG_YH_UI_THEME_PIXELPET
+            display_ = new PetSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
+                                         DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
+#elif CONFIG_YH_UI_THEME_EMOPET
+            display_ = new EmoSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
+                                         DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
+#else
             display_ = new YhSkinDisplay(panel_io, panel,
                                          DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
                                          DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
+#endif
         }
 
     }

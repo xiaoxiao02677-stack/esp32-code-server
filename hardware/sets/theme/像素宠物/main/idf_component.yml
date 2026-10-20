@@ -1,0 +1,16 @@
+## ESP-IDF v6.1 managed dependencies
+##
+## 说明：
+##  * ESP-IDF v6.1 的 esp_lcd 组件已内置 ST7789 面板驱动
+##    (esp_lcd_new_panel_st7789)，无需额外下载。
+##  * 若你用的是 GC9A01 圆屏，改为 espressif/esp_lcd_gc9a01 并替换 display.c 中的构造函数。
+dependencies:
+  idf: ">=6.1"
+
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+
+  espressif/esp_lvgl_port:
+    version: "^2"
+    public: true

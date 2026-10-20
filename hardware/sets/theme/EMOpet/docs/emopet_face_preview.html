@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMOPET 风格 · 机器人脸屏 · 240×240 方屏预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b0c10; color: #e6e9ef;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+    min-height: 100vh; padding: 30px 20px 60px;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: .3px; }
+  h1 span { color: #2fd8ff; }
+  .sub { color: #8b93a3; font-size: 14px; margin-top: 8px; line-height: 1.75; }
+  .sub b { color: #2fd8ff; font-weight: 500; }
+
+  .stage { display: flex; gap: 38px; align-items: flex-start; margin-top: 26px; flex-wrap: wrap; }
+
+  /* ── 设备外壳：模拟 EMOPET 的黑色方头 ── */
+  .device {
+    background: linear-gradient(155deg, #22252c, #101216);
+    border: 1px solid #2b2f38; border-radius: 26px; padding: 20px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.7); flex-shrink: 0;
+  }
+  .head {
+    background: linear-gradient(160deg, #1b1e24, #0a0b0e);
+    border-radius: 22px; padding: 14px;
+    box-shadow: inset 0 2px 8px rgba(255,255,255,.05), 0 0 0 1px #33373f;
+  }
+  #screen {
+    display: block; border-radius: 12px; background: #08090c;
+    width: 380px; height: 380px; transition: width .25s, height .25s;
+    image-rendering: auto;
+  }
+  #screen.actual { width: 240px; height: 240px; }
+  .devcap { text-align: center; color: #6b7383; font-size: 12px; margin-top: 13px; letter-spacing: .5px; }
+
+  .panel { flex: 1; min-width: 400px; }
+  .cur { display: flex; align-items: baseline; gap: 12px; }
+  .cur .nm { font-size: 24px; color: #2fd8ff; font-weight: 600; }
+  .cur .en { font-size: 13px; color: #6b7383; font-family: ui-monospace, Menlo, monospace; }
+
+  .sect { margin-top: 22px; }
+  .sect h3 { font-size: 12px; color: #6b7383; font-weight: 500; letter-spacing: 1.2px; margin-bottom: 10px; }
+  .btns { display: flex; gap: 9px; flex-wrap: wrap; }
+  button {
+    background: #171a21; color: #d6dce6; border: 1px solid #2a2f38;
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: .15s;
+  }
+  button:hover { background: #212631; border-color: #3a4150; }
+  button.on { background: #2fd8ff; color: #04222c; border-color: #2fd8ff; font-weight: 600; }
+  button.primary { background: #2fd8ff; color: #04222c; border-color: #2fd8ff; font-weight: 600; }
+
+  .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw {
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    border: 2px solid #2a2f38; transition: .15s; position: relative;
+  }
+  .sw:hover { transform: scale(1.1); }
+  .sw.on { border-color: #fff; box-shadow: 0 0 14px currentColor; }
+
+  .grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  .cell { text-align: center; }
+  .cell canvas {
+    width: 92px; height: 92px; border-radius: 10px; background: #08090c;
+    border: 2px solid #22262e; cursor: pointer; transition: .15s; display: block;
+  }
+  .cell canvas:hover { border-color: #2fd8ff; transform: translateY(-3px); }
+  .cell canvas.sel { border-color: #2fd8ff; }
+  .cell .lb { font-size: 11px; color: #8b93a3; margin-top: 6px; }
+
+  .note {
+    margin-top: 32px; background: #12151b; border: 1px solid #22262e;
+    border-left: 3px solid #2fd8ff; border-radius: 8px; padding: 16px 18px;
+    font-size: 13px; line-height: 1.9; color: #9aa3b2;
+  }
+  .note b { color: #d6dce6; }
+  .note code { font-family: ui-monospace, Menlo, Consolas, monospace; background: #0b0c10; padding: 1px 5px; border-radius: 3px; color: #2fd8ff; font-size: 12px; }
+  .note table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  .note th { text-align: left; color: #6b7383; font-weight: 500; padding: 6px 8px 6px 0; }
+  .note td { padding: 6px 8px 6px 0; color: #b6bdc9; border-top: 1px solid #1b1f26; }
+  .note td.k { color: #2fd8ff; width: 100px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EMOPET 风格 · 机器人脸屏 <span>Robot Face</span></h1>
+  <div class="sub">
+    240×240 <b>方形 IPS</b>（ST7789）· 黑底 + 蓝色发光眼 · ESP-IDF v6.1 可跑<br>
+    眼睛即全部：没有嘴、没有身体，<b>所有情绪都靠两只会发光的眼睛表达</b>。切换表情时用「眨眼」过渡——这是机器人脸最自然的转场。
+  </div>
+
+  <div class="stage">
+    <div class="device">
+      <div class="head"><canvas id="screen" width="240" height="240"></canvas></div>
+      <div class="devcap">240 × 240 · EMOPET STYLE FACE</div>
+    </div>
+
+    <div class="panel">
+      <div class="cur">
+        <div class="nm" id="curname">待机</div>
+        <div class="en" id="curen">IDLE</div>
+      </div>
+
+      <div class="sect">
+        <h3>播放</h3>
+        <div class="btns">
+          <button class="primary" id="play">▶ 自动循环演示</button>
+          <button id="replay">↻ 从头播</button>
+          <button id="blinknow">眨一下</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>眼睛颜色</h3>
+        <div class="swatches" id="sw"></div>
+      </div>
+
+      <div class="sect">
+        <h3>眼睛画法（可对比）</h3>
+        <div class="btns">
+          <button id="tCute" class="on">💖 可爱版 · 大眼 + 高光</button>
+          <button id="tPlain">原版 · 发光灯珠</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>叠加元素（真机按需开关）</h3>
+        <div class="btns">
+          <button id="tStatus">顶部状态</button>
+          <button id="tWave">底部声波</button>
+          <button id="tBlink">自动眨眼</button>
+          <button id="tBreathe">呼吸缩放</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>显示尺寸</h3>
+        <div class="btns">
+          <button class="sz on" data-a="0">放大 380px</button>
+          <button class="sz" data-a="1">实际 240px</button>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h3>表情库（点击查看）</h3>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>这套界面的设计要点：</b>
+    <table>
+      <tr><th>要点</th><th>说明</th></tr>
+      <tr><td class="k">眼睛即全部</td><td>没有嘴、没有身体。情绪全部由眼睛的<b>形状 / 大小 / 倾角 / 辉光强度</b>四个维度表达</td></tr>
+      <tr><td class="k">眨眼转场</td><td>切换表情时先闭眼再睁开，比直接变形自然得多，这是机器人脸的核心手法</td></tr>
+      <tr><td class="k">★ 高光点</td><td><b>这是「灯」和「眼睛」的分界线。</b>主高光（上方偏右的小白椭圆）+ 次高光（下方偏左的反射光）。没有它，眼睛只是两颗 LED</td></tr>
+      <tr><td class="k">★ 幼态布局</td><td>眼睛更大（54×62）、位置更靠下（cy 126）、间距更开（80px）。<b>大眼 + 低位 + 宽距 = 婴儿图式</b>，这是可爱的底层原理</td></tr>
+      <tr><td class="k">★ 眨眼挤压</td><td>眨眼不是纯垂直压扁，而是<b>横向同时拉伸 12%</b>（squash &amp; stretch），睁到底时过冲 6%。有弹性才活</td></tr>
+      <tr><td class="k">辉光分层</td><td>外晕（径向渐变到面板）→ 主体（中心白→边缘主色）→ 亮芯 → 高光。<b>ESP32 上不要做高斯模糊</b>，用尺寸递减 + 透明度递增模拟</td></tr>
+      <tr><td class="k">黑色最省电</td><td>IPS 上黑像素几乎不耗电，这套方案适合 24 小时常亮，续航远好于浅色界面</td></tr>
+      <tr><td class="k">零位图</td><td>所有眼睛形状都是参数化路径，<b>flash 占用几乎为零</b>，也不用 PSRAM 存图</td></tr>
+    </table>
+    <div style="margin-top:12px">
+      真机实现：<code>emopet_face.c</code> 用 <code>lv_canvas</code> 直接画路径，眼睛参数放进一张表情表，
+      切换时启动 300ms 的闭眼→换形→睁眼动画。详见工程 README。
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════ 眼睛参数系统 ══════════════════════
+// 每个表情 = 一组眼睛参数。切换时插值 + 眨眼转场。
+const SHAPES = ['dot', 'arc', 'heart', 'star', 'spiral', 'x', 'qr', 'none'];
+
+const PALETTE = [
+  { name:'冰蓝', main:[47,216,255], core:[214,248,255] },
+  { name:'青绿', main:[53,240,208], core:[216,255,248] },
+  { name:'紫',   main:[169,123,255],core:[236,226,255] },
+  { name:'粉',   main:[255,111,181],core:[255,224,240] },
+  { name:'琥珀', main:[255,162,58], core:[255,238,208] },
+  { name:'翠绿', main:[107,255,142],core:[224,255,232] },
+];
+let palIdx = 0;
+
+// w/h: 眼宽高; tilt: 倾角(左右眼反向); glow: 辉光强度; offY: 整体上下; bend: 弧线弯曲(>0 笑 ∩, <0 哭 ∪)
+const EMOTIONS = {
+  idle:     { cn:'待机',   en:'IDLE',     shape:'dot',  w:54, h:62, tilt:0,    glow:1.00, offY:0,  bend:0 },
+  listen:   { cn:'聆听',   en:'LISTEN',   shape:'dot',  w:60, h:70, tilt:0,    glow:1.35, offY:-2, bend:0 },
+  speak:    { cn:'说话',   en:'SPEAK',    shape:'dot',  w:56, h:64, tilt:0,    glow:1.20, offY:0,  bend:0 },
+  happy:    { cn:'开心',   en:'HAPPY',    shape:'arc',  w:50, h:18, tilt:0,    glow:1.25, offY:2,  bend:1.0 },
+  love:     { cn:'爱心',   en:'LOVE',     shape:'heart',w:48, h:45, tilt:0,    glow:1.55, offY:0,  bend:0 },
+  sleepy:   { cn:'困',     en:'SLEEPY',   shape:'arc',  w:46, h:10, tilt:0,    glow:0.62, offY:4,  bend:0.35 },
+  sad:      { cn:'难过',   en:'SAD',      shape:'arc',  w:44, h:15, tilt:-0.30,glow:0.75, offY:2,  bend:-0.85 },
+  surprise: { cn:'惊讶',   en:'SURPRISE', shape:'dot',  w:48, h:78, tilt:0,    glow:1.60, offY:-4, bend:0 },
+  angry:    { cn:'生气',   en:'ANGRY',    shape:'dot',  w:56, h:46, tilt:0.55, glow:1.45, offY:0,  bend:0 },
+  wink:     { cn:'眨眼',   en:'WINK',     shape:'dot',  w:54, h:58, tilt:0,    glow:1.20, offY:0,  bend:0, rShape:'arc', rH:18, rBend:1.0 },
+  star:     { cn:'星星眼', en:'STAR',     shape:'star', w:50, h:48, tilt:0,    glow:1.55, offY:0,  bend:0 },
+  dizzy:    { cn:'晕',     en:'DIZZY',    shape:'spiral',w:44,h:44, tilt:0,    glow:0.95, offY:0,  bend:0 },
+  think:    { cn:'思考',   en:'THINK',    shape:'dot',  w:50, h:50, tilt:0.28, glow:1.05, offY:-8, bend:0 },
+  shy:      { cn:'害羞',   en:'SHY',      shape:'dot',  w:50, h:46, tilt:0,    glow:1.10, offY:6,  bend:0, blush:1 },
+  offline:  { cn:'断线',   en:'OFFLINE',  shape:'x',    w:42, h:42, tilt:0,    glow:0.70, offY:0,  bend:0 },
+  lowbatt:  { cn:'低电量', en:'LOWBATT',  shape:'dot',  w:46, h:40, tilt:0,    glow:0.45, offY:0,  bend:0, pulse:1 },
+  boot:     { cn:'开机',   en:'BOOT',     shape:'dot',  w:54, h:62, tilt:0,    glow:0.00, offY:0,  bend:0 },
+  wifi:     { cn:'配网',   en:'WIFI',     shape:'qr',   w:0,  h:0,  tilt:0,    glow:1.00, offY:0,  bend:0 },
+};
+
+// ══════════════════════ 状态 ══════════════════════
+let curEmo = 'idle';
+let cur = Object.assign({}, EMOTIONS.idle);
+let tgt = Object.assign({}, EMOTIONS.idle);
+let switching = false, switchT = 0, pendingShape = null;
+let blinkT = -1, blinkActive = false, nextBlink = 90;
+let showStatus = false, showWave = false, autoBlink = true, breathe = true;
+let playing = false, demoIdx = 0, demoT = 0;
+let tGlobal = 0, lastMs = 0;
+
+const DEMO = ['boot','idle','listen','speak','happy','love','star','wink','think','shy','surprise','angry','sad','sleepy','dizzy','lowbatt','offline','wifi','idle'];
+
+const rgb = (c, a=1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+/* 可爱布局：眼睛更大、更靠下、间距更开 —— 婴儿图式（幼态）三要素 */
+const EYE_LX = 80, EYE_RX = 160, EYE_CY = 126;
+let cuteMode = true;
+
+// ══════════════════════ 眼睛路径绘制 ══════════════════════
+function eyePath(ctx, cx, cy, w, h, shape, bend) {
+  ctx.beginPath();
+  if (shape === 'dot') {
+    const r = Math.min(w, h) / 2;
+    ctx.moveTo(cx - w/2 + r, cy - h/2);
+    ctx.arcTo(cx + w/2, cy - h/2, cx + w/2, cy + h/2, r);
+    ctx.arcTo(cx + w/2, cy + h/2, cx - w/2, cy + h/2, r);
+    ctx.arcTo(cx - w/2, cy + h/2, cx - w/2, cy - h/2, r);
+    ctx.arcTo(cx - w/2, cy - h/2, cx + w/2, cy - h/2, r);
+    ctx.closePath();
+  } else if (shape === 'arc') {
+    // 弯月眼：bend>0 笑 ∩（中间上凸），bend<0 哭 ∪
+    const lift = Math.abs(bend) * h * 0.55 * Math.sign(bend);
+    ctx.moveTo(cx - w/2, cy + lift * 0.5);
+    ctx.quadraticCurveTo(cx, cy - lift, cx + w/2, cy + lift * 0.5);
+  } else if (shape === 'heart') {
+    const s = w / 44, x = cx, y = cy;
+    ctx.moveTo(x, y + h/2 * 0.95);
+    ctx.bezierCurveTo(x - w*0.95, y - h*0.15, x - w*0.42, y - h*0.85, x, y - h*0.22);
+    ctx.bezierCurveTo(x + w*0.42, y - h*0.85, x + w*0.95, y - h*0.15, x, y + h/2 * 0.95);
+    ctx.closePath();
+  } else if (shape === 'star') {
+    const R = w/2, r = R*0.44;
+    for (let i = 0; i < 10; i++) {
+      const ang = -Math.PI/2 + i * Math.PI/5;
+      const rr = i % 2 ? r : R;
+      const px = cx + rr*Math.cos(ang), py = cy + rr*Math.sin(ang) * (h/w);
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+  } else if (shape === 'spiral') {
+    const turns = 2.6, steps = 70, R = w/2;
+    for (let i = 0; i <= steps; i++) {
+      const p = i/steps, ang = p * turns * Math.PI*2, rr = R * p;
+      const px = cx + rr*Math.cos(ang), py = cy + rr*Math.sin(ang) * (h/w);
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+  } else if (shape === 'x') {
+    const s = w/2 * 0.72;
+    ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+    ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+  }
+}
+
+/* ── 可爱版大眼：外晕 → 主体 → 亮芯 → 主高光 → 次高光 ──────
+ * 关键是第 ④ 步的高光点：有了它才是「眼睛」，没有它只是「LED 灯」。 */
+function drawCuteEye(ctx, cx, cy, w, h, colMain, colCore, glow) {
+  const R = Math.max(w, h);
+
+  // ① 外光晕：柔和扩散到黑色面板上（EMOPET 的质感来源）
+  ctx.save();
+  const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.15);
+  gg.addColorStop(0,    rgb(colMain, 0.40 * glow));
+  gg.addColorStop(0.42, rgb(colMain, 0.20 * glow));
+  gg.addColorStop(1,    rgb(colMain, 0));
+  ctx.fillStyle = gg;
+  ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.15, R * 1.15, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // ② 主体：胶囊，中心白 → 边缘主色（发光体的正确结构）
+  ctx.save();
+  ctx.shadowColor = rgb(colMain, 0.95 * Math.min(glow, 1.2));
+  ctx.shadowBlur  = 20 * Math.min(glow, 1.2);
+  const body = ctx.createRadialGradient(cx, cy - h * 0.06, R * 0.04, cx, cy, R * 0.56);
+  body.addColorStop(0,    'rgba(255,255,255,0.98)');
+  body.addColorStop(0.30, rgb(colCore, 0.98));
+  body.addColorStop(0.72, rgb(colMain, 0.98));
+  body.addColorStop(1,    rgb(colMain, 0.90));
+  ctx.fillStyle = body;
+  const r = Math.min(w, h) / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - w/2 + r, cy - h/2);
+  ctx.arcTo(cx + w/2, cy - h/2, cx + w/2, cy + h/2, r);
+  ctx.arcTo(cx + w/2, cy + h/2, cx - w/2, cy + h/2, r);
+  ctx.arcTo(cx - w/2, cy + h/2, cx - w/2, cy - h/2, r);
+  ctx.arcTo(cx - w/2, cy - h/2, cx + w/2, cy - h/2, r);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // ③ 主高光：上方偏右的小白椭圆 —— 这一笔让「灯」变成「眼睛」
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.shadowColor = 'rgba(255,255,255,0.85)'; ctx.shadowBlur = 7;
+  ctx.beginPath();
+  ctx.ellipse(cx + w * 0.17, cy - h * 0.29, w * 0.19, h * 0.145, -0.28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // ④ 次高光（反射光）：下方偏左，更小更淡 —— 增加球面湿润感
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.40)';
+  ctx.beginPath();
+  ctx.ellipse(cx - w * 0.21, cy + h * 0.28, w * 0.105, h * 0.070, 0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEye(ctx, cx, cy, w, h, shape, bend, colMain, colCore, glow, pulse) {
+  if (shape === 'none' || h < 0.6) return;
+  const isStroke = (shape === 'arc' || shape === 'spiral' || shape === 'x');
+  const g = glow * (pulse ? (0.55 + 0.45*Math.abs(Math.sin(tGlobal*2.2))) : 1);
+  if (g <= 0.02) return;
+
+  /* 可爱模式：圆眼走专门的分层绘制 */
+  if (cuteMode && shape === 'dot') {
+    drawCuteEye(ctx, cx, cy, w, h, colMain, colCore, g);
+    return;
+  }
+
+  // ── 原版：3 层递减（用于非圆眼，或关闭可爱模式时）
+  const layers = [
+    { blur: 26 + 10*g, opa: 0.30*g, scale: 1.00 },
+    { blur: 12 + 6*g,  opa: 0.55*g, scale: 0.94 },
+    { blur: 3,         opa: 1.00,   scale: 0.86 },
+  ];
+  for (let i = 0; i < layers.length; i++) {
+    const L = layers[i];
+    ctx.save();
+    ctx.shadowColor = rgb(colMain, L.opa);
+    ctx.shadowBlur = L.blur;
+    const sw = w * L.scale, sh = h * L.scale;
+    if (isStroke) {
+      ctx.strokeStyle = (i === 2 ? rgb(colCore) : rgb(colMain, Math.min(1, L.opa + 0.25)));
+      ctx.lineWidth = Math.max(2.5, sh * (shape === 'x' ? 0.28 : 0.62));
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      eyePath(ctx, cx, cy, sw, sh, shape, bend);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = (i === 2 ? rgb(colCore) : rgb(colMain));
+      eyePath(ctx, cx, cy, sw, sh, shape, bend);
+      ctx.fill();
+      if (i === 2 && shape === 'dot') {
+        ctx.shadowBlur = 2;
+        ctx.fillStyle = rgb([255,255,255], 0.85);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + sh*0.06, sw*0.30, sh*0.26, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// ══════════════════════ 二维码（配网）══════════════════════
+function drawQR(ctx, alpha) {
+  const x0 = 52, y0 = 46, size = 136, n = 21, cell = size/n;
+  ctx.save();
+  ctx.fillStyle = rgb([255,255,255], alpha*0.97);
+  ctx.beginPath(); ctx.roundRect(x0-6, y0-6, size+12, size+12, 8); ctx.fill();
+  let sd = 20250818;
+  const rnd = () => { sd = (sd*1103515245 + 12345) & 0x7fffffff; return sd/0x7fffffff; };
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    if ((i<7&&j<7) || (i>=n-7&&j<7) || (i<7&&j>=n-7)) continue;
+    if (rnd() > 0.52) {
+      ctx.fillStyle = rgb([16,18,22], alpha);
+      ctx.fillRect(x0 + i*cell, y0 + j*cell, cell, cell);
+    }
+  }
+  const finder = (ox, oy) => {
+    ctx.fillStyle = rgb([16,18,22], alpha); ctx.fillRect(x0+ox*cell, y0+oy*cell, 7*cell, 7*cell);
+    ctx.fillStyle = rgb([255,255,255], alpha); ctx.fillRect(x0+(ox+1)*cell, y0+(oy+1)*cell, 5*cell, 5*cell);
+    ctx.fillStyle = rgb([16,18,22], alpha); ctx.fillRect(x0+(ox+2)*cell, y0+(oy+2)*cell, 3*cell, 3*cell);
+  };
+  finder(0,0); finder(n-7,0); finder(0,n-7);
+  const P = PALETTE[palIdx];
+  ctx.font = '12px "PingFang SC",sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle = rgb(P.main, alpha); ctx.fillText('扫码配网', 120, 202);
+  ctx.restore();
+}
+
+// ══════════════════════ 叠加元素 ═══════════════════════
+/* 3×5 点阵数字（与 C 代码 DIGIT35 一致，零字体依赖）*/
+const DIGIT35 = [
+  [7,5,5,5,7],[2,6,2,2,7],[7,1,7,4,7],[7,1,7,1,7],[5,5,7,1,1],
+  [7,4,7,1,7],[7,4,7,5,7],[7,1,1,1,1],[7,5,7,5,7],[7,5,7,1,7],
+];
+function glyph(ctx, rows, x, y, px, col) {
+  ctx.fillStyle = col;
+  for (let r = 0; r < 5; r++)
+    for (let c = 0; c < 3; c++)
+      if (rows[r] & (1 << (2-c))) ctx.fillRect(x + c*px, y + r*px, px, px);
+}
+/* 模拟状态（对应 overlay.c 的 overlay_state_t）*/
+let ST = { hour: 20, minute: 14, time_valid: true, wifi_level: 3,
+           wifi_connected: true, battery_pct: 78, charging: false };
+
+function drawStatus(ctx, P) {
+  const px = 2, gw = 6, gap = 1;
+  let x = 14; const y = 10;
+  const c70 = rgb(P.main, 0.70);
+  glyph(ctx, DIGIT35[Math.floor(ST.hour/10)],   x, y, px, c70); x += gw + gap;
+  glyph(ctx, DIGIT35[ST.hour % 10],             x, y, px, c70); x += gw + gap;
+  ctx.fillStyle = c70;
+  ctx.fillRect(x, y + px, px, px); ctx.fillRect(x, y + 3*px, px, px); x += px + gap;
+  glyph(ctx, DIGIT35[Math.floor(ST.minute/10)], x, y, px, c70); x += gw + gap;
+  glyph(ctx, DIGIT35[ST.minute % 10],           x, y, px, c70);
+  if (!ST.time_valid) { ctx.fillStyle = rgb(P.main,0.5); ctx.fillRect(8, y+4, 3, 3); }
+
+  /* Wi-Fi：按 RSSI 亮 1..3 格 */
+  for (let i = 0; i < 3; i++) {
+    const on = ST.wifi_connected && (ST.wifi_level > i);
+    ctx.beginPath(); ctx.arc(192, 18, 4 + i*4, Math.PI*1.25, Math.PI*1.75);
+    ctx.strokeStyle = rgb(P.main, on ? 0.80 : 0.20); ctx.lineWidth = 2; ctx.stroke();
+  }
+  /* 电量 */
+  ctx.strokeStyle = rgb(P.main, 0.5); ctx.lineWidth = 1; ctx.strokeRect(208, 12, 18, 11);
+  ctx.fillStyle = rgb(P.main, 0.5); ctx.fillRect(227, 15, 2, 5);
+  let cells = Math.floor(ST.battery_pct * 14 / 100);
+  if (cells < 1 && ST.battery_pct > 0) cells = 1;
+  const low = ST.battery_pct <= 15;
+  const op = low && ST.battery_pct > 0
+    ? (Math.abs(Math.sin(tGlobal*2)) > 0.5 ? 0.90 : 0.30) : 0.90;
+  ctx.fillStyle = rgb(P.main, op); ctx.fillRect(210, 14, cells, 7);
+  if (ST.charging) {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(218,13); ctx.lineTo(214,18); ctx.lineTo(221,21); ctx.stroke();
+  }
+}
+
+/* 频段模拟（对应 overlay.c 的 8 段包络插值到 22 条）*/
+function bands(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const p = i/(n-1)*(8-1), i0 = Math.floor(p), i1 = Math.min(i0+1, 7), f = p - i0;
+    const gain = [1.0,1.05,1.15,1.30,1.50,1.75,2.05,2.40];
+    const g = gain[i0]*(1-f) + gain[i1]*f;
+    const jit = 0.75 + 0.25*Math.sin(tGlobal*(3 + i0*1.5) + i0);
+    const v = (curEmo === 'speak' ? 0.55 : curEmo === 'listen' ? 0.35 : 0.10) * g * jit;
+    out.push(Math.min(1, v));
+  }
+  return out;
+}
+function drawWave(ctx, P) {
+  ctx.save();
+  const n = 22, bw = 5, gap = 3;
+  const x0 = (240 - (n*bw + (n-1)*gap))/2, base = 216;
+  const B = bands(n);
+  for (let i = 0; i < n; i++) {
+    const d = Math.abs(i - n/2) / (n/2);
+    const amp = (1 - d*0.55) * B[i];
+    const jit = 0.72 + 0.28*Math.abs(Math.sin(tGlobal*6.5 + i*0.62));
+    const hh = Math.max(3, 3 + amp * 28 * jit);
+    ctx.fillStyle = rgb(P.main, 0.27 + 0.59*amp);
+    ctx.beginPath();
+    ctx.roundRect(x0 + i*(bw+gap), base - hh, bw, hh, 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBlush(ctx, cx, cy, P, amt) {
+  ctx.save();
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 20);
+  g.addColorStop(0, rgb(P.main, 0.30*amt));
+  g.addColorStop(1, rgb(P.main, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 20, 11, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// ══════════════════════ 主绘制 ═══════════════════════
+function draw(ctx, forcedEmo) {
+  const P = PALETTE[palIdx];
+  const emo = forcedEmo || cur;
+  ctx.clearRect(0,0,240,240);
+  // 面板底色（近黑，EMOPET 脸就是黑色面板）
+  const bg = ctx.createLinearGradient(0,0,0,240);
+  bg.addColorStop(0, '#0c0e12'); bg.addColorStop(1, '#06070a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,240,240);
+
+  // 眼睛在面板上的反射光晕（增强"LED 照亮面板"的质感）
+  if (emo.glow > 0.05 && emo.shape !== 'qr') {
+    const g1 = ctx.createRadialGradient(120, 120, 0, 120, 120, 120);
+    g1.addColorStop(0, rgb(P.main, 0.13 * emo.glow));
+    g1.addColorStop(1, rgb(P.main, 0));
+    ctx.fillStyle = g1; ctx.fillRect(0,0,240,240);
+  }
+
+  if (emo.shape === 'qr') { drawQR(ctx, 1); if (showStatus) drawStatus(ctx, P); return; }
+
+  // 眨眼 / 转场的 h 缩放
+  let hf = 1;
+  if (blinkActive) {
+    const p = blinkT / 0.14;
+    hf = (p < 0.5) ? (1 - p*2*0.96) : (0.04 + (p-0.5)*2*1.06);  /* 睁到底时过冲 6% */
+    if (hf < 0.04) hf = 0.04;
+    if (hf > 1.06) hf = 1.06;
+  }
+  if (switching) {
+    const p = switchT / 0.30;
+    if (p < 0.45) hf = Math.min(hf, 1 - p/0.45);
+    else if (p < 0.55) hf = 0.04;
+    else hf = Math.min(hf, (p - 0.55)/0.45);
+  }
+
+  // 呼吸（待机时轻微起伏）
+  let bf = 1;
+  if (breathe && emo.shape === 'dot') bf = 1 + 0.035*Math.sin(tGlobal*1.7);
+
+  // 说话：眼睛随音频能量跳动
+  const energy = (curEmo === 'speak') ? (0.35 + 0.55*Math.abs(Math.sin(tGlobal*8.5))) : 0;
+  const speakScale = (curEmo === 'speak') ? (1 + 0.16*energy) : 1;
+
+  const w = emo.w * bf * speakScale * (1 + 0.12 * (1 - hf));   /* 眨眼时横向挤压 */
+  const h = emo.h * bf * hf * speakScale;
+  const cy = EYE_CY + emo.offY;
+  const lx = EYE_LX, rx = EYE_RX;
+
+  if (emo.blush) { drawBlush(ctx, lx - 6, cy + 34, P, 1); drawBlush(ctx, rx + 6, cy + 34, P, 1); }
+
+  drawEye(ctx, lx, cy, w, h, emo.shape, emo.bend, P.main, P.core, emo.glow, emo.pulse);
+  // 右眼：支持 wink 等左右不同形状
+  const rs = emo.rShape || emo.shape;
+  const rh = (emo.rShape ? (emo.rH||emo.h) : emo.h) * bf * hf * speakScale;
+  const rb = emo.rShape ? (emo.rBend||0) : emo.bend;
+  drawEye(ctx, rx, cy, w, rh, rs, rb, P.main, P.core, emo.glow, emo.pulse);
+
+  // 困：小 Zzz
+  if (curEmo === 'sleepy') {
+    ctx.font = '11px ui-monospace, Menlo, monospace';
+    ctx.fillStyle = rgb(P.main, 0.5); ctx.textAlign = 'left';
+    ctx.fillText('z', rx + 12, cy - 30 - (tGlobal*8 % 14));
+    ctx.font = '9px ui-monospace, Menlo, monospace';
+    ctx.fillText('z', rx + 22, cy - 42 - (tGlobal*8 % 14));
+  }
+
+  if (showStatus) drawStatus(ctx, P);
+  if (showWave) drawWave(ctx, P);
+}
+
+// ══════════════════════ 循环 ═══════════════════════
+const cv = document.getElementById('screen');
+const ctx = cv.getContext('2d');
+
+function tick(ms) {
+  const dt = Math.min(0.05, (ms - lastMs)/1000); lastMs = ms;
+  tGlobal += dt;
+
+  // 参数插值
+  const k = 0.16;
+  for (const key of ['w','h','tilt','glow','offY','bend']) {
+    cur[key] += (tgt[key] - cur[key]) * k;
+  }
+
+  // 转场：形状切换走闭眼→换形→睁眼
+  if (switching) {
+    switchT += dt;
+    if (switchT >= 0.30) { switching = false; cur.shape = pendingShape; pendingShape = null;
+      if (tgt.rShape) { cur.rShape = tgt.rShape; } else { cur.rShape = null; }
+    } else if (switchT >= 0.135 && pendingShape && cur.shape !== pendingShape) {
+      cur.shape = pendingShape;
+      if (tgt.rShape) cur.rShape = tgt.rShape; else cur.rShape = null;
+    }
+  }
+
+  // 眨眼
+  if (blinkActive) {
+    blinkT += dt;
+    if (blinkT > 0.14) { blinkActive = false; blinkT = -1; }
+  } else if (autoBlink && cur.shape === 'dot' && !switching) {
+    if (--nextBlink <= 0) { blinkActive = true; blinkT = 0; nextBlink = 60 + Math.floor(Math.random()*140); }
+  }
+
+  // 自动演示
+  if (playing) {
+    demoT += dt;
+    if (demoT > 1.6) { demoT = 0; demoIdx = (demoIdx+1) % DEMO.length; setEmotion(DEMO[demoIdx], true); }
+  }
+
+  draw(ctx);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ══════════════════════ 交互 ═══════════════════════
+const nameEl = document.getElementById('curname'), enEl = document.getElementById('curen');
+
+function setEmotion(key, fromDemo) {
+  const e = EMOTIONS[key]; if (!e) return;
+  curEmo = key;
+  nameEl.textContent = e.cn; enEl.textContent = e.en;
+  tgt = Object.assign({}, e);
+  if (e.shape !== cur.shape || (e.rShape||null) !== (cur.rShape||null)) {
+    pendingShape = e.shape; switching = true; switchT = 0;
+  }
+  if (key === 'boot') {  // 开机：辉光渐亮
+    cur.glow = 0; setTimeout(()=>{ tgt = Object.assign({}, EMOTIONS.idle); curEmo = 'idle';
+      nameEl.textContent='待机'; enEl.textContent='IDLE'; }, 1500);
+  }
+  if (!fromDemo) { playing = false; document.getElementById('play').textContent = '▶ 自动循环演示'; }
+  document.querySelectorAll('#grid canvas').forEach((c,i) => c.classList.toggle('sel', Object.keys(EMOTIONS)[i] === key));
+}
+
+document.getElementById('play').onclick = () => {
+  playing = !playing;
+  document.getElementById('play').textContent = playing ? '⏸ 暂停' : '▶ 自动循环演示';
+  if (playing) { demoIdx = -1; demoT = 99; }
+};
+document.getElementById('replay').onclick = () => { demoIdx = -1; demoT = 99; playing = true;
+  document.getElementById('play').textContent = '⏸ 暂停'; };
+document.getElementById('blinknow').onclick = () => { blinkActive = true; blinkT = 0; };
+
+const swBox = document.getElementById('sw');
+PALETTE.forEach((p, i) => {
+  const d = document.createElement('div');
+  d.className = 'sw' + (i===0?' on':'');
+  d.style.background = rgb(p.main); d.style.color = rgb(p.main);
+  d.title = p.name;
+  d.onclick = () => { palIdx = i; document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); d.classList.add('on'); buildGrid(); };
+  swBox.appendChild(d);
+});
+
+function toggle(id, get, set) {
+  const b = document.getElementById(id);
+  b.onclick = () => { set(!get()); b.classList.toggle('on', get()); };
+  b.classList.toggle('on', get());
+}
+function setCute(v) {
+  cuteMode = v;
+  document.getElementById('tCute').classList.toggle('on', v);
+  document.getElementById('tPlain').classList.toggle('on', !v);
+  buildGrid();
+}
+document.getElementById('tCute').onclick  = () => setCute(true);
+document.getElementById('tPlain').onclick = () => setCute(false);
+
+toggle('tStatus', ()=>showStatus, v=>showStatus=v);
+toggle('tWave',   ()=>showWave,   v=>showWave=v);
+toggle('tBlink',  ()=>autoBlink,  v=>autoBlink=v);
+toggle('tBreathe',()=>breathe,    v=>breathe=v);
+
+document.querySelectorAll('.sz').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.sz').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); cv.classList.toggle('actual', b.dataset.a === '1');
+});
+
+function buildGrid() {
+  const box = document.getElementById('grid');
+  box.innerHTML = '';
+  const P = PALETTE[palIdx];
+  Object.entries(EMOTIONS).forEach(([key, e]) => {
+    const c = document.createElement('canvas'); c.width = c.height = 240;
+    const cx = c.getContext('2d');
+    // 静态快照：直接画目标形态
+    const bg = cx.createLinearGradient(0,0,0,240);
+    bg.addColorStop(0,'#0c0e12'); bg.addColorStop(1,'#06070a');
+    cx.fillStyle = bg; cx.fillRect(0,0,240,240);
+    if (e.glow > 0.05 && e.shape !== 'qr') {
+      const g1 = cx.createRadialGradient(120,120,0,120,120,120);
+      g1.addColorStop(0, rgb(P.main, 0.13*Math.min(e.glow,1.3)));
+      g1.addColorStop(1, rgb(P.main, 0));
+      cx.fillStyle = g1; cx.fillRect(0,0,240,240);
+    }
+    if (e.shape === 'qr') {
+      drawQR(cx, 1);
+    } else {
+      const g = Math.min(e.glow, 1.3);
+      const gy = EYE_CY + (e.offY||0);
+      drawEye(cx, EYE_LX, gy, e.w, e.h, e.shape, e.bend, P.main, P.core, g, 0);
+      const rs = e.rShape || e.shape;
+      drawEye(cx, EYE_RX, gy, e.w, (e.rShape ? (e.rH||e.h) : e.h), rs,
+              e.rShape ? (e.rBend||0) : e.bend, P.main, P.core, g, 0);
+      if (e.blush) { drawBlush(cx, EYE_LX-4, gy+36, P, 1); drawBlush(cx, EYE_RX+4, gy+36, P, 1); }
+      if (key === 'sleepy') { cx.font='11px monospace'; cx.fillStyle=rgb(P.main,0.5);
+        cx.fillText('z',EYE_RX+12,gy-30); cx.font='9px monospace'; cx.fillText('z',EYE_RX+22,gy-42); }
+    }
+    if (showStatus) drawStatus(cx, P);
+    const w = document.createElement('div'); w.className = 'cell';
+    w.appendChild(c);
+    const lb = document.createElement('div'); lb.className = 'lb'; lb.textContent = e.cn;
+    w.appendChild(lb);
+    c.onclick = () => setEmotion(key);
+    if (key === curEmo) c.classList.add('sel');
+    box.appendChild(w);
+  });
+}
+buildGrid();
+</script>
+</body>
+</html>

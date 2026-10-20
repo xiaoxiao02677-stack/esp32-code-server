@@ -5,6 +5,17 @@
 #include <functional>
 #include <string>
 
+// lv_img_dsc_t 是 LVGL v8 兼容别名（lv_api_map_v8.h 的 typedef，目标为匿名
+// struct），无法前置声明 —— 这里与 display.h 保持同一条件闸：非 emote 构建
+// 直接引 lvgl.h；emote 构建无 LVGL，EarlyRestoreBootWallpaper 的返回类型退化为
+// void*（该构建下无人调用它，壁纸链路整体被 WALLPAPER_HAS_LVGL_DISPLAY 关闭）。
+#ifndef CONFIG_USE_EMOTE_MESSAGE_STYLE
+#include <lvgl.h>
+using YhWallpaperImage = lv_img_dsc_t;
+#else
+using YhWallpaperImage = void;
+#endif
+
 // 壁纸槽位：
 //   idle = 待机壁纸（主界面背景，原有行为）
 //   boot = 开机壁纸（splash 画面底图，新增）。两种壁纸独立下发/独立 NVS/
@@ -59,6 +70,17 @@ public:
     // 网络就绪后调用：NVS 里有 url/version 且当前未应用同版本时后台重拉。
     // 失败静默（屏幕保持当前背景，不影响启动）；重复调用幂等。
     void RestoreFromNvsAsync();
+
+    // ★ 开机早期恢复（SetupUI 之前、联网之前调用一次）：
+    //   boot 壁纸的展示面是 splash，而 splash 在联网前就建好、时间同步后即
+    //   收起 —— 网络重拉几乎必然赶不上。这里从 flash 持久化区（assets 分区
+    //   尾部，见 boot_wallpaper_store）同步读图、校验 MD5、填进 boot 槽，
+    //   返回 lv_img_dsc_t* 供 ShowBootSplash 直接当 splash 底图消费。
+    //   flash 无图 / 校验失败 / 分区不适用 → nullptr（回落旧链：
+    //   联网后 RestoreFromNvsAsync 网络重拉）。
+    //   内部把 flash md5 与 NVS 元数据对账：不一致时保留图（图是刚校验过的
+    //   真图），网络恢复后会重拉对齐。
+    const YhWallpaperImage* EarlyRestoreBootWallpaper();
 
     // 当前已应用版本（空 = 无用户壁纸），调试/日志用。默认 idle 槽。
     std::string applied_version(WallpaperKind kind = WallpaperKind::Idle);

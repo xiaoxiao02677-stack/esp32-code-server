@@ -39,6 +39,7 @@ set(SOURCES "audio/audio_codec.cc"
             "protocols/mqtt_protocol.cc"
             "protocols/websocket_protocol.cc"
             "wallpaper/wallpaper_manager.cc"
+            "wallpaper/boot_wallpaper_store.cc"
             "mcp_server.cc"
             "system_info.cc"
             "application.cc"
@@ -48,6 +49,24 @@ set(SOURCES "audio/audio_codec.cc"
             "assets.cc"
             "main.cc"
             )
+
+# 像素宠物主题（--theme pixel-pet）：只换视觉层，骨架（占位族/壁纸链/
+# 字体退休池/锁纪律）全部继承 YhSkinDisplay。默认 xiaoyou 不编入，省 flash。
+if(CONFIG_YH_UI_THEME_PIXELPET)
+    list(APPEND SOURCES
+        "display/pet_skin/pet_canvas.c"
+        "display/pet_skin/pet_boot_anim.c"
+        "display/pet_skin/pet_skin_display.cc"
+    )
+endif()
+
+# EMOpet 主题（--theme emopet）：机器人发光眼，同上只换视觉层。
+if(CONFIG_YH_UI_THEME_EMOPET)
+    list(APPEND SOURCES
+        "display/emo_skin/emo_face.c"
+        "display/emo_skin/emo_skin_display.cc"
+    )
+endif()
 
 # YH Device Protocol (YuHe Workshop server side-channel)
 if(CONFIG_YH_PROTOCOL_ENABLED)
@@ -941,6 +960,21 @@ endif()
 if(NOT BOARD_MANUFACTURER AND BOARD_DIR MATCHES "^([^/]+)/")
     set(BOARD_MANUFACTURER "${CMAKE_MATCH_1}")
 endif()
+
+# UI 主题后缀：非默认主题的固件，上报的 BOARD_TYPE 追加 "-<theme>"。
+# 原因：OTA 按设备上报的 board.type 匹配 ai_ota 记录 —— 同一版型的三套主题
+# 固件若共用裸 type，推一次 OTA 会把所有设备统一刷成上传时的那个主题，
+# 用户选的皮肤被静默覆盖。加后缀后各主题固件各自一条 ai_ota 轨道：
+#   yh-154tft-wifi        ← 默认主题（xiaoyou，不加后缀，存量设备兼容）
+#   yh-154tft-wifi-emopet ← emopet 主题
+# 后缀命名与 build.py 的 out/<id>-<theme> 产物目录、ota_publish.py 的
+# --board <id>-<theme> 注册名完全一致，全链路对齐。
+if(CONFIG_YH_UI_THEME_EMOPET)
+    set(BOARD_TYPE "${BOARD_TYPE}-emopet")
+elseif(CONFIG_YH_UI_THEME_PIXELPET)
+    set(BOARD_TYPE "${BOARD_TYPE}-pixel-pet")
+endif()
+
 if(NOT CMAKE_BUILD_EARLY_EXPANSION AND NOT BOARD_TYPE MATCHES "^[a-z0-9.-]+$")
     message(FATAL_ERROR
         "Invalid BOARD_TYPE '${BOARD_TYPE}': only lowercase letters, digits, '.' and '-' are allowed"

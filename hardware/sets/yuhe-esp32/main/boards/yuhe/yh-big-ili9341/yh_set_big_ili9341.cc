@@ -11,29 +11,36 @@
 
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
+#include "codecs/no_audio_codec.h"
 #include "display/lcd_display.h"
 #include "display/yh_skin/yh_skin_display.h"
+#if CONFIG_YH_UI_THEME_PIXELPET
+#include "display/pet_skin/pet_skin_display.h"
+#elif CONFIG_YH_UI_THEME_EMOPET
+#include "display/emo_skin/emo_skin_display.h"
+#endif
 #include "application.h"
 #include "button.h"
 #include "mcp_server.h"
-#include "led/single_led.h"
 #include "config.h"
 
 #define TAG "YhSetBigIli9341"
 
-// 注意：本版型的全部 GPIO 均为推测值，烧录前必须对照原理图核实。
-// 详见同目录 README.md 与 config.h 顶部的警告块。
+// 引脚来源：hardware/big_secreen/yuhe-esp32（原厂固件，实机验证）。
+// 该板为 Freenove ESP32-S3 Display 2.8" 布线，详见同目录 config.h 头注释。
 class YhSetBigIli9341Board : public WifiBoard {
 private:
     Button boot_button_;
     LcdDisplay* display_ = nullptr;
     i2c_master_bus_handle_t codec_i2c_bus_ = nullptr;
+    // ES8311 是否在 I2C 总线上应答（启动探测；失败降级哑编解码器）
+    bool codec_i2c_ok_ = false;
 
-    void InitializeI2c() {
+    i2c_master_bus_handle_t MakeI2cBus(gpio_num_t sda, gpio_num_t scl) {
         i2c_master_bus_config_t i2c_bus_cfg = {
             .i2c_port = AUDIO_CODEC_I2C_NUM,
-            .sda_io_num = AUDIO_CODEC_I2C_SDA_PIN,
-            .scl_io_num = AUDIO_CODEC_I2C_SCL_PIN,
+            .sda_io_num = sda,
+            .scl_io_num = scl,
             .clk_source = I2C_CLK_SRC_DEFAULT,
             .glitch_ignore_cnt = 7,
             .intr_priority = 0,
@@ -42,7 +49,49 @@ private:
                 .enable_internal_pullup = 1,
             },
         };
-        ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &codec_i2c_bus_));
+        i2c_master_bus_handle_t bus = nullptr;
+        ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &bus));
+        return bus;
+    }
+
+    void ScanI2cBus(i2c_master_bus_handle_t bus) {
+        // 只发地址帧探测，对总线设备无副作用。全空说明这对引脚上没挂任何
+        // I2C 器件——拿着这份日志对照原理图即可定位真实引脚。
+        bool any = false;
+        for (int addr = 0x08; addr <= 0x77; addr++) {
+            if (i2c_master_probe(bus, addr, 10) == ESP_OK) {
+                ESP_LOGW(TAG, "  I2C device at 0x%02x", addr);
+                any = true;
+            }
+        }
+        if (!any) {
+            ESP_LOGW(TAG, "  (no I2C device on this pin pair)");
+        }
+    }
+
+    void InitializeI2c() {
+        // 引脚已按原厂固件（bigscreen-s3，实机验证）修正为 Freenove 官方
+        // 布线 SCL=15/SDA=16。保留探测 + 降级：若 ES8311 仍无应答（套板
+        // 布线差异等），扫总线打诊断日志并降级哑编解码器，绝不硬崩。
+        // 注意 i2c_master_probe 要 7 位地址：ES8311 8 位写地址 0x30 >> 1 = 0x18。
+        codec_i2c_bus_ = MakeI2cBus(AUDIO_CODEC_I2C_SDA_PIN, AUDIO_CODEC_I2C_SCL_PIN);
+        if (i2c_master_probe(codec_i2c_bus_, AUDIO_CODEC_ES8311_ADDR >> 1, 30) == ESP_OK) {
+            ESP_LOGI(TAG, "ES8311 probe OK: 7-bit addr 0x%02x on SDA=%d SCL=%d",
+                     AUDIO_CODEC_ES8311_ADDR >> 1, AUDIO_CODEC_I2C_SDA_PIN,
+                     AUDIO_CODEC_I2C_SCL_PIN);
+            codec_i2c_ok_ = true;
+            return;
+        }
+        ESP_LOGW(TAG, "ES8311 not responding on SDA=%d SCL=%d, scanning bus...",
+                 AUDIO_CODEC_I2C_SDA_PIN, AUDIO_CODEC_I2C_SCL_PIN);
+        ScanI2cBus(codec_i2c_bus_);
+        // 探测失败：释放总线（引脚还原），音频降级哑编解码器。
+        if (codec_i2c_bus_ != nullptr) {
+            i2c_del_master_bus(codec_i2c_bus_);
+            codec_i2c_bus_ = nullptr;
+        }
+        ESP_LOGW(TAG, "ES8311 not found; audio degraded to dummy codec "
+                 "(screen/network still work). Check wiring and config.h.");
     }
 
     void InitializeSpi() {
@@ -85,13 +134,29 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY));
         ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
 
-        // 共享「小柚」皮肤：2.8 寸 320x240 横屏（矩形，不走圆屏安全区）
+        // 皮肤按编译期主题选择（build.py --theme）：320x240 横屏三套都支持
+#if CONFIG_YH_UI_THEME_PIXELPET
+        display_ = new PetSkinDisplay(panel_io, panel,
+                                     DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
+                                     DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                     DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_EMOPET
+        display_ = new EmoSkinDisplay(panel_io, panel,
+                                     DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
+                                     DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                     DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Wide320x240());
+#else
         display_ = new YhSkinDisplay(panel_io, panel,
                                      DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
                                      DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
                                      DISPLAY_SWAP_XY,
                                      YhSkinProfile::Wide320x240());
+#endif
     }
 
     void InitializeButtons() {
@@ -118,17 +183,24 @@ public:
         GetBacklight()->RestoreBrightness();
     }
 
-    virtual Led* GetLed() override {
-        static SingleLed led(BUILTIN_LED_GPIO);
-        return &led;
-    }
+    // 不覆写 GetLed：GPIO48 在 Freenove 板与 SD 卡 D2 共用（原厂固件同样
+    // 不启用 LED），SingleLed 翻转会干扰 SD 通信。
 
     virtual AudioCodec* GetAudioCodec() override {
+        if (!codec_i2c_ok_) {
+            // ES8311 探测无应答：降级哑编解码器（只有 I2S 通道、无编解码
+            // 控制）。设备可配网/显示，语音功能待排查接线后恢复。
+            static NoAudioCodecDuplex dummy_codec(
+                AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
+                AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS,
+                AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN);
+            return &dummy_codec;
+        }
         static Es8311AudioCodec audio_codec(codec_i2c_bus_, AUDIO_CODEC_I2C_NUM,
             AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
             AUDIO_I2S_GPIO_MCLK, AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS,
             AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN,
-            AUDIO_CODEC_PA_PIN, AUDIO_CODEC_ES8311_ADDR, true);
+            AUDIO_CODEC_PA_PIN, AUDIO_CODEC_ES8311_ADDR, true, AUDIO_CODEC_PA_INVERTED);
         return &audio_codec;
     }
 

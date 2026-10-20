@@ -22,7 +22,7 @@
 namespace yh_skin {
 
 struct SplashInfo {
-    const char* brand = "小柚";
+    const char* brand = "琳琳";
     const char* subtitle = "";
     const char* version = "";  // 右下角小字
     // 开机底图：优先用户壁纸（WallpaperManager 已生效的那张）。

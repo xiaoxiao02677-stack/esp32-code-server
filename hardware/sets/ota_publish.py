@@ -2,7 +2,8 @@
 """把 build.py 产出的固件发布到「固件升级管理」（ai_ota），打通设备 OTA 升级链路。
 
 流程（与管理端页面完全同一条后端链路）：
-  1. 读取 <out>/<board>/<board>-yuhe.bin，解析 ESP32 app 描述符拿到真实 version
+  1. 读取 out/<board>/ 下的固件 bin（新命名 <board>-yuhe-<version>.bin 优先，
+     老命名 <board>-yuhe.bin 兼容），解析 ESP32 app 描述符拿到真实 version
   2. POST {server}/otaMag/upload              -> uploadfile/<md5>.bin
   3. POST {server}/otaMag  (同一 type 幂等 upsert) -> ai_ota 记录
   4. 可选：用 OTA 模拟器复验「低版本设备能拿到升级 URL」
@@ -46,12 +47,23 @@ OUT_ROOT = SETS_ROOT / "out"
 DEFAULT_SERVER = "http://sandyun.top:8002/yuhe"
 DEFAULT_CAPTCHA_CMD = 'ssh -p 22222 root@sandyun.top "redis-cli -n 0 get sys:captcha:{uuid}"'
 
-# 版型 -> 展示名 / 备注（可按需修改；type 必须等于固件上报的 board.type）
+# 版型 -> 展示名 / 备注（可按需修改；type 必须等于固件上报的 board.type）。
+# 主题固件（非默认主题编译）上报的 type 会带 "-emopet"/"-pixel-pet" 后缀
+# （固件树 main/CMakeLists.txt 的 BOARD_TYPE 主题后缀逻辑），与 out/<id>-<theme>
+# 产物目录同名 —— 发布时 --board 直接用带后缀的名字即可各走各的 OTA 轨道。
 BOARD_META = {
     "yh-154tft-wifi": ("屿禾-1.54寸TFT-WiFi版", "ESP32-S3 / ST7789 + 直驱 I2S"),
     "yh-big-ili9341": ("屿禾-大屏ILI9341版", "ESP32-S3 / ILI9341 + ES8311（引脚待验证）"),
     "yh-cam": ("屿禾-CAM版", "ESP32-S3 / OV2640 + ES8311 + ES7210 + PCA9557 / 已启用回采(AEC)"),
     "yh-n16r8-st7789": ("屿禾-N16R8-ST7789版", "ESP32-S3 / ST7789 + MAX98357 + INMP441"),
+    "yh-154tft-wifi-emopet": ("屿禾-1.54寸TFT-WiFi版·EMOpet主题", "机器人发光眼主题"),
+    "yh-big-ili9341-emopet": ("屿禾-大屏ILI9341版·EMOpet主题", "机器人发光眼主题"),
+    "yh-cam-emopet": ("屿禾-CAM版·EMOpet主题", "机器人发光眼主题"),
+    "yh-n16r8-st7789-emopet": ("屿禾-N16R8-ST7789版·EMOpet主题", "机器人发光眼主题"),
+    "yh-154tft-wifi-pixel-pet": ("屿禾-1.54寸TFT-WiFi版·像素宠物主题", "canvas 自绘宠物主题"),
+    "yh-big-ili9341-pixel-pet": ("屿禾-大屏ILI9341版·像素宠物主题", "canvas 自绘宠物主题"),
+    "yh-cam-pixel-pet": ("屿禾-CAM版·像素宠物主题", "canvas 自绘宠物主题"),
+    "yh-n16r8-st7789-pixel-pet": ("屿禾-N16R8-ST7789版·像素宠物主题", "canvas 自绘宠物主题"),
 }
 
 
@@ -82,6 +94,21 @@ def read_app_version(bin_path: Path) -> str:
     if off < 0:
         raise RuntimeError(f"{bin_path} 不是有效的 ESP32 app 镜像（未找到 app 描述符魔数）")
     return data[off + 16: off + 16 + 32].split(b"\0")[0].decode()
+
+
+def _find_bin(out_dir: Path, board: str) -> Path:
+    """在 out/<board>/ 下找固件 bin：优先精确名 <board>-yuhe.bin（老命名），
+    回退带版本号的新命名 <board>-yuhe-<version>.bin（取最新修改时间）。"""
+    exact = out_dir / f"{board}-yuhe.bin"
+    if exact.is_file():
+        return exact
+    if out_dir.is_dir():
+        versioned = sorted(
+            (p for p in out_dir.glob(f"{board}-yuhe-*.bin") if p.is_file()),
+            key=lambda p: p.stat().st_mtime, reverse=True)
+        if versioned:
+            return versioned[0]
+    return exact  # 不存在时返回精确名，publish_one 会报"固件不存在"
 
 
 def multipart(fields: dict, files: dict):
@@ -198,7 +225,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--board", help="版型 id（如 yh-cam）")
     ap.add_argument("--all", action="store_true", help="发布 out/ 下全部版型")
-    ap.add_argument("--bin", help="直接指定固件文件（默认取 out/<board>/<board>-yuhe.bin）")
+    ap.add_argument("--bin", help="直接指定固件文件（默认取 out/<board>/ 下最新产物，含带版本号新命名）")
     ap.add_argument("--out-root", default=str(OUT_ROOT))
     ap.add_argument("--server", default=os.environ.get("YUHE_SERVER", DEFAULT_SERVER))
     ap.add_argument("--token", default=os.environ.get("YUHE_TOKEN"))
@@ -216,7 +243,7 @@ def main() -> int:
     if args.all:
         boards = sorted(
             p.name for p in out_root.iterdir()
-            if p.is_dir() and (p / f"{p.name}-yuhe.bin").is_file()
+            if p.is_dir() and _find_bin(p, p.name)
         )
     elif args.board:
         boards = [args.board]
@@ -236,7 +263,10 @@ def main() -> int:
 
     rc = 0
     for board in boards:
-        bin_path = Path(args.bin) if args.bin else out_root / board / f"{board}-yuhe.bin"
+        if args.bin:
+            bin_path = Path(args.bin)
+        else:
+            bin_path = _find_bin(out_root / board, board)
         rc |= publish_one(args.server, token or "", board, bin_path,
                           args.name, args.remark, args.dry_run)
         if args.verify and not args.dry_run and args.mac:

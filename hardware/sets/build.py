@@ -129,6 +129,33 @@ SERVER_ENVS: dict[str, dict[str, Any]] = {
 }
 DEFAULT_SERVER_ENV = "prod"
 
+# ---------------------------------------------------------------------------
+# UI 主题（编译期皮肤切换）
+#
+# 三套皮肤共用同一显示骨架（壁纸双槽/字体退休池/锁纪律/占位族），只换视觉层：
+#   xiaoyou   原主题（背景图 + emoji 表情 + 品牌 splash）
+#   pixel-pet 像素宠物（canvas 自绘宠物 + 3.8s 出生动画 + 五态表情 + 双击换肤）
+#   emopet    EMOpet（机器人发光眼 + 15 态表情 + 双击换眼色）
+# Kconfig choice YH_UI_THEME（main/Kconfig.projbuild），CMakeLists 按
+# CONFIG_YH_UI_THEME_PIXELPET / CONFIG_YH_UI_THEME_EMOPET 条件编入源。
+# ---------------------------------------------------------------------------
+
+THEMES: dict[str, dict[str, str]] = {
+    "xiaoyou": {
+        "label": "原主题（小智/琳琳：背景图 + emoji 表情 + 品牌 splash）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_XIAOYOU=y"],
+    },
+    "pixel-pet": {
+        "label": "像素宠物（canvas 自绘宠物 + 出生动画 + 双击换宠）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_PIXELPET=y"],
+    },
+    "emopet": {
+        "label": "EMOpet（机器人发光眼 + 15 态表情 + 双击换眼色）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_EMOPET=y"],
+    },
+}
+DEFAULT_THEME = "xiaoyou"
+
 # 与 <FW>/main/CMakeLists.txt 里 yuhe 系列现有分支保持一致
 DEFAULT_EMOJI_COLLECTION = "noto-color-emoji_64"
 
@@ -503,6 +530,61 @@ def apply_server_env(board: dict[str, Any], server_env: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# 2.6 选择 UI 主题（原主题 / 像素宠物）
+# ---------------------------------------------------------------------------
+
+
+def choose_theme(cli_value: Optional[str]) -> Optional[str]:
+    """确定 UI 主题：--theme 参数 > 交互选择 > 默认原主题。
+
+    返回主题 key（'xiaoyou' / 'pixel-pet' / 'emopet'），取消返回 None。
+    """
+    if cli_value:
+        if cli_value not in THEMES:
+            notice_bad(f"未知 UI 主题 {cli_value!r}，可选: {', '.join(THEMES)}")
+            return None
+        return cli_value
+
+    if not sys.stdin.isatty():
+        return DEFAULT_THEME
+
+    say()
+    say(bold("UI 主题（决定固件皮肤，Kconfig choice YH_UI_THEME）"))
+    say(rule())
+    keys = list(THEMES)
+    for index, key in enumerate(keys, start=1):
+        marker = "→" if key == DEFAULT_THEME else " "
+        say(f" {marker} {index}) {bold(key):<10} {THEMES[key]['label']}")
+    say(f"      （回车默认 {DEFAULT_THEME}，q 退出）")
+    try:
+        answer = input(f"请选择 [1-{len(keys)}/xiaoyou/pixel-pet/emopet，回车={DEFAULT_THEME}]: ").strip().lower()
+    except EOFError:
+        say("")
+        notice_bad("没有读到输入，已退出")
+        return None
+    if not answer:
+        return DEFAULT_THEME
+    if answer in {"q", "quit", "exit"}:
+        say("已取消。")
+        return None
+    if answer.isdigit():
+        index = int(answer)
+        if 1 <= index <= len(keys):
+            return keys[index - 1]
+    if answer in THEMES:
+        return answer
+    say(f"{red('[错误]')} 输入无效：{answer!r}，请输入编号或 xiaoyou / pixel-pet / emopet")
+    return choose_theme(None)
+
+
+def apply_theme(board: dict[str, Any], theme: str) -> list[str]:
+    """把主题的 CONFIG_* 行记到 board（写 sets-build.json 时并入 sdkconfig_append）。"""
+    lines = list(THEMES[theme]["sdkconfig"])
+    board["_theme_lines"] = lines
+    return lines
+
+
+# ---------------------------------------------------------------------------
 # 3. 同步版型文件
 # ---------------------------------------------------------------------------
 
@@ -639,6 +721,14 @@ def write_build_config(target: Path, board: dict[str, Any]) -> tuple[str, list[s
         env_keys = {line.split("=", 1)[0] for line in env_lines}
         merged = [line for line in merged if line.split("=", 1)[0] not in env_keys]
         merged.extend(env_lines)
+    # UI 主题行：同机制（剔除旧主题行 → 追加到末尾，后写获胜）
+    theme_lines = list(board.get("_theme_lines") or [])
+    if theme_lines:
+        theme_keys = {line.split("=", 1)[0] for line in theme_lines}
+        theme_keys |= {"CONFIG_YH_UI_THEME_XIAOYOU", "CONFIG_YH_UI_THEME_PIXELPET",
+                       "CONFIG_YH_UI_THEME_EMOPET"}
+        merged = [line for line in merged if line.split("=", 1)[0] not in theme_keys]
+        merged.extend(theme_lines)
     for line in append:
         if line not in merged:
             merged.append(line)
@@ -655,6 +745,11 @@ def write_build_config(target: Path, board: dict[str, Any]) -> tuple[str, list[s
     if env_lines:
         say("  服务器环境行（已替换旧地址，写入末尾）：")
         for line in env_lines:
+            say(f"    * {line}")
+    theme_lines = list(board.get("_theme_lines") or [])
+    if theme_lines:
+        say("  UI 主题行（已替换旧主题，写入末尾）：")
+        for line in theme_lines:
             say(f"    * {line}")
     notice_warn("透传的 CONFIG_* 必须是 Kconfig 中真实存在的符号，否则固件 build.py 会报 Kconfig rejected")
     return generated.name, append
@@ -1346,20 +1441,48 @@ def run_build(fw_root: Path, board: dict[str, Any], config_name: str, extra_args
 # ---------------------------------------------------------------------------
 
 
-def archive_outputs(fw_root: Path, board: dict[str, Any], server_env: str = "prod") -> None:
-    # 测试环境产物放独立目录 out/<id>-test/，避免覆盖生产固件
-    out_id = board["id"] if server_env == "prod" else f"{board['id']}-{server_env}"
+def read_app_version(bin_path: Path) -> str:
+    """解析 ESP32 app 描述符（esp_app_desc_t）内嵌 version（与 ota_publish.py 同源逻辑）。"""
+    data = bin_path.read_bytes()
+    marker = b"\x32\x54\xcd\xab"  # 0xABCD5432 小端
+    off = data.find(marker)
+    if off < 0:
+        return ""
+    return data[off + 16: off + 16 + 32].split(b"\0")[0].decode(errors="replace").strip()
+
+
+def archive_outputs(fw_root: Path, board: dict[str, Any], server_env: str = "prod",
+                    theme: str = DEFAULT_THEME) -> None:
+    # 产物目录：生产+默认主题 out/<id>/，测试环境 -test 后缀，非默认主题 -<theme> 后缀
+    out_id = board["id"]
+    if server_env != "prod":
+        out_id = f"{out_id}-{server_env}"
+    if theme != DEFAULT_THEME:
+        out_id = f"{out_id}-{theme.replace('/', '-')}"
     say()
     say(bold(f"[4/4] 归档产物 -> {OUT_ROOT / out_id}"))
     out_dir = OUT_ROOT / out_id
     out_dir.mkdir(parents=True, exist_ok=True)
-    name = board["build_name"] if server_env == "prod" else f"{board['build_name']}-{server_env}"
+    name = board["build_name"]
+    if server_env != "prod":
+        name = f"{name}-{server_env}"
+    if theme != DEFAULT_THEME:
+        name = f"{name}-{theme.replace('/', '-')}"
+    # 产物名追加固件内嵌版本号（如 yh-cam-yuhe-2.5.1.bin）：
+    # 同名即同版本，避免"版本相同不升级"被旧产物挡住；合并镜像没有 app 描述符则不加后缀
+    version = ""
+    app_bin = fw_root / "build" / "yuhe.bin"
+    if app_bin.is_file():
+        version = read_app_version(app_bin)
+    ver_suffix = f"-{version}" if version else ""
     copied: list[Path] = []
     for relative, template in ARTIFACTS:
         source = fw_root / relative
         if not source.is_file():
             continue
-        destination = out_dir / template.format(name=name)
+        destination = out_dir / template.format(name=name).replace(
+            ".bin", f"{ver_suffix}.bin") if relative == "build/yuhe.bin" else \
+            out_dir / template.format(name=name)
         shutil.copy2(source, destination)
         copied.append(destination)
     if not copied:
@@ -1373,6 +1496,10 @@ def archive_outputs(fw_root: Path, board: dict[str, Any], server_env: str = "pro
     say("  已归档：")
     for destination in copied:
         say(f"    {destination}")
+    if version:
+        say(f"  版本号: {version}（产物名已带版本，同名即同版本）")
+    else:
+        say(yellow("  未能从 yuhe.bin 解析出版本号，产物名未带版本后缀"))
     say()
     say(f"  本产物固件连的是: {SERVER_ENVS[server_env]['label']}")
     if server_env != "prod":
@@ -1434,6 +1561,8 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/build.py --list              # 只列出版型\n"
             "  python hardware/sets/build.py --board yh-cam      # 直接编译指定版型\n"
             "  python hardware/sets/build.py --board yh-cam --server test  # 固件连测试环境\n"
+            "  python hardware/sets/build.py --board yh-cam --theme pixel-pet  # 像素宠物主题\n"
+            "  python hardware/sets/build.py --board yh-cam --theme emopet     # EMOpet 主题\n"
             "  python hardware/sets/build.py --board yh-cam --yes --sync-only  # 只同步+注册\n"
             "  python hardware/sets/build.py --board yh-cam --no-archive       # 编译但不归档\n"
             "\n"
@@ -1452,6 +1581,11 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         "--server", metavar="ENV", choices=sorted(SERVER_ENVS),
         help=f"目标服务器环境（{'/'.join(sorted(SERVER_ENVS))}），决定固件连生产还是测试；"
              "不指定时交互选择，非交互终端默认 prod",
+    )
+    parser.add_argument(
+        "--theme", metavar="THEME", choices=sorted(THEMES),
+        help=f"UI 主题（{'/'.join(sorted(THEMES))}）：xiaoyou=原主题（默认），"
+             "pixel-pet=像素宠物，emopet=EMOpet 机器人眼；不指定时交互选择",
     )
     parser.add_argument("--list", action="store_true", help="只列出可用版型，不编译")
     parser.add_argument("--sync-only", action="store_true", help="只做同步与注册，不编译")
@@ -1527,6 +1661,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     if server_env != "prod":
         say(yellow("  注意：烧给测试环境的固件连的是测试服务器，别混用到生产设备上。"))
 
+    theme = choose_theme(args.theme)
+    if theme is None:
+        return EXIT_ENV
+    theme_lines = apply_theme(selected, theme)
+    say()
+    say(bold(f"UI 主题: {theme} — {THEMES[theme]['label']}"))
+    for line in theme_lines:
+        say(f"  {green('+')} {line}")
+    if theme != "xiaoyou":
+        say(yellow("  注意：主题与上次编译不同时，请删除 <FW>\\build 后全量重编。"))
+
     fw_root = resolve_fw_root(args.fw_root)
     if fw_root is None:
         notice_bad("自动探测不到固件源码根目录（<FW>）")
@@ -1572,14 +1717,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         say("--no-archive：跳过产物归档")
     else:
         try:
-            archive_outputs(fw_root, selected, server_env)
+            archive_outputs(fw_root, selected, server_env, theme)
         except OSError as error:
             notice_bad(f"归档失败（编译结果仍然有效）: {error}")
             return EXIT_ERROR
 
     # ---- 收尾：本脚本只编译，烧录交给 flash.py ----
     say()
-    notice_ok(f"编译完成：{selected['id']} — {selected['name']}（服务器环境: {server_env}）")
+    notice_ok(f"编译完成：{selected['id']} — {selected['name']}（服务器: {server_env}，主题: {theme}）")
     say("烧录（独立脚本，含多线程串口探测）：")
     say(f"        python hardware/sets/flash.py --board {selected['id']}")
     say(f"        只看有哪些设备在线：python hardware/sets/flash.py --list")
