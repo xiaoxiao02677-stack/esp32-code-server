@@ -139,6 +139,33 @@ WHITELIST: dict[str, dict] = {
         "kinds": {"B_ONLY"},
         "reason": "需求二新增壁纸模块（源码/资源），仅存在于 B",
     },
+    # ---- UI 主题层（B 独有，编译期 --theme 切换）----
+    "display/pet_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "像素宠物主题（--theme pixel-pet）：canvas 直写自绘宠物 + 3.8s 出生动画 + "
+                  "五态表情，继承 YhSkinDisplay 骨架只换视觉层；A 侧无该目录",
+    },
+    "display/emo_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "EMOpet 主题（--theme emopet）：机器人发光眼（15 态表情）+ 直写 buffer 渲染，"
+                  "继承 YhSkinDisplay 骨架只换视觉层（2026-10-19 移植自 theme/EMOpet）；A 侧无该目录",
+    },
+    # ---- B 领先：NVS / 唤醒词健壮性修复 ----
+    "settings.cc": {
+        "kinds": {"DIFF"},
+        "reason": "B 领先：Settings NVS 防崩（nvs_open 失败不 abort、句柄判 0 跳写，"
+                  "2026-10-17 interrupt_config 崩溃现场修复）",
+    },
+    "boards/common/board.cc": {
+        "kinds": {"DIFF"},
+        "reason": "B 领先：服务端下发唤醒词拼音清洗（esp_mn 只认小写音节，'Ni Hao'/'|' 会静默失败）"
+                  "+ wake_word_config→wake_word_cfg 命名空间缩短（16 字符超 NVS 上限 15）",
+    },
+    "audio/wake_words/custom_wake_word.cc": {
+        "kinds": {"DIFF"},
+        "reason": "B 领先：跟随 board.cc 的 wake_word_cfg 命名空间改名（曾用名 16 字符超 NVS 上限，"
+                  "nvs_open 永远失败）",
+    },
     "display/display.h": {
         "kinds": {"DIFF"},
         "reason": "需求二壁纸接口：Display 基类新增 SetWallpaper/ClearWallpaper 虚函数（默认空实现），"

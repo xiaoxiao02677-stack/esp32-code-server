@@ -4,16 +4,22 @@ rem  build-bigscreen.bat : one-click build for bigscreen-s3
 rem  Board: ESP32-S3 + ES8311 audio + ILI9341 2.8" SPI LCD
 rem  Usage: double-click, or run from this directory
 rem  Toolchain: ESP-IDF v6.1 EIM layout (D:\INSTALL\esp)
+rem
+rem  NOTE: keep this file pure ASCII. cmd decodes batch files
+rem  using the OEM codepage (GBK on zh-CN Windows); UTF-8 text
+rem  in comments corrupts parsing (garbled commands, then a
+rem  fatal "& was unexpected" abort). Verified 2026-10-19.
 rem ============================================================
 cd /d "%~dp0"
 set "BOARD=bigscreen-s3"
 
 rem ---------- ASCII build path (cmake 4.x crashes 0xC0000409 on non-ASCII paths) ----------
 set "LINK=C:\bsfw"
-if exist "%LINK%" rmdir "%LINK%" >nul 2>&1
+rmdir "%LINK%" >nul 2>&1
 mklink /J "%LINK%" "%~dp0." >nul 2>&1
 if not exist "%LINK%\CMakeLists.txt" (
     echo [ERROR] cannot create ASCII junction %LINK% to this dir
+    echo         if %LINK% exists as a real folder, delete it manually, then re-run
     pause
     exit /b 1
 )
@@ -25,12 +31,13 @@ echo ============================================================
 echo.
 
 rem ---------- 0. component manager workarounds ----------
-rem esp_video 2.5.0 的 esp_h264 依赖带 matches
-rem "$CONFIG{ESP_VIDEO_USE_CUSTOMIZED_ESP_H264_VERSION} == False"，
-rem esp32s3 构建时该 Kconfig 变量未定义（esp_h264 是 p4-only 依赖），
-rem 组件管理器的"新版本检查"（check_for_new_component_versions）求值
-rem 该条件抛 MissingKconfigError 导致 configure FATAL。关掉检查即可，
-rem 不影响 dependencies.lock 锁定的版本（2026-10-15 经验）。
+rem esp_video 2.5.0 depends on esp_h264 with a "matches" condition:
+rem "$CONFIG{ESP_VIDEO_USE_CUSTOMIZED_ESP_H264_VERSION} == False".
+rem On esp32s3 that Kconfig variable is undefined (esp_h264 is a
+rem P4-only dependency), so the component manager's new-version
+rem check (check_for_new_component_versions) throws MissingKconfigError
+rem and configure fails. Disabling the check fixes it; locked
+rem versions in dependencies.lock are unaffected. (2026-10-15)
 set IDF_COMPONENT_CHECK_NEW_VERSION=0
 set IDF_COMPONENT_SUPPRESS_UNKNOWN_FILE_WARNINGS=1
 
@@ -38,7 +45,7 @@ rem ---------- 1. ESP-IDF environment ----------
 rem EIM layout: set toolchain vars directly (proven in P19-R build)
 if not exist "D:\INSTALL\esp\v6.1\esp-idf\tools\cmake\project.cmake" (
     echo [ERROR] ESP-IDF v6.1 not found at D:\INSTALL\esp\v6.1\esp-idf
-    echo         Fix: set ESP_IDF_PATH^/edit this script to your IDF location
+    echo         Fix: set ESP_IDF_PATH / edit this script to your IDF location
     pause
     exit /b 1
 )
