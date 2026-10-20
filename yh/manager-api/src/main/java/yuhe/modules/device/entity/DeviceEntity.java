@@ -34,6 +34,12 @@ public class DeviceEntity {
     @Schema(description = "自动更新开关(0关闭/1开启)")
     private Integer autoUpdate;
 
+    @Schema(description = "单台指定固件ID(ai_ota.id，空=不指定；设备升级到目标后自动清空)")
+    private String targetOtaId;
+
+    @Schema(description = "OTA主题轨道(空=跟随设备上报type；非空=按此轨道取固件)")
+    private String otaType;
+
     @Schema(description = "设备硬件型号")
     private String board;
 

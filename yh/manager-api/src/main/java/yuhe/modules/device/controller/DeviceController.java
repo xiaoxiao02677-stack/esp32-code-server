@@ -26,13 +26,16 @@ import yuhe.common.utils.Result;
 import yuhe.modules.device.dto.DeviceAddressBookAliasDTO;
 import yuhe.modules.device.dto.DeviceAddressBookPermissionDTO;
 import yuhe.modules.device.dto.DeviceManualAddDTO;
+import yuhe.modules.device.dto.DeviceOtaTargetDTO;
 import yuhe.modules.device.dto.DeviceRegisterDTO;
 import yuhe.modules.device.dto.DeviceToolsCallReqDTO;
 import yuhe.modules.device.dto.DeviceUnBindDTO;
 import yuhe.modules.device.dto.DeviceUpdateDTO;
 import yuhe.modules.device.entity.DeviceEntity;
+import yuhe.modules.device.entity.OtaEntity;
 import yuhe.modules.device.service.DeviceAddressBookService;
 import yuhe.modules.device.service.DeviceService;
+import yuhe.modules.device.service.OtaService;
 import yuhe.modules.device.vo.UserShowDeviceListVO;
 import yuhe.modules.security.user.SecurityUser;
 import yuhe.modules.sys.service.SysParamsService;
@@ -45,13 +48,15 @@ public class DeviceController {
     private final DeviceAddressBookService deviceAddressBookService;
     private final RedisUtils redisUtils;
     private final SysParamsService sysParamsService;
+    private final OtaService otaService;
 
     public DeviceController(DeviceService deviceService, DeviceAddressBookService deviceAddressBookService,
-            RedisUtils redisUtils, SysParamsService sysParamsService) {
+            RedisUtils redisUtils, SysParamsService sysParamsService, OtaService otaService) {
         this.deviceService = deviceService;
         this.deviceAddressBookService = deviceAddressBookService;
         this.redisUtils = redisUtils;
         this.sysParamsService = sysParamsService;
+        this.otaService = otaService;
     }
 
     @PostMapping("/bind/{agentId}/{deviceCode}")
@@ -138,6 +143,46 @@ public class DeviceController {
         UserDetail user = SecurityUser.getUser();
         deviceService.manualAddDevice(user.getId(), dto);
         return new Result<>();
+    }
+
+    @PutMapping("/ota-target/{id}")
+    @Operation(summary = "设置设备 OTA 定向配置（单台指定固件 / 主题轨道）")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<Void> setDeviceOtaTarget(@PathVariable String id,
+            @Valid @RequestBody DeviceOtaTargetDTO dto) {
+        DeviceEntity entity = deviceService.selectById(id);
+        if (entity == null) {
+            return new Result<Void>().error("设备不存在");
+        }
+        // 只更新出现的字段：null 跳过（部分更新语义），空串 = 显式清除
+        // 注意：MyBatis-Plus updateById 跳过 null 字段，清空必须写空串（DB 落 NULL 靠列语义）
+        if (dto.getTargetOtaId() != null) {
+            if (dto.getTargetOtaId().isEmpty()) {
+                entity.setTargetOtaId("");
+            } else {
+                // 指定的固件必须真实存在，防止 pin 一个幽灵 id 让设备永远空转
+                OtaEntity ota = otaService.selectById(dto.getTargetOtaId());
+                if (ota == null) {
+                    return new Result<Void>().error("指定的固件记录不存在");
+                }
+                entity.setTargetOtaId(dto.getTargetOtaId());
+            }
+        }
+        if (dto.getOtaType() != null) {
+            // 非空轨道必须已有固件注册，否则轨道无固件可推，切过去就回不来了
+            if (dto.getOtaType().isEmpty()) {
+                entity.setOtaType("");
+            } else {
+                if (otaService.getLatestOta(dto.getOtaType()) == null) {
+                    return new Result<Void>().error("该主题轨道下没有已注册的固件: " + dto.getOtaType());
+                }
+                entity.setOtaType(dto.getOtaType());
+            }
+        }
+        if (!deviceService.updateById(entity)) {
+            return new Result<Void>().error(ErrorCode.UPDATE_DATA_FAILED);
+        }
+        return new Result<Void>();
     }
 
     @PostMapping("/tools/list/{deviceId}")

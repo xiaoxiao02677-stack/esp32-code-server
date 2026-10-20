@@ -205,8 +205,10 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
             // 只有在设备已绑定且明确开启自动升级时才返回固件升级信息
             if (Integer.valueOf(1).equals(deviceById.getAutoUpdate())) {
                 String type = deviceReport.getBoard() == null ? null : deviceReport.getBoard().getType();
-                DeviceReportRespDTO.Firmware firmware = buildFirmwareInfo(type,
-                        deviceReport.getApplication() == null ? null : deviceReport.getApplication().getVersion());
+                String currentVersion =
+                        deviceReport.getApplication() == null ? null : deviceReport.getApplication().getVersion();
+                DeviceReportRespDTO.Firmware firmware =
+                        buildFirmwareInfo(deviceById, type, currentVersion);
                 response.setFirmware(firmware);
             }
         }
@@ -492,40 +494,107 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         return code;
     }
 
-    private DeviceReportRespDTO.Firmware buildFirmwareInfo(String type, String currentVersion) {
-        if (StringUtils.isBlank(type)) {
+    /**
+     * 固件决策（三优先级）：
+     *   1. target_ota_id 单台指定 —— 管理端为这台设备 pin 了具体 ai_ota 记录：
+     *      版本更新即下发（版本相同或更低不下发，防重复刷）；设备上报的
+     *      version+type 与 pin 完全一致 = 已升级到位，自动清 pin（自愈，见
+     *      clearDeviceTargetOtaIfConverged）。pin 的固件 type 无需与设备当前
+     *      type 相同 —— 这正是跨主题切换的实现路径。
+     *   2. ota_type 主题轨道 —— 非空时覆盖设备上报的 type 作为查询轨道：
+     *      轨道 != 上报 type 时无视版本号强制下发（设备刷成轨道固件后，
+     *      上报 type 变为轨道值，此后恢复纯版本比较，不会循环刷）。
+     *   3. 默认 —— 按设备上报 type 取最新，版本更高才下发（原行为）。
+     */
+    private DeviceReportRespDTO.Firmware buildFirmwareInfo(DeviceEntity device, String reportedType,
+            String currentVersion) {
+        if (StringUtils.isBlank(reportedType)) {
             return null;
         }
         if (StringUtils.isBlank(currentVersion)) {
             currentVersion = "0.0.0";
         }
 
-        OtaEntity ota = otaService.getLatestOta(type);
+        OtaEntity ota = null;
+        boolean forceDownload = false; // 主题轨道切换：忽略版本比较强制下发
+
+        // 1) 单台指定
+        if (StringUtils.isNotBlank(device.getTargetOtaId())) {
+            ota = otaService.selectById(device.getTargetOtaId());
+            if (ota == null) {
+                // pin 的固件已被删除：清掉失效 pin，回落轨道逻辑（不能让设备卡死）
+                clearDeviceTargetOta(device.getId(), null);
+            } else {
+                // 已升级到位（版本一致且 type 收敛）→ 自愈清 pin，回落轨道逻辑
+                if (compareVersions(ota.getVersion(), currentVersion) <= 0
+                        && ota.getType().equals(reportedType)) {
+                    clearDeviceTargetOta(device.getId(), ota);
+                } else {
+                    // 版本更新，或 type 未收敛（跨主题切换中）→ 下发 pin
+                    forceDownload = compareVersions(ota.getVersion(), currentVersion) > 0
+                            || !ota.getType().equals(reportedType);
+                }
+                if (!forceDownload) {
+                    ota = null; // 已收敛，继续走轨道逻辑（可能还有更高版本可推）
+                }
+            }
+        }
+
+        // 2) 主题轨道 / 3) 默认轨道
+        if (ota == null) {
+            String trackType = StringUtils.isNotBlank(device.getOtaType()) ? device.getOtaType()
+                    : reportedType;
+            ota = otaService.getLatestOta(trackType);
+            if (ota != null) {
+                // 轨道与上报 type 不同 = 正在跨主题切换，无视版本号强制下发；
+                // 收敛后（上报 type == 轨道）恢复纯版本比较
+                forceDownload = !trackType.equals(reportedType)
+                        || compareVersions(ota.getVersion(), currentVersion) > 0;
+            }
+        }
+
         DeviceReportRespDTO.Firmware firmware = new DeviceReportRespDTO.Firmware();
         String downloadUrl = null;
 
-        if (ota != null) {
-            // 如果设备没有版本信息，或者OTA版本比设备版本新，则返回下载地址
-            if (compareVersions(ota.getVersion(), currentVersion) > 0) {
-                String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
-                if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
-                    log.error("OTA地址未配置，请登录智控台，在参数管理找到【server.ota】配置");
-                    // 尝试从请求中获取
-                    HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
-                            .getRequestAttributes())
-                            .getRequest();
-                    otaUrl = request.getRequestURL().toString();
-                }
-                // 将URL中的/ota/替换为/otaMag/download/
-                String uuid = UUID.randomUUID().toString();
-                redisUtils.set(RedisKeys.getOtaIdKey(uuid), ota.getId());
-                downloadUrl = otaUrl.replace("/ota/", "/otaMag/download/") + uuid;
+        if (ota != null && forceDownload) {
+            String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
+            if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
+                log.error("OTA地址未配置，请登录智控台，在参数管理找到【server.ota】配置");
+                // 尝试从请求中获取
+                HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+                        .getRequestAttributes())
+                        .getRequest();
+                otaUrl = request.getRequestURL().toString();
             }
+            // 将URL中的/ota/替换为/otaMag/download/
+            String uuid = UUID.randomUUID().toString();
+            redisUtils.set(RedisKeys.getOtaIdKey(uuid), ota.getId());
+            downloadUrl = otaUrl.replace("/ota/", "/otaMag/download/") + uuid;
         }
 
         firmware.setVersion(ota == null ? currentVersion : ota.getVersion());
         firmware.setUrl(downloadUrl == null ? Constant.INVALID_FIRMWARE_URL : downloadUrl);
+        // 跨主题切换（pin 目标 type ≠ 上报 type，或轨道 ≠ 上报 type）时版本号可能相同，
+        // 设备端只比版本号会跳过 —— force=1 让设备无视版本号强制刷（ota.cc 已支持）
+        if (ota != null && forceDownload && ota.getType() != null
+                && !ota.getType().equals(reportedType)) {
+            firmware.setForce(1);
+        }
         return firmware;
+    }
+
+    /** pin 收敛自愈：升级到位后清掉 target_ota_id，设备回到轨道逻辑。 */
+    private void clearDeviceTargetOta(String deviceId, OtaEntity converged) {
+        try {
+            DeviceEntity patch = new DeviceEntity();
+            patch.setId(deviceId);
+            patch.setTargetOtaId("");
+            deviceDao.updateById(patch);
+            log.info("设备 {} 已升级到指定固件{}，自动清除 pin",
+                    deviceId, converged == null ? "(固件已删除)" : " " + converged.getVersion());
+        } catch (Exception e) {
+            log.error("清除设备 {} 的 target_ota_id 失败", deviceId, e);
+        }
     }
 
     /**

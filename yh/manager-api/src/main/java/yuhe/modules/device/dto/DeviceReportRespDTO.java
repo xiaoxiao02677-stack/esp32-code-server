@@ -33,6 +33,9 @@ public class DeviceReportRespDTO {
         private String version;
         @Schema(description = "下载地址")
         private String url;
+        @Schema(description = "强制升级标记：1=无视版本号强制刷（单台指定/主题轨道切换用，"
+                + "设备端 ota.cc 已支持 force==1）")
+        private Integer force;
     }
 
     public static DeviceReportRespDTO createError(String message) {

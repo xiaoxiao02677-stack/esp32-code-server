@@ -874,3 +874,16 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610181930.sql
+  - changeSet:
+      id: 202610192230
+      author: server-java
+      # 单台设备 OTA 定向升级 + 主题轨道：
+      #   ai_device.target_ota_id —— 单台指定 ai_ota 记录（跨主题切换），
+      #     设备上报版本+type 与目标一致时由应用层自动清空；
+      #   ai_device.ota_type —— 主题轨道覆盖（空=跟随设备上报 type），
+      #     autoUpdate=1 时轨道 != 上报 type 则无视版本号强制下发（主题切换）。
+      # 只加列，默认 NULL，存量行为完全不变。
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610192230.sql
