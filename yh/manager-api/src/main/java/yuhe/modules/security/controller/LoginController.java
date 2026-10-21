@@ -38,6 +38,7 @@ import yuhe.modules.security.user.SecurityUser;
 import yuhe.modules.sys.dto.PasswordDTO;
 import yuhe.modules.sys.dto.RetrievePasswordDTO;
 import yuhe.modules.sys.dto.SysUserDTO;
+import yuhe.modules.sys.service.SysAdminModuleService;
 import yuhe.modules.sys.service.SysDictDataService;
 import yuhe.modules.sys.service.SysParamsService;
 import yuhe.modules.sys.service.SysUserService;
@@ -57,6 +58,7 @@ public class LoginController {
     private final CaptchaService captchaService;
     private final SysParamsService sysParamsService;
     private final SysDictDataService sysDictDataService;
+    private final SysAdminModuleService sysAdminModuleService;
 
     @GetMapping("/captcha")
     @Operation(summary = "验证码")
@@ -103,10 +105,14 @@ public class LoginController {
         if (userDTO == null) {
             throw new RenException(ErrorCode.ACCOUNT_PASSWORD_ERROR);
         }
+        // 三态校验（console-v2 用户管理联动：软删除/停用/锁定的账号拒绝登录）
+        sysUserService.assertLoginAllowed(userDTO.getId());
         // 判断密码是否正确，不一样则进入if
         if (!PasswordUtils.matches(login.getPassword(), userDTO.getPassword())) {
             throw new RenException(ErrorCode.ACCOUNT_PASSWORD_ERROR);
         }
+        // 登录成功：更新最后登录时间（用户列表「最后登录」列数据源）
+        sysUserService.touchLastLogin(userDTO.getId());
         return sysUserTokenService.createToken(userDTO.getId());
     }
 
@@ -161,6 +167,12 @@ public class LoginController {
         Result<UserDetail> result = new Result<>();
         result.setData(user);
         return result;
+    }
+
+    @GetMapping("/display-config")
+    @Operation(summary = "当前用户生效展示配置（用户>角色>系统逐层合并；导航模块过滤用）")
+    public Result<Map<String, Object>> myDisplayConfig() {
+        return new Result<Map<String, Object>>().ok(sysAdminModuleService.myDisplayConfig());
     }
 
     @PutMapping("/change-password")

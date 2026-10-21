@@ -30,6 +30,9 @@
   /* 导航自适应文字：dock 本体宽度随最长文字项自适应（max-content，72~140px 夹取，见 .dock）；
      --dock-w 不再控制 dock 宽度，只作 .app-shell 左侧预留宽联动（展开=内容最大宽 140px，收起 56px 由 .dock-collapsed 覆盖） */
   --dock-w: 140px;
+  /* A10 滚动条配色：软色拇指 + hover 加深（Firefox scrollbar-color 与 WebKit thumb 共用） */
+  --sb-thumb: rgba(27, 44, 80, .16);
+  --sb-thumb-hover: rgba(27, 44, 80, .30);
   --font: "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
@@ -44,7 +47,25 @@ body {
 
 /* 键盘可达性：全局焦点环（鼠标点击不出现，Tab 聚焦才出现） */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ============ A10 滚动体系：文档滚动锁定，页面滚动收进 .app-shell 容器 ============ */
+/* 浏览器文档级滚动条不再出现（body overflow hidden），滚动发生在 .app-shell 内层；
+   全部滚动条（页面容器/弹窗/侧栏/代码块）统一软色圆角样式 */
 html { scroll-behavior: smooth; }
+body { overflow: hidden; }
+
+/* 全局滚动条：软色圆角，hover 加深；颜色从主题变量派生（暗色主题自动变亮） */
+* { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;   /* 内缩 2px，thumb 更纤细不顶边 */
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--sb-thumb-hover); background-clip: padding-box; }
 
 /* 跳转主内容（键盘用户可达） */
 .skip-link {
@@ -58,8 +79,14 @@ html { scroll-behavior: smooth; }
 .data-table, .stat-card .stat-value, .pager { font-variant-numeric: tabular-nums; }
 
 .app-shell {
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* A10：从「文档滚动」改为「容器滚动」——shell 固定一屏高，页面内容在其内部滚动，
+     浏览器滚动条不再出现；背景/径向光晕随内容一起滚动（视觉与原一致） */
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;   /* 长短页切换时滚动条出现/消失不引起画布跳动 */
+  scroll-behavior: smooth;    /* 锚点跳转（skip-link）平滑；原 html 级规则已随文档滚动失效 */
   display: flex;
   justify-content: center;
   background:
@@ -84,6 +111,13 @@ html { scroll-behavior: smooth; }
   padding: 20px 28px 32px;
   position: relative;
   overflow: hidden;
+  /* A10 修复：shell 是 flex，默认 align-items:stretch 会把画布钉死在视口高，
+     内容超出后被上面的 overflow:hidden 裁掉、shell 永远滚不动（内容看不到）。
+     改为不参与拉伸、按内容自然增高，让 shell 的 overflow-y:auto 真正接管滚动；
+     短内容时用 min-height 撑满一屏（52px = shell 上下 padding），满屏卡片视觉不变 */
+  align-self: flex-start;
+  min-height: calc(100vh - 52px);
+  min-height: calc(100dvh - 52px);
 }
 
 /* 管理员角色切换为深色顶栏提示 */
@@ -338,14 +372,24 @@ html.dock-collapsed { --dock-w: 56px; }
   box-shadow: var(--shadow-dock); border: 1px solid rgba(255,255,255,.6);
   width: max-content; min-width: 72px; max-width: 140px; height: 100vh; height: 100dvh;
   overflow-x: visible; overflow-y: auto;
+  /* A10：滚动条平时隐形，悬停导航时才浮现（窄屏 26 项管理菜单需要滚动时的静默方案） */
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
   transition: min-width .25s ease, max-width .25s ease;
 }
+.dock:hover { scrollbar-color: var(--sb-thumb) transparent; }
 /* 收起态：dock 本体固定 56px（覆盖展开态自适应宽度），min/max 同步锁死保证过渡可插值 */
 html.dock-collapsed .dock-wrap { min-width: 56px; max-width: 56px; }
 html.dock-collapsed .dock { min-width: 56px; max-width: 56px; }
-.dock::-webkit-scrollbar { width: 6px; }
-.dock::-webkit-scrollbar-thumb { background: rgba(27,44,80,.18); border-radius: 6px; }
+.dock::-webkit-scrollbar { width: 8px; }
+.dock::-webkit-scrollbar-thumb {
+  background-color: transparent;          /* 默认隐形，hover 显影 */
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color .25s ease;
+}
+.dock:hover::-webkit-scrollbar-thumb { background-color: var(--sb-thumb); }
 .dock::-webkit-scrollbar-track { background: transparent; }
 /* C3：图标左、文字右 */
 .dock-item {
@@ -427,6 +471,8 @@ html[data-theme="dark"] {
   --text: #E6ECF8;
   --text-sub: #8A94A6;
   --border: #26324D;
+  --sb-thumb: rgba(230, 236, 248, .18);
+  --sb-thumb-hover: rgba(230, 236, 248, .34);
   --shadow-card: 0 2px 12px rgba(0,0,0,.35);
   --shadow-dock: 0 8px 32px rgba(0,0,0,.5);
 }

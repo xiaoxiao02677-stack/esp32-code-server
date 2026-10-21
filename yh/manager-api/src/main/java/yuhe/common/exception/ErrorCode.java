@@ -284,4 +284,24 @@ public interface ErrorCode {
     int WALLPAPER_NOT_FOUND = 10401; // 壁纸不存在
     int WALLPAPER_DEVICE_UNREACHABLE = 10402; // 设备不可达
     int WALLPAPER_FORMAT_INVALID = 10403; // 壁纸格式或大小超限
+
+    // 用户管理相关错误码（console-v2 Users.vue 对齐：10220 用户名已存在等）
+    int USER_USERNAME_EXISTS = 10220; // 用户名已存在
+    int USER_NOT_EXIST = 10221; // 用户不存在
+    int USER_ALREADY_DELETED = 10222; // 用户已在回收站
+    int USER_DELETE_FORBIDDEN = 10223; // 不允许删除自己或最后一个超级管理员
+    int USER_ROLE_NOT_EXIST = 10224; // 角色不存在
+    int USER_IMPORT_PARTIAL_FAIL = 10225; // 导入部分失败（data={success,failed}）
+    int USER_IMPORT_ALL_FAIL = 10226; // 导入全部失败
+    int USER_DELETED = 10227; // 用户已被删除（回收站中）
+    int USER_BAN_SELF_FORBIDDEN = 10228; // 不能封禁自己
+
+    // 管理端五模块（console-v2 Roles/AuditLog/DisplayConfig/UserDefaults/CustomReview 对齐，SPEC §4）
+    int ADMIN_SCOPE_INVALID = 10230; // 作用域参数非法（scopeType=1 须带 roleId，=2 须带 userId）
+    int ADMIN_ROLE_NOT_EXIST = 10231; // 角色不存在
+    int ADMIN_ROLE_CODE_EXISTS = 10232; // 角色编码已存在
+    int ADMIN_ROLE_BUILTIN_FORBIDDEN = 10233; // 内置角色不允许删除
+    int ADMIN_ROLE_HAS_USERS = 10234; // 角色下仍有用户，先解绑再删除
+    int ADMIN_CUSTOM_NOT_EXIST = 10235; // 自定义模型/音色记录不存在
+    int ADMIN_AUDIT_REMARK_REQUIRED = 10236; // 驳回时必须填写审核意见
 }

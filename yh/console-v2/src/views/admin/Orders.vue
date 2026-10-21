@@ -445,6 +445,7 @@ onMounted(async () => {
   border-radius: 16px;
   padding: 26px 28px;
   box-shadow: 0 24px 60px rgba(15, 22, 40, .22);
+  /* 超高滚动收敛到 App.vue .modal 基类（max-height/overflow/overscroll），此处不再重复定义 */
 }
 .modal h3 { font-size: 17px; margin-bottom: 18px; }
 

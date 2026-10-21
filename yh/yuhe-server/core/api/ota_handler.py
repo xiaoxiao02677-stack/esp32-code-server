@@ -56,6 +56,9 @@ class OTAHandler(BaseHandler):
 
         # firmware storage
         self.bin_dir = os.path.join(os.getcwd(), "data", "bin")
+        # 2026-10-20 OTA 自动更新停用：升级一律由管理端在 Java 侧 pin 指定（ai_ota），
+        # 本 handler 不再按 data/bin 目录版本自动推送；恢复自动更新改回 False 即可
+        self.auto_update_disabled = True
         # cache structure: { 'updated_at': timestamp, 'ttl': seconds, 'files_by_model': { model: [(version, filename), ...] } }
         self._bin_cache: Dict = {
             "updated_at": 0,
@@ -300,7 +303,8 @@ class OTAHandler(BaseHandler):
             # Now check firmware files for updates
             try:
                 self._refresh_bin_cache_if_needed()
-                files_by_model = self._bin_cache.get("files_by_model", {})
+                # 自动更新停用：不读 bin 缓存 → candidates 恒空 → 不下发固件 URL
+                files_by_model = {} if self.auto_update_disabled else self._bin_cache.get("files_by_model", {})
                 candidates = files_by_model.get(device_model, [])
 
                 self.logger.bind(tag=TAG).info(

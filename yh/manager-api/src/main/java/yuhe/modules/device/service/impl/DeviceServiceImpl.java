@@ -52,6 +52,8 @@ import yuhe.common.user.UserDetail;
 import yuhe.common.utils.ConvertUtils;
 import yuhe.common.utils.DateUtils;
 import yuhe.common.utils.JsonUtils;
+import yuhe.modules.agent.dao.AgentDao;
+import yuhe.modules.agent.entity.AgentEntity;
 import yuhe.modules.device.dao.DeviceDao;
 import yuhe.modules.device.dto.DeviceManualAddDTO;
 import yuhe.modules.device.dto.DevicePageUserDTO;
@@ -73,6 +75,7 @@ import yuhe.modules.sys.service.SysUserUtilService;
 public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> implements DeviceService {
 
     private final DeviceDao deviceDao;
+    private final AgentDao agentDao;
     private final SysUserUtilService sysUserUtilService;
     private final SysParamsService sysParamsService;
     private final RedisUtils redisUtils;
@@ -312,6 +315,13 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         vo.setDeviceType(device.getBoard());
         vo.setBoard(device.getBoard());
         vo.setAutoUpdate(device.getAutoUpdate());
+        // 智能体归属：ConvertUtils 同名拷贝只带得到 agentId，agentName 需显式查（与 page() 行为一致）
+        if (StringUtils.isNotBlank(device.getAgentId())) {
+            AgentEntity agent = agentDao.selectById(device.getAgentId());
+            if (agent != null) {
+                vo.setAgentName(agent.getAgentName());
+            }
+        }
         vo.setCreateDateTimestamp(toTimestamp(device.getCreateDate()));
         vo.setLastConnectedAtTimestamp(toTimestamp(device.getLastConnectedAt()));
         return vo;
@@ -390,12 +400,24 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
                         // 必须设备关键词查找
                         .like(StringUtils.isNotBlank(dto.getKeywords()), "alias", dto.getKeywords()));
         // 循环处理page获取回来的数据，返回需要的字段
+        // 智能体名批量预查：一次 in 查询整页 agent_id，避免逐行 N+1
+        Map<String, String> agentNameById = new HashMap<>();
+        Set<String> agentIds = page.getRecords().stream()
+                .map(DeviceEntity::getAgentId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        if (!agentIds.isEmpty()) {
+            for (AgentEntity a : agentDao.selectBatchIds(agentIds)) {
+                agentNameById.put(a.getId(), a.getAgentName());
+            }
+        }
         List<UserShowDeviceListVO> list = page.getRecords().stream().map(device -> {
             UserShowDeviceListVO vo = toUserShowDeviceListVO(device);
             // 把最后修改的时间，改为简短描述的时间
             vo.setRecentChatTime(DateUtils.getShortTime(device.getUpdateDate()));
             sysUserUtilService.assignUsername(device.getUserId(),
                     vo::setBindUserName);
+            vo.setAgentName(agentNameById.get(device.getAgentId()));
             return vo;
         }).toList();
         // 计算页数
@@ -495,16 +517,15 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     }
 
     /**
-     * 固件决策（三优先级）：
-     *   1. target_ota_id 单台指定 —— 管理端为这台设备 pin 了具体 ai_ota 记录：
-     *      版本更新即下发（版本相同或更低不下发，防重复刷）；设备上报的
-     *      version+type 与 pin 完全一致 = 已升级到位，自动清 pin（自愈，见
-     *      clearDeviceTargetOtaIfConverged）。pin 的固件 type 无需与设备当前
-     *      type 相同 —— 这正是跨主题切换的实现路径。
-     *   2. ota_type 主题轨道 —— 非空时覆盖设备上报的 type 作为查询轨道：
-     *      轨道 != 上报 type 时无视版本号强制下发（设备刷成轨道固件后，
-     *      上报 type 变为轨道值，此后恢复纯版本比较，不会循环刷）。
-     *   3. 默认 —— 按设备上报 type 取最新，版本更高才下发（原行为）。
+     * 固件决策（pin-only，2026-10-20 起）：
+     *   仅 target_ota_id 单台指定生效 —— 管理端为设备 pin 具体 ai_ota 记录，
+     *   版本更新即下发（版本相同或更低不下发，防重复刷）；设备上报的
+     *   version+type 与 pin 完全一致 = 已升级到位，自动清 pin（自愈，见
+     *   clearDeviceTargetOtaIfConverged）。pin 的固件 type 无需与设备当前
+     *   type 相同 —— 这正是跨主题切换的实现路径。
+     *   自动升级已停用：原「ota_type 主题轨道跟随」与「默认轨道推最新」两级
+     *   决策删除，设备不再因服务器存在更高版本而自动收到固件 URL；升级一律
+     *   由管理员在设备管理页手动指定（含批量全选）。
      */
     private DeviceReportRespDTO.Firmware buildFirmwareInfo(DeviceEntity device, String reportedType,
             String currentVersion) {
@@ -516,40 +537,28 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         }
 
         OtaEntity ota = null;
-        boolean forceDownload = false; // 主题轨道切换：忽略版本比较强制下发
+        boolean forceDownload = false; // 跨主题切换：忽略版本比较强制下发
 
-        // 1) 单台指定
+        // pin 指定（唯一升级路径）
         if (StringUtils.isNotBlank(device.getTargetOtaId())) {
             ota = otaService.selectById(device.getTargetOtaId());
             if (ota == null) {
-                // pin 的固件已被删除：清掉失效 pin，回落轨道逻辑（不能让设备卡死）
+                // pin 的固件已被删除：清掉失效 pin（不能让设备卡死），无自动回退
                 clearDeviceTargetOta(device.getId(), null);
             } else {
-                // 已升级到位（版本一致且 type 收敛）→ 自愈清 pin，回落轨道逻辑
+                // 已升级到位（版本一致且 type 收敛）→ 自愈清 pin，此后保持现状
                 if (compareVersions(ota.getVersion(), currentVersion) <= 0
                         && ota.getType().equals(reportedType)) {
                     clearDeviceTargetOta(device.getId(), ota);
+                    ota = null;
                 } else {
                     // 版本更新，或 type 未收敛（跨主题切换中）→ 下发 pin
                     forceDownload = compareVersions(ota.getVersion(), currentVersion) > 0
                             || !ota.getType().equals(reportedType);
+                    if (!forceDownload) {
+                        ota = null;
+                    }
                 }
-                if (!forceDownload) {
-                    ota = null; // 已收敛，继续走轨道逻辑（可能还有更高版本可推）
-                }
-            }
-        }
-
-        // 2) 主题轨道 / 3) 默认轨道
-        if (ota == null) {
-            String trackType = StringUtils.isNotBlank(device.getOtaType()) ? device.getOtaType()
-                    : reportedType;
-            ota = otaService.getLatestOta(trackType);
-            if (ota != null) {
-                // 轨道与上报 type 不同 = 正在跨主题切换，无视版本号强制下发；
-                // 收敛后（上报 type == 轨道）恢复纯版本比较
-                forceDownload = !trackType.equals(reportedType)
-                        || compareVersions(ota.getVersion(), currentVersion) > 0;
             }
         }
 
@@ -574,7 +583,7 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
 
         firmware.setVersion(ota == null ? currentVersion : ota.getVersion());
         firmware.setUrl(downloadUrl == null ? Constant.INVALID_FIRMWARE_URL : downloadUrl);
-        // 跨主题切换（pin 目标 type ≠ 上报 type，或轨道 ≠ 上报 type）时版本号可能相同，
+        // 跨主题切换（pin 目标 type ≠ 上报 type）时版本号可能相同，
         // 设备端只比版本号会跳过 —— force=1 让设备无视版本号强制刷（ota.cc 已支持）
         if (ota != null && forceDownload && ota.getType() != null
                 && !ota.getType().equals(reportedType)) {

@@ -21,12 +21,22 @@
 
     <DataTable title="固件列表" :loading="loading">
       <table class="data-table">
-        <thead><tr><th>版本</th><th>类型 / 轨道</th><th>文件</th><th>时间</th><th>操作</th></tr></thead>
+        <thead><tr><th>版本</th><th>类型 / 轨道</th><th>文件</th><th>备注</th><th>时间</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="o in otas" :key="o.id">
             <td><div class="cell-main">{{ o.firmwareVersion || o.appVersion || o.version }}</div></td>
             <td style="font-size:12px">{{ o.type || '—' }}</td>
             <td style="font-size:12px">{{ o.fileName || o.filePath || o.path || '—' }}</td>
+            <td>
+              <div v-if="editingRemarkId === o.id" class="remark-edit">
+                <input v-model="remarkDraft" maxlength="200" placeholder="输入备注…" @keyup.enter="saveRemark(o)" @keyup.esc="cancelRemark" ref="remarkInputRef" />
+                <button class="mini-btn" title="保存" @click="saveRemark(o)">✓</button>
+                <button class="mini-btn" title="取消" @click="cancelRemark">✕</button>
+              </div>
+              <button v-else class="remark-cell" :title="o.remark || '点击添加备注'" @click="startRemark(o)">
+                <span class="remark-text" :class="{ empty: !o.remark }">{{ o.remark || '＋ 添加' }}</span>
+              </button>
+            </td>
             <td style="font-size:12px">{{ o.createDate || '' }}</td>
             <td>
               <div class="row-actions">
@@ -83,7 +93,7 @@
 
 <script setup>
 import YhIcon from '../../components/YhIcon.vue'
-import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, nextTick, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
@@ -238,6 +248,32 @@ function remove(o) {
   })
 }
 
+// ── 备注行内编辑 ──
+const editingRemarkId = ref('')
+const remarkDraft = ref('')
+function startRemark(o) {
+  editingRemarkId.value = o.id
+  remarkDraft.value = o.remark || ''
+  nextTick(() => {
+    const el = document.querySelector('.remark-edit input')
+    el?.focus()
+  })
+}
+function cancelRemark() { editingRemarkId.value = ''; remarkDraft.value = '' }
+async function saveRemark(o) {
+  // 契约：PUT /otaMag/{id}，body 携带 type/version 供唯一性校验，remark 为本次变更字段
+  try {
+    await adminApi.otaUpdate(o.id, {
+      type: o.type,
+      version: o.version,
+      remark: remarkDraft.value.trim()
+    })
+    o.remark = remarkDraft.value.trim()
+    toast('备注已更新')
+  } catch (e) { toast(e.msg || '备注保存失败', 'error') }
+  finally { cancelRemark() }
+}
+
 onMounted(load)
 </script>
 
@@ -246,4 +282,31 @@ onMounted(load)
 .reg-tip code { background: var(--bg-2, #f4f6fa); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
 .empty-hint { color: var(--text-sub); font-size: 13px; line-height: 1.8; margin-top: 8px; }
 .empty-link { color: var(--primary); font-weight: 600; }
+/* 备注列：点格子进编辑态 */
+.remark-cell {
+  display: flex; align-items: center; width: 100%;
+  min-height: 32px; padding: 4px 8px; border: 1px dashed transparent; border-radius: 8px;
+  background: none; cursor: text; text-align: left; font-family: var(--font);
+  transition: border-color .15s, background .15s;
+}
+.remark-cell:hover { border-color: var(--border); background: var(--bg-soft, #F8FAFD); }
+.remark-text {
+  font-size: 12px; color: var(--text); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.remark-text.empty { color: var(--text-sub); opacity: .7; }
+.remark-edit { display: flex; align-items: center; gap: 6px; }
+.remark-edit input {
+  flex: 1; min-width: 120px; border: 1.5px solid var(--primary); border-radius: 8px;
+  padding: 5px 8px; font-size: 12px; outline: none; font-family: var(--font);
+  background: var(--surface); color: var(--text);
+}
+.mini-btn {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  cursor: pointer; font-size: 12px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.mini-btn:hover { border-color: var(--primary); color: var(--primary); }
 </style>

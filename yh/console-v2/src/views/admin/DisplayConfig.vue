@@ -74,6 +74,37 @@
         <button class="btn btn-ghost" @click="addRow">＋ 添加字段</button>
       </div>
     </DataTable>
+
+    <!-- ② 模块可见性：配置该作用域能看到哪些管理端模块（导航过滤 + 路由拦截） -->
+    <DataTable title="模块可见性" hint="控制该作用域登录后能看到/进入哪些管理端模块；未配置=全部可见；作用域继承：用户>角色>系统" :loading="loading" style="margin-top:20px">
+      <table class="data-table">
+        <thead>
+          <tr><th style="width:42%">模块</th><th>👁 可见</th><th style="width:40%">说明</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="m in moduleRows" :key="m.to">
+            <td>
+              <div class="cell-main">{{ m.label }}</div>
+              <div class="cell-sub mono">{{ m.to }}</div>
+            </td>
+            <td>
+              <label class="chk">
+                <input type="checkbox" v-model="m.visible" />
+                <span>{{ m.visible ? '可见' : '隐藏' }}</span>
+              </label>
+            </td>
+            <td class="cell-sub">{{ m.note }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="add-row" style="justify-content: space-between">
+        <span class="field-hint" style="font-size:12.5px;color:var(--text-sub)">概览（/admin）为管理端入口，始终可见不可隐藏</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" @click="setAllModules(true)">全选可见</button>
+          <button class="btn btn-ghost" @click="setAllModules(false)">全部隐藏</button>
+        </div>
+      </div>
+    </DataTable>
   </div>
 </template>
 
@@ -82,7 +113,7 @@ import YhIcon from '../../components/YhIcon.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi } from '../../lib/api'
+import { adminApi, loadMyDisplayConfig } from '../../lib/api'
 
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
@@ -101,12 +132,42 @@ const SCOPES = [
   { value: 2, label: '👤 用户' }
 ]
 
+// 管理端模块清单（与 DockNav adminItems 同源；to 即 modules 配置的 key）
+// 注意：概览 /admin 不在清单中（管理端入口始终可见，不可隐藏）
+const ADMIN_MODULES = [
+  { to: '/admin/orders', label: '订单管理', note: '订单列表与跟进' },
+  { to: '/admin/agents', label: '智能体', note: '智能体配置' },
+  { to: '/admin/chat', label: '聊天', note: '会话审查' },
+  { to: '/admin/memory', label: '记忆', note: '记忆库管理' },
+  { to: '/admin/voices', label: '音色', note: '平台音色' },
+  { to: '/admin/templates', label: '模板', note: '智能体模板' },
+  { to: '/admin/knowledge', label: '知识库', note: '知识库管理' },
+  { to: '/admin/models', label: '模型', note: '模型供应商配置' },
+  { to: '/admin/devices', label: '设备', note: '设备管理' },
+  { to: '/admin/params', label: '参数', note: '系统参数' },
+  { to: '/admin/users', label: '用户', note: '用户管理' },
+  { to: '/admin/roles', label: '角色', note: '角色与权限' },
+  { to: '/admin/audit', label: '审计', note: '操作审计日志' },
+  { to: '/admin/display', label: '展示配置', note: '字段/模块可见性（本页）' },
+  { to: '/admin/defaults', label: '默认配置', note: '默认模型配置' },
+  { to: '/admin/custom-review', label: '自定义审核', note: '模型/音色审核' },
+  { to: '/admin/ota', label: 'OTA', note: '固件升级' },
+  { to: '/admin/dicts', label: '字典', note: '数据字典' },
+  { to: '/admin/servers', label: '服务器', note: '服务器管理' },
+  { to: '/admin/mcp', label: 'MCP', note: 'MCP 工具' },
+  { to: '/admin/linksim', label: '链路模拟', note: '链路模拟器' },
+  { to: '/admin/wake-word', label: '唤醒词', note: '唤醒词管理' },
+  { to: '/admin/push-scheduler', label: '推送调度', note: '定时推送' },
+  { to: '/admin/apis', label: 'API调试', note: '接口调试' }
+]
+
 const scopeType = ref(0)   // 0系统 / 1角色 / 2用户
 const roleId = ref('')
 const userId = ref('')
 const roles = ref([])
 const users = ref([])
 const rows = ref([])
+const moduleRows = ref(ADMIN_MODULES.map(m => ({ ...m, visible: true })))
 const newKey = ref('')
 const loading = ref(false)
 const saving = ref(false)
@@ -129,17 +190,30 @@ function normalizeRows(fields) {
 }
 
 async function load() {
+  // 作用域=角色/用户 但尚未选择目标：不发请求（后端 10230 校验缺参），渲染缺省空态
+  if ((scopeType.value === 1 && !roleId.value) || (scopeType.value === 2 && !userId.value)) {
+    rows.value = normalizeRows({})
+    moduleRows.value = ADMIN_MODULES.map(m => ({ ...m, visible: true }))
+    return
+  }
   loading.value = true
   try {
     const p = { scopeType: scopeType.value }
     if (scopeType.value === 1) p.roleId = roleId.value
     if (scopeType.value === 2) p.userId = userId.value
     const res = await adminApi.displayConfigGet(p)
-    // 契约（SPEC §4.3）：data={configJson:{"fields":{key:{visible,editable}}}}
+    // 契约（SPEC §4.3）：data={configJson:{"fields":{key:{visible,editable}},"modules":{path:{visible}}}}
     const json = typeof res.data?.configJson === 'string' ? JSON.parse(res.data.configJson || '{}') : (res.data?.configJson || {})
     rows.value = normalizeRows(json.fields || {})
+    // 模块可见性：本作用域已显式配置的模块用配置值，未配置的按缺省「可见」展示
+    const mods = json.modules || {}
+    moduleRows.value = ADMIN_MODULES.map(m => ({
+      ...m,
+      visible: Object.prototype.hasOwnProperty.call(mods, m.to) ? mods[m.to]?.visible !== false : true
+    }))
   } catch (e) {
     rows.value = normalizeRows({})
+    moduleRows.value = ADMIN_MODULES.map(m => ({ ...m, visible: true }))
     // 403 越权 / 10230 非法作用域参数提示（SPEC §3 错误码）
     if (e.code === 403 || e.code === 10230) toast(e.msg || '无权限或作用域参数无效', 'error')
     else toast(e.msg || '加载失败', 'error')
@@ -189,12 +263,19 @@ function removeRow(i) {
   })
 }
 
+function setAllModules(v) {
+  moduleRows.value.forEach(m => { m.visible = v })
+}
+
 async function save() {
   const fields = {}
   for (const r of rows.value) fields[r.key] = { visible: r.visible, editable: r.editable }
+  // 模块可见性：全部落库（含 visible:true，显式覆盖下层作用域的隐藏）
+  const modules = {}
+  for (const m of moduleRows.value) modules[m.to] = { visible: m.visible }
   const body = {
     scopeType: scopeType.value,
-    configJson: { fields }
+    configJson: { fields, modules }
   }
   if (scopeType.value === 1) {
     if (!roleId.value) { toast('请先选择角色', 'error'); return }
@@ -208,6 +289,8 @@ async function save() {
   try {
     await adminApi.displayConfigSave(body)
     toast('已保存')
+    // 立即刷新本地生效配置（管理员自己的导航按新配置过滤，无需重新登录）
+    loadMyDisplayConfig().catch(() => {})
   } catch (e) {
     if (e.code === 403 || e.code === 10230) toast(e.msg || '无权限或作用域参数无效', 'error')
     else toast(e.msg || '保存失败', 'error')

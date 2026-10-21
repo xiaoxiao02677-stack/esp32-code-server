@@ -218,6 +218,13 @@ private:
     void SendWallpaperAck(const std::string& version, bool ok, const std::string& reason,
                           WallpaperKind kind = WallpaperKind::Idle);
 public:
+    // 本地设备配置上报（音量/亮度物理键）：与语音 MCP 工具路径殊途同归——
+    // 服务端 device_config_sync 拦截 MCP 工具上报云端，物理键路径无 MCP 调用，
+    // 由设备主动上行 {"type":"device_config_report","config":{...}}，Python 端
+    // DeviceConfigReportHandler 转报 Java /config/device-config（同一条云端链路）。
+    // 板级按键回调（非 Application 成员）需外部调用，故为 public。
+    void SendDeviceConfigReport(const std::string& key, int value);
+public:
     /**
      * 定时触发一次 notify 播报。设备不空闲时丢弃并记录日志。
      */

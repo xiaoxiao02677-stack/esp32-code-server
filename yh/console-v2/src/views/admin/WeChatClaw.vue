@@ -578,6 +578,7 @@ onMounted(load)
 .modal {
   background: #fff; border-radius: 16px; width: min(480px, 92vw);
   box-shadow: 0 24px 60px rgba(0,0,0,.2);
+  /* 超高滚动收敛到 App.vue .modal 基类（max-height/overflow/overscroll），此处不再重复定义 */
 }
 .modal-header {
   padding: 18px 20px; border-bottom: 1px solid var(--border);

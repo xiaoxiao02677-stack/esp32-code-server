@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -40,19 +39,19 @@ class DeviceAutoUpdateTest {
     }
 
     @Test
-    @DisplayName("自动升级开启时继续执行固件查询")
-    void enabledAutoUpdateChecksFirmware() {
+    @DisplayName("自动升级开启但未 pin 固件时不自动推送（pin-only 语义）")
+    void enabledAutoUpdateWithoutPinDoesNotPush() {
         OtaService otaService = mock(OtaService.class);
-        when(otaService.getLatestOta(BOARD_TYPE)).thenReturn(null);
         DeviceServiceImpl service = proxiedService(deviceWithAutoUpdate(1), otaService);
 
         DeviceReportRespDTO response = service.checkDeviceActive(
                 MAC_ADDRESS, MAC_ADDRESS, deviceReport());
 
+        // 自动升级已停用：无 pin 时不再按轨道查最新固件
         assertNotNull(response.getFirmware());
         assertEquals(CURRENT_VERSION, response.getFirmware().getVersion());
         assertEquals(Constant.INVALID_FIRMWARE_URL, response.getFirmware().getUrl());
-        verify(otaService).getLatestOta(BOARD_TYPE);
+        verifyNoInteractions(otaService);
     }
 
     private DeviceServiceImpl proxiedService(DeviceEntity device, OtaService otaService) {

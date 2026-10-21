@@ -140,15 +140,42 @@ hardware/sets/
 [1/4] 同步版型文件   boards/<id>  ->  <FW>/main/boards/yuhe/<id>
 [2/4] 注册版型       幂等改写 <FW>/main/Kconfig.projbuild 与 main/CMakeLists.txt
                     的 SETS-BOARDS 标记块
+[2.5/4] 版本号注入   config.ini 里该版型的版本 -> <FW>/CMakeLists.txt 的
+                    set(PROJECT_VER "...") 行（详见下节）
 [3/4] 编译           调用 <FW>/scripts/build.py <board_dir> --name <build_name>
-[4/4] 归档           ->  hardware/sets/out/<id>/
-     收尾           打印下一步该执行的 flash.py 命令（本脚本不烧录）
+[4/4] 归档           ->  hardware/sets/out/<id>/（yuhe.bin 带 app 描述符版本后缀）
+     收尾           编译成功后把实际版本回填 config.ini；打印 flash.py 命令
 ```
 
 第 2 步是**幂等**的：它只替换 `# >>> SETS-BOARDS-BEGIN >>>` 和
 `# <<< SETS-BOARDS-END <<<` 之间的内容，标记块之外一个字都不动；
 内容没变时会输出「标记块内容已是最新，未改动」。
 首次改写前会备份到 `<原文件>.bak-sets`，并打印改动的 diff 摘要。
+
+### 版本号集中管理（config.ini）
+
+各版型的固件版本号统一放在 **`hardware/sets/config.ini`**，不再直接改
+`<FW>/CMakeLists.txt`（那里是全部版型共用的，改一处所有版型跟着变）：
+
+```ini
+[default]              # 没有专属段的版型用它兜底
+version = 2.5.2
+[yh-154tft-wifi]       # 只想升这个版型就改这一段
+version = 2.5.2
+```
+
+支持 `#` 备注：整行注释与行内注释（`version = 2.5.3 # 电池版专用`）都行，
+自动回填版本时注释原样保留，不会被动抹掉。
+
+- **构建前**：build.py 把所选版型的版本写进 `<FW>/CMakeLists.txt` 的
+  `set(PROJECT_VER "...")` 行——IDF app 描述符（`yuhe.bin` 内嵌版本、OTA
+  上报的 `application.version`）、内层 `scripts/build.py`、docker 构建器都
+  从这一行取版本，格式不变所以全链路兼容
+- **编译成功后**：从产物 app 描述符读出实际版本**自动回填** config.ini，
+  所以文件里的值永远是"上次构建的真实版本"，手改忘了也不会倒退
+  （回填只更新有差异的段）
+- 发新版本：把对应版型的 `version` 改大（如 2.5.2 → 2.5.3）再构建即可；
+  产物名自动带版本后缀（`<name>-yuhe-2.5.3.bin`），OTA 侧同名即同版本
 
 注册的位置与内容：
 

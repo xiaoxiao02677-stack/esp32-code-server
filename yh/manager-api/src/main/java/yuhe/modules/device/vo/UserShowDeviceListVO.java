@@ -17,6 +17,18 @@ public class UserShowDeviceListVO {
     @Schema(description = "绑定用户名称")
     private String bindUserName;
 
+    @Schema(description = "所属智能体ID")
+    private String agentId;
+
+    @Schema(description = "所属智能体名称")
+    private String agentName;
+
+    @Schema(description = "OTA 单台指定固件ID（pin）")
+    private String targetOtaId;
+
+    @Schema(description = "OTA 主题轨道")
+    private String otaType;
+
     @Schema(description = "设备型号")
     private String deviceType;
 

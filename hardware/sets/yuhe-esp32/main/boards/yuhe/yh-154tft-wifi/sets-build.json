@@ -1,10 +1,10 @@
 {
     "manufacturer": "yuhe",
-    "type": "yh-big-ili9341",
+    "type": "yh-154tft-wifi",
     "target": "esp32s3",
     "builds": [
         {
-            "name": "yh-big-ili9341",
+            "name": "yh-154tft-wifi",
             "sdkconfig_append": [
                 "CONFIG_LWIP_TCPIP_RECVMBOX_SIZE=48",
                 "CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=32",
@@ -13,7 +13,7 @@
                 "CONFIG_LV_USE_FONT_COMPRESSED=y",
                 "CONFIG_LV_USE_FONT_PLACEHOLDER=y",
                 "CONFIG_USE_AUDIO_PROCESSOR=y",
-                "CONFIG_USE_SERVER_AEC=n",
+                "CONFIG_USE_SERVER_AEC=y",
                 "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y",
                 "CONFIG_PARTITION_TABLE_CUSTOM=y",
                 "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions/v2/16m.csv\"",
@@ -36,7 +36,7 @@
                 "CONFIG_OTA_URL=\"http://sandyun.top:8144/yuhe/ota/\"",
                 "CONFIG_YH_SERVER_HOST=\"sandyun.top\"",
                 "CONFIG_YH_SERVER_PORT=8199",
-                "CONFIG_YH_UI_THEME_XIAOYOU=y"
+                "CONFIG_YH_UI_THEME_EMOPET=y"
             ]
         }
     ]

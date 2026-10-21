@@ -202,6 +202,12 @@ async function loadUsers() {
 
 // ===== 加载当前作用域默认配置 =====
 async function load() {
+  // 作用域=角色/用户 但尚未选择目标：不发请求（后端 10230 校验缺参），表单显示空态
+  if ((scopeType.value === 1 && !roleId.value) || (scopeType.value === 2 && !userId.value)) {
+    form.llmModelId = ''; form.ttsModelId = ''; form.ttsVoiceId = ''; form.asrModelId = ''
+    form.temperature = null; form.topP = null; lockPolicy.value = false
+    return
+  }
   loading.value = true
   try {
     const res = await adminApi.userDefaultGet(scopeParams())

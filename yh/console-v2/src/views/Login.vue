@@ -45,7 +45,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import YhIcon from '../components/YhIcon.vue'
-import { authApi, refreshUserInfo, defaultRouteAfterLogin } from '../lib/api'
+import { authApi, refreshUserInfo, defaultRouteAfterLogin, loadMyDisplayConfig } from '../lib/api'
 
 const router = useRouter()
 const showPw = ref(false)
@@ -79,6 +79,8 @@ async function doLogin() {
     }
     // 身份补全（旧后端 TokenDTO 缺 superAdmin/roles，用 /user/info 兜底）→ 角色分流跳转
     await refreshUserInfo().catch(() => {})
+    // 拉取生效展示配置（模块可见性；失败静默=全部可见）
+    await loadMyDisplayConfig().catch(() => {})
     const target = defaultRouteAfterLogin()
     // 双保险跳转：router.push + hash 直赋（防 router 时序问题导致"登录完还在login页"）
     router.push(target).catch(() => {})

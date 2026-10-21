@@ -149,7 +149,8 @@ watch(() => forcePwd.show, (v) => {
 @keyframes boot-fill { from { width: 8%; } to { width: 100%; } }
 
 .modal-mask { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: grid; place-items: center; z-index: var(--z-modal); }
-.modal { background: #fff; border-radius: 20px; padding: 26px; width: min(440px, 92vw); box-shadow: 0 24px 60px rgba(0,0,0,.2); }
+/* 弹窗超高时可滚（dvh 优先、vh 兜底，与 .app-shell 写法一致）；overscroll 防滚动穿透到 shell */
+.modal { background: #fff; border-radius: 20px; padding: 26px; width: min(440px, 92vw); max-height: min(88dvh, 88vh); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 24px 60px rgba(0,0,0,.2); }
 .modal.confirm h3 { font-size: 17px; margin-bottom: 10px; }
 .modal.confirm p { color: var(--text-sub); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }

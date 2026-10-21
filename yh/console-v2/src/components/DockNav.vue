@@ -64,7 +64,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { hasAdminRole, userState } from '../lib/api'
+import { hasAdminRole, isModuleVisible, userState } from '../lib/api'
 import WallpaperDispatch from './WallpaperDispatch.vue'
 import YhIcon from './YhIcon.vue'
 
@@ -156,7 +156,12 @@ const adminItems = [
   { to: '/admin/push-scheduler', icon: 'send', label: '推送调度' },
   { to: '/admin/apis', icon: 'terminal', label: 'API调试' }
 ]
-const items = computed(() => (props.role === 'admin' ? adminItems : customerItems))
+// 模块可见性过滤（展示配置）：仅显式 visible:false 才隐藏，未配置全可见；
+// 管理端入口 '/admin'（概览）永远保留，防把用户挡在管理端外
+const items = computed(() => {
+  if (props.role !== 'admin') return customerItems
+  return adminItems.filter(it => isModuleVisible(it.to))
+})
 
 function isActive(to) {
   return route.path === to

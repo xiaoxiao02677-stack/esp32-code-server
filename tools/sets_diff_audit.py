@@ -474,12 +474,14 @@ def check_q7() -> Q7Result:
         result.notes.append("未找到 DeviceServiceImpl.java / OtaServiceImpl.java，Q7 无法核查")
         return result
 
-    latest_ok = "otaService.getLatestOta(type)" in device_src
+    # 任务F force 修复后变量名 type→trackType（轨道目标 type 或上报 type），
+    # 匹配语义不变：ai_ota.type == 轨道/上报 type 精确相等
+    latest_ok = "otaService.getLatestOta(trackType)" in device_src
     eq_ok = 'eq("type", type)' in ota_src
     upsert_ok = "same" if 'eq("type", entity.getType())' in ota_src else ""
 
     for name, path, token in (
-        ("DeviceServiceImpl.java", DEVICE_IMPL, "otaService.getLatestOta(type)"),
+        ("DeviceServiceImpl.java", DEVICE_IMPL, "otaService.getLatestOta(trackType)"),
         ("OtaServiceImpl.java", OTA_IMPL, 'eq("type", type)'),
     ):
         text = path.read_text(encoding="utf-8", errors="replace")

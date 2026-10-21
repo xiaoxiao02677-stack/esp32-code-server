@@ -11,3 +11,5 @@ class TextMessageType(Enum):
     SERVER = "server"
     PING = "ping"
     WALLPAPER = "wallpaper"
+    # 设备本地配置上报（物理音量/亮度键）：固件 SendDeviceConfigReport 主动上行
+    DEVICE_CONFIG_REPORT = "device_config_report"

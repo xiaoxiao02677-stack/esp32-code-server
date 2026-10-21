@@ -11,6 +11,8 @@ public class RenException extends RuntimeException {
 
     private int code;
     private String msg;
+    /** 业务附加数据（如导入部分失败 10225 的 {success,failed} 明细，前端 e.data 消费） */
+    private Object data;
 
     public RenException(int code) {
         super(MessageUtils.getMessage(code));
@@ -62,6 +64,14 @@ public class RenException extends RuntimeException {
 
     public void setCode(int code) {
         this.code = code;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
     }
 
 }

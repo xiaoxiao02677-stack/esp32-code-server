@@ -12,7 +12,10 @@ spring:
     druid:
       #MySQL
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://127.0.0.1:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&nullCatalogMeansCurrent=true
+      # serverTimezone 必须与 MySQL 会话时区一致（SYSTEM=Asia/Shanghai）。
+      # 原为 UTC：JVM(北京) Date 经连接层转 UTC 字面量入库，库内时间比真实
+      # 早 8h（2026-10-20 修正：连接串与存量数据 +8h 同批迁移）
+      url: jdbc:mysql://127.0.0.1:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
       username: root
       password: 123456
       initial-size: 10

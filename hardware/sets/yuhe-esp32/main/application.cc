@@ -1903,6 +1903,25 @@ void Application::SendWallpaperAck(const std::string& version, bool ok,
              ok ? "ok" : "fail", reason.c_str());
 }
 
+void Application::SendDeviceConfigReport(const std::string& key, int value) {
+    // 运行上下文：物理键回调（button task）或 MCP 工具线程 → Schedule 到主任务
+    // 再发（protocol_ 生命周期安全，与 SendWallpaperAck 同一纪律）
+    Schedule([this, key, value]() {
+        if (protocol_ == nullptr) {
+            ESP_LOGW(TAG, "Drop device_config_report: protocol is not ready");
+            return;
+        }
+        std::string message = "{\"type\":\"device_config_report\",\"config\":{\"";
+        message += key;
+        message += "\":";
+        message += std::to_string(value);
+        message += "}}";
+        protocol_->SendJsonText(message);
+        ESP_LOGI(TAG, "device_config_report: %s=%d", key.c_str(), value);
+    });
+}
+
+
 void Application::SetAecMode(AecMode mode) {
     aec_mode_ = mode;
     Schedule([this]() {

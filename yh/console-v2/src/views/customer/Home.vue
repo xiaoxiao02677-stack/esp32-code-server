@@ -216,7 +216,7 @@ onMounted(() => { load(); loadLlmModels() })
 
 <style scoped>
 .modal-mask { position: fixed; inset: 0; background: rgba(15,22,40,.45); display: grid; place-items: center; z-index: 100; }
-.modal { background: #fff; border-radius: 20px; padding: 26px; width: min(440px, 92vw); box-shadow: 0 24px 60px rgba(0,0,0,.2); }
+/* .modal 基类收敛到 App.vue（含 max-height/overflow 超高滚动），此处不再重复定义 */
 .modal h3 { font-size: 17px; margin-bottom: 18px; }
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 13px; color: var(--text-sub); font-weight: 600; }

@@ -170,12 +170,14 @@ private:
             }
             GetDisplay()->ShowNotification(Lang::Strings::VOLUME + std::to_string(volume/10));
             codec->SetOutputVolume(volume);
+            Application::GetInstance().SendDeviceConfigReport("volume", volume);
 
         });
 
         volume_up_button_.OnLongPress([this]() {
             GetAudioCodec()->SetOutputVolume(100);
             GetDisplay()->ShowNotification(Lang::Strings::MAX_VOLUME);
+            Application::GetInstance().SendDeviceConfigReport("volume", 100);
         });
 
         volume_down_button_.OnClick([this]() {
@@ -186,11 +188,13 @@ private:
             }
             codec->SetOutputVolume(volume);
             GetDisplay()->ShowNotification(Lang::Strings::VOLUME + std::to_string(volume/10));
+            Application::GetInstance().SendDeviceConfigReport("volume", volume);
         });
 
         volume_down_button_.OnLongPress([this]() {
             GetAudioCodec()->SetOutputVolume(0);
             GetDisplay()->ShowNotification(Lang::Strings::MUTED);
+            Application::GetInstance().SendDeviceConfigReport("volume", 0);
         });
     }
 

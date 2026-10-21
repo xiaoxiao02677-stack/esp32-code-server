@@ -9,6 +9,7 @@ from core.handle.textMessageHandler import TextMessageHandler
 from core.handle.textHandler.serverMessageHandler import ServerTextMessageHandler
 from core.handle.textHandler.pingMessageHandler import PingMessageHandler
 from core.handle.textHandler.wallpaperMessageHandler import WallpaperMessageHandler
+from core.handle.textHandler.deviceConfigReportMessageHandler import DeviceConfigReportHandler
 
 TAG = __name__
 
@@ -31,6 +32,7 @@ class TextMessageHandlerRegistry:
             ServerTextMessageHandler(),
             PingMessageHandler(),
             WallpaperMessageHandler(),
+            DeviceConfigReportHandler(),
         ]
 
         for handler in handlers:

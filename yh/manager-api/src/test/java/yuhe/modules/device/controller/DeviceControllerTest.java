@@ -19,6 +19,7 @@ import yuhe.modules.device.dto.DeviceUpdateDTO;
 import yuhe.modules.device.entity.DeviceEntity;
 import yuhe.modules.device.service.DeviceAddressBookService;
 import yuhe.modules.device.service.DeviceService;
+import yuhe.modules.device.service.OtaService;
 import yuhe.modules.security.user.SecurityUser;
 import yuhe.modules.sys.service.SysParamsService;
 
@@ -59,7 +60,8 @@ class DeviceControllerTest {
                 deviceService,
                 mock(DeviceAddressBookService.class),
                 mock(RedisUtils.class),
-                mock(SysParamsService.class));
+                mock(SysParamsService.class),
+                mock(OtaService.class));
     }
 
     private DeviceEntity ownedDevice() {

@@ -106,9 +106,7 @@ module_test:
 
 # 唤醒词，用于识别唤醒词还是讲话内容
 wakeup_words:
-  - "你好小智"
   - "嘿你好呀"
-  - "你好小志"
   - "小爱同学"
   - "你好小鑫"
   - "你好小新"
@@ -221,7 +219,7 @@ prompt: |
 prompt_template: agent-base-prompt.txt
 
 # 系统错误时的回复
-system_error_response: "主人，我现在有点忙，我们稍后再试吧。"
+system_error_response: "宝宝,我困了 我先睡会哈"
 
 # 结束语prompt
 end_prompt:

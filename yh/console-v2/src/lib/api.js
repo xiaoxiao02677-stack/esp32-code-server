@@ -111,6 +111,37 @@ export function hasAdminRole(info) {
 // 响应式用户状态：登录/守卫/按钮组件共用，避免裸读 localStorage 的非响应式陈旧值
 export const userState = ref(getUserInfo() || { username: '', superAdmin: 0, roles: [] })
 
+// ---------- 模块可见性（展示配置 modules）：导航过滤/路由拦截共用 ----------
+// 生效规则（后端 /user/display-config 三层合并）：modules[routePrefix] = { visible: true|false }
+// 未配置/加载失败 → 全部可见（fail-open，不影响既有功能）；仅显式 visible:false 才隐藏
+export const moduleVisibility = ref({})   // { '/admin/orders': { visible:false }, ... }
+let moduleConfigLoaded = false
+
+export function isModuleVisible(routePath) {
+  // 只管管理端路由；顾客端与固定入口不在此约束内
+  if (!routePath || !routePath.startsWith('/admin')) return true
+  // 超管豁免：任何配置不得对超管隐藏模块（防系统层配置自锁展示配置页无法恢复）。
+  // 注意用 getUserInfo() 实时读 localStorage：userState 在模块加载时初始化，
+  // 测试/刷新场景先写 localStorage 后进页面时 userState 可能仍是旧值。
+  const u = userState.value && userState.value.username ? userState.value : getUserInfo()
+  if (u && Number(u.superAdmin) === 1) return true
+  const cfg = moduleVisibility.value
+  if (Object.prototype.hasOwnProperty.call(cfg, routePath)) return cfg[routePath]?.visible !== false
+  return true
+}
+
+/** 登录后/刷新时拉取生效展示配置（失败静默：全部可见兜底） */
+export async function loadMyDisplayConfig() {
+  if (!getToken()) return
+  try {
+    const res = await api.get('/user/display-config')
+    const d = res.data || {}
+    if (d && typeof d.modules === 'object' && d.modules) moduleVisibility.value = d.modules
+    moduleConfigLoaded = true
+  } catch { /* fail-open：全部可见 */ }
+}
+export function isModuleConfigLoaded() { return moduleConfigLoaded }
+
 /** 是否为 demo 公开展示账号（DB super_admin=1）：默认进游客页但保留管理端切换按钮 */
 export function isDemoUser(info) {
   const u = info || userState.value
@@ -203,19 +234,23 @@ async function request(method, path, { body, params, formData, raw, rawBody, con
     } catch { /* ignore */ }
     // 仅对「用户会话类」接口清 token 踢登录；服务间代理/系统接口的 401
     // （如"无效的服务器密钥"）属于后端配置问题，不应把用户踢出登录页。
+    // /admin/* 属于管理员会话接口——管理员 token 被强制下线后必须立即踢登录页，
+    // 否则停留在管理页上点什么都是 401，看起来像"整个页面无响应"。
     const isAuthCheck = path.startsWith('/user/info') || path.startsWith('/user/pub-config')
-    if (!freshToken && (isAuthCheck || isTokenExpired())) {
+    const isAdminApi = path.startsWith('/admin/')
+    if (!freshToken && (isAuthCheck || isAdminApi || isTokenExpired())) {
       clearToken()
       if (!location.hash.startsWith('#/login')) location.hash = '#/login'
       throw { code: 401, msg: '登录已过期，请重新登录' }
     }
     if (!isAuthCheck) {
       // 非会话校验接口的 401：仅抛错给调用方展示，不动登录态
+      // （管理员接口已在上面 isAdminApi 分支处理，不会走到这里）
       throw { code: 401, msg: data.msg || '无权限访问该接口' }
     }
     throw { code: 401, msg: '登录已过期（在途请求）' }
   }
-  if (data.code !== 0) throw { code: data.code, msg: data.msg || '操作失败' }
+  if (data.code !== 0) throw { code: data.code, msg: data.msg || '操作失败', data: data.data }
   return data
 }
 
@@ -280,7 +315,7 @@ export const adminApi = {
   createAgent: (body) => api.post('/agent', body),
   updateAgent: (id, body) => api.put(`/agent/${id}`, body),
   deleteAgent: (id) => api.del(`/agent/${id}`),
-  boundDevices: (agentId) => api.post(`/device/bind/${agentId}`, {}),
+  boundDevices: (agentId) => api.get(`/device/bind/${agentId}`),
   bindDeviceByCode: (agentId, code) => api.post(`/device/bind/${agentId}/${encodeURIComponent(code)}`),
   agentSessions: (agentId, params) => api.get(`/agent/${agentId}/sessions`, params || { page: 1, limit: 10 }),
   // MCP 接入点
@@ -428,9 +463,9 @@ export const adminApi = {
   ragModels: () => api.get('/datasets/rag-models'),
 
   // ===== OTA =====
-  otaPage: (params) => api.get('/otaMag', params || { page: 1, limit: 100 }),
-  // 注册固件记录（上传文件只是第一步；不注册 ai_ota 设备永远查不到固件）
+  otaPage: (params) => api.get('/otaMag', params || { page: 1, limit: 100 }),  // 注册固件记录（上传文件只是第一步；不注册 ai_ota 设备永远查不到固件）
   otaSave: (body) => api.post('/otaMag', body),
+  otaUpdate: (id, body) => api.put(`/otaMag/${id}`, body),
   uploadOta: (file) => {
     const form = new FormData()
     form.append('file', file)

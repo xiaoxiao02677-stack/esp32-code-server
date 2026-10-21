@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './styles/global.css'
-import { getToken, getUserInfo, hasAdminRole, startTokenCheck, defaultRouteAfterLogin, refreshUserInfo } from './lib/api'
+import { getToken, getUserInfo, hasAdminRole, startTokenCheck, defaultRouteAfterLogin, refreshUserInfo, loadMyDisplayConfig, isModuleConfigLoaded, isModuleVisible } from './lib/api'
 
 import CustomerHome from './views/customer/Home.vue'
 import CustomerDevices from './views/customer/Devices.vue'
@@ -94,13 +94,17 @@ const router = createRouter({
 })
 
 // A7 路由守卫：无 token 一律跳登录；已登录不再回登录页
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const has = !!getToken()
   if (!has && to.path !== '/login') return '/login'
   if (has && to.path === '/login') return defaultRouteAfterLogin()
   if (has && to.path.startsWith('/admin')) {
     const info = getUserInfo()
     if (info && !hasAdminRole(info)) return '/customer'
+    // 模块可见性（展示配置）：配置未加载时先拉一次（登录后首次导航/刷新直达）
+    if (!isModuleConfigLoaded()) await loadMyDisplayConfig()
+    // 被展示配置隐藏的模块：URL 直达也拦截（防手输绕过导航）
+    if (!isModuleVisible(to.path)) return '/admin'
   }
   return true
 })
@@ -114,3 +118,6 @@ startTokenCheck(() => {
     location.hash = '#/login'
   }
 })
+
+// 登录态启动时预取生效展示配置（导航模块过滤；失败静默全部可见）
+if (getToken()) loadMyDisplayConfig()

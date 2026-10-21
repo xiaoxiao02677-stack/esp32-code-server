@@ -21,21 +21,42 @@
       <table class="data-table">
         <thead><tr><th>智能体</th><th>模型</th><th>操作</th></tr></thead>
         <tbody>
-          <tr v-for="a in agents" :key="a.id">
-            <td>
-              <div class="cell-main">{{ a.name }}</div>
-              <div class="cell-sub">{{ a.boundCount ? `📡 ${a.boundCount} 台设备` : '未绑定设备' }}</div>
-            </td>
-            <td style="font-size:12px">{{ a.llmModel || '—' }}<br />{{ a.ttsModel || '—' }}</td>
-            <td>
-              <div class="row-actions">
-                <button class="link-btn" @click="loadSessions(a)">会话</button>
-                <button class="link-btn" @click="loadMcp(a)">MCP</button>
-                <button class="link-btn" @click="openEdit(a)">编辑</button>
-                <button class="link-btn danger" @click="remove(a)">删除</button>
-              </div>
-            </td>
-          </tr>
+          <!-- 智能体主行：点击「设备」在行下展开该智能体已绑设备（按需加载，收起不占空间） -->
+          <template v-for="a in agents" :key="a.id">
+            <tr>
+              <td>
+                <div class="cell-main">{{ a.name }}</div>
+                <div class="cell-sub">{{ a.boundCount ? `📡 ${a.boundCount} 台设备` : '未绑定设备' }}</div>
+              </td>
+              <td style="font-size:12px">{{ a.llmModel || '—' }}<br />{{ a.ttsModel || '—' }}</td>
+              <td>
+                <div class="row-actions">
+                  <button class="link-btn" @click="toggleDevices(a)">
+                    {{ expandedAgentId === a.id ? '▲ 收起' : '📱 设备' }}{{ expandedAgentId === a.id ? '' : (a.boundCount ? `(${a.boundCount})` : '') }}
+                  </button>
+                  <button class="link-btn" @click="loadSessions(a)">会话</button>
+                  <button class="link-btn" @click="loadMcp(a)">MCP</button>
+                  <button class="link-btn" @click="openEdit(a)">编辑</button>
+                  <button class="link-btn danger" @click="remove(a)">删除</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="expandedAgentId === a.id" class="device-row">
+              <td colspan="3">
+                <div class="device-panel">
+                  <div v-if="devicesLoading" class="device-hint">设备加载中…</div>
+                  <template v-else-if="agentDevices.length">
+                    <span v-for="d in agentDevices" :key="d.id" class="device-chip">
+                      <span class="chip-name" :title="d.id">{{ d.alias || d.id }}</span>
+                      <span class="chip-sub">{{ d.board || '未知版型' }}<template v-if="d.appVersion"> · v{{ d.appVersion }}</template></span>
+                      <button class="chip-unbind" title="解绑此设备" @click="unbindFromList(d)">✕</button>
+                    </span>
+                  </template>
+                  <div v-else class="device-hint">该智能体暂无绑定设备（编辑弹窗内可用验证码或 MAC 绑定）</div>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
       <div v-if="agents.length === 0" class="empty-state">
@@ -200,7 +221,7 @@ import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
-import { adminApi, api } from '../../lib/api'
+import { adminApi } from '../../lib/api'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -256,7 +277,7 @@ async function load() {
       name: a.agentName || a.name || '未命名',
       llmModel: a.llmModelId || '',
       ttsModel: a.ttsModelId || '',
-      boundCount: a.boundCount ?? 0
+      boundCount: a.deviceCount ?? a.boundCount ?? 0
     }))
     boundTotal.value = agents.value.reduce((s, a) => s + (a.boundCount || 0), 0)
   } catch (e) { toast(e.msg || '加载失败', 'error') }
@@ -280,8 +301,8 @@ async function loadEditVoices() {
 
 async function loadBoundDevices(agentId) {
   if (!agentId) { boundDevices.value = []; return }
-  // cc-console 契约：POST /device/bind/{agentId} body={} → 已绑定设备列表
-  const res = await api.post(`/device/bind/${agentId}`, {})
+  // 后端契约：GET /device/bind/{agentId} → 已绑定设备列表（POST 是 MQTT 在线状态转发，勿混用）
+  const res = await adminApi.boundDevices(agentId)
   boundDevices.value = res.data || []
 }
 
@@ -453,6 +474,42 @@ async function loadSessions(a) {
   } catch (e) { toast(e.msg || '会话加载失败', 'error') }
 }
 
+// ── 行内展开：智能体已绑设备（按需加载） ──
+const expandedAgentId = ref('')
+const agentDevices = ref([])
+const devicesLoading = ref(false)
+async function toggleDevices(a) {
+  if (expandedAgentId.value === a.id) { expandedAgentId.value = ''; return }
+  expandedAgentId.value = a.id
+  agentDevices.value = []
+  devicesLoading.value = true
+  try {
+    // 后端契约：GET /device/bind/{agentId} → 已绑定设备列表
+    const res = await adminApi.boundDevices(a.id)
+    agentDevices.value = res.data || []
+  } catch (e) {
+    toast(e.msg || '设备列表加载失败', 'error')
+    expandedAgentId.value = ''
+  } finally { devicesLoading.value = false }
+}
+
+function unbindFromList(d) {
+  askConfirm({
+    title: '解绑设备', message: `确定将「${d.alias || d.id}」从该智能体解绑吗？`, danger: true,
+    onOk: async () => {
+      try {
+        await adminApi.deviceUnbind({ deviceId: d.id })
+        toast('已解绑')
+        agentDevices.value = agentDevices.value.filter(x => x.id !== d.id)
+        // 同步主行计数
+        const a = agents.value.find(x => x.id === expandedAgentId.value)
+        if (a && a.boundCount > 0) a.boundCount--
+        boundTotal.value = agents.value.reduce((s, x) => s + (x.boundCount || 0), 0)
+      } catch (e) { toast(e.msg || '解绑失败', 'error') }
+    }
+  })
+}
+
 function goChat(s) {
   sessions.show = false
   router.push({ path: '/admin/chat', query: { agentId: sessions.agentId, sessionId: s.sessionId } })
@@ -537,4 +594,20 @@ onMounted(load)
 .bind-code-row input { flex: 0 0 200px; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; letter-spacing: 2px; }
 .manual-add { margin-top: 12px; font-size: 13px; }
 .manual-add summary { cursor: pointer; color: var(--text-sub); font-weight: 600; }
+/* 行内展开的已绑设备面板 */
+.device-row > td { padding: 0 14px 14px !important; background: var(--bg-soft, #F8FAFD); border-bottom: 1px solid var(--border) !important; }
+.device-panel { border-radius: 12px; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: var(--surface); border: 1px dashed var(--border); }
+.device-hint { font-size: 12.5px; color: var(--text-sub); padding: 4px 2px; }
+.device-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-soft); border-radius: 999px; padding: 5px 8px 5px 14px;
+}
+.chip-name { font-size: 13px; font-weight: 600; color: var(--text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-sub { font-size: 11px; color: var(--text-sub); white-space: nowrap; }
+.chip-unbind {
+  width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
+  background: transparent; color: var(--text-sub); font-size: 11px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.chip-unbind:hover { background: var(--danger); color: #fff; }
 </style>

@@ -34,6 +34,30 @@ public class SysUserEntity extends BaseEntity {
      */
     private Integer status;
     /**
+     * 软删除 0：正常 1：已删除（DB 列已存在，历史建表未映射）
+     */
+    private Integer deleted;
+    /**
+     * 删除时间
+     */
+    private Date deletedDate;
+    /**
+     * 锁定 0：未锁 1：已锁定
+     */
+    private Integer locked;
+    /**
+     * 最后登录时间
+     */
+    private Date lastLoginDate;
+    /**
+     * 下次登录须改密 0/1
+     */
+    private Integer mustChangePwd;
+    /**
+     * 密码更新时间
+     */
+    private Date pwdUpdateDate;
+    /**
      * 更新者
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)

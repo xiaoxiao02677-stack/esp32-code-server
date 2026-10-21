@@ -58,6 +58,10 @@
 - 打断三道防线：起播保护窗 800ms → 人声确认窗 → 回声探测（grep `打断探测`）
 - echo_guard v3：字符层+拼音层+跨句拼接拼音子串（真人说不出句1尾+句2头连续串）
 - fun_local ASR 返回 dict 必须取 content；本地 pytest 需 `data/.config.yaml` 占位
+- **「主人，小智现在有点忙」排查顺序**（2026-10-19 详录）：先 grep `LLM stream processing error`
+  → tuple 崩溃 = Intent_nointent agent + 设备 MCP 工具时生产/消费条件不对称（已修 703eec33）；
+  兜底话术≠部署回归，先比对崩溃/正常会话的 `selected_module.Intent`。E2E 冒烟基建
+  `_e2e_venv`+`_e2e_tuple_fix.py`（复刻设备 ID+MCP 协商+listen 三连）
 
 ## ★ 崩溃排查（全文见 firmware-crash-cookbook.md）
 - **先校验 elf 同源**（日志 SHA256 前 9 位 == sha256sum build/yuhe.elf）；`EXCVADDR=0x14`+lv_event_mark_deleted
@@ -73,6 +77,12 @@
 - Java `/opt/xiaozhi/xiaozhi-esp32-api.jar`（systemd `xiaozhi-manager-api`，8002）+外部 yml；
   Python `/root/xiaozhi-server/main/xiaozhi-server`（systemd，8000 WS/8003 http/12399 心跳）；
   前端 `/var/www/console-v2/admin`（`/admin/`与`/admincc/` 同 alias）
+- **★★ 生产前端有两个目录必须同批更新**（2026-10-21 踩坑）：`/var/www/console-v2/app/`
+  （nginx `location = /` + `/assets/`，客户端构建 base=/）和 `/var/www/console-v2/admin/`
+  （`/admincc/`+`/admin/`，管理构建 base=/admincc/）。用户从 8001 根路径 `/#/admin/xxx`
+  进管理页走的是 **app 目录**（客户端 bundle 自带全套管理路由）——只更 admin 会出现
+  "同步了但用户看不到新功能"。nginx 配置真源：`/etc/nginx/snippets/xiaozhi-common.conf`
+  （被 9001/9443/8443 server 共同 include）。测试环境 8144 根路径即 admin dist 无此问题
 - **顺序 Java → Python → Web**（config_loader.py 拉不到 Java 配置直接 raise）；
   **Python 三文件同批**（wake_word_service.py / wake_word_handler.py / http_server.py）
 - 发布后验 inode 不验时间戳；前端缺资源返 200+HTML ⇒ 逐体 md5；MySQL datetime 存 UTC 早 8h
@@ -97,3 +107,22 @@
 - 入参 `device_ids` 顶层列表 + `content.topic_sources`；任务查 `GET /api/push/tasks/{id}`
 - **空闲设备 UUID→MAC 断链**：反查链末级接 `wake_word_service._agent_devices`（设备断 WS 后仍保留）
 - 话题源全失败降级 chat 兜底；TTS 转 Ogg Opus mono；URL 兜底链 public_audio_base_url → vision → ws host:8003
+
+## ★★ 配置真源：manager-api 模式下 config.yaml 大部分键无效
+`data/.config.yaml` 配了 `manager-api.url` → 运行时配置整包从 Java `/config/server-base` 拉
+（sys_params 整表 + Redis `server:config` 缓存 + Python 进程缓存）。
+**话术/唤醒词等系统参数改 sys_params 表**，改完三连：`UPDATE` → `redis-cli DEL server:config`
+→ `systemctl restart xiaozhi-server`。本地 config.yaml 只补 redis/TTS/prompt_template 兜底键。
+鉴权头 `Authorization: Bearer <secret>`；服务 venv 是 `.venv/bin/python`（系统 python3 缺 httpx）。
+**时序红线**：必须先 UPDATE 后清缓存重启；顺序颠倒 Java 会把旧值重建进 Redis 需重来一轮。
+sed 删中文行在远端不可靠（编码），用远端 python3 按行过滤。
+生产 Python 根 `/root/xiaozhi-server/main/xiaozhi-server/`；订单日报邮件
+`/root/xiaozhi-server/tools/order_report_mailer.py`（root cron 00:00，报昨天）。
+
+## ★ 前端 API 契约陷阱（cc-console 迁移遗留）
+- **`POST /device/bind/{agentId}` 是 MQTT 在线状态转发（返回 String，网关未配置返回空串）**；
+  已绑设备列表真契约是 **`GET /device/bind/{agentId}`**（List<UserShowDeviceListVO>）。
+  adminApi.boundDevices 曾误用 POST，2026-10-21 已改 GET（连带 Agents 编辑弹窗/清单展开/Devices 降级路径）
+- `/agent/list` 设备计数字段名是 **`deviceCount`**（非 boundCount）
+- OtaEntity 自带 remark，/otaMag 列表直接返回实体；PUT /otaMag/{id} 需带 type/version（唯一性校验）
+- UserShowDeviceListVO 已含 agentId/agentName/targetOtaId/otaType（2026-10-21 补，修"智能体列全 demo"）
