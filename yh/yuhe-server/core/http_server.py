@@ -7,6 +7,7 @@ from core.api.ota_handler import OTAHandler
 from core.api.vision_handler import VisionHandler
 from core.api.memory_handler import MemoryManageHandler
 from core.api.tts_preview_handler import TtsPreviewHandler
+from core.api.tts_voice_probe_handler import TtsVoiceProbeHandler
 from core.api.asr_recognize_handler import AsrRecognizeHandler
 from core.api.llm_preview_handler import LlmPreviewHandler
 from core.api.model_test_handler import ModelTestHandler
@@ -79,6 +80,14 @@ def self_tts_preview_handler():
 _TTS_PREVIEW_HANDLER = None
 
 
+def self_tts_voice_probe_handler():
+    """Late-bound access to the TtsVoiceProbeHandler instance (same pattern as tts)."""
+    return _TTS_VOICE_PROBE_HANDLER
+
+
+_TTS_VOICE_PROBE_HANDLER = None
+
+
 def self_llm_preview_handler():
     """Late-bound access to the LlmPreviewHandler instance (same pattern as tts)."""
     return _LLM_PREVIEW_HANDLER
@@ -103,6 +112,7 @@ class SimpleHttpServer:
         self.vision_handler = VisionHandler(config)
         self.memory_handler = MemoryManageHandler(config)
         self.tts_preview_handler = TtsPreviewHandler(config)
+        self.tts_voice_probe_handler = TtsVoiceProbeHandler(config)
         self.asr_recognize_handler = AsrRecognizeHandler(config)
         self.llm_preview_handler = LlmPreviewHandler(config)
         self.model_test_handler = ModelTestHandler(config)
@@ -113,9 +123,10 @@ class SimpleHttpServer:
         self.entity_handler = EntityHandler(config)
         self.wechat_claw_handler = None
         # Expose the instances to the module-scope middlewares (auth check).
-        global _MEMORY_HANDLER, _TTS_PREVIEW_HANDLER, _LLM_PREVIEW_HANDLER, _MODEL_TEST_HANDLER
+        global _MEMORY_HANDLER, _TTS_PREVIEW_HANDLER, _TTS_VOICE_PROBE_HANDLER, _LLM_PREVIEW_HANDLER, _MODEL_TEST_HANDLER
         _MEMORY_HANDLER = self.memory_handler
         _TTS_PREVIEW_HANDLER = self.tts_preview_handler
+        _TTS_VOICE_PROBE_HANDLER = self.tts_voice_probe_handler
         _LLM_PREVIEW_HANDLER = self.llm_preview_handler
         _MODEL_TEST_HANDLER = self.model_test_handler
         _WAKE_WORD_HANDLER = None
@@ -427,6 +438,15 @@ class SimpleHttpServer:
                         web.options(
                             "/api/tts/preview",
                             self.tts_preview_handler.handle_options,
+                        ),
+                        # 内部 TTS 音色批量探测 API（同 tts/preview 安全模型）
+                        web.post(
+                            "/api/tts/voice-probe",
+                            self.tts_voice_probe_handler.handle_probe,
+                        ),
+                        web.options(
+                            "/api/tts/voice-probe",
+                            self.tts_voice_probe_handler.handle_options,
                         ),
                     ]
                 )

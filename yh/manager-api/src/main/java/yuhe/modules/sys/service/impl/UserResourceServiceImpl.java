@@ -34,6 +34,8 @@ import yuhe.modules.sys.dao.SysUserCustomVoiceDao;
 import yuhe.modules.sys.entity.SysUserCustomModelEntity;
 import yuhe.modules.sys.entity.SysUserCustomVoiceEntity;
 import yuhe.modules.sys.service.UserResourceService;
+import yuhe.modules.model.entity.ModelConfigEntity;
+import yuhe.modules.model.service.ModelConfigService;
 import yuhe.modules.timbre.dao.TimbreDao;
 import yuhe.modules.timbre.entity.TimbreEntity;
 
@@ -52,13 +54,15 @@ public class UserResourceServiceImpl implements UserResourceService {
     private final SysUserCustomVoiceDao voiceDao;
     private final TimbreDao timbreDao;
     private final SysParamsDao sysParamsDao;
+    private final ModelConfigService modelConfigService;
 
     public UserResourceServiceImpl(SysUserCustomModelDao modelDao, SysUserCustomVoiceDao voiceDao,
-            TimbreDao timbreDao, SysParamsDao sysParamsDao) {
+            TimbreDao timbreDao, SysParamsDao sysParamsDao, ModelConfigService modelConfigService) {
         this.modelDao = modelDao;
         this.voiceDao = voiceDao;
         this.timbreDao = timbreDao;
         this.sysParamsDao = sysParamsDao;
+        this.modelConfigService = modelConfigService;
     }
 
     // ==================== 资源聚合 ====================
@@ -98,6 +102,46 @@ public class UserResourceServiceImpl implements UserResourceService {
             }
         }
         data.put("ttsVoices", ttsVoices);
+
+        // LLM 模型（Home.vue 创建/编辑弹窗的"大脑"下拉与统计卡依赖 llmModels）：
+        // 平台启用的 LLM + 本人审核通过的自定义 LLM（模型为0规则）
+        List<Map<String, Object>> llmModels = new ArrayList<>();
+        try {
+            for (ModelConfigEntity m : modelConfigService.getEnabledModelsByType("LLM")) {
+                // 可用性过滤与 AgentServiceImpl.resolveUsableLlmOrDefault 同语义：
+                // 占位 key（含中文）的模型不下发，避免选中后创建智能体被静默回退
+                if (m.getConfigJson() != null) {
+                    Object key = m.getConfigJson().get("api_key");
+                    if (key instanceof String s && (s.contains("你") || s.chars().anyMatch(c -> c > 127))) {
+                        continue;
+                    }
+                }
+                Map<String, Object> mm = new LinkedHashMap<>();
+                mm.put("id", m.getId());
+                mm.put("modelName", m.getModelName());
+                mm.put("providerCode", m.getModelCode());
+                llmModels.add(mm);
+            }
+        } catch (Exception ignored) {
+            // 平台模型查询失败不阻塞资源聚合（前端回退空列表显示引导）
+        }
+        if (userId != null) {
+            LambdaQueryWrapper<SysUserCustomModelEntity> mw = new LambdaQueryWrapper<SysUserCustomModelEntity>()
+                    .eq(SysUserCustomModelEntity::getUserId, userId)
+                    .eq(SysUserCustomModelEntity::getAuditStatus, 1)
+                    .eq(SysUserCustomModelEntity::getStatus, 1)
+                    .and(w -> w.eq(SysUserCustomModelEntity::getModelType, "LLM")
+                            .or().eq(SysUserCustomModelEntity::getModelType, "llm"));
+            for (SysUserCustomModelEntity e : modelDao.selectList(mw)) {
+                Map<String, Object> mm = new LinkedHashMap<>();
+                mm.put("id", e.getId());
+                mm.put("modelName", e.getModelName());
+                mm.put("providerCode", e.getProviderCode());
+                mm.put("custom", true);
+                llmModels.add(mm);
+            }
+        }
+        data.put("llmModels", llmModels);
         return data;
     }
 

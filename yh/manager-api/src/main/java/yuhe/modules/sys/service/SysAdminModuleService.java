@@ -48,6 +48,12 @@ public interface SysAdminModuleService {
      */
     Map<String, Object> myDisplayConfig();
 
+    /**
+     * 指定用户的生效展示配置（Realm 授权/后台任务用，非登录上下文）。
+     * 合并规则与 myDisplayConfig 一致。
+     */
+    Map<String, Object> mergedDisplayConfig(Long userId);
+
     // ===== 默认配置（SPEC §4.3） =====
     Map<String, Object> userDefaultGet(Integer scopeType, Long roleId, Long userId);
 

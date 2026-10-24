@@ -30,8 +30,9 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 # ---------------------------------------------------------------------------
 # 常量
@@ -427,15 +428,19 @@ def print_board_list(boards: list[dict[str, Any]], broken: list[tuple[str, list[
 # ---------------------------------------------------------------------------
 
 
-def choose_board(boards: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+ALL_BOARDS = "__all__"  # choose_board 返回该哨兵值表示用户选择了「全量构建」
+
+
+def choose_board(boards: list[dict[str, Any]]) -> Union[dict[str, Any], str, None]:
+    """交互选版型。返回版型 dict、全量哨兵 ALL_BOARDS（输入 0）或 None（取消）。"""
     if not sys.stdin.isatty():
-        notice_bad("当前不是交互式终端，请用 --board <id> 指定版型")
+        notice_bad("当前不是交互式终端，请用 --board <id> 或 --all 指定")
         return None
 
     total = len(boards)
     for attempt in range(3):
         try:
-            answer = input(f"请输入编号或版型 id（1-{total}，q 退出）: ").strip()
+            answer = input(f"请输入编号或版型 id（0=全量，1-{total}，q 退出）: ").strip()
         except EOFError:
             say("")
             notice_bad("没有读到输入，已退出")
@@ -443,6 +448,8 @@ def choose_board(boards: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
         if answer.lower() in {"q", "quit", "exit"}:
             say("已取消。")
             return None
+        if answer == "0":
+            return ALL_BOARDS
         if answer.isdigit():
             index = int(answer)
             if 1 <= index <= total:
@@ -451,7 +458,9 @@ def choose_board(boards: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
             for board in boards:
                 if board["id"] == answer:
                     return board
-        say(f"{red('[错误]')} 输入无效：{answer!r}，请输入 1-{total} 之间的编号或版型 id")
+            if answer.lower() in {"all", "a"}:
+                return ALL_BOARDS
+        say(f"{red('[错误]')} 输入无效：{answer!r}，请输入 0（全量）、1-{total} 之间的编号或版型 id")
     notice_bad("连续 3 次输入无效，已退出（重新运行本脚本即可）")
     return None
 
@@ -1727,6 +1736,169 @@ def ensure_components(fw_root: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 5.9 全量构建（--all：所有版型 × 生产+测试 × 所有主题）
+# ---------------------------------------------------------------------------
+
+
+def _clean_build_dir(fw_root: Path) -> None:
+    """删 <FW>/build 触发全量重编（切换版型后 sdkconfig 变化，增量编译不可靠）。"""
+    build_dir = fw_root / "build"
+    if not build_dir.is_dir():
+        return
+    say(f"  清理编译目录: {build_dir}")
+    shutil.rmtree(build_dir, ignore_errors=True)
+
+
+def _board_build_plan(board: dict[str, Any]) -> list[tuple[str, str]]:
+    """一个版型的全量组合列表：[(server_env, theme), ...]。
+
+    组内排序规则：同环境内先编默认主题（增量编译收益最大），再编其它主题
+    （每次换主题 sdkconfig 变化会触发重配置，但 build/ 可复用加速）。
+    环境顺序 prod → test，两环境切换同样走 reconfigure 复用。
+    """
+    plan: list[tuple[str, str]] = []
+    for env in ("prod", "test"):
+        plan.append((env, DEFAULT_THEME))
+        plan.extend((env, theme) for theme in THEMES if theme != DEFAULT_THEME)
+    return plan
+
+
+def run_build_all(
+    boards: list[dict[str, Any]],
+    args: argparse.Namespace,
+    fw_root: Path,
+) -> int:
+    """全量构建入口：所有版型 × 生产+测试 × 所有主题。
+
+    每个组合独立走完整流程（同步→注入→编译→归档→版本回填），
+    单个组合失败不中断后续，最后汇总成功/失败清单。
+    """
+    # 引脚未验证的版型在全量模式下默认跳过（不逐个确认；--yes 显式包含）
+    if any(not b["pins_verified"] for b in boards) and not args.yes:
+        say(yellow("以下版型引脚未验证（pins_verified=false），--all 模式默认跳过（加 --yes 可包含）："))
+        for board in boards:
+            if not board["pins_verified"]:
+                say(f"    [跳过] {board['id']}")
+        boards = [b for b in boards if b["pins_verified"]]
+        if not boards:
+            notice_bad("没有引脚已验证的版型可构建，退出")
+            return EXIT_ERROR
+        say()
+
+    combos: list[tuple[dict[str, Any], str, str]] = []
+    for board in boards:
+        for server_env, theme in _board_build_plan(board):
+            combos.append((board, server_env, theme))
+    total = len(combos)
+
+    say()
+    say(bold(f"全量构建：{len(boards)} 版型 × 2 环境 × {len(THEMES)} 主题 = {total} 个组合"))
+    for board in boards:
+        say(f"  {board['id']:<22} {board['name']}")
+    say(f"  环境: prod（生产）/ test（测试）")
+    say(f"  主题: {', '.join(THEMES)}")
+    if args.all_no_clean:
+        say(yellow("  --all-no-clean：不清理 build/（速度优先，风险自担）"))
+    else:
+        say("  开工前与每次切换版型时自动清理 <FW>/build（保证全量重编，耗时更长）")
+    say()
+
+    idf_error = check_idf_env()
+    if idf_error:
+        notice_bad(idf_error)
+        print_idf_help()
+        return EXIT_ENV
+    announce_idf_env()
+    ensure_components(fw_root)
+
+    # 开工前清一次 build/：用户上次手动编译的可能是别的版型，第一个组合
+    # 直接复用旧缓存会把别的版型的编译产物混进来（--all-no-clean 时尊重用户选择）
+    if not args.all_no_clean:
+        _clean_build_dir(fw_root)
+
+    results: list[tuple[str, str, str, int]] = []  # (board_id, env, theme, rc)
+    start_time = time.time()
+
+    for index, (board, server_env, theme) in enumerate(combos, start=1):
+        label = f"{board['id']} / {server_env} / {theme}"
+        say()
+        say(rule("="))
+        say(bold(f"[{index}/{total}] {label}"))
+        say(rule("="))
+
+        # 版型切换时清 build/（第一个组合无需清理——与单版型流程一致）
+        if index > 1 and not args.all_no_clean:
+            prev_board = combos[index - 2][0]
+            if prev_board["id"] != board["id"]:
+                _clean_build_dir(fw_root)
+
+        try:
+            target = sync_board(board, fw_root)
+            clean_generated_configs(boards, fw_root)
+            apply_server_env(board, server_env)
+            apply_theme(board, theme)
+            config_name, _ = write_build_config(target, board)
+            register_boards(boards, fw_root)
+            apply_project_version(fw_root, board)
+        except RuntimeError as error:
+            notice_bad(f"{label}: 同步/注册失败 - {error}")
+            results.append((board["id"], server_env, theme, EXIT_ERROR))
+            continue
+        except OSError as error:
+            notice_bad(f"{label}: 文件操作失败 - {error}")
+            results.append((board["id"], server_env, theme, EXIT_ERROR))
+            continue
+
+        return_code = run_build(fw_root, board, config_name, list(args.fw_arg), server_env)
+        if return_code != EXIT_OK:
+            results.append((board["id"], server_env, theme, return_code))
+            continue
+
+        if args.no_archive:
+            say(f"  --no-archive：跳过 {label} 产物归档")
+        else:
+            try:
+                archive_outputs(fw_root, board, server_env, theme)
+            except OSError as error:
+                notice_bad(f"{label}: 归档失败（编译结果仍有效）- {error}")
+                results.append((board["id"], server_env, theme, EXIT_ERROR))
+                continue
+
+        # 版本号回填
+        app_bin = fw_root / "build" / "yuhe.bin"
+        if app_bin.is_file():
+            try:
+                write_back_version(board["id"], read_app_version(app_bin))
+            except OSError as error:
+                notice_warn(f"{label}: 版本号回填失败（不影响产物）- {error}")
+
+        results.append((board["id"], server_env, theme, EXIT_OK))
+
+    # ---- 汇总 ----
+    elapsed = time.time() - start_time
+    ok = [r for r in results if r[3] == EXIT_OK]
+    failed = [r for r in results if r[3] != EXIT_OK]
+    say()
+    say(rule("="))
+    say(bold(f"全量构建完成：{len(ok)}/{len(results)} 成功  （耗时 {elapsed / 60:.1f} 分钟）"))
+    say(rule("="))
+    for board_id, server_env, theme, rc in results:
+        mark = green("  ✓") if rc == EXIT_OK else red(f"  ✗ rc={rc}")
+        say(f"{mark}  {board_id:<22} {server_env:<6} {theme}")
+    if failed:
+        say()
+        say(yellow("失败组合的产物未归档；可单独重跑："))
+        for board_id, server_env, theme, _ in failed:
+            say(f"  python hardware/sets/build.py --board {board_id} --server {server_env} --theme {theme}")
+        return EXIT_ERROR
+    notice_ok("全部组合构建成功")
+    say("烧录（独立脚本，含多线程串口探测）：")
+    say(f"        python hardware/sets/flash.py --list")
+    say(f"        python hardware/sets/flash.py --board <id>[-<env>][-<theme>]")
+    return EXIT_OK
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1746,6 +1918,8 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/build.py --board yh-cam --theme emopet     # EMOpet 主题\n"
             "  python hardware/sets/build.py --board yh-cam --yes --sync-only  # 只同步+注册\n"
             "  python hardware/sets/build.py --board yh-cam --no-archive       # 编译但不归档\n"
+            "  python hardware/sets/build.py --all                          # 全量：所有版型 × 生产+测试 × 所有主题\n"
+            "  python hardware/sets/build.py --all --yes --all-no-clean     # 全量免交互不清理（最快）\n"
             "\n"
             "不想先激活 ESP-IDF 环境时，直接用 IDF venv 的 python 跑本脚本：\n"
             "  D:\\INSTALL\\esp\\tools\\python\\v6.1\\venv\\Scripts\\python.exe "
@@ -1758,6 +1932,15 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--board", metavar="ID", help="直接指定版型 id，跳过交互选择")
+    parser.add_argument(
+        "--all", action="store_true",
+        help="全量构建：所有可用版型 × 生产+测试环境 × 所有 UI 主题，逐个编译并归档；"
+             "等价于对所有组合跑一遍 --board <id> --server <env> --theme <theme>",
+    )
+    parser.add_argument(
+        "--all-no-clean", action="store_true",
+        help="--all 模式下切换版型时不删除 <FW>/build（风险自担：旧版型编译缓存可能漏编，产物混入旧配置）",
+    )
     parser.add_argument(
         "--server", metavar="ENV", choices=sorted(SERVER_ENVS),
         help=f"目标服务器环境（{'/'.join(sorted(SERVER_ENVS))}），决定固件连生产还是测试；"
@@ -1813,6 +1996,28 @@ def main(argv: Optional[list[str]] = None) -> int:
         notice_bad("没有可用版型，请先在 boards/<id>/ 下按 SPEC.md 补齐 set.json 等文件")
         return EXIT_ERROR
 
+    # --all 全量构建：所有版型 × 生产+测试 × 所有主题（不走单版型交互流程）
+    if args.all:
+        if args.board:
+            notice_bad("--all 与 --board 互斥（--all 已覆盖所有版型）")
+            return EXIT_ENV
+        if args.sync_only:
+            notice_bad("--all 不支持 --sync-only（全量构建必然要编译）")
+            return EXIT_ENV
+        if args.server:
+            notice_bad("--all 与 --server 互斥（--all 已包含生产+测试全部环境）")
+            return EXIT_ENV
+        if args.theme:
+            notice_bad("--all 与 --theme 互斥（--all 已包含所有主题）")
+            return EXIT_ENV
+        fw_root = resolve_fw_root(args.fw_root)
+        if fw_root is None:
+            notice_bad("自动探测不到固件源码根目录（<FW>）")
+            say("请用 --fw-root 指定，或设置环境变量 YUHE_FW_ROOT。")
+            return EXIT_ENV
+        say(f"  固件根目录: {fw_root}")
+        return run_build_all(boards, args, fw_root)
+
     if args.board:
         selected = next((board for board in boards if board["id"] == args.board), None)
         if selected is None:
@@ -1827,6 +2032,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         selected = choose_board(boards)
         if selected is None:
             return EXIT_ENV
+        if selected == ALL_BOARDS:
+            # 交互中输入 0 = 全量构建（等价 --all）
+            args.all = True
+            fw_root = resolve_fw_root(args.fw_root)
+            if fw_root is None:
+                notice_bad("自动探测不到固件源码根目录（<FW>）")
+                say("请用 --fw-root 指定，或设置环境变量 YUHE_FW_ROOT。")
+                return EXIT_ENV
+            say(f"  固件根目录: {fw_root}")
+            return run_build_all(boards, args, fw_root)
 
     if not confirm_board(selected, args.yes):
         return EXIT_OK

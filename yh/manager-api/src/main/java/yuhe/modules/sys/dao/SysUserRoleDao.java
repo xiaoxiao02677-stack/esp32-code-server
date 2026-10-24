@@ -18,6 +18,11 @@ public interface SysUserRoleDao extends BaseMapper<SysUserRoleEntity> {
     @Select("SELECT role_id FROM sys_user_role WHERE user_id = #{userId}")
     java.util.List<Long> selectRoleIdsByUserId(@Param("userId") Long userId);
 
+    /** 用户角色码（登录态 UserDetail.roles 数据源；连表 sys_role 过滤已删除角色） */
+    @Select("SELECT r.role_code FROM sys_user_role ur JOIN sys_role r ON r.id = ur.role_id"
+            + " WHERE ur.user_id = #{userId}")
+    java.util.List<String> selectRoleCodesByUserId(@Param("userId") Long userId);
+
     @Delete("DELETE FROM sys_user_role WHERE user_id = #{userId}")
     int deleteByUserId(@Param("userId") Long userId);
 }

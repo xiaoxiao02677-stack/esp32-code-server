@@ -1,5 +1,7 @@
 package yuhe.modules.security.service;
 
+import java.util.List;
+
 import yuhe.modules.security.entity.SysUserTokenEntity;
 import yuhe.modules.sys.entity.SysUserEntity;
 
@@ -19,4 +21,8 @@ public interface ShiroService {
      */
     SysUserEntity getUser(Long userId);
 
+    /**
+     * 根据用户ID，查询角色码列表（UserDetail.roles 数据源）
+     */
+    List<String> getRoleCodes(Long userId);
 }

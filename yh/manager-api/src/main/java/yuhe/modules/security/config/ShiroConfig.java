@@ -101,6 +101,8 @@ public class ShiroConfig {
         filterMap.put("/memory/**", "oauth2");
         filterMap.put("/agent/play/**", "anon");
         filterMap.put("/voiceClone/play/**", "anon");
+        // 支付宝异步回调（Shiro anon：服务端应答纯文本 success/fail，无登录态）
+        filterMap.put("/pay/alipay/**", "anon");
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
 

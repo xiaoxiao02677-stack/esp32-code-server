@@ -30,10 +30,18 @@ async def sendAudioMessage(conn: "ConnectionHandler", sentenceType, audios, text
         conn.tts.tts_audio_first_sentence = False
 
     if sentenceType == SentenceType.FIRST:
-        # 同一句子的后续消息加入流控队列，其他情况立即发送
+        # 同一句子的后续消息加入流控队列，其他情况立即发送。
+        # 必须同时校验后台发送任务存活：tts stop 已 stop_sending() 后
+        # 队列无人消费，而 duplex 轮间 sentence_id 不变（本地 chat 旁路），
+        # 仅凭 sentence_id 相等会把 sentence_start 塞进死队列，随下一次
+        # MIDDLE 帧触发 reset() 时 queue.clear() 丢弃——第二轮起助手字幕
+        # 全部消失（2026-10-24 实录）。任务已死则立即发送，随后音频帧
+        # 会重建流控循环，wire 顺序 sentence_start → 音频帧不变。
         if (
             hasattr(conn, "audio_rate_controller")
             and conn.audio_rate_controller
+            and conn.audio_rate_controller.pending_send_task
+            and not conn.audio_rate_controller.pending_send_task.done()
             and getattr(conn, "audio_flow_control", {}).get("sentence_id")
             == conn.sentence_id
         ):

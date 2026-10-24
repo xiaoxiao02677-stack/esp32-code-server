@@ -32,6 +32,7 @@
         <liquibase-core.version>4.20.0</liquibase-core.version>
         <aliyun-sms-version>4.1.0</aliyun-sms-version>
         <okio-version>3.4.0</okio-version>
+        <alipay-sdk.version>4.40.272.ALL</alipay-sdk.version>
         <skipTests>true</skipTests>
         <argLine></argLine>
     </properties>
@@ -246,6 +247,12 @@
             <groupId>com.squareup.okio</groupId>
             <artifactId>okio</artifactId>
             <version>${okio-version}</version>
+        </dependency>
+        <!-- 支付宝支付sdk（小店支付：/pay/create、/pay/alipay/notify） -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>${alipay-sdk.version}</version>
         </dependency>
     </dependencies>
 

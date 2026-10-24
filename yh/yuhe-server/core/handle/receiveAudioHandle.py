@@ -45,7 +45,15 @@ async def handleAudioMessage(conn: "ConnectionHandler", pcm_frame):
         return
     # 服务端AEC功能需要实时触发打断
     if conn.client_aec:
-        if conn.client_is_speaking and conn.client_listen_mode != "manual":
+        # duplex 一条龙：打断判定由百炼服务端完成（AEC 板回声已消除，真人
+        # 插话百炼自己 VAD 打断），本地三道防线不再运行，避免双重打断竞态
+        tts = conn.tts
+        duplex_active = (
+            tts is not None
+            and getattr(tts, "full_duplex", False)
+            and tts.activate_session
+        )
+        if not duplex_active and conn.client_is_speaking and conn.client_listen_mode != "manual":
             if have_voice:
                 await _maybe_server_interrupt(conn)
             else:
@@ -196,6 +204,16 @@ async def startToChat(conn: "ConnectionHandler", text):
     # 回声防护：非 AEC 设备播报期的回声会被 ASR 转成"用户说话"回传（自言自语
     # 循环的根因）。与最近播报句相似即丢弃，不进对话流。
     if check_echo(conn, text):
+        return
+
+    # duplex 一条龙旁路：ASR+LLM+TTS 全在百炼多模态会话内完成，本地 ASR
+    # 识别的文本不进本地 LLM（与百炼回复撞车）。字幕与对话历史由 provider
+    # 的 SpeechContent 事件处理，这里直接返回。
+    tts = conn.tts
+    if tts is not None and getattr(tts, "full_duplex", False) and tts.activate_session:
+        conn.logger.bind(tag=TAG).debug(
+            f"duplex模式：本地ASR文本不进LLM『{text[:30]}』"
+        )
         return
 
     # 检查输入是否是JSON格式（包含说话人信息）

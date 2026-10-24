@@ -402,6 +402,12 @@ void Application::Run() {
                 auto led = Board::GetInstance().GetLed();
                 led->OnStateChanged();
             } else if (GetDeviceState() == kDeviceStateSpeaking) {
+#if !CONFIG_YH_REALTIME_INTERRUPT
+                // 实时打断总开关（YH_REALTIME_INTERRUPT，默认 n）：播报中
+                // 彻底不做设备侧打断，播报完整播完。为 Realtime API 接入
+                // 预留——届时由服务端统一做打断决策，设备侧保持静默。
+                ESP_LOGD(TAG, "Ignore VAD change: realtime interrupt disabled");
+#else
                 if (aec_mode_ != kAecOnDeviceSide) {
                     // 服务端 AEC / 关闭态：打断判断交给服务器（receiveAudioHandle 的
                     // client_aec 分支），本地 VAD 事件只用于状态展示，不做打断决策
@@ -432,6 +438,7 @@ void Application::Run() {
                         // 反馈交给屏幕状态与 LED，避免播报被掐断后又补一声噪声。
                     }
                 }
+#endif
             }
         }
 
@@ -1342,6 +1349,14 @@ void Application::HandleWakeWordDetectedEvent() {
         StopNotification();
         BeginWakeWordInvoke(wake_word);
     } else if (state == kDeviceStateSpeaking || state == kDeviceStateListening) {
+#if !CONFIG_YH_REALTIME_INTERRUPT
+        if (state == kDeviceStateSpeaking) {
+            // 实时打断总开关关闭：播报中唤醒词不打断（回声误触发防护 +
+            // Realtime API 预留）。Listening 态的唤醒词处理不受影响。
+            ESP_LOGI(TAG, "Ignore wake word in speaking: realtime interrupt disabled");
+            return;
+        }
+#endif
         AbortSpeaking(kAbortReasonWakeWordDetected);
         // Clear send queue to avoid sending residues to server
         while (audio_service_.PopPacketFromSendQueue())
@@ -1530,6 +1545,15 @@ void Application::HandleStateChangedEvent() {
             //      本地 VAD 必须关——单工板没有回采通道，开着必然被自己打断。
             //   2. 设备侧 AEC 真正生效（有回采通道）：本地 VAD + 服务器双路并行。
             //   3. 都没有：关语音处理，只剩唤醒词打断（application.cc:1266）。
+#if !CONFIG_YH_REALTIME_INTERRUPT
+            // 实时打断总开关关闭：播报期不向服务器推麦克风流（服务端 ASR 打断
+            // 的数据源头），也关本地 VAD——设备侧彻底静默，播报完整播完。
+            // 播报结束回 Listening 时 StartListeningAudio 会重新开嗓+推流。
+            // 播报期唤醒词检测按无 AEC 板的原生策略保留（AFE 检测），
+            // 触发后由 HandleWakeWordDetectedEvent 的开关分支静默忽略。
+            audio_service_.EnableVoiceProcessing(false);
+            audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
+#else
             if (listening_mode_ == kListeningModeRealtime &&
                 audio_service_.IsDeviceAecEffective()) {
                 // 设备侧 AEC 生效：保持 VAD（本地打断 + 推流都开）
@@ -1549,6 +1573,7 @@ void Application::HandleStateChangedEvent() {
                 // Only AFE wake word can be detected in speaking mode
                 audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
             }
+#endif
             audio_service_.ResetDecoder();
             break;
         case kDeviceStateNotifying:
@@ -1831,7 +1856,13 @@ void Application::WakeWordInvoke(const std::string& wake_word) {
             }
         });
     } else if (state == kDeviceStateSpeaking) {
+#if !CONFIG_YH_REALTIME_INTERRUPT
+        // 实时打断总开关关闭：播报中外部唤醒调用（板级按钮/自定义唤醒词）
+        // 不打断播报，静默忽略。
+        ESP_LOGI(TAG, "Ignore wake word invoke in speaking: realtime interrupt disabled");
+#else
         Schedule([this]() { AbortSpeaking(kAbortReasonNone); });
+#endif
     } else if (state == kDeviceStateListening) {
         Schedule([this]() {
             if (protocol_) {

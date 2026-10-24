@@ -51,6 +51,9 @@ public class AgentDTO {
     @Schema(description = "设备数量", example = "10")
     private Integer deviceCount;
 
+    /** 共享授权数（超管可见性配置角标） */
+    private Integer shareCount;
+
     @Schema(description = "标签列表")
     private List<AgentTagDTO> tags;
 }

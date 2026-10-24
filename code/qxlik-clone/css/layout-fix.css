@@ -1,0 +1,72 @@
+/* layout-fix.css —— 全站排版可读性补丁 (2026-10-24)
+ *
+ * 目标：解决三类审计问题，不改变原站视觉风格：
+ *  1. 表格长文本被 ellipsis 压成一行且无悬浮提示 → 允许内容型列两行截断
+ *  2. ant-table-cell-ellipsis 的 word-break:keep-all 对 CJK 长词不换行 → break-word
+ *  3. 超宽表格在 bento-content-panel (overflow-x:hidden) 内被裁切 → 横向滚动兜底
+ *
+ * 搭配 js/layout-fix.js 使用：JS 为 ellipsis-text 补 title 属性、
+ * 并给 >24 字的长文本加 .qx-long-text 切换为两行截断。
+ */
+
+/* ---- 1. 长文本两行截断（比单行 ellipsis 可读性更好，行高更舒适） ---- */
+.ellipsis-text.qx-long-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  vertical-align: middle;
+  max-height: 3em; /* 2 行封顶，防行高抖动 */
+}
+/* 两行截断后对应 td 垂直居中保持 */
+.ant-table-tbody > tr > td .ellipsis-text.qx-long-text {
+  display: -webkit-box;
+}
+
+/* ---- 2. 修正 antd ellipsis 的 CJK 不换行问题（仅作用于允许换行的场景） ---- */
+/* keep-all 会让无空格的中英混排长串整个不换行，超出即被裁。 */
+/* 这里只对未标记 qx-long-text 的普通 ellipsis 放宽断词，保持单行省略号外观不变。 */
+.ant-table-wrapper .ant-table-cell-ellipsis {
+  word-break: break-word;
+}
+
+/* ---- 3. 表格容器横向滚动兜底（覆盖 bento-content-panel 的 overflow-x:hidden 裁切） ---- */
+.ant-table-wrapper .ant-table-container {
+  overflow-x: auto;
+}
+/* 滚动条样式与站内一致（细、半透明） */
+.ant-table-wrapper .ant-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+.ant-table-wrapper .ant-table-container::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, .35);
+  border-radius: 4px;
+}
+.ant-table-wrapper .ant-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, .55);
+}
+.ant-table-wrapper .ant-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- 4. 静态页写死的 ellipsis 单元格（无 .ellipsis-text span 的）最小可读保障 ---- */
+.ant-table-tbody > tr > td {
+  overflow-wrap: anywhere; /* 长 URL / 长 token 不撑破布局 */
+}
+
+/* ---- 5. 移动端（<768px）表格密度微调 ---- */
+@media (max-width: 768px) {
+  .bento-content-panel {
+    padding: 16px 16px; /* 原 32px 40px 在窄屏左右吃掉 80px */
+  }
+  .ellipsis-text.qx-long-text {
+    -webkit-line-clamp: 3; /* 窄屏列更窄，放三行保信息量 */
+    line-clamp: 3;
+    max-height: 4.5em;
+  }
+}

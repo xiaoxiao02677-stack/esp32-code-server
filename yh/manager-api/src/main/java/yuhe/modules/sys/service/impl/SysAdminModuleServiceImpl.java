@@ -361,10 +361,18 @@ public class SysAdminModuleServiceImpl implements SysAdminModuleService {
             empty.put("modules", new LinkedHashMap<String, Object>());
             return empty;
         }
-        List<Long> roleIds = sysUserRoleDao.selectRoleIdsByUserId(userId);
+        return mergedDisplayConfig(userId);
+    }
+
+    @Override
+    public Map<String, Object> mergedDisplayConfig(Long userId) {
         Map<String, Object> merged = new LinkedHashMap<>();
         merged.put("fields", new LinkedHashMap<String, Object>());
         merged.put("modules", new LinkedHashMap<String, Object>());
+        if (userId == null) {
+            return merged;
+        }
+        List<Long> roleIds = sysUserRoleDao.selectRoleIdsByUserId(userId);
         // 逐层：系统 → 各角色（按 roleId 升序，靠后的覆盖靠前的）→ 用户
         List<SysDisplayConfigEntity> layers = new ArrayList<>();
         layers.add(findDisplayConfig(0, null, null));

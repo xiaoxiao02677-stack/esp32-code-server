@@ -1,6 +1,8 @@
 package yuhe.common.user;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.Data;
 
@@ -16,4 +18,6 @@ public class UserDetail implements Serializable {
     private Integer superAdmin;
     private String token;
     private Integer status;
+    /** 角色码列表（sys_role.role_code，认证时填充）；前端 hasAdminRole/isModuleVisible 消费 */
+    private List<String> roles = new ArrayList<>();
 }

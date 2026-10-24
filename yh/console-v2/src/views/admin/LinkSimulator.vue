@@ -429,5 +429,6 @@ async function runSimPipeline() {
 @media (max-width: 760px) {
   .sim-stages { flex-direction: column; }
   .sim-arrow { display: none; }
+  .sim-select { min-width: 0; width: 100%; }
 }
 </style>

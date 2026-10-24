@@ -712,4 +712,9 @@ onUnmounted(() => { clearRetry('load'); clearRetry('facts') })
 .trust-fill { height: 100%; border-radius: var(--radius-pill); background: linear-gradient(90deg, #FF8FAB, #F9A8D4); transition: width 0.4s; }
 .trust-num { font-size: 12px; color: var(--text-sub); }
 .fact-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 移动端：引擎选择器不撑破单元格 */
+@media (max-width: 768px) {
+  .engine-select { min-width: 0; max-width: 150px; }
+}
 </style>

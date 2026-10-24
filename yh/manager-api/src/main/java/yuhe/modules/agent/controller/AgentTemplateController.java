@@ -3,6 +3,7 @@ package yuhe.modules.agent.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,7 +44,7 @@ public class AgentTemplateController {
     
     @GetMapping("/page")
     @Operation(summary = "获取模板分页列表")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = Constant.PAGE, description = "当前页码，从1开始", required = true),
             @Parameter(name = Constant.LIMIT, description = "每页显示记录数", required = true),
@@ -79,7 +80,7 @@ public class AgentTemplateController {
     
     @GetMapping("/{id}")
     @Operation(summary = "获取模板详情")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     public Result<AgentTemplateVO> getAgentTemplateById(@PathVariable("id") String id) {
         AgentTemplateEntity template = agentTemplateService.getById(id);
         if (template == null) {
@@ -94,7 +95,7 @@ public class AgentTemplateController {
     
     @PostMapping
     @Operation(summary = "创建模板")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     public Result<AgentTemplateEntity> createAgentTemplate(@Valid @RequestBody AgentTemplateEntity template) {
         // 设置排序值为下一个可用的序号
         template.setSort(agentTemplateService.getNextAvailableSort());
@@ -109,7 +110,7 @@ public class AgentTemplateController {
     
     @PutMapping
     @Operation(summary = "更新模板")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     public Result<AgentTemplateEntity> updateAgentTemplate(@Valid @RequestBody AgentTemplateEntity template) {
         boolean updated = agentTemplateService.updateById(template);
         if (updated) {
@@ -121,7 +122,7 @@ public class AgentTemplateController {
     
     @DeleteMapping("/{id}")
     @Operation(summary = "删除模板")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     public Result<String> deleteAgentTemplate(@PathVariable("id") String id) {
         // 先查询要删除的模板信息，获取其排序值
         AgentTemplateEntity template = agentTemplateService.getById(id);
@@ -146,7 +147,7 @@ public class AgentTemplateController {
     // 添加新的批量删除方法，使用不同的URL
     @PostMapping("/batch-remove")
     @Operation(summary = "批量删除模板")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:templates"}, logical = Logical.OR)
     public Result<String> batchRemoveAgentTemplates(@RequestBody List<String> ids) {
         boolean deleted = agentTemplateService.removeByIds(ids);
         if (deleted) {

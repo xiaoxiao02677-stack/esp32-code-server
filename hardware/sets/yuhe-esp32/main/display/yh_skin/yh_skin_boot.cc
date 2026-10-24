@@ -4,9 +4,11 @@
 
 #include <cstring>
 
-// splash 专用小字体（约 130 个常用中文 + ASCII，~30KB 编译后）：
+// splash 专用小字体（286 码位：常用中文 + ASCII，覆盖 splash 文案、系统卡片
+// （配网/激活/升级/错误）全部固定文案、气泡彩蛋问候语与 lang_config.h 状态串，
+// ~90KB 编译后）：
 // 开机首帧在 assets 分区加载之前渲染，主题字体只有 basic 档（890 字），
-// 「柚/陪/伴/助/初/始/稍/候…」都不在其中，开 LV_USE_FONT_PLACEHOLDER 时
+// 「屿/禾/工/坊/柚/陪/伴/助/初/始/稍/候…」都不在其中，开 LV_USE_FONT_PLACEHOLDER 时
 // 渲染成方框（即用户看到的"开机乱码"）。本字体覆盖 splash 全部文案
 // （品牌名/副标题/lang_config.h 状态串），BuildSplash 首建时直接用它。
 // assets 的 common 档到位后 SetSplashFont 仍会重绑——那是双保险，不是依赖。
@@ -241,7 +243,7 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
 
 // 换字体：开机画面是**在 assets 生效之前**建好的，建的时候用的还是编译进固件的
 // basic 字体（890 字）。assets 里的 common（5258 字）要到 Application 初始化
-// 后段才会被加载，那时 splash 早就画完了 —— 品牌名「小柚」里的「柚」不在 basic
+// 后段才会被加载，那时 splash 早就画完了 —— 品牌名「屿禾工坊」的字都不在 basic
 // 里，就固定显示成方框（本工程开着 LV_USE_FONT_PLACEHOLDER）。
 // 这个函数负责在 assets 就位后把 splash 上的文字重新绑到新字体上。
 // 调用方必须已持有 LVGL 锁（ApplyFonts 是这么调的）。

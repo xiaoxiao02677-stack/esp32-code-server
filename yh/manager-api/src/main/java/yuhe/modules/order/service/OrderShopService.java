@@ -61,8 +61,21 @@ public class OrderShopService {
         if (body == null || id == null) {
             throw new IllegalArgumentException("商品ID不能为空");
         }
+        // 全字段 UPDATE：以现行为底合并（避免缺字段清空）
+        Map<String, Object> cur = goodsMapper.getById(id);
+        if (cur == null) {
+            throw new IllegalArgumentException("商品不存在");
+        }
         normalize(body);
         body.put("id", id);
+        body.put("name", body.get("name") != null ? body.get("name") : cur.get("name"));
+        body.put("cover", body.get("cover") != null ? body.get("cover") : cur.get("cover"));
+        body.put("price", body.get("price") != null ? body.get("price") : cur.get("price"));
+        body.put("stock", body.get("stock") != null ? body.get("stock") : cur.get("stock"));
+        body.put("category", body.get("category") != null ? body.get("category") : cur.get("category"));
+        body.put("status", body.get("status") != null ? body.get("status") : cur.get("status"));
+        body.put("sort", body.get("sort") != null ? body.get("sort") : cur.get("sort"));
+        body.put("remark", body.get("remark") != null ? body.get("remark") : cur.get("remark"));
         goodsMapper.update(body);
     }
 
@@ -74,12 +87,9 @@ public class OrderShopService {
         return goodsMapper.selectList(null, null, null, 0, 10000);
     }
 
-    /** 上下架开关：PUT 语义复用 update */
+    /** 上下架开关：专用单列 UPDATE */
     public void goodsToggle(Long id, Integer status) {
-        Map<String, Object> p = new LinkedHashMap<>();
-        p.put("id", id);
-        p.put("status", status == null ? 1 : status);
-        goodsMapper.update(p);
+        goodsMapper.updateStatus(id, status == null ? 1 : status);
     }
 
     private void normalize(Map<String, Object> body) {
@@ -237,10 +247,11 @@ public class OrderShopService {
         // 汇总商品描述
         StringBuilder product = new StringBuilder();
         for (int i = 0; i < picked.size(); i++) {
+            Map<String, Object> item = picked.get(i);
             if (i > 0) {
                 product.append("、");
             }
-            product.append(r.get("name")).append(" x").append(r.get("qty"));
+            product.append(item.get("name")).append(" x").append(item.get("qty"));
         }
         String orderId = "OD" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
         Map<String, Object> order = new LinkedHashMap<>();

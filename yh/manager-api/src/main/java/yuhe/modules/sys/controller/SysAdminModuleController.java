@@ -3,6 +3,7 @@ package yuhe.modules.sys.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,11 @@ import yuhe.modules.sys.vo.AdminRoleVO;
 /**
  * 管理端扩展模块控制层（console-v2 五页面契约，SPEC §4）
  * 角色 / 审计日志 / 展示配置 / 默认配置 / 自定义审核
+ *
+ * <p>模块级权限说明：audit / defaults / custom-review 三个模块对持有对应
+ * admin:xxx 权限码的用户开放（Logical.OR 超管或模块码）。roles 与
+ * display-config 是权限体系的管理入口（角色 permissions、可见模块发放权限码
+ * 的数据源），开放给普通用户等于自授权提权，故保持超管专用。</p>
  */
 @AllArgsConstructor
 @RestController
@@ -94,7 +100,7 @@ public class SysAdminModuleController {
 
     @GetMapping("/audit/page")
     @Operation(summary = "审计日志分页（DB created_at → createdDate）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:audit"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "userId", description = "用户ID", required = false),
             @Parameter(name = "module", description = "模块名", required = false),
@@ -111,7 +117,7 @@ public class SysAdminModuleController {
 
     @GetMapping("/audit/modules")
     @Operation(summary = "审计模块名去重列表（下拉）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:audit"}, logical = Logical.OR)
     public Result<List<String>> auditModules() {
         return new Result<List<String>>().ok(sysAdminModuleService.auditModules());
     }
@@ -145,7 +151,7 @@ public class SysAdminModuleController {
 
     @GetMapping("/user-default")
     @Operation(summary = "查默认模型配置（无行返回空对象）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:defaults"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "scopeType", description = "0系统 1角色 2用户", required = true),
             @Parameter(name = "roleId", description = "scopeType=1 必填", required = false),
@@ -160,7 +166,7 @@ public class SysAdminModuleController {
 
     @PutMapping("/user-default")
     @Operation(summary = "保存默认模型配置（upsert；null 字段显式落库表示清除）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:defaults"}, logical = Logical.OR)
     public Result<Void> userDefaultSave(@RequestBody SysUserDefaultSaveDTO dto) {
         sysAdminModuleService.userDefaultSave(dto);
         return new Result<Void>();
@@ -170,7 +176,7 @@ public class SysAdminModuleController {
 
     @GetMapping("/custom-models/page")
     @Operation(summary = "自定义模型审核分页（含 username/apiKeyMasked）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:custom-review"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "auditStatus", description = "0待审 1过 2驳", required = false),
             @Parameter(name = "keyword", description = "模型名/用户名/供应器", required = false),
@@ -184,7 +190,7 @@ public class SysAdminModuleController {
 
     @PostMapping("/custom-models/audit")
     @Operation(summary = "模型审核（驳回必须 remark 10236）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:custom-review"}, logical = Logical.OR)
     public Result<Void> customModelAudit(@RequestBody AdminCustomAuditDTO dto) {
         sysAdminModuleService.customModelAudit(dto);
         return new Result<Void>();
@@ -192,7 +198,7 @@ public class SysAdminModuleController {
 
     @PutMapping("/custom-models/quota")
     @Operation(summary = "模型配额（quotaLimit=null 不限）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:custom-review"}, logical = Logical.OR)
     public Result<Void> customModelQuota(@RequestBody AdminCustomQuotaDTO dto) {
         sysAdminModuleService.customModelQuota(dto);
         return new Result<Void>();
@@ -200,7 +206,7 @@ public class SysAdminModuleController {
 
     @GetMapping("/custom-voices/page")
     @Operation(summary = "自定义音色审核分页（含 username）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:custom-review"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "auditStatus", description = "0待审 1过 2驳", required = false),
             @Parameter(name = "keyword", description = "音色名/用户名", required = false),
@@ -214,7 +220,7 @@ public class SysAdminModuleController {
 
     @PostMapping("/custom-voices/audit")
     @Operation(summary = "音色审核（驳回必须 remark 10236）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:custom-review"}, logical = Logical.OR)
     public Result<Void> customVoiceAudit(@RequestBody AdminCustomAuditDTO dto) {
         sysAdminModuleService.customVoiceAudit(dto);
         return new Result<Void>();

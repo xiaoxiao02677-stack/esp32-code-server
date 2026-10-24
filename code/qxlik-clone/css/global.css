@@ -1,0 +1,203 @@
+/* ==========================================================================
+   qxlik-clone — 全局样式（照搬 Connect Ai - 智能物联网管理平台）
+   源站: xiaozhi.qxlik.cn | 提取自 index-Ck3GRkxY.css 223 条规则 + 主题 token
+   ========================================================================== */
+
+/* ---------- 设计 token（照搬源站 antd 两套主题的 CSS 变量化） ---------- */
+:root {
+  /* 浅色主题（mce: defaultAlgorithm） */
+  --ant-color-primary: #111827;
+  --ant-color-primary-hover: #374151;
+  --ant-color-primary-border: #4B5563;
+  --ant-color-info: #4F46E5;
+  --ant-color-error: #DC2626;
+  --ant-color-error-bg: rgba(220, 38, 38, 0.06);
+  --ant-color-success: #059669;
+  --ant-color-warning: #D97706;
+  --ant-color-bg-base: #F4F5F7;
+  --ant-color-bg-container: #FFFFFF;
+  --ant-color-bg-elevated: #FFFFFF;
+  --ant-color-border: #E5E7EB;
+  --ant-color-border-secondary: #F3F4F6;
+  --ant-color-text: #111827;
+  --ant-color-text-secondary: #4B5563;
+  --ant-color-text-tertiary: #9CA3AF;
+  --ant-color-text-quaternary: #D1D5DB;
+  --ant-color-text-inverse: #FFFFFF;
+  --ant-color-fill-quaternary: #F3F4F6;
+  --ant-color-fill-tertiary: #E5E7EB;
+  --ant-color-fill-secondary: #EEF0F3;
+  --ant-color-error-hover: #EF4444;
+  --ant-color-primary-bg: rgba(17, 24, 39, 0.08);
+  --box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.02);
+  --box-shadow-secondary: 0 8px 32px 0 rgba(0, 0, 0, 0.04);
+  --border-radius: 12px;
+  --border-radius-lg: 16px;
+  --border-radius-sm: 8px;
+  --control-height: 40px;
+  /* 源站 DashboardView 遗留变量 */
+  --primary-color: #111827;
+  --text-color: #111827;
+  --text-secondary: #4B5563;
+  --bg-secondary: #F9FAFB;
+}
+
+/* ---------- 基础重置 ---------- */
+*, *:before, *:after { box-sizing: border-box; margin: 0; font-weight: 400; }
+
+/* 全局过渡（源站特性：所有元素颜色 0.3s 过渡，主题切换丝滑） */
+* { transition: background-color .3s ease, color .3s ease, border-color .3s ease; }
+
+html, body { width: 100%; height: 100%; }
+body {
+  min-height: 100vh;
+  color: var(--ant-color-text);
+  background-color: var(--ant-color-bg-base);
+  transition: background-color .3s ease, color .3s ease;
+  line-height: 1.6;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', 'PingFang SC', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .outfit-font {
+  font-family: 'Outfit', 'Noto Sans SC', 'PingFang SC', sans-serif;
+}
+
+#app { width: 100%; height: 100%; background-color: var(--ant-color-bg-base); min-height: 100vh; }
+
+a { color: var(--ant-color-primary); text-decoration: none; }
+a:hover { color: var(--ant-color-primary-hover); }
+
+/* ---------- 滚动条（源站 6px 细滚动条） ---------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #00000026; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #0000004d; }
+
+/* ---------- 危险链接 ---------- */
+.danger-link, .delete-link { color: #ff4d4f !important; text-decoration: none; transition: color .3s ease; }
+.danger-link:hover, .delete-link:hover { color: #ff7875 !important; text-decoration: none; }
+
+/* ---------- nprogress 路由进度条 ---------- */
+#nprogress { pointer-events: none; }
+#nprogress .bar {
+  background: #29d;
+  position: fixed;
+  z-index: 1031;
+  top: 0; left: 0;
+  width: 100%;
+  height: 2px;
+}
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px #29d, 0 0 5px #29d;
+  opacity: 1;
+  transform: rotate(3deg) translateY(-4px);
+}
+#nprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: 1031;
+  top: 15px; right: 15px;
+}
+#nprogress .spinner-icon {
+  width: 18px; height: 18px;
+  box-sizing: border-box;
+  border: solid 2px transparent;
+  border-top-color: #29d;
+  border-left-color: #29d;
+  border-radius: 50%;
+  animation: nprogress-spinner .4s linear infinite;
+}
+.nprogress-custom-parent { overflow: hidden; position: relative; }
+.nprogress-custom-parent #nprogress .spinner,
+.nprogress-custom-parent #nprogress .bar { position: absolute; }
+
+/* ---------- 全局 loading（毛玻璃遮罩） ---------- */
+.global-loading {
+  position: fixed; inset: 0;
+  background: #00000080;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 9999;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.loading-content { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.loading-text { color: #fff; font-size: 16px; font-weight: 500; }
+.loading-circle {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: loadingCircle 1s infinite linear;
+}
+.fade-enter-active, .fade-leave-active { transition: opacity .3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ---------- 错误边界 ---------- */
+.error-boundary { width: 100%; height: 100%; }
+.error-container {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 400px; padding: 40px 20px;
+}
+.error-content { text-align: center; max-width: 600px; }
+.error-icon { margin-bottom: 24px; }
+.error-icon svg {
+  display: inline-block;
+  animation: shake .5s ease-in-out;
+}
+.error-title {
+  font-size: 24px; font-weight: 600;
+  color: var(--ant-color-text);
+  margin-bottom: 16px;
+}
+.error-message {
+  font-size: 16px;
+  color: var(--ant-color-text-secondary);
+  margin-bottom: 32px;
+  word-break: break-word;
+}
+.error-actions { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
+
+/* ---------- antd 风格组件基类（弹窗/抽屉） ---------- */
+.ant-modal-content {
+  border-radius: 16px !important;
+  padding: 32px !important;
+  border: 1px solid var(--ant-color-border) !important;
+  box-shadow: 0 10px 40px -10px #0000001a !important;
+  background-color: var(--ant-color-bg-container) !important;
+}
+
+/* ---------- 动画关键帧 ---------- */
+@keyframes nprogress-spinner {
+  0% { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes loadingCircle {
+  0% { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes shake {
+  0%, to { transform: translate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-10px); }
+  20%, 40%, 60%, 80% { transform: translate(10px); }
+}
+@keyframes pulse-dot {
+  0%, to { opacity: 1; }
+  50% { opacity: .5; }
+}
+@keyframes recording-pulse {
+  0% { box-shadow: 0 0 #ff4d4f66; }
+  50% { box-shadow: 0 0 0 8px #ff4d4f00; }
+  to { box-shadow: 0 0 #ff4d4f00; }
+}
+@keyframes cardIn {
+  0% { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}

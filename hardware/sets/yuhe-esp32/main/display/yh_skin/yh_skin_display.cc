@@ -27,7 +27,49 @@
 
 #define TAG "YhSkin"
 
+// splash 专用小字体（286 码位，覆盖主界面全部固定文案）：开机到 assets 加载
+// （激活完成 assets.Apply()）之间，主题 text 字体是 basic 档（890 字），
+// 气泡「我在呢」的「呢」、底部提示「短按说话 长按菜单」等多字缺失。
+// TextFontFallback 按文案内容探测，缺字整行回落本字体；common 档到位后
+// ApplyFonts() 会统一重绑主题字体，视觉回归一致。
+extern const lv_font_t font_splash_20_4;
+
 namespace {
+
+// 文字字体回落：主题 text 字体缺文案中任一字形（basic 档场景）→ splash 字体。
+// 整行同字体，避免逐字符混排导致行高/基线跳动。
+const lv_font_t* TextFontFallback(const char* text, const lv_font_t* theme_text) {
+    if (text == nullptr) {
+        return theme_text;
+    }
+    const lv_font_t* fallback = (theme_text != nullptr) ? theme_text : &font_splash_20_4;
+    if (fallback == &font_splash_20_4) {
+        return fallback;
+    }
+    lv_font_glyph_dsc_t dsc;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(text);
+    while (*p != '\0') {
+        uint32_t cp = 0;
+        int seq = 1;
+        if ((*p & 0x80u) == 0x00u) {
+            cp = *p;
+        } else if ((*p & 0xE0u) == 0xC0u) {
+            cp = *p & 0x1Fu; seq = 2;
+        } else if ((*p & 0xF0u) == 0xE0u) {
+            cp = *p & 0x0Fu; seq = 3;
+        } else if ((*p & 0xF8u) == 0xF0u) {
+            cp = *p & 0x07u; seq = 4;
+        }
+        for (int i = 1; i < seq && p[i] != '\0'; ++i) {
+            cp = (cp << 6) | (p[i] & 0x3Fu);
+        }
+        if (!lv_font_get_glyph_dsc(fallback, &dsc, cp, 0)) {
+            return &font_splash_20_4;
+        }
+        p += seq;
+    }
+    return fallback;
+}
 
 // 气泡文本上限（按 UTF-8 码点计）。72 是防御性上限：180px 宽 2 行约 18 汉字，
 // 超出部分被气泡裁切（不会画到气泡外），与基准行为一致；本常量的真正职责是
@@ -436,18 +478,16 @@ void YhSkinDisplay::BuildMainScreen() {
     lv_obj_set_width(bubble_label_, profile_.scaled(180));
     lv_label_set_long_mode(bubble_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(bubble_label_, LV_TEXT_ALIGN_CENTER, 0);
-    if (fonts.text != nullptr) {
-        lv_obj_set_style_text_font(bubble_label_, fonts.text, 0);
-    }
+    // basic 阶段「呢」不在 basic 档 → 整行回落 splash 字体（见文件头注释）
+    lv_obj_set_style_text_font(bubble_label_, TextFontFallback("我在呢", fonts.text), 0);
     lv_obj_set_style_text_color(bubble_label_, lv_color_hex(kColorTextMain), 0);
     lv_obj_center(bubble_label_);
 
     // ---- 底部提示 y=-18（基准 y=-12 贴圆边会被裁，这是基准里的 D5 修复）----
     hint_label_ = lv_label_create(screen);
     lv_label_set_text(hint_label_, "短按说话  长按菜单");
-    if (fonts.text != nullptr) {
-        lv_obj_set_style_text_font(hint_label_, fonts.text, 0);
-    }
+    // 同上：「短/按/长/菜/单」都不在 basic 档
+    lv_obj_set_style_text_font(hint_label_, TextFontFallback("短按说话  长按菜单", fonts.text), 0);
     lv_obj_set_style_text_color(hint_label_, lv_color_hex(kColorTextHint), 0);
     lv_obj_align(hint_label_, LV_ALIGN_BOTTOM_MID, 0,
                  profile_.round ? -profile_.scaled(18) : -profile_.scaled(12));
@@ -527,8 +567,8 @@ void YhSkinDisplay::ShowBootSplash() {
     DisplayLockGuard lock(this);
     if (!lock) { return; }  // fail-closed：拿不到 LVGL 锁就不碰对象树
     yh_skin::SplashInfo info;
-    info.brand = "琳琳";
-    info.subtitle = "AI 陪伴助手";
+    info.brand = "屿禾工坊";
+    info.subtitle = "";
     info.version = esp_app_get_description()->version;
     // 开机底图回落链：boot 壁纸 > idle 壁纸（指针只读不接管）。
     // 全空时 SplashInfo::background 为 nullptr，splash 内部回落 yh_skin_bg。
@@ -572,6 +612,10 @@ void YhSkinDisplay::SetBubbleText(const char* text) {
     //   调用点各写一遍可靠。
     DisplayLockGuard lock(this);
     if (!lock) { return; }  // fail-closed：拿不到 LVGL 锁就不碰对象树
+    // 动态文案同样按内容选字体：激活前的错误提示/彩蛋在 basic 档缺字时回落
+    // splash 字体；common 档到位后主题字体全覆盖，走主题字体（见文件头注释）
+    lv_obj_set_style_text_font(bubble_label_,
+                               TextFontFallback(text, CurrentFonts().text), 0);
     lv_label_set_text(bubble_label_, text);
 }
 

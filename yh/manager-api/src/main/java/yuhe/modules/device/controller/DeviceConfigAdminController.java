@@ -2,6 +2,7 @@ package yuhe.modules.device.controller;
 
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +40,7 @@ public class DeviceConfigAdminController {
             @Parameter(name = Constant.PAGE, description = "当前页码，从1开始", required = true),
             @Parameter(name = Constant.LIMIT, description = "每页显示记录数", required = true)
     })
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:devices"}, logical = Logical.OR)
     public Result<PageData<DeviceConfigEntity>> page(@Parameter(hidden = true) @RequestParam Map<String, Object> params) {
         ValidatorUtils.validateEntity(params);
         PageData<DeviceConfigEntity> page = deviceConfigAdminService.page(params);
@@ -48,14 +49,14 @@ public class DeviceConfigAdminController {
 
     @GetMapping("/{deviceId}")
     @Operation(summary = "查询单台设备云端配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:devices"}, logical = Logical.OR)
     public Result<DeviceConfigEntity> get(@PathVariable("deviceId") String deviceId) {
         return new Result<DeviceConfigEntity>().ok(deviceConfigAdminService.selectById(deviceId));
     }
 
     @DeleteMapping("/{deviceId}")
     @Operation(summary = "删除单台设备云端配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:devices"}, logical = Logical.OR)
     public Result<Void> delete(@PathVariable("deviceId") String deviceId) {
         if (!deviceConfigAdminService.deleteById(deviceId)) {
             return new Result<Void>().error("记录不存在或删除失败: " + deviceId);
@@ -65,7 +66,7 @@ public class DeviceConfigAdminController {
 
     @DeleteMapping
     @Operation(summary = "清空全部设备云端配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:devices"}, logical = Logical.OR)
     public Result<Integer> deleteAll() {
         int rows = deviceConfigAdminService.deleteAll();
         return new Result<Integer>().ok(rows);

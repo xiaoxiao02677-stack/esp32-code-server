@@ -53,6 +53,7 @@ import yuhe.modules.agent.service.AgentChatHistoryService;
 import yuhe.modules.agent.service.AgentContextProviderService;
 import yuhe.modules.agent.service.AgentPluginMappingService;
 import yuhe.modules.agent.service.AgentService;
+import yuhe.modules.agent.service.AgentShareService;
 import yuhe.modules.agent.service.AgentSnapshotService;
 import yuhe.modules.agent.service.AgentTagService;
 import yuhe.modules.agent.service.AgentTemplateService;
@@ -85,6 +86,7 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     private final ModelProviderService modelProviderService;
     private final AgentContextProviderService agentContextProviderService;
     private final AgentTagService agentTagService;
+    private final AgentShareService agentShareService;
     private final CorrectWordFileService correctWordFileService;
     private final AgentSnapshotService agentSnapshotService;
     private final yuhe.modules.device.service.DeviceConfigService deviceConfigService;
@@ -354,7 +356,12 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (isCurrentUserSuperAdmin()) {
             return true;
         }
-        return userId != null && userId.equals(agent.getUserId());
+        if (userId != null && userId.equals(agent.getUserId())) {
+            return true;
+        }
+        // 共享授权（ai_agent_share）：按用户/按角色组共享给当前用户
+        // → 视为有权限（顾客端可见、可用、可看会话记录）
+        return agentShareService.isSharedToUser(agent.getId(), userId);
     }
 
     private void requireAgentPermission(AgentEntity agent, Long userId) {
@@ -423,13 +430,26 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         correctWordFileService.deleteMappingsByAgentId(agentId);
         agentTagService.deleteAgentTags(agentId);
         agentSnapshotService.deleteByAgentId(agentId);
+        agentShareService.deleteByAgentId(agentId);
         deleteById(agentId);
     }
 
     @Override
     public List<AgentDTO> getUserAgents(Long userId, String keyword, String searchType) {
         QueryWrapper<AgentEntity> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id", userId).orderByDesc("created_at");
+        // 超管：看全部智能体（/#/admin/agents 管理页数据源）
+        if (isCurrentUserSuperAdmin()) {
+            // 无过滤，稍后统一 orderByDesc
+        } else {
+            // 普通用户：自己的 + 共享授权的（按用户直享 + 所属角色组共享）
+            List<String> sharedIds = agentShareService.getSharedAgentIds(userId);
+            if (sharedIds.isEmpty()) {
+                queryWrapper.eq("user_id", userId);
+            } else {
+                queryWrapper.and(w -> w.eq("user_id", userId).or().in("id", sharedIds));
+            }
+        }
+        queryWrapper.orderByDesc("created_at");
 
         if (StringUtils.isNotBlank(keyword)) {
             queryWrapper.and(w -> {
@@ -490,6 +510,9 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
 
         // 获取设备数量
         dto.setDeviceCount(getDeviceCountByAgentId(agent.getId()));
+
+        // 共享授权数（抽屉角标展示）
+        dto.setShareCount(agentShareService.listByAgentId(agent.getId()).size());
 
         // 获取标签列表
         List<AgentTagEntity> tags = agentTagDao.selectByAgentId(agent.getId());

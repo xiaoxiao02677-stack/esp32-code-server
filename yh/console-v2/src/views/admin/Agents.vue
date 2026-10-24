@@ -21,12 +21,16 @@
       <table class="data-table">
         <thead><tr><th>智能体</th><th>模型</th><th>操作</th></tr></thead>
         <tbody>
-          <!-- 智能体主行：点击「设备」在行下展开该智能体已绑设备（按需加载，收起不占空间） -->
+          <!-- 智能体主行：点击「设备」在行下展开该智能体已绑设备（按需加载，收起不占空间）；
+               点击行主体（名称单元格）打开共享权限抽屉 -->
           <template v-for="a in agents" :key="a.id">
             <tr>
-              <td>
+              <td class="cell-clickable" :title="isSuperAdmin ? '点击设置可见权限' : ''" @click="isSuperAdmin && openShareDrawer(a)">
                 <div class="cell-main">{{ a.name }}</div>
-                <div class="cell-sub">{{ a.boundCount ? `📡 ${a.boundCount} 台设备` : '未绑定设备' }}</div>
+                <div class="cell-sub">
+                  {{ a.boundCount ? `📡 ${a.boundCount} 台设备` : '未绑定设备' }}
+                  <span v-if="isSuperAdmin && a.shareCount" class="share-badge">👁 {{ a.shareCount }} 可见</span>
+                </div>
               </td>
               <td style="font-size:12px">{{ a.llmModel || '—' }}<br />{{ a.ttsModel || '—' }}</td>
               <td>
@@ -34,6 +38,7 @@
                   <button class="link-btn" @click="toggleDevices(a)">
                     {{ expandedAgentId === a.id ? '▲ 收起' : '📱 设备' }}{{ expandedAgentId === a.id ? '' : (a.boundCount ? `(${a.boundCount})` : '') }}
                   </button>
+                  <button v-if="isSuperAdmin" class="link-btn" @click="openShareDrawer(a)">权限</button>
                   <button class="link-btn" @click="loadSessions(a)">会话</button>
                   <button class="link-btn" @click="loadMcp(a)">MCP</button>
                   <button class="link-btn" @click="openEdit(a)">编辑</button>
@@ -64,6 +69,67 @@
         <p>点击右上角「新增智能体」创建第一个</p>
       </div>
     </DataTable>
+
+    <!-- 共享权限抽屉：点击条目名称/权限按钮弹出，设置哪些用户/角色组可以看到该智能体 -->
+    <div v-if="shareDrawer.show" class="drawer-mask" @click.self="shareDrawer.show = false">
+      <div class="drawer">
+        <div class="drawer-head">
+          <div>
+            <h3>可见权限 — {{ shareDrawer.agentName }}</h3>
+            <p class="drawer-sub">设置哪些用户 / 角色组可以在自己的列表中看到该智能体及其绑定设备（对被共享者视同自建，可增删改查）</p>
+          </div>
+          <button class="drawer-close" @click="shareDrawer.show = false">✕</button>
+        </div>
+
+        <div v-if="shareDrawer.loading" class="drawer-body"><p class="drawer-hint">加载中…</p></div>
+        <div v-else class="drawer-body">
+          <!-- 角色组 -->
+          <div class="share-section">
+            <div class="share-section-title">👥 按角色组共享</div>
+            <p class="drawer-hint">该角色下所有用户可见</p>
+            <div class="share-options">
+              <label v-for="r in shareDrawer.roles" :key="'r' + r.id" class="share-option" :class="{ on: shareDrawer.selectedRoles.includes(r.id) }">
+                <input type="checkbox" :value="r.id" v-model="shareDrawer.selectedRoles" />
+                <span class="share-option-name">{{ r.roleName }}</span>
+                <span class="share-option-code">{{ r.roleCode }}</span>
+              </label>
+              <p v-if="!shareDrawer.roles.length" class="drawer-hint">暂无可分配角色</p>
+            </div>
+          </div>
+
+          <!-- 用户 -->
+          <div class="share-section">
+            <div class="share-section-title">👤 按用户共享</div>
+            <div class="share-search-row">
+              <input v-model.trim="shareDrawer.userKeyword" placeholder="搜索用户名…" @input="filterUsers" />
+            </div>
+            <div class="share-options">
+              <label v-for="u in filteredUsers" :key="'u' + u.id" class="share-option" :class="{ on: shareDrawer.selectedUsers.includes(u.id) }">
+                <input type="checkbox" :value="u.id" v-model="shareDrawer.selectedUsers" />
+                <span class="share-option-name">{{ u.username }}</span>
+                <span class="share-option-code">{{ u.roleNames?.length ? u.roleNames.join(' / ') : '未分配角色' }}</span>
+              </label>
+              <p v-if="!filteredUsers.length" class="drawer-hint">{{ shareDrawer.userKeyword ? '无匹配用户' : '暂无用户' }}</p>
+            </div>
+            <p v-if="shareDrawer.selectedUsers.length > filteredUsers.length && !shareDrawer.userKeyword" class="drawer-hint">
+              另有 {{ shareDrawer.selectedUsers.length - filteredUsers.length }} 个已选用户未在列表前 {{ USER_PAGE_LIMIT }} 条中（保存时保留）
+            </p>
+          </div>
+        </div>
+
+        <div class="drawer-foot">
+          <span class="drawer-summary">
+            已选：{{ shareDrawer.selectedRoles.length }} 个角色组 · {{ shareDrawer.selectedUsers.length }} 个用户
+          </span>
+          <div>
+            <button class="btn btn-ghost" @click="shareDrawer.show = false">取消</button>
+            <button class="btn btn-primary" :disabled="shareDrawer.saving" @click="saveShares">
+              {{ shareDrawer.saving ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 会话列表 -->
     <div v-if="sessions.show" class="modal-mask" @click.self="sessions.show = false">
@@ -222,10 +288,13 @@ import { useRouter } from 'vue-router'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
 import { adminApi } from '../../lib/api'
+import { userState } from '../../lib/api'
 
 const router = useRouter()
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
+// 超管判断：抽屉入口（行点击/权限按钮/可见角标）仅超级管理员可见
+const isSuperAdmin = computed(() => (userState.value?.superAdmin ?? 0) === 1)
 
 const agents = ref([])
 const loading = ref(false)
@@ -277,7 +346,8 @@ async function load() {
       name: a.agentName || a.name || '未命名',
       llmModel: a.llmModelId || '',
       ttsModel: a.ttsModelId || '',
-      boundCount: a.deviceCount ?? a.boundCount ?? 0
+      boundCount: a.deviceCount ?? a.boundCount ?? 0,
+      shareCount: a.shareCount ?? 0
     }))
     boundTotal.value = agents.value.reduce((s, a) => s + (a.boundCount || 0), 0)
   } catch (e) { toast(e.msg || '加载失败', 'error') }
@@ -515,6 +585,88 @@ function goChat(s) {
   router.push({ path: '/admin/chat', query: { agentId: sessions.agentId, sessionId: s.sessionId } })
 }
 
+// ── 共享权限抽屉（超管配置：哪些用户/角色组可见该智能体） ──
+const USER_PAGE_LIMIT = 200
+const shareDrawer = reactive({
+  show: false, loading: false, saving: false,
+  agentId: '', agentName: '',
+  roles: [],            // 全部可分配角色 [{id, roleName, roleCode}]
+  users: [],            // 用户候选 [{id, username, roleNames}]
+  selectedRoles: [],    // 已选角色 id
+  selectedUsers: [],    // 已选用户 id
+  userKeyword: ''
+})
+const filteredUsers = computed(() => {
+  const kw = shareDrawer.userKeyword.toLowerCase()
+  if (!kw) return shareDrawer.users
+  return shareDrawer.users.filter(u => (u.username || '').toLowerCase().includes(kw))
+})
+
+async function loadShareCandidates() {
+  // 角色 + 用户候选并行加载（角色列表轻量全量；用户拉前 200 条，够勾选）
+  const [rolesRes, usersRes] = await Promise.all([
+    adminApi.roleList(),
+    adminApi.userPage({ page: 1, limit: USER_PAGE_LIMIT })
+  ])
+  shareDrawer.roles = rolesRes.data || []
+  const list = usersRes.data?.list || []
+  shareDrawer.users = list.map(u => ({ id: u.id, username: u.username, roleNames: u.roleNames || [] }))
+}
+
+async function openShareDrawer(a) {
+  shareDrawer.agentId = a.id
+  shareDrawer.agentName = a.name
+  shareDrawer.show = true
+  shareDrawer.loading = true
+  shareDrawer.selectedRoles = []
+  shareDrawer.selectedUsers = []
+  shareDrawer.userKeyword = ''
+  try {
+    if (!shareDrawer.roles.length || !shareDrawer.users.length) {
+      await loadShareCandidates()
+    }
+    const res = await adminApi.agentShares(a.id)
+    const shares = res.data || []
+    const roleIds = new Set(shareDrawer.roles.map(r => r.id))
+    const userIds = new Set(shareDrawer.users.map(u => u.id))
+    for (const s of shares) {
+      if (s.targetType === 'role') {
+        // 已选但不在候选列表（角色被删/停用）也要保留可保存
+        if (!roleIds.has(s.targetId)) {
+          shareDrawer.roles.push({ id: s.targetId, roleName: `角色#${s.targetId}`, roleCode: '(已失效)' })
+        }
+        shareDrawer.selectedRoles.push(s.targetId)
+      } else if (s.targetType === 'user') {
+        if (!userIds.has(s.targetId)) {
+          shareDrawer.users.push({ id: s.targetId, username: `用户#${s.targetId}`, roleNames: ['(不在前200条)'] })
+        }
+        shareDrawer.selectedUsers.push(s.targetId)
+      }
+    }
+  } catch (e) {
+    toast(e.msg || '共享配置加载失败', 'error')
+  } finally {
+    shareDrawer.loading = false
+  }
+}
+
+function filterUsers() { /* v-model.trim 已实时过滤，computed filteredUsers 自动生效 */ }
+
+async function saveShares() {
+  shareDrawer.saving = true
+  try {
+    const shares = [
+      ...shareDrawer.selectedRoles.map(id => ({ targetType: 'role', targetId: id })),
+      ...shareDrawer.selectedUsers.map(id => ({ targetType: 'user', targetId: id }))
+    ]
+    await adminApi.agentSharesSave(shareDrawer.agentId, shares)
+    toast('共享权限已保存')
+    shareDrawer.show = false
+    load() // 刷新可见数角标
+  } catch (e) { toast(e.msg || '保存失败', 'error') }
+  finally { shareDrawer.saving = false }
+}
+
 async function loadMcp(a) {
   try {
     const res = await adminApi.mcpAddress(a.id)
@@ -610,4 +762,67 @@ onMounted(load)
   display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
 }
 .chip-unbind:hover { background: var(--danger); color: #fff; }
+/* ── 共享权限抽屉 ── */
+.cell-clickable { cursor: pointer; }
+.cell-clickable:hover .cell-main { color: var(--primary); }
+.share-badge {
+  margin-left: 8px; font-size: 11px; color: var(--primary); font-weight: 600;
+  background: var(--primary-soft); border-radius: 999px; padding: 1px 8px;
+}
+.drawer-mask {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, .45);
+  z-index: 200; display: flex; justify-content: flex-end;
+}
+.drawer {
+  width: min(440px, 92vw); height: 100%; background: var(--surface, #fff);
+  display: flex; flex-direction: column;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, .18);
+  animation: drawer-in .22s ease;
+}
+@keyframes drawer-in { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+.drawer-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  padding: 18px 20px 12px; border-bottom: 1px solid var(--border);
+}
+.drawer-head h3 { margin: 0 0 4px; font-size: 16px; }
+.drawer-sub { margin: 0; font-size: 12px; color: var(--text-sub); line-height: 1.5; }
+.drawer-close {
+  border: none; background: transparent; cursor: pointer; font-size: 15px;
+  color: var(--text-sub); width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
+}
+.drawer-close:hover { background: var(--bg-soft, #F1F5F9); color: var(--text); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 14px 20px; }
+.drawer-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 8px; }
+.share-section { margin-bottom: 18px; }
+.share-section-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.share-search-row { margin: 6px 0; }
+.share-search-row input {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; outline: none; font-family: var(--font);
+}
+.share-search-row input:focus { border-color: var(--primary); }
+.share-options { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.share-option {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 12px;
+  transition: border-color .12s, background .12s;
+}
+.share-option:hover { border-color: var(--primary); }
+.share-option.on { border-color: var(--primary); background: var(--primary-soft, #EEF2FF); }
+.share-option input { accent-color: var(--primary); }
+.share-option-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.share-option-code { font-size: 11px; color: var(--text-sub); margin-left: auto; }
+.drawer-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 12px 20px; border-top: 1px solid var(--border);
+}
+.drawer-summary { font-size: 12px; color: var(--text-sub); }
+.drawer-foot .btn { margin-left: 8px; }
+
+/* 移动端：编辑栅格单列、抽屉全宽、行操作换行 */
+@media (max-width: 768px) {
+  .edit-grid { grid-template-columns: 1fr; }
+  .drawer { width: 100vw; max-width: 100vw; }
+  .row-actions { flex-wrap: wrap; }
+}
 </style>

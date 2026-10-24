@@ -3,8 +3,10 @@ package yuhe.modules.agent.controller;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -43,7 +45,10 @@ import yuhe.modules.agent.dto.AgentCreateDTO;
 import yuhe.modules.agent.dto.AgentDTO;
 import yuhe.modules.agent.dto.AgentMemoryDTO;
 import yuhe.modules.agent.dto.AgentUpdateDTO;
+import yuhe.modules.agent.dto.AgentSharesSaveDTO;
 import yuhe.modules.agent.entity.AgentEntity;
+import yuhe.modules.agent.vo.AgentShareVO;
+import yuhe.modules.agent.service.AgentShareService;
 import yuhe.modules.agent.entity.AgentTemplateEntity;
 import yuhe.modules.agent.dto.AgentTagDTO;
 import yuhe.modules.agent.entity.AgentTagEntity;
@@ -71,6 +76,7 @@ public class AgentController {
     private final AgentChatSummaryService agentChatSummaryService;
     private final RedisUtils redisUtils;
     private final AgentTagService agentTagService;
+    private final AgentShareService agentShareService;
 
     private void requireAgentPermission(String agentId) {
         if (!agentService.checkAgentPermission(agentId, SecurityUser.getUserId())) {
@@ -111,7 +117,7 @@ public class AgentController {
 
     @GetMapping("/all")
     @Operation(summary = "智能体列表（管理员）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:agents"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = Constant.PAGE, description = "当前页码，从1开始", required = true),
             @Parameter(name = Constant.LIMIT, description = "每页显示记录数", required = true),
@@ -120,6 +126,34 @@ public class AgentController {
             @Parameter(hidden = true) @RequestParam Map<String, Object> params) {
         PageData<AgentEntity> page = agentService.adminAgentList(params);
         return new Result<PageData<AgentEntity>>().ok(page);
+    }
+
+    // ==================== 共享授权（超管抽屉） ====================
+
+    @GetMapping("/{id}/shares")
+    @Operation(summary = "获取智能体共享配置（抽屉回显）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:agents"}, logical = Logical.OR)
+    public Result<List<AgentShareVO>> getAgentShares(@PathVariable("id") String id) {
+        List<AgentShareVO> shares = agentShareService.listByAgentId(id).stream()
+                .map(e -> {
+                    AgentShareVO vo = new AgentShareVO();
+                    vo.setTargetType(e.getTargetType());
+                    vo.setTargetId(e.getTargetId());
+                    return vo;
+                })
+                .collect(Collectors.toList());
+        return new Result<List<AgentShareVO>>().ok(shares);
+    }
+
+    @PutMapping("/{id}/shares")
+    @Operation(summary = "保存智能体共享配置（全量覆盖）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:agents"}, logical = Logical.OR)
+    public Result<Void> saveAgentShares(
+            @PathVariable("id") String id,
+            @RequestBody AgentSharesSaveDTO dto) {
+        agentService.getAgentById(id);
+        agentShareService.saveAgentShares(id, dto.getShares(), SecurityUser.getUserId());
+        return new Result<Void>().ok(null);
     }
 
     @GetMapping("/{id}")

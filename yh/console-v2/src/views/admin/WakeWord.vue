@@ -537,4 +537,11 @@ async function pushToDevice(agent) {
   color: var(--primary); background: #fff; border: 1.5px solid var(--border);
   border-radius: 10px; padding: 4px 0; font-variant-numeric: tabular-nums;
 }
+
+/* 移动端：双列配置与设备栅格单列化，滑块值不换行 */
+@media (max-width: 768px) {
+  .config-row { grid-template-columns: 1fr; gap: 12px; }
+  .device-grid { grid-template-columns: 1fr; }
+  .slider-group { flex-wrap: wrap; }
+}
 </style>

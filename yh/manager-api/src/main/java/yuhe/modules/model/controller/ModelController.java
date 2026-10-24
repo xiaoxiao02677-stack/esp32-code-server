@@ -2,6 +2,7 @@ package yuhe.modules.model.controller;
 
 import java.util.List;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,7 +66,7 @@ public class ModelController {
 
     @GetMapping("/{modelType}/provideTypes")
     @Operation(summary = "获取模型供应器列表")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<List<ModelProviderDTO>> getModelProviderList(@PathVariable String modelType) {
         List<ModelProviderDTO> modelProviderDTOS = modelProviderService.getListByModelType(modelType);
         return new Result<List<ModelProviderDTO>>().ok(modelProviderDTOS);
@@ -73,7 +74,7 @@ public class ModelController {
 
     @GetMapping("/list")
     @Operation(summary = "获取模型配置列表")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<PageData<ModelConfigDTO>> getModelConfigList(
             @RequestParam(required = true) String modelType,
             @RequestParam(required = false) String modelName,
@@ -85,7 +86,7 @@ public class ModelController {
 
     @PostMapping("/{modelType}/{provideCode}")
     @Operation(summary = "新增模型配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<ModelConfigDTO> addModelConfig(@PathVariable String modelType,
             @PathVariable String provideCode,
             @RequestBody ModelConfigBodyDTO modelConfigBodyDTO) {
@@ -96,7 +97,7 @@ public class ModelController {
 
     @PutMapping("/{modelType}/{provideCode}/{id}")
     @Operation(summary = "编辑模型配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<ModelConfigDTO> editModelConfig(@PathVariable String modelType,
             @PathVariable String provideCode,
             @PathVariable String id,
@@ -108,7 +109,7 @@ public class ModelController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除模型配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<Void> deleteModelConfig(@PathVariable String id) {
         modelConfigService.delete(id);
         return new Result<>();
@@ -116,7 +117,7 @@ public class ModelController {
 
     @GetMapping("/{id}")
     @Operation(summary = "获取模型配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<ModelConfigDTO> getModelConfig(@PathVariable String id) {
         ModelConfigEntity item = modelConfigService.selectById(id);
         ModelConfigDTO modelConfigDTO = ConvertUtils.sourceToTarget(item, ModelConfigDTO.class);
@@ -125,7 +126,7 @@ public class ModelController {
 
     @PutMapping("/enable/{id}/{status}")
     @Operation(summary = "启用/关闭模型配置")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<Void> enableModelConfig(@PathVariable String id, @PathVariable Integer status) {
         ModelConfigEntity entity = modelConfigService.selectById(id);
         if (entity == null) {
@@ -159,7 +160,7 @@ public class ModelController {
 
     @PutMapping("/default/{id}")
     @Operation(summary = "设置默认模型")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<Void> setDefaultModel(@PathVariable String id) {
         ModelConfigEntity entity = modelConfigService.selectById(id);
         if (entity == null) {

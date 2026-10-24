@@ -3,12 +3,14 @@
 """
 订单管理日报邮件脚本（生产端 /root/xiaozhi-server/tools/）
 
-功能：每天 00:00 查询订单数据库，生成 Excel 订单报表，通过 QQ 邮箱 SMTP 发送给指定收件人。
+功能：每天 00:00 查询订单数据库，生成【全量】订单 Excel 报表，通过 QQ 邮箱 SMTP 发送给指定收件人。
+      全量 = 订单库全部未删除订单（shipping_status <> '3'，与后台订单管理页一致）。
 
 用法：
-    python3 order_report_mailer.py            # 常规发送（今日订单）
-    python3 order_report_mailer.py --once     # 立即执行一次（同常规）
-    python3 order_report_mailer.py --test     # 发送一封测试邮件（含全量订单 Excel）
+    python3 order_report_mailer.py                # 常规发送（全量订单）
+    python3 order_report_mailer.py --once         # 立即执行一次（同常规）
+    python3 order_report_mailer.py --yesterday    # 只发昨天的订单（旧行为，备用）
+    python3 order_report_mailer.py --from 2026-10-01 --to 2026-10-20   # 自定义区间
 
 修改指南：
     - 邮箱账号 / 收件人 / 数据库连接 / 发送时间，全部在 OrderReportMailer.__init__ 的参数数组里改。
@@ -17,7 +19,6 @@
     - 列顺序、列宽、状态中文映射在 SheetBuilder 的 COLUMNS 常量里改。
 """
 import argparse
-import csv
 import logging
 import os
 import smtplib
@@ -61,12 +62,7 @@ class OrderDatabase:
         self.database = database
 
     def fetch_orders(self, date_from=None, date_to=None):
-        """查询指定日期区间（默认今天 00:00 ~ 24:00）的订单，按支付时间倒序。"""
-        if date_from is None:
-            date_from = datetime.now().strftime("%Y-%m-%d 00:00:00")
-        if date_to is None:
-            date_to = datetime.now().strftime("%Y-%m-%d 23:59:59")
-
+        """查询订单：默认全量（排除已删除 shipping_status='3'）；指定区间时按支付时间过滤。"""
         import pymysql
         conn = pymysql.connect(
             host=self.host, port=self.port, user=self.user,
@@ -75,16 +71,28 @@ class OrderDatabase:
         )
         try:
             with conn.cursor(pymysql.cursors.DictCursor) as cur:
-                cur.execute(
-                    """
-                    SELECT id, user_name, contact, product, amount, pay_time,
-                           address, shipping_status, remark, create_time, update_time
-                    FROM order_table
-                    WHERE pay_time >= %s AND pay_time <= %s
-                    ORDER BY pay_time DESC
-                    """,
-                    (date_from, date_to),
-                )
+                if date_from and date_to:
+                    cur.execute(
+                        """
+                        SELECT id, user_name, contact, product, amount, pay_time,
+                               address, shipping_status, remark, create_time, update_time
+                        FROM order_table
+                        WHERE pay_time >= %s AND pay_time <= %s
+                          AND (shipping_status IS NULL OR shipping_status <> '3')
+                        ORDER BY pay_time DESC
+                        """,
+                        (date_from, date_to),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT id, user_name, contact, product, amount, pay_time,
+                               address, shipping_status, remark, create_time, update_time
+                        FROM order_table
+                        WHERE (shipping_status IS NULL OR shipping_status <> '3')
+                        ORDER BY create_time DESC
+                        """
+                    )
                 return cur.fetchall()
         finally:
             conn.close()
@@ -105,18 +113,21 @@ class SheetBuilder:
         ("金额(元)", "amount", 10),
         ("支付时间", "pay_time", 20),
         ("收货地址", "address", 36),
-        ("发货状态", "shipping_status", 10),
+        ("订单状态", "shipping_status", 10),
         ("备注", "remark", 24),
         ("创建时间", "create_time", 20),
     ]
 
-    # 发货状态 → 中文（数据库 shipping_status 存的是字符串，如 "0"/"1"/"已发货"）
+    # 订单状态 → 中文（与后台订单管理页一致：0 待处理 / 1 已发货 / 2 已完成 / 3 已取消）
     STATUS_CN = {
-        "0": "待发货",
+        "0": "待处理",
         "1": "已发货",
-        "2": "已签收",
+        "2": "已完成",
         "3": "已取消",
     }
+
+    def status_cn(self, value):
+        return self.STATUS_CN.get(str(value), str(value) if value else "")
 
     def build(self, rows):
         """rows: list[dict] → 返回临时 xlsx 文件路径。"""
@@ -142,7 +153,7 @@ class SheetBuilder:
             for col_idx, (_title, key, _width) in enumerate(self.COLUMNS, start=1):
                 value = row.get(key)
                 if key == "shipping_status":
-                    value = self.STATUS_CN.get(str(value), str(value) if value else "")
+                    value = self.status_cn(value)
                 elif value is None:
                     value = ""
                 ws.cell(row=r, column=col_idx, value=value).alignment = Alignment(vertical="center")
@@ -239,10 +250,6 @@ class OrderReportMailer:
         self.subject_prefix = "订单日报"
         self.from_display_name = "订单管理系统"
 
-        # ---- 报表范围：默认昨天（cron 在 00:00 运行，报刚结束的那天）；
-        #      手动 --once 补发也报昨天；--from/--to 可自定义区间 ----
-        self.report_date = datetime.now() - timedelta(days=1)
-
         # ---- 组装部件 ----
         self.db = OrderDatabase(**self.db_params)
         self.sheet = SheetBuilder()
@@ -254,36 +261,46 @@ class OrderReportMailer:
 
     # ---------- 流程方法 ----------
     def run(self, date_from=None, date_to=None):
-        """主入口：查询 → Excel → 邮件。失败抛异常（供 cron 日志捕获）。"""
-        date_from = date_from or self.report_date.strftime("%Y-%m-%d 00:00:00")
-        date_to = date_to or self.report_date.strftime("%Y-%m-%d 23:59:59")
-
+        """主入口：查询 → Excel → 邮件。默认全量；失败抛异常（供 cron 日志捕获）。"""
         rows = self.db.fetch_orders(date_from, date_to)
-        log.info(f"查询到 {len(rows)} 条订单（{date_from} ~ {date_to}）")
+        if date_from:
+            range_label = f"{date_from[:10]}~{date_to[:10]}"
+            log.info(f"查询到 {len(rows)} 条订单（区间 {range_label}）")
+        else:
+            range_label = "全量"
+            log.info(f"查询到 {len(rows)} 条订单（全量，排除已删除）")
 
         xlsx_path = self.sheet.build(rows)
         try:
-            subject = f"{self.subject_prefix} {date_from[:10]}（共 {len(rows)} 单）"
-            body = self.build_body_html(date_from[:10], len(rows), rows)
-            filename = f"orders_{date_from[:10].replace('-', '')}.xlsx"
+            today = datetime.now().strftime("%Y-%m-%d")
+            subject = f"{self.subject_prefix} {today}（{range_label}，共 {len(rows)} 单）"
+            body = self.build_body_html(today, range_label, len(rows), rows)
+            filename = f"orders_{today.replace('-', '')}_{range_label}.xlsx"
             self.mailer.send(subject, body, xlsx_path, filename)
             log.info("邮件已发送")
         finally:
             if os.path.exists(xlsx_path):
                 os.remove(xlsx_path)
 
-    def build_body_html(self, day, count, rows):
-        """邮件正文（纯静态 HTML，无需模板引擎）。"""
+    def build_body_html(self, day, range_label, count, rows):
+        """邮件正文（纯静态 HTML，无需模板引擎）。含状态分布统计。"""
+        # 状态分布
+        stat = {}
+        for r in rows:
+            s = self.sheet.status_cn(r.get("shipping_status")) or "未知"
+            stat[s] = stat.get(s, 0) + 1
+        stat_html = " / ".join(f"{k} {v}" for k, v in stat.items()) if stat else "无订单"
         return f"""
         <div style="font-family:'Microsoft YaHei',sans-serif;max-width:640px;margin:0 auto;">
           <h2 style="color:#333;border-bottom:2px solid #4472C4;padding-bottom:8px;">
-            📦 {self.subject_prefix} · {day}
+            📦 {self.subject_prefix} · {day}（{range_label}）
           </h2>
-          <p style="font-size:15px;color:#555;">当日订单总数：<b style="color:#c00;">{count}</b> 单</p>
+          <p style="font-size:15px;color:#555;">订单总数：<b style="color:#c00;">{count}</b> 单</p>
+          <p style="font-size:14px;color:#555;">状态分布：{stat_html}</p>
           <p style="font-size:13px;color:#888;">
             报表生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}（系统自动发送，请勿直接回复）
           </p>
-          <p style="font-size:13px;color:#555;">附件为当日订单明细（Excel），请查收。</p>
+          <p style="font-size:13px;color:#555;">附件为订单明细（Excel，{range_label}，不含已删除订单），请查收。</p>
         </div>
         """
 
@@ -292,11 +309,11 @@ class OrderReportMailer:
 # 入口
 # ============================================================
 def main():
-    parser = argparse.ArgumentParser(description="订单管理日报邮件")
-    parser.add_argument("--once", action="store_true", help="立即执行一次")
-    parser.add_argument("--test", action="store_true", help="发送测试邮件")
-    parser.add_argument("--from", dest="date_from", help="起始日期 YYYY-MM-DD（默认今天）")
-    parser.add_argument("--to", dest="date_to", help="结束日期 YYYY-MM-DD（默认今天）")
+    parser = argparse.ArgumentParser(description="订单日报邮件（默认全量订单）")
+    parser.add_argument("--once", action="store_true", help="立即执行一次（同常规：全量）")
+    parser.add_argument("--yesterday", action="store_true", help="只发昨天的订单（旧行为，备用）")
+    parser.add_argument("--from", dest="date_from", help="起始日期 YYYY-MM-DD")
+    parser.add_argument("--to", dest="date_to", help="结束日期 YYYY-MM-DD")
     args = parser.parse_args()
 
     mailer = OrderReportMailer()
@@ -304,10 +321,14 @@ def main():
         df = args.date_from + " 00:00:00" if args.date_from else None
         dt = args.date_to + " 23:59:59" if args.date_to else None
         mailer.run(date_from=df, date_to=dt)
-    elif args.test:
-        # 测试模式：发全量订单，验证链路
-        mailer.run(date_from="1970-01-01 00:00:00", date_to="2099-12-31 23:59:59")
+    elif args.yesterday:
+        d = datetime.now() - timedelta(days=1)
+        mailer.run(
+            date_from=d.strftime("%Y-%m-%d 00:00:00"),
+            date_to=d.strftime("%Y-%m-%d 23:59:59"),
+        )
     else:
+        # 默认（含 --once）：全量订单
         mailer.run()
 
 

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,7 +56,7 @@ public class AdminController {
 
     @GetMapping("/users")
     @Operation(summary = "分页查找用户（console-v2 Users.vue：keyword 用户名搜索 + deleted 回收站 + roleNames）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "keyword", description = "用户名关键词", required = false),
             @Parameter(name = "deleted", description = "0 正常用户 1 回收站", required = false),
@@ -70,7 +71,7 @@ public class AdminController {
 
     @PostMapping("/users")
     @Operation(summary = "新增用户（返回初始密码）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<String> create(@RequestBody AdminUserCreateDTO dto) {
         String password = sysUserService.adminCreate(dto);
         return new Result<String>().ok(password);
@@ -78,14 +79,14 @@ public class AdminController {
 
     @GetMapping("/users/{id}")
     @Operation(summary = "用户详情（user + 当前角色）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<AdminUserDetailVO> detail(@PathVariable Long id) {
         return new Result<AdminUserDetailVO>().ok(sysUserService.detail(id));
     }
 
     @PutMapping("/users/roles")
     @Operation(summary = "分配角色（全量覆盖）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<Void> assignRoles(@RequestBody AdminUserRolesDTO dto) {
         sysUserService.assignRoles(dto);
         return new Result<Void>();
@@ -93,15 +94,24 @@ public class AdminController {
 
     @PutMapping("/users/restore/{id}")
     @Operation(summary = "从回收站恢复用户")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<Void> restore(@PathVariable Long id) {
         sysUserService.restore(id);
         return new Result<Void>();
     }
 
+    @DeleteMapping("/users/purge/{id}")
+    @Operation(summary = "从回收站彻底删除（物理删除，释放用户名；级联清理设备/智能体/角色/会话）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
+    public Result<Void> purge(@PathVariable Long id) {
+        // 仅回收站账号可彻底删除（deleted=1）；正常用户须先软删除进回收站
+        sysUserService.purge(id, yuhe.modules.security.user.SecurityUser.getUserId());
+        return new Result<>();
+    }
+
     @PostMapping("/users/import")
     @Operation(summary = "批量导入用户（部分失败 10225 data 携带明细）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<Map<String, Object>> importUsers(@RequestBody List<AdminUserImportItemDTO> list) {
         Map<String, Object> result = sysUserService.importUsers(list);
         return new Result<Map<String, Object>>().ok(result);
@@ -109,7 +119,7 @@ public class AdminController {
 
     @GetMapping("/users/export")
     @Operation(summary = "导出用户 CSV")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public void export(HttpServletResponse response,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "0") Integer deleted) throws IOException {
@@ -144,7 +154,7 @@ public class AdminController {
 
     @GetMapping("/users/sessions")
     @Operation(summary = "在线会话分页")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<PageData<AdminSessionVO>> sessions(
             @Parameter(hidden = true) @RequestParam Map<String, Object> params) {
         return new Result<PageData<AdminSessionVO>>().ok(sysUserService.pageSessions(params));
@@ -152,7 +162,7 @@ public class AdminController {
 
     @PostMapping("/users/forceLogout/{id}")
     @Operation(summary = "强制下线（过期该用户全部 token）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<Void> forceLogout(@PathVariable Long id) {
         sysUserService.forceLogout(id);
         return new Result<Void>();
@@ -160,14 +170,14 @@ public class AdminController {
 
     @GetMapping("/role/list")
     @Operation(summary = "角色列表（启用角色，用于分配弹窗）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<List<SysRoleEntity>> roleList() {
         return new Result<List<SysRoleEntity>>().ok(sysUserService.listRoles());
     }
 
     @PutMapping("/users/{id}")
     @Operation(summary = "重置密码")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<String> update(
             @PathVariable Long id) {
         String password = sysUserService.resetPassword(id);
@@ -176,7 +186,7 @@ public class AdminController {
 
     @DeleteMapping("/users/{id}")
     @Operation(summary = "用户删除（软删除，回收站可恢复）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     public Result<Void> delete(@PathVariable Long id) {
         // console-v2 Users.vue 契约：软删除（deleted=1），设备/智能体保留，回收站可恢复
         sysUserService.softDelete(id, yuhe.modules.security.user.SecurityUser.getUserId());
@@ -194,7 +204,7 @@ public class AdminController {
 
     @PutMapping("/users/changeStatus/{status}")
     @Operation(summary = "批量修改用户状态")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     @Parameter(name = "status", description = "用户状态", required = true)
     public Result<Void> changeStatus(@PathVariable Integer status, @RequestBody String[] userIds) {
         sysUserService.changeStatus(status, userIds);
@@ -203,7 +213,7 @@ public class AdminController {
 
     @GetMapping("/device/all")
     @Operation(summary = "分页查找设备")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "keywords", description = "设备关键词", required = false),
             @Parameter(name = Constant.PAGE, description = "当前页码，从1开始", required = true),

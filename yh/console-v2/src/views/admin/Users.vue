@@ -101,6 +101,7 @@
                 <td>
                   <div v-if="deleted === 1" class="row-actions">
                     <button class="link-btn" @click="restore(u)">恢复</button>
+                    <button class="link-btn danger" @click="purge(u)">彻底删除</button>
                   </div>
                   <div v-else class="row-actions">
                     <button class="link-btn" @click="openRoles(u)">角色</button>
@@ -130,10 +131,11 @@
               <td style="color:var(--text-sub)">{{ u.lastLoginDate || '—' }}</td>
               <td style="color:var(--text-sub)">{{ u.createDate }}</td>
               <td>
-                <!-- 已删用户：仅恢复 -->
-                <div v-if="deleted === 1" class="row-actions">
-                  <button class="link-btn" @click="restore(u)">恢复</button>
-                </div>
+              <!-- 已删用户：恢复 / 彻底删除（物理删除释放用户名） -->
+              <div v-if="deleted === 1" class="row-actions">
+                <button class="link-btn" @click="restore(u)">恢复</button>
+                <button class="link-btn danger" @click="purge(u)">彻底删除</button>
+              </div>
                 <div v-else class="row-actions">
                   <button class="link-btn" @click="openRoles(u)">角色</button>
                   <button class="link-btn" @click="resetPwd(u)">重置密码</button>
@@ -476,8 +478,12 @@ async function createUser() {
     toast('用户已创建')
     load()
   } catch (e) {
-    // 10220 用户名已存在等 → 后端 msg 直接展示
-    toast(e.msg || '创建失败', 'error')
+    // 10220 用户名已存在；10237 用户名被回收站同名账号占用 → 明确指引
+    if (e.code === 10237) {
+      toast('该用户名被回收站中的已删账号占用，请到「已删除（回收站）」中恢复或彻底删除该账号后重试', 'error', 6000)
+    } else {
+      toast(e.msg || '创建失败', 'error')
+    }
   } finally {
     creating.value = false
   }
@@ -602,6 +608,22 @@ function restore(u) {
         toast('已恢复')
         load()
       } catch (e) { toast(e.msg || '恢复失败', 'error') }
+    }
+  })
+}
+
+// ===== 彻底删除（物理删除，释放用户名；级联清理设备/智能体/角色/会话） =====
+function purge(u) {
+  askConfirm({
+    title: '彻底删除',
+    message: `确定彻底删除用户「${u.username}」吗？⚠️ 此操作不可恢复：账号将被物理删除，名下设备、智能体（含聊天记录）、角色绑定、音色克隆一并清除，用户名随之释放。`,
+    danger: true,
+    onOk: async () => {
+      try {
+        await adminApi.userPurge(u.id)
+        toast('已彻底删除，用户名已释放')
+        load()
+      } catch (e) { toast(e.msg || '彻底删除失败', 'error') }
     }
   })
 }

@@ -108,6 +108,11 @@ public interface SysUserService extends BaseService<SysUserEntity> {
     void restore(Long userId);
 
     /**
+     * 彻底删除（仅限回收站账号；物理删除用户 + 级联清理设备/智能体/角色/token/音色克隆，释放用户名）
+     */
+    void purge(Long userId, Long operatorId);
+
+    /**
      * 批量导入（逐条查重；部分失败抛 10225 携带 {success,failed}）
      */
     java.util.Map<String, Object> importUsers(java.util.List<yuhe.modules.sys.dto.AdminUserImportItemDTO> list);

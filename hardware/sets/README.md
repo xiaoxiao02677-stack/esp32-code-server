@@ -45,7 +45,8 @@ PATH 一并交给编译子进程。所以用系统里任意一个 python 启动�
 python hardware/sets/build.py
 ```
 
-跟着菜单走即可：输入编号或版型 id，然后选目标服务器环境（回车默认生产）。
+跟着菜单走即可：输入编号或版型 id；**输入 0 = 全量构建**（所有版型 × 生产+测试 ×
+所有主题，等价 `--all`）。然后选目标服务器环境（回车默认生产）。
 
 不想交互的话直接指定版型并跳过确认：
 
@@ -76,6 +77,26 @@ python hardware/sets/build.py --board yh-cam --server test --yes
 ```bat
 python hardware/sets/build.py --board yh-cam --sync-only
 ```
+
+### 全量构建（`--all`）
+
+把**所有版型 × 生产+测试环境 × 所有主题**一口气全部编译出来，适合发布前
+批量出产物。当前是 4 版型 × 2 环境 × 3 主题 = 24 个组合：
+
+```bat
+python hardware/sets/build.py --all
+```
+
+- 逐个组合走完整流程（同步 → 注入 → 编译 → 归档），单个失败不中断后续，
+  结尾汇总成功/失败清单；失败组合会打印可单独重跑的完整命令。
+- 产物归档到 `out/<id>/`、`out/<id>-test/`、`out/<id>-<theme>/` 等，与单次
+  构建的命名完全一致（`flash.py --board` 可直接引用）。
+- 切换版型时自动清理 `<FW>\build` 保证全量重编（约 3-5 分钟/组合）。加
+  `--all-no-clean` 可跳过清理提速，但旧版型编译缓存可能导致漏编，风险自担。
+- `pins_verified=false` 的版型默认跳过（全量模式下不便逐个确认），加 `--yes`
+  强制包含。
+- 交互式选版型时输入 **0**（或 `all`）同样进入全量构建。
+- `--all` 与 `--board` / `--server` / `--theme` / `--sync-only` 互斥。
 
 要强制指定解释器就用 `--python`：
 
@@ -212,12 +233,17 @@ version = 2.5.2
 | 参数 | 作用 |
 |---|---|
 | `--board <id>` | 直接指定版型，跳过交互选择 |
+| `--all` | 全量构建：所有版型 × 生产+测试 × 所有主题（详见上文） |
+| `--all-no-clean` | `--all` 模式下不清理 `<FW>\build`（提速，风险自担） |
+| `--server <env>` | 目标服务器环境 `prod` / `test` |
+| `--theme <theme>` | UI 主题 `xiaoyou` / `pixel-pet` / `emopet` |
 | `--list` | 只列出版型就退出 |
 | `--sync-only` | 只做同步与注册，不编译（无需 ESP-IDF） |
-| `-y` / `--yes` | 跳过所有确认，含引脚未验证警告 |
+| `-y` / `--yes` | 跳过所有确认，含引脚未验证警告；`--all` 模式下兼作「包含未验证版型」 |
 | `--no-archive` | 编译后不归档 |
 | `--fw-arg=<ARG>` | 额外透传给 `<FW>/scripts/build.py`，可重复。**必须用等号**：`--fw-arg=--zip` |
 | `--fw-root <DIR>` | 手动指定固件根目录（默认用 sets 自带副本 `sets/yuhe-esp32/`） |
+| `--python <EXE>` | 强制指定 IDF venv 的 python（覆盖自动探测） |
 | `--no-color` | 关闭彩色输出（日志重定向到文件时用） |
 
 烧录不在这里，见下一节。

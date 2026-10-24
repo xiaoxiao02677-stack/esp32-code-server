@@ -35,12 +35,6 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button
-        v-if="role === 'admin' || canSwitchRole"
-        class="role-switch" @click="$emit('switch-role', role === 'admin' ? 'customer' : 'admin')"
-      >
-        {{ role === 'admin' ? '→ 顾客视图' : '→ 管理员视图' }}
-      </button>
       <button class="btn btn-ghost logout-btn" @click="confirmLogout">退出登录</button>
       <div class="avatar" :title="avatarTitle">{{ avatarChar }}</div>
     </div>
@@ -50,11 +44,10 @@
 <script setup>
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { clearToken, hasAdminRole, userState } from '../lib/api'
+import { clearToken } from '../lib/api'
 import YhIcon from './YhIcon.vue'
 
 const props = defineProps({ role: { type: String, default: 'customer' } })
-defineEmits(['switch-role'])
 
 const route = useRoute()
 const router = useRouter()
@@ -155,15 +148,8 @@ const avatarChar = computed(() => username.value
   : (props.role === 'admin' ? '管' : '客'))
 const avatarTitle = computed(() => username.value || (props.role === 'admin' ? '管理员' : '顾客'))
 
-// 用户模块：普通用户（无 admin 系角色且非超管）在顾客端隐藏「→ 管理员视图」按钮（与 DockNav 切换按钮同规则）。
-// 切换按钮可见性：订阅响应式 userState（登录补全/老登录态异步修正后自动重算），
-// 不再裸调 getUserInfo()（读 localStorage 无响应式依赖，登录后写入 cc_user_info 不会触发重算）。
-// 未知状态（username 空且无角色数据）保守显示，向后兼容旧登录态。
-const canSwitchRole = computed(() => {
-  const u = userState.value
-  if (!u || (!u.username && !Array.isArray(u.roles))) return true
-  return hasAdminRole(u)
-})
+// 用户模块：登录按角色自动分流（管理员→管理端、普通用户→顾客端），无视图切换入口。
+// hasAdminAccess/canSwitchRole 相关逻辑已随切换按钮移除。
 
 function confirmLogout() {
   askConfirm({

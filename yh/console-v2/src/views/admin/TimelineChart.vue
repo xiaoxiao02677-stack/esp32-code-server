@@ -193,4 +193,9 @@ canvas { width: 100%; height: 400px; display: block; }
   font-size: 13px; font-family: var(--font); background: var(--surface); color: var(--text);
 }
 .mini-select:focus { border-color: var(--primary); outline: none; }
+
+/* 移动端：时间线画布降高 */
+@media (max-width: 768px) {
+  canvas { height: 320px; }
+}
 </style>

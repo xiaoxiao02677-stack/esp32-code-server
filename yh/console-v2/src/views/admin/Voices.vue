@@ -7,6 +7,9 @@
       </div>
       <div class="head-actions">
         <button class="btn btn-primary" :disabled="!activeModelId" @click="openCreate">＋ 新增音色</button>
+        <button class="btn btn-ghost" :disabled="!activeModelId || probing" @click="probe">
+          {{ probing ? '探测中…（约半分钟）' : '⚡ 探测音色' }}
+        </button>
         <button class="btn btn-ghost" @click="load" :disabled="loading">↻ 刷新</button>
       </div>
     </div>
@@ -80,6 +83,33 @@
         </div>
       </div>
     </div>
+    <!-- 音色探测报告 -->
+    <div v-if="probeReport" class="modal-mask" @click.self="probeReport = null">
+      <div class="modal" style="max-width:560px">
+        <h3>⚡ 音色探测报告</h3>
+        <div style="display:flex;gap:12px;margin:14px 0">
+          <div class="probe-stat"><strong>{{ probeReport.validCount }}</strong><span>有效</span></div>
+          <div class="probe-stat" style="color:var(--danger,#e5484d)"><strong>{{ probeReport.invalidCount }}</strong><span>失效</span></div>
+          <div class="probe-stat"><strong>{{ (probeReport.added || []).length }}</strong><span>新增</span></div>
+          <div class="probe-stat"><strong>{{ (probeReport.removed || []).length }}</strong><span>移除</span></div>
+        </div>
+        <div v-if="(probeReport.added || []).length" style="margin-bottom:10px">
+          <strong style="font-size:13px">✅ 新增（{{ probeReport.added.length }}）</strong>
+          <div class="probe-list">{{ probeReport.added.join('、') }}</div>
+        </div>
+        <div v-if="(probeReport.removed || []).length" style="margin-bottom:10px">
+          <strong style="font-size:13px;color:var(--danger,#e5484d)">🗑 移除（{{ probeReport.removed.length }}）</strong>
+          <div class="probe-list">{{ probeReport.removed.join('、') }}</div>
+        </div>
+        <div v-if="(probeReport.migratedAgents || []).length" style="margin-bottom:10px">
+          <strong style="font-size:13px">🔁 引用已迁移的智能体（{{ probeReport.migratedAgents.length }}）</strong>
+          <div class="probe-list">{{ probeReport.migratedAgents.join('、') }}</div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" @click="probeReport = null; pickModel({ id: activeModelId, modelName: activeModelName }, true)">完成</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -101,6 +131,8 @@ const loading = ref(false)
 const saving = ref(false)
 const playingVoice = ref('')
 const llmOpts = ref([])
+const probing = ref(false)
+const probeReport = ref(null)
 const editor = reactive({ show: false, id: '', name: '', ttsVoice: '', languages: '普通话', sort: 0, voiceInstruction: '', voiceDemo: '', dynamicInstruction: false, instructionLlmId: '' })
 
 async function load() {
@@ -202,6 +234,23 @@ function remove(v) {
   })
 }
 
+// 探测当前引擎支持的音色：自动移除失效音色、新增有效音色、迁移智能体引用
+function probe() {
+  askConfirm({
+    title: '探测音色',
+    message: `将探测「${activeModelName.value}」引擎当前实际支持的音色（含官方候选池），失效音色将被移除（自建克隆音色不受影响），被引用的失效音色会自动迁移。约需半分钟，继续？`,
+    onOk: async () => {
+      probing.value = true
+      try {
+        const res = await adminApi.ttsVoiceProbe(activeModelId.value)
+        probeReport.value = res.data || {}
+        toast(`探测完成：有效 ${probeReport.value.validCount ?? '?'} / 失效 ${probeReport.value.invalidCount ?? '?'}`)
+      } catch (e) { toast(e.msg || '探测失败', 'error') }
+      finally { probing.value = false }
+    }
+  })
+}
+
 onMounted(load)
 </script>
 
@@ -216,4 +265,10 @@ onMounted(load)
 .form-row input:focus { border-color: var(--primary); }
 .link-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .link-btn:disabled:hover { text-decoration: none; }
+
+/* 探测报告统计块 */
+.probe-stat { flex: 1; text-align: center; padding: 10px 8px; border-radius: 12px; background: var(--bg-soft, rgba(127,127,127,.08)); }
+.probe-stat strong { display: block; font-size: 22px; }
+.probe-stat span { font-size: 12px; color: var(--text-sub); }
+.probe-list { font-size: 12px; color: var(--text-sub); line-height: 1.7; margin-top: 6px; max-height: 140px; overflow-y: auto; word-break: break-all; }
 </style>

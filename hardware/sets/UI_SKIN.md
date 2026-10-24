@@ -74,7 +74,7 @@ python tools/yh_syntax_check.py main/boards/yuhe/yh-154tft-wifi/yh_set_154tft_wi
 | 阶段 | 屏幕上看到 | 代码路径 |
 |---|---|---|
 | 上电 → LVGL 起来 | 背光点亮，`SetupUI()` 立刻建主界面 + 盖一层不透明开机画面 | `YhSkinDisplay::SetupUI()` → `BuildSplash()` |
-| 音频/网络初始化 | 深紫渐变 + 背景图 60% + 「小柚」+「AI 陪伴助手」+ 三点呼吸动画 + 右下版本号 | `yh_skin_boot.cc` |
+| 音频/网络初始化 | 深紫渐变 + 背景图 60% + 「屿禾工坊」+ 三点呼吸动画 + 右下版本号 | `yh_skin_boot.cc` |
 | 连 Wi-Fi | 底部状态行出现「正在连接 xxx…」（不覆盖品牌字） | `SetStatus()` → `SplashAbsorbsStatus()` |
 | 配网模式 | 全屏卡片：热点 / 密码 / 请连接后打开配网页面 | `ShowNotification()` → `ShowWifiCard()` |
 | 激活 | 全屏卡片：6 位激活码逐位大字 + 说明 | `SetChatMessage("system", code…)` → `ShowActivationCard()` |

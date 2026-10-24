@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './styles/global.css'
-import { getToken, getUserInfo, hasAdminRole, startTokenCheck, defaultRouteAfterLogin, refreshUserInfo, loadMyDisplayConfig, isModuleConfigLoaded, isModuleVisible } from './lib/api'
+import { getToken, getUserInfo, hasAdminAccess, startTokenCheck, defaultRouteAfterLogin, refreshUserInfo, loadMyDisplayConfig, isModuleConfigLoaded, isModuleVisible } from './lib/api'
 
 import CustomerHome from './views/customer/Home.vue'
 import CustomerDevices from './views/customer/Devices.vue'
@@ -37,7 +37,6 @@ import AdminAuditLog from './views/admin/AuditLog.vue'
 import AdminDisplayConfig from './views/admin/DisplayConfig.vue'
 import AdminUserDefaults from './views/admin/UserDefaults.vue'
 import AdminCustomReview from './views/admin/CustomReview.vue'
-// 订单管理页面
 import AdminOrders from './views/admin/Orders.vue'
 // 用户模块新增页面（customer 端）
 import CustomerProfile from './views/customer/Profile.vue'
@@ -60,7 +59,6 @@ const router = createRouter({
     { path: '/customer/profile', component: CustomerProfile },
     { path: '/customer/my-models', component: CustomerMyModels },
     { path: '/admin', component: AdminHome },
-    { path: '/admin/orders', component: AdminOrders },
     { path: '/admin/agents', component: AdminAgents },
     { path: '/admin/voices', component: AdminVoices },
     { path: '/admin/chat', component: AdminChat },
@@ -88,6 +86,7 @@ const router = createRouter({
     { path: '/admin/push-scheduler', component: AdminPushScheduler },
     { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw },
     { path: '/admin/wechat-claw', component: AdminWeChatClaw },
+    { path: '/admin/orders', component: AdminOrders },
     // 404 兜底：未知路径不再渲染空白页
     { path: '/:pathMatch(.*)*', component: NotFound }
   ]
@@ -99,10 +98,11 @@ router.beforeEach(async (to) => {
   if (!has && to.path !== '/login') return '/login'
   if (has && to.path === '/login') return defaultRouteAfterLogin()
   if (has && to.path.startsWith('/admin')) {
+    // 模块可见性（展示配置）：配置未加载时先拉一次（登录后首次导航/刷新直达）。
+    // 必须在准入判定前加载：普通用户「有可见管理模块」即放行（hasAdminAccess）
     const info = getUserInfo()
-    if (info && !hasAdminRole(info)) return '/customer'
-    // 模块可见性（展示配置）：配置未加载时先拉一次（登录后首次导航/刷新直达）
     if (!isModuleConfigLoaded()) await loadMyDisplayConfig()
+    if (info && !hasAdminAccess(info)) return '/customer'
     // 被展示配置隐藏的模块：URL 直达也拦截（防手输绕过导航）
     if (!isModuleVisible(to.path)) return '/admin'
   }

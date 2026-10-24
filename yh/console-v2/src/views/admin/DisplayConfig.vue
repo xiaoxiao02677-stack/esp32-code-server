@@ -135,7 +135,6 @@ const SCOPES = [
 // 管理端模块清单（与 DockNav adminItems 同源；to 即 modules 配置的 key）
 // 注意：概览 /admin 不在清单中（管理端入口始终可见，不可隐藏）
 const ADMIN_MODULES = [
-  { to: '/admin/orders', label: '订单管理', note: '订单列表与跟进' },
   { to: '/admin/agents', label: '智能体', note: '智能体配置' },
   { to: '/admin/chat', label: '聊天', note: '会话审查' },
   { to: '/admin/memory', label: '记忆', note: '记忆库管理' },
@@ -146,6 +145,7 @@ const ADMIN_MODULES = [
   { to: '/admin/devices', label: '设备', note: '设备管理' },
   { to: '/admin/params', label: '参数', note: '系统参数' },
   { to: '/admin/users', label: '用户', note: '用户管理' },
+  { to: '/admin/orders', label: '订单', note: '订单管理' },
   { to: '/admin/roles', label: '角色', note: '角色与权限' },
   { to: '/admin/audit', label: '审计', note: '操作审计日志' },
   { to: '/admin/display', label: '展示配置', note: '字段/模块可见性（本页）' },
@@ -334,4 +334,10 @@ onMounted(() => {
   padding: 9px 14px; font-size: 13.5px; outline: none; background: #fff; color: var(--text);
 }
 .add-row input:focus { border-color: var(--primary); }
+
+/* 移动端：下拉不固定最小宽 */
+@media (max-width: 768px) {
+  select { min-width: 0 !important; max-width: 100%; }
+  .page-head + .panel .panel-head { flex-wrap: wrap; }
+}
 </style>

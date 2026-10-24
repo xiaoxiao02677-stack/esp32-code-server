@@ -158,13 +158,6 @@ body { overflow: hidden; }
 }
 
 .topbar-right { display: flex; align-items: center; gap: 10px; }
-.role-switch {
-  border: 1.5px solid var(--border); background: var(--surface);
-  border-radius: var(--radius-pill); padding: 7px 16px;
-  font-size: 13px; font-weight: 600; color: var(--primary);
-  cursor: pointer; transition: all .15s;
-}
-.role-switch:hover { border-color: var(--primary); background: var(--primary-soft); }
 .avatar {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--primary-soft); color: var(--primary);
@@ -410,14 +403,6 @@ html.dock-collapsed .dock { min-width: 56px; max-width: 56px; }
   content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: 3px; height: 18px; border-radius: 2px; background: var(--primary);
 }
-/* C5：角色切换按钮沉到侧栏底部 */
-.dock-more {
-  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
-  background: var(--primary); color: #fff; font-size: 16px; font-weight: 700;
-  display: grid; place-items: center; margin: 6px auto 0; flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(27,108,255,.4); transition: transform .15s;
-}
-.dock-more:hover { transform: rotate(90deg); }
 
 /* ============ 导航折叠/展开（单击 ☰ 切换，VitePress 侧栏风格参照） ============ */
 /* 收起态（.dock-collapsed 在 <html> 上）：仅图标居中、隐藏文字与色板；色板展开态才显示 */
@@ -536,3 +521,114 @@ html[data-theme="morandi"] .app-canvas { background: #F5F4F2; }
 .app-shell.shell-compact .panel-head { padding: 10px 16px 6px; }
 .app-shell.shell-compact .page-head { margin-bottom: 8px; }
 .app-shell.shell-compact .pager { padding: 8px 14px 10px; }
+
+/* ============ 移动端适配（≤768px 手机断点，全站骨架层） ============
+   策略：dock 由左侧竖栏转底部横向标签栏（图标+短标签）；
+   画布近全宽；表格容器横向滚动；双列表单/栅格一律单列；
+   弹窗/抽屉全宽。页面私有栅格在各自 scoped 样式补 @media 覆盖。 */
+
+/* ---------- 768px 以下：整体骨架 ---------- */
+@media (max-width: 768px) {
+  /* dock 底部化：竖排侧栏 → 底部横向标签栏（图标+短标签，横向滚动） */
+  /* 注意：900px 断点的 html:not(.dock-collapsed) 前缀规则特异性更高（0,2,1），
+     此处必须用同级特异性覆盖 min/max-width 夹取，否则 dock 被钳在 64px 只见一个按钮 */
+  .dock-wrap {
+    top: auto; bottom: 0; left: 0; right: 0; height: auto; width: 100%;
+    min-width: 0; max-width: none; transition: none;
+  }
+  .dock {
+    flex-direction: row; align-items: center;
+    width: 100%; min-width: 0; max-width: none; height: auto;
+    overflow-x: auto; overflow-y: hidden;
+    border-radius: 20px 20px 0 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    gap: 2px; transition: none;
+  }
+  html:not(.dock-collapsed) .dock-wrap,
+  html:not(.dock-collapsed) .dock { min-width: 0; max-width: none; width: 100%; }
+  .dock::-webkit-scrollbar { display: none; }
+  .dock { scrollbar-width: none; }
+  /* 折叠钮/主题行/紧凑钮在手机上隐藏（空间宝贵；主题等桌面功能可登录 PC 调整） */
+  .dock-toggle, .theme-row, .compact-btn { display: none !important; }
+  .dock-item {
+    flex-direction: column; gap: 3px; padding: 6px 10px;
+    border-radius: 12px; font-size: 10.5px; flex-shrink: 0;
+  }
+  .dock-item .ic { font-size: 20px; }
+  /* 恢复短标签（900px 断点 display:none 特异性同级，靠源码顺序在后覆盖） */
+  .dock-item .dock-label { display: block; white-space: nowrap; }
+  .dock-item.active::after { width: 100%; height: 3px; top: auto; bottom: 2px; left: 50%; transform: translateX(-50%); border-radius: 2px; }
+  /* 收起态在手机上无意义，强制还原 */
+  html.dock-collapsed { --dock-w: 0px; }
+  html.dock-collapsed .dock-wrap, html.dock-collapsed .dock { min-width: 0; max-width: none; }
+
+  /* shell：画布占满（左 padding 归零，底部为 dock 让位） */
+  .app-shell { padding: 12px 12px calc(76px + env(safe-area-inset-bottom)) 12px !important; transition: none; }
+  .app-canvas {
+    max-width: 100%; border-radius: 18px; padding: 14px 14px 18px;
+    min-height: calc(100dvh - 100px);
+  }
+
+  /* 页头纵向堆叠：标题+操作按钮换行 */
+  .page-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .page-head h1 { font-size: 21px; }
+  .head-actions { flex-wrap: wrap; gap: 8px; }
+  .head-actions .btn { flex: 1; min-width: 120px; justify-content: center; padding: 9px 12px; font-size: 13px; }
+
+  /* 顶栏：隐藏搜索（桌面快捷功能），保留品牌+退出 */
+  .topbar { flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
+  .brand-name { font-size: 15px; }
+  .topbar-right { margin-left: auto; }
+
+  /* 统计卡：手机 2 列（保持紧凑） */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-card .stat-value { font-size: 24px; }
+  .stat-card .stat-icon { font-size: 22px; right: 10px; top: 10px; }
+
+  /* 表格容器化横滚：panel 内容超宽不再撑破画布 */
+  .panel { overflow-x: auto; }
+  .data-table { min-width: 560px; }
+  .data-table th, .data-table td { padding: 10px 12px; }
+
+  /* 表格行操作按钮收紧 */
+  .row-actions { flex-wrap: wrap; gap: 4px; }
+
+  /* 弹窗与抽屉全宽 */
+  .modal { width: 94vw !important; max-width: 94vw !important; border-radius: 16px; }
+  .modal-actions { flex-wrap: wrap; }
+  .modal-actions .btn { flex: 1; min-width: 120px; justify-content: center; }
+
+  /* 分页收窄 */
+  .pager { justify-content: center; gap: 6px; font-size: 12px; }
+  .page-btn { min-width: 28px; height: 28px; }
+
+  /* 全局表单行（151 处 form-row）：label 与输入堆叠由各页已定，补间距收紧 */
+  .form-row { gap: 5px; }
+
+  /* hero 区：高度收紧 */
+  .hero-row { grid-template-columns: 1fr; }
+  .hero-blob { min-height: 150px; padding: 16px; }
+  .hero-blob h2 { font-size: 20px; }
+  .blob-3d { width: 56px; height: 56px; font-size: 26px; right: 10px; bottom: 40px; }
+}
+
+/* ---------- 480px 以下：超窄屏（大屏手机横持/小屏手机） ---------- */
+@media (max-width: 480px) {
+  .app-shell { padding-left: 10px; padding-right: 10px; }
+  .app-canvas { padding: 12px 10px 16px; border-radius: 14px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card .stat-value { font-size: 21px; }
+  .page-head h1 { font-size: 19px; }
+  .empty-state { padding: 36px 0; }
+  .data-table { min-width: 520px; }
+  .head-actions .btn { min-width: 104px; }
+}
+
+/* ---------- 触屏微交互：按压反馈（hover 语义在触屏无效） ---------- */
+@media (hover: none) {
+  .btn:not(:disabled):active, .chip:active, .link-btn:active,
+  .dock-item:active, .page-btn:active { transform: scale(.97); }
+  .dock-item:hover { color: inherit; }
+  .dock-item.active:hover { color: var(--primary); }
+  .btn:hover { transform: none; }
+}

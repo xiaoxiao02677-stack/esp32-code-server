@@ -3,6 +3,8 @@ package yuhe.modules.order.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import yuhe.common.page.PageData;
@@ -32,18 +34,25 @@ public class OrderController {
         return new Result<Map<String, Object>>().ok(orderService.getById(id));
     }
 
+    /**
+     * 管理端订单 CRUD（/admin/Orders 页面专用）。/order/** 不在 /admin/** Shiro 拦截链下，
+     * 只做登录校验：读接口在 Service 层按用户收敛数据范围，写接口必须超管。
+     */
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:orders"}, logical = Logical.OR)
     @PostMapping("/create")
     public Result<String> create(@RequestBody Map<String, Object> params) {
         orderService.create(params);
         return new Result<String>().ok(String.valueOf(params.get("id")));
     }
 
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:orders"}, logical = Logical.OR)
     @PutMapping("/update")
     public Result<String> update(@RequestBody Map<String, Object> params) {
         orderService.update(params);
         return new Result<String>().ok(String.valueOf(params.get("id")));
     }
 
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:orders"}, logical = Logical.OR)
     @DeleteMapping("/delete/{id}")
     public Result<String> delete(@PathVariable String id) {
         orderService.delete(id);

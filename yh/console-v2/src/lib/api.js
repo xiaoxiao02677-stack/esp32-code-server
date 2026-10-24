@@ -108,6 +108,15 @@ export function hasAdminRole(info) {
   return roles.some(r => r === 'super_admin' || r === 'admin')
 }
 
+/** 是否允许进入管理端：管理员角色，或生效展示配置里存在可见管理模块。
+ *  与后端 Oauth2Realm 模块权限码发放规则对齐（可见模块 → admin:<module>），
+ *  配置了可见模块的普通用户由此获得管理端准入；接口层仍由后端权限注解把关。 */
+export function hasAdminAccess(info) {
+  if (hasAdminRole(info)) return true
+  const cfg = moduleVisibility.value
+  return Object.keys(cfg).some(k => k.startsWith('/admin/') && cfg[k]?.visible !== false)
+}
+
 // 响应式用户状态：登录/守卫/按钮组件共用，避免裸读 localStorage 的非响应式陈旧值
 export const userState = ref(getUserInfo() || { username: '', superAdmin: 0, roles: [] })
 
@@ -120,13 +129,27 @@ let moduleConfigLoaded = false
 export function isModuleVisible(routePath) {
   // 只管管理端路由；顾客端与固定入口不在此约束内
   if (!routePath || !routePath.startsWith('/admin')) return true
+  // 管理端落地页（概览）始终可见：守卫拦隐藏模块时重定向目标就是它，参与可见性判定会死循环；
+  // 概览内容按各模块接口权限自然降级（无权限的卡片报错/空态），不再路由级拦截
+  if (routePath === '/admin') return true
   // 超管豁免：任何配置不得对超管隐藏模块（防系统层配置自锁展示配置页无法恢复）。
   // 注意用 getUserInfo() 实时读 localStorage：userState 在模块加载时初始化，
   // 测试/刷新场景先写 localStorage 后进页面时 userState 可能仍是旧值。
   const u = userState.value && userState.value.username ? userState.value : getUserInfo()
   if (u && Number(u.superAdmin) === 1) return true
+  // 非超管恒不可见：roles / display 是权限体系管理入口（接口层保持超管专用，
+  // 防止普通用户通过展示配置间接改动权限数据源自授权提权），
+  // 即使展示配置勾选了可见也不对非超管生效
+  if (routePath === '/admin/roles' || routePath === '/admin/display') return false
   const cfg = moduleVisibility.value
-  if (Object.prototype.hasOwnProperty.call(cfg, routePath)) return cfg[routePath]?.visible !== false
+  // 非超管允许清单：配置了任意 modules 时，未列出的管理模块一律隐藏（与后端
+  // 权限码发放集合对齐——接口层只会放行已配置可见的模块，导航不再显示 403 页面）。
+  if (Object.keys(cfg).some(k => k.startsWith('/admin/'))) {
+    if (Object.prototype.hasOwnProperty.call(cfg, routePath)) return cfg[routePath]?.visible !== false
+    return false
+  }
+  // 无任何管理模块配置（未配置/加载失败）：维持全部可见的旧行为，
+  // 准入已由 hasAdminAccess 把关（此分支只对管理员角色用户可达）
   return true
 }
 
@@ -142,16 +165,15 @@ export async function loadMyDisplayConfig() {
 }
 export function isModuleConfigLoaded() { return moduleConfigLoaded }
 
-/** 是否为 demo 公开展示账号（DB super_admin=1）：默认进游客页但保留管理端切换按钮 */
+/** demo 公开展示账号判断（展示配置等场景使用；登录分流不再特例） */
 export function isDemoUser(info) {
   const u = info || userState.value
   return !!(u && u.username && String(u.username).toLowerCase() === 'demo')
 }
 
-// 登录后默认路由：demo 展示账号→游客页；超管/管理员→管理端；其余→游客页
-// 依赖 userState（refreshUserInfo 补全后调用才可靠；未补全时退化为角色未知→游客页，安全侧）
+// 登录后默认路由：管理员角色（super_admin=1 或 roles 含 super_admin/admin）→管理端；其余→顾客端。
+// 登录按角色自动分流，前端不再提供视图切换入口（TopBar 切换按钮已移除）。
 export function defaultRouteAfterLogin() {
-  if (isDemoUser()) return '/customer'
   if (hasAdminRole(userState.value)) return '/admin'
   return '/customer'
 }
@@ -300,8 +322,13 @@ export const customerApi = {
   agentList: () => api.get('/agent/list'),
   agentDetail: (id) => api.get(`/agent/${id}`),
   createAgent: (body) => api.post('/agent', body),
+  updateAgent: (id, body) => api.put(`/agent/${id}`, body),
   deleteAgent: (id) => api.del(`/agent/${id}`),
   boundDevices: (agentId) => api.get(`/device/bind/${agentId}`),
+  // 绑定三件套（与管理端同契约，后端均 sys:role:normal 码，顾客端可直接用）
+  bindDeviceByCode: (agentId, code) => api.post(`/device/bind/${agentId}/${encodeURIComponent(code)}`),
+  deviceManualAdd: (body) => api.post('/device/manual-add', body),
+  deviceUnbind: (body) => api.post('/device/unbind', body),
   voiceClonePage: (params) => api.get('/voiceClone', params),
   voiceResourcePage: (params) => api.get('/voiceResource', params),
   ttsVoicePage: (params) => api.get('/ttsVoice', params)
@@ -318,6 +345,9 @@ export const adminApi = {
   boundDevices: (agentId) => api.get(`/device/bind/${agentId}`),
   bindDeviceByCode: (agentId, code) => api.post(`/device/bind/${agentId}/${encodeURIComponent(code)}`),
   agentSessions: (agentId, params) => api.get(`/agent/${agentId}/sessions`, params || { page: 1, limit: 10 }),
+  // 共享授权（超管抽屉）：回显 / 全量保存
+  agentShares: (agentId) => api.get(`/agent/${agentId}/shares`),
+  agentSharesSave: (agentId, shares) => api.put(`/agent/${agentId}/shares`, { shares }),
   // MCP 接入点
   mcpAddress: (agentId) => api.get(`/agent/mcp/address/${agentId}`),
   mcpTools: (agentId) => api.get(`/agent/mcp/tools/${agentId}`),
@@ -354,6 +384,8 @@ export const adminApi = {
   ttsVoiceCreate: (body) => api.post('/ttsVoice', body),
   ttsVoiceUpdate: (id, body) => api.put(`/ttsVoice/${id}`, body),
   ttsVoiceDelete: (id) => api.post('/ttsVoice/delete', id ? [id] : []),
+  // 音色探测：探测当前引擎实际支持的音色并同步（删失效+新增有效+迁移智能体引用）
+  ttsVoiceProbe: (ttsModelId) => api.post(`/ttsVoice/probe?ttsModelId=${encodeURIComponent(ttsModelId)}`),
   voiceClonePlay: (id) => api.get('/voiceClone/play/' + id),
 
   // ===== 记忆 =====
@@ -413,6 +445,7 @@ export const adminApi = {
   userDetail: (id) => api.get(`/admin/users/${id}`),
   userAssignRoles: (b) => api.put('/admin/users/roles', b),
   userRestore: (id) => api.put(`/admin/users/restore/${id}`),
+  userPurge: (id) => api.del(`/admin/users/purge/${id}`),
   userImport: (list) => api.post('/admin/users/import', list),
   userExportUrl: (p) => `/yuhe/admin/users/export?${new URLSearchParams(p)}`,
   userSessions: (p) => api.get('/admin/users/sessions', p),
@@ -527,6 +560,16 @@ export const adminApi = {
   clawCreateSchedule: (openid, data) => api.post(`/wechat/claw/schedules/${openid}`, data),
   clawDeleteSchedule: (openid, id) => api.del(`/wechat/claw/schedules/${openid}/${id}`),
   clawToggleSchedule: (openid, id) => api.put(`/wechat/claw/schedules/${openid}/${id}/toggle`),
+
+  // ===== 订单管理（后端 /order/*，网关 /yuhe/order/*） =====
+  // 注意：后端返回 Map 用下划线列名（user_name/pay_time/address/shipping_status/create_time），
+  // 写入用驼峰键（userName/paymentTime/shippingAddress/status），前端分别处理。
+  orderPage: (params) => api.get('/order/page', params),
+  orderInfo: (id) => api.get(`/order/info/${id}`),
+  orderCreate: (body) => api.post('/order/create', body),
+  orderUpdate: (body) => api.put('/order/update', body),
+  orderDelete: (id) => api.del(`/order/delete/${id}`),
+  orderExport: (params) => api.get('/order/export', params),
 }
 
 // ---------- 壁纸下发（P1-4，独立端点组，不并入 adminApi） ----------
@@ -565,24 +608,3 @@ export const userApi = {
   customVoiceUpdate: (id, b) => api.put(`/user/custom-voices/${id}`, b),
   customVoiceDelete: (id) => api.del(`/user/custom-voices/${id}`)
 }
-// ============ 订单管理API（对齐已部署的 OrderController：@RequestMapping("/order")，context-path=/yuhe） ============
-const orderApi = {
-  // 分页列表：GET /order/page（keyword 模糊匹配 user_name/contact/product）
-  orderPage: (params = {}) => {
-    const { page = 1, limit = 10, keyword = '' } = params
-    return api.get('/order/page', { page, limit, keyword })
-  },
-  // 详情：GET /order/info/{id}
-  orderInfo: (id) => api.get(`/order/info/${id}`),
-  // 新增：POST /order/create
-  orderCreate: (data) => api.post('/order/create', data),
-  // 更新：PUT /order/update（body 必须含 id）
-  orderUpdate: (id, data) => api.put('/order/update', { ...data, id }),
-  // 删除（软删）：DELETE /order/delete/{id}
-  orderDelete: (id) => api.del(`/order/delete/${id}`),
-  // 导出数据：GET /order/export?keyword= → { code:0, data:[ {...订单字段...} ] }（由前端生成 Excel）
-  orderExportList: (params = {}) => api.get('/order/export', { keyword: params.keyword || '' })
-}
-
-// 合并到adminApi
-Object.assign(adminApi, orderApi)

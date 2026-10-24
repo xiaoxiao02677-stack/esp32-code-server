@@ -364,4 +364,11 @@ onMounted(load)
 .modal .form-row input:focus, .modal .form-row textarea:focus { border-color: var(--primary); }
 .field-hint { font-size: 11.5px; color: var(--text-sub); margin: 2px 0 0; }
 /* .btn-danger 已收敛到 global.css */
+
+/* 移动端：搜索框自适应宽度 */
+@media (max-width: 768px) {
+  .search-bar input { width: 100%; }
+  .search-bar { flex-wrap: wrap; }
+  .remark { max-width: 120px; }
+}
 </style>

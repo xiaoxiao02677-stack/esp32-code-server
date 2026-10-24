@@ -220,6 +220,9 @@ public class ConfigServiceImpl implements ConfigService {
         }
         // 获取智能体ID（记忆按Agent隔离，yuhe-server 以 agent_id 作为记忆命名空间）
         result.put("agent_id", agent.getId());
+        // 账户归属（realtime client_info.user_id 用：同一用户多设备在百炼侧归并
+        // 会话/风控维度；缺省回落 agent_id，兼容无主智能体）
+        result.put("user_id", agent.getUserId() != null ? String.valueOf(agent.getUserId()) : agent.getId());
 
         // 唤醒词合并下发：agent 自定义 wake_words 优先在前，与全局 wakeup_words
         // （sys_params 310，分号分隔）合并去重；两者皆空时兜底「你好」（默认唤醒词）

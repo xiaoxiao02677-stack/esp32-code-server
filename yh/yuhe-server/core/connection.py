@@ -118,6 +118,9 @@ class ConnectionHandler:
         self._short_term_lines = []  # 历史预取的最近对话行
         # 云端设备配置（design §1.2 链路①：Java getAgentModels 下发的 device_config）
         self.device_config = None
+        # 账户归属（Java getAgentModels 下发 user_id；realtime client_info.user_id
+        # 与记忆归并维度用，None 时消费方各自兜底）
+        self.user_id = None
         self.audio_format = "opus"
         self.sample_rate = 24000  # 默认采样率，从客户端 hello 消息中动态更新
 
@@ -415,6 +418,18 @@ class ConnectionHandler:
             # 入口处直接解码PCM，避免VAD和ASR重复解码
             pcm_frame = self._decode_opus_packet(message)
             if pcm_frame:
+                # duplex 一条龙：音频直推百炼多模态会话（ASR+LLM+TTS 全在服务端）；
+                # 本地 asr_audio_queue 仍入队（VAD/打断探测/声纹等本地能力继续可用）
+                tts = self.tts
+                if (
+                    tts is not None
+                    and getattr(tts, "full_duplex", False)
+                    and tts.activate_session
+                ):
+                    try:
+                        await tts.receive_upstream_audio(pcm_frame)
+                    except Exception as e:
+                        self.logger.bind(tag=TAG).warning(f"duplex上行失败: {e}")
                 self.asr_audio_queue.put(pcm_frame)
 
     async def _process_mqtt_audio_message(self, message):
@@ -646,6 +661,11 @@ class ConnectionHandler:
             asyncio.run_coroutine_threadsafe(
                 self.tts.open_audio_channels(self), self.loop
             )
+            # duplex 一条龙：设备接入即建立长驻多模态会话（持续上行约束）
+            if getattr(self.tts, "full_duplex", False):
+                asyncio.run_coroutine_threadsafe(
+                    self.tts.start_duplex_session(), self.loop
+                )
             if self.need_bind:
                 self.bind_completed_event.set()
                 return
@@ -989,6 +1009,10 @@ class ConnectionHandler:
             self.max_output_size = int(private_config["device_max_output_size"])
         if private_config.get("chat_history_conf", None) is not None:
             self.chat_history_conf = int(private_config["chat_history_conf"])
+        # 账户归属（Java getAgentModels 新增 user_id 键）：realtime client_info.user_id
+        # 与用户维度归并用；字符串化避免 Long 精度问题，None 保持兜底行为
+        if private_config.get("user_id", None) is not None:
+            self.user_id = str(private_config["user_id"])
         # 云端设备配置下发（design §1.2 链路①）：开机/重连时以云端值覆盖设备本地
         # 未绑定设备（need_bind）不下发；MQTT 网关透传自定义 type 未验证，保守跳过（design §6 风险4）
         if not self.need_bind and not self.conn_from_mqtt_gateway:
@@ -1997,6 +2021,12 @@ class ConnectionHandler:
                 self.logger.bind(tag=TAG).error(f"关闭WebSocket连接时出错: {ws_error}")
 
             if self.tts:
+                # duplex 一条龙：先停上行泵和长驻会话，再走通用清理
+                if hasattr(self.tts, "stop_duplex_session"):
+                    try:
+                        await self.tts.stop_duplex_session()
+                    except Exception as e:
+                        self.logger.bind(tag=TAG).warning(f"停止duplex会话失败: {e}")
                 await self.tts.close()
             if self.asr:
                 await self.asr.close()

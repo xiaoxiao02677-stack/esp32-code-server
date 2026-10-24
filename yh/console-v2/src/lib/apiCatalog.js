@@ -39,7 +39,7 @@ const API_CATALOG = {
       {m:"register",h:"POST",p:"/user/register",s:"注册账号",pa:"registerForm(body)"},
       {m:"saveDeviceConfig",h:"PUT",p:"/user/configDevice/${device_id}",s:"保存设备配置",pa:"device_id(路径),configData(body)"},
       {m:"getUserInfo",h:"GET",p:"/user/info",s:"获取当前用户信息",pa:"无"},
-      {m:"changePassword",h:"PUT",p:"/user/change-password",s:"修改密码",pa:"old/newPassword(body)"},
+      {m:"changePassword",h:"PUT",p:"/user/change-password",s:"修改密码",pa:"password/newPassword(body)"},
       {m:"changeUserStatus",h:"PUT",p:"/admin/users/changeStatus/${status}",s:"批量修改用户状态",pa:"status(路径),userIds(body)"},
       {m:"getPubConfig",h:"GET",p:"/user/pub-config",s:"获取公共配置",pa:"无"},
       {m:"retrievePassword",h:"PUT",p:"/user/retrieve-password",s:"找回密码",pa:"phone,code,password(body)"}

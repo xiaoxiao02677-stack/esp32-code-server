@@ -2,6 +2,7 @@ package yuhe.modules.timbre.controller;
 
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,7 +42,7 @@ public class TimbreController {
 
     @GetMapping
     @Operation(summary = "分页查找")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:voices"}, logical = Logical.OR)
     @Parameters({
             @Parameter(name = "ttsModelId", description = "对应 TTS 模型主键", required = true),
             @Parameter(name = "name", description = "音色名称"),
@@ -63,7 +64,7 @@ public class TimbreController {
 
     @PostMapping
     @Operation(summary = "音色保存")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:voices"}, logical = Logical.OR)
     public Result<Void> save(@RequestBody TimbreDataDTO dto) {
         ValidatorUtils.validateEntity(dto);
         timbreService.save(dto);
@@ -72,7 +73,7 @@ public class TimbreController {
 
     @PutMapping("/{id}")
     @Operation(summary = "音色修改")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:voices"}, logical = Logical.OR)
     public Result<Void> update(
             @PathVariable String id,
             @RequestBody TimbreDataDTO dto) {
@@ -83,10 +84,19 @@ public class TimbreController {
 
     @PostMapping("/delete")
     @Operation(summary = "音色删除")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:voices"}, logical = Logical.OR)
     public Result<Void> delete(@RequestBody String[] ids) {
         timbreService.delete(ids);
         return new Result<>();
+    }
+
+    @PostMapping("/probe")
+    @Operation(summary = "探测当前引擎支持音色并同步（删除失效+新增有效+迁移智能体引用）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:voices"}, logical = Logical.OR)
+    @Parameter(name = "ttsModelId", description = "对应 TTS 模型主键", required = true)
+    public Result<Map<String, Object>> probe(@RequestParam String ttsModelId) {
+        Map<String, Object> report = timbreService.probeAndSync(ttsModelId);
+        return new Result<Map<String, Object>>().ok(report);
     }
 
 }

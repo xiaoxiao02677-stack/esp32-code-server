@@ -15,7 +15,7 @@
 // 只替换视觉层：像素宠物 canvas 取代背景图+表情图，3.8s 出生动画取代品牌 splash。
 //
 // 主题切换：Kconfig choice YH_UI_THEME（main/Kconfig.projbuild）
-//   · YH_UI_THEME_XIAOYOU（默认）—— 原主题（小智/小柚/琳琳），直接构造 YhSkinDisplay
+//   · YH_UI_THEME_XIAOYOU（默认）—— 原主题（品牌 splash「屿禾工坊」），直接构造 YhSkinDisplay
 //   · YH_UI_THEME_PIXELPET —— 像素宠物，本类
 // build.py --theme xiaoyou|pixel-pet 注入对应 sdkconfig 行。
 //

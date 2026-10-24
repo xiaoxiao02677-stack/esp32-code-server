@@ -6,6 +6,7 @@ import java.util.Map;
 
 import yuhe.common.page.PageData;
 import yuhe.common.service.BaseService;
+import yuhe.common.user.UserDetail;
 import yuhe.modules.device.dto.DeviceManualAddDTO;
 import yuhe.modules.device.dto.DevicePageUserDTO;
 import yuhe.modules.device.dto.DeviceReportReqDTO;
@@ -44,9 +45,9 @@ public interface DeviceService extends BaseService<DeviceEntity> {
     List<UserShowDeviceListVO> getUserDeviceList(Long userId, String agentId);
 
     /**
-     * 解绑设备
+     * 解绑设备（设备归属者或超级管理员）
      */
-    void unbindDevice(Long userId, String deviceId);
+    void unbindDevice(UserDetail user, String deviceId);
 
     /**
      * 设备激活
@@ -111,6 +112,11 @@ public interface DeviceService extends BaseService<DeviceEntity> {
      * 手动添加设备
      */
     void manualAddDevice(Long userId, DeviceManualAddDTO dto);
+
+    /**
+     * 智能体是否共享给当前用户（共享用户视同归属主操作该智能体及其设备）
+     */
+    boolean isAgentSharedToUser(String agentId, Long userId);
 
     /**
      * 更新设备连接信息

@@ -146,6 +146,14 @@ async def handle_music_command(conn: "ConnectionHandler", text):
                 conn.logger.bind(tag=TAG).info(f"找到最匹配的歌曲: {best_match}")
                 await play_local_music(conn, specific_file=best_match)
                 return True
+            # 点名歌不在曲库：明说找不到再随机播，不做静默降级
+            # （此前静默随机，用户点 A 播 B 完全不知情，2026-10-23 实录
+            #   点"周杰伦"播"廉波老矣"）
+            conn.logger.bind(tag=TAG).info(
+                f"点名歌曲不在曲库: {potential_song}，转随机播放"
+            )
+            await play_local_music(conn, not_found_song=potential_song)
+            return True
     # 检查是否是通用播放音乐命令
     await play_local_music(conn)
     return True
@@ -168,9 +176,23 @@ def _get_random_play_prompt(song_name):
     return random.choice(prompts)
 
 
-async def play_local_music(conn: "ConnectionHandler", specific_file=None):
+def _speak(conn: "ConnectionHandler", text: str):
+    """纯播报（无文件播放）：store + 入队 MIDDLE TEXT。"""
+    conn.tts.store_tts_text(conn.sentence_id, text)
+    conn.tts.tts_text_queue.put(
+        TTSMessageDTO(
+            sentence_id=conn.sentence_id,
+            sentence_type=SentenceType.MIDDLE,
+            content_type=ContentType.TEXT,
+            content_detail=text,
+        )
+    )
+
+
+async def play_local_music(conn: "ConnectionHandler", specific_file=None, not_found_song=None):
     global MUSIC_CACHE
-    """播放本地音乐文件"""
+    """播放本地音乐文件。not_found_song：用户点名但曲库没有的歌，
+    播报"没有找到"后再随机播一首，避免点 A 播 B 无告知。"""
     try:
         if not os.path.exists(MUSIC_CACHE["music_dir"]):
             conn.logger.bind(tag=TAG).error(
@@ -185,6 +207,10 @@ async def play_local_music(conn: "ConnectionHandler", specific_file=None):
         else:
             if not MUSIC_CACHE["music_files"]:
                 conn.logger.bind(tag=TAG).error("未找到MP3音乐文件")
+                if not_found_song:
+                    _speak(conn, f"抱歉，曲库里没有《{not_found_song}》，曲库暂时也是空的")
+                else:
+                    _speak(conn, "抱歉，曲库现在是空的，没有可以播放的音乐")
                 return
             selected_music = random.choice(MUSIC_CACHE["music_files"])
             music_path = os.path.join(MUSIC_CACHE["music_dir"], selected_music)
@@ -192,7 +218,13 @@ async def play_local_music(conn: "ConnectionHandler", specific_file=None):
         if not os.path.exists(music_path):
             conn.logger.bind(tag=TAG).error(f"选定的音乐文件不存在: {music_path}")
             return
-        text = _get_random_play_prompt(selected_music)
+        if not_found_song:
+            text = (
+                f"抱歉，曲库里没有《{not_found_song}》，"
+                + _get_random_play_prompt(selected_music)
+            )
+        else:
+            text = _get_random_play_prompt(selected_music)
         conn.tts.store_tts_text(conn.sentence_id, text)
         # conn.dialogue.put(Message(role="assistant", content=text))
 

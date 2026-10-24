@@ -887,3 +887,12 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202610192230.sql
+  - changeSet:
+      id: 202610232300
+      author: server-java
+      # 智能体共享授权：ai_agent_share（超管为智能体配置可见范围：
+      # 按用户 user / 按角色组 role）。CREATE TABLE IF NOT EXISTS，重放安全。
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202610232300.sql

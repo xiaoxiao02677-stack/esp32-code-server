@@ -154,6 +154,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String resetPassword(Long userId) {
+        assertModuleAdminCanTouch(userId);
         String password = generatePassword();
         changePasswordDirectly(userId, password);
         return password;
@@ -316,6 +317,16 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Integer status, String[] userIds) {
+        if (userIds != null) {
+            // 非超管不可封禁/解锁超管账号（封禁全部超管=管理端瘫痪 DoS）
+            for (String uid : userIds) {
+                try {
+                    assertModuleAdminCanTouch(Long.parseLong(uid.trim()));
+                } catch (NumberFormatException ignore) {
+                    // 沿用既有行为：非法 ID 由 updateById 抛错
+                }
+            }
+        }
         for (String userId : userIds) {
             // 不许封禁自己（封完自己 token 虽在但登录态被拒，管理页面会"假死"）
             if (status != null && status == 0 && SecurityUser.getUserId() != null
@@ -347,16 +358,29 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     private final yuhe.modules.sys.dao.SysRoleDao sysRoleDao;
     private final yuhe.modules.sys.dao.SysUserRoleDao sysUserRoleDao;
     private final yuhe.modules.security.dao.SysUserTokenDao sysUserTokenDao;
+    private final yuhe.modules.voiceclone.dao.VoiceCloneDao voiceCloneDao;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String adminCreate(AdminUserCreateDTO dto) {
         String username = dto.getUsername().trim();
-        // 查重只看未删除用户（同名已删账号在回收站，DB 唯一索引兜底冲突场景极罕见）
+        // 查重一：未删除用户同名（正常语义）
         Long sameName = baseDao.selectCount(new QueryWrapper<SysUserEntity>()
                 .eq("username", username).eq("deleted", 0));
         if (sameName != null && sameName > 0) {
             throw new RenException(ErrorCode.USER_USERNAME_EXISTS);
+        }
+        // 查重二：回收站同名账号——DB uk_username 全局唯一不看 deleted，
+        // 软删用户仍占用户名（insert 会撞唯一索引报 10002"记录重复"，但用户在正常列表看不到），
+        // 必须在此给出可操作的明确提示
+        SysUserEntity recycled = baseDao.selectOne(new QueryWrapper<SysUserEntity>()
+                .eq("username", username).eq("deleted", 1).last("LIMIT 1"));
+        if (recycled != null) {
+            RenException ex = new RenException(ErrorCode.USER_USERNAME_IN_RECYCLE,
+                    String.valueOf(recycled.getId()));
+            ex.setData(java.util.Map.of("recycledUserId", recycled.getId(),
+                    "username", username));
+            throw ex;
         }
         String password = StringUtils.isNotBlank(dto.getPassword()) ? dto.getPassword() : generatePassword();
         if (!isStrongPassword(password)) {
@@ -371,6 +395,10 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         entity.setLocked(0);
         entity.setMustChangePwd(0); // 创建后不强制改密（用户要求：初始密码可直接用）
         insert(entity);
+        // 模块管理员（admin:users 非超管）不可在创建时指定角色绑定（角色挂展示配置，防扩权）
+        if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
+            assertSuperAdminForRoleOps();
+        }
         saveUserRoles(entity.getId(), dto.getRoleIds());
         return password;
     }
@@ -409,6 +437,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignRoles(AdminUserRolesDTO dto) {
+        assertSuperAdminForRoleOps();
         SysUserEntity u = sysUserDao.selectById(dto.getUserId());
         if (u == null) {
             throw new RenException(ErrorCode.USER_NOT_EXIST);
@@ -444,6 +473,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         if (userId.equals(operatorId)) {
             throw new RenException(ErrorCode.USER_DELETE_FORBIDDEN);
         }
+        assertModuleAdminCanTouch(userId);
         SysUserEntity u = sysUserDao.selectById(userId);
         if (u == null) {
             throw new RenException(ErrorCode.USER_NOT_EXIST);
@@ -478,11 +508,45 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         if (u.getDeleted() == null || u.getDeleted() != 1) {
             throw new RenException(ErrorCode.USER_NOT_EXIST);
         }
+        // 恢复冲突预检：正常列表已有同名用户时，恢复会撞 DB 全局唯一索引 uk_username
+        Long sameNameActive = baseDao.selectCount(new QueryWrapper<SysUserEntity>()
+                .eq("username", u.getUsername()).eq("deleted", 0));
+        if (sameNameActive != null && sameNameActive > 0) {
+            throw new RenException(ErrorCode.USER_USERNAME_EXISTS);
+        }
         SysUserEntity patch = new SysUserEntity();
         patch.setId(userId);
         patch.setDeleted(0);
         patch.setDeletedDate(null);
         updateById(patch);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void purge(Long userId, Long operatorId) {
+        if (userId.equals(operatorId)) {
+            throw new RenException(ErrorCode.USER_DELETE_FORBIDDEN);
+        }
+        assertModuleAdminCanTouch(userId);
+        SysUserEntity u = sysUserDao.selectById(userId);
+        if (u == null) {
+            throw new RenException(ErrorCode.USER_NOT_EXIST);
+        }
+        // 只允许彻底删除回收站中的账号（deleted=1）；正常用户必须先软删除
+        if (u.getDeleted() == null || u.getDeleted() != 1) {
+            throw new RenException(ErrorCode.USER_NOT_IN_RECYCLE);
+        }
+        // 级联清理（与 legacy deleteById 同源语义：设备 + 智能体全级联）
+        deviceService.deleteByUserId(userId);
+        agentService.deleteAgentByUserId(userId);
+        // 角色绑定、登录 token、音色克隆记录：物理删除防孤儿
+        sysUserRoleDao.deleteByUserId(userId);
+        sysUserTokenDao.delete(new QueryWrapper<yuhe.modules.security.entity.SysUserTokenEntity>()
+                .eq("user_id", userId));
+        voiceCloneDao.delete(new QueryWrapper<yuhe.modules.voiceclone.entity.VoiceCloneEntity>()
+                .eq("user_id", userId));
+        // 用户本体物理删除（释放用户名，DB uk_username 唯一索引随之解除占用）
+        baseDao.deleteById(userId);
     }
 
     @Override
@@ -552,6 +616,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
 
     @Override
     public void forceLogout(Long userId) {
+        assertModuleAdminCanTouch(userId);
         sysUserTokenDao.logout(userId, new java.util.Date(System.currentTimeMillis() - 60_000));
     }
 
@@ -560,6 +625,37 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         // 只返回启用角色，按 sort、id 排序（内置角色 id 小排前）
         return sysRoleDao.selectList(new QueryWrapper<SysRoleEntity>()
                 .eq("status", 1).orderByAsc("sort").orderByAsc("id"));
+    }
+
+    // ===== 模块级权限护栏（admin:users 开放给非超管后的提权防护，2026-10-22）=====
+
+    /** 当前操作者是否超级管理员（sys_user.super_admin=1） */
+    private boolean operatorIsSuperAdmin() {
+        try {
+            yuhe.common.user.UserDetail operator = SecurityUser.getUser();
+            return operator != null && operator.getSuperAdmin() != null
+                    && operator.getSuperAdmin() == SuperAdminEnum.YES.value();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** 非超管不可操作超管账号（重置密码/封禁/删除/强退/恢复），防接管与 DoS */
+    private void assertModuleAdminCanTouch(Long userId) {
+        if (operatorIsSuperAdmin() || userId == null) {
+            return;
+        }
+        SysUserEntity target = sysUserDao.selectById(userId);
+        if (target != null && target.getSuperAdmin() != null && target.getSuperAdmin() == 1) {
+            throw new RenException(ErrorCode.ADMIN_MODULE_TARGET_SUPER_FORBIDDEN);
+        }
+    }
+
+    /** 非超管不可分配/修改角色绑定（角色挂展示配置=模块权限来源，防横向扩权） */
+    private void assertSuperAdminForRoleOps() {
+        if (!operatorIsSuperAdmin()) {
+            throw new RenException(ErrorCode.ADMIN_MODULE_ROLE_ASSIGN_FORBIDDEN);
+        }
     }
 
     @Override

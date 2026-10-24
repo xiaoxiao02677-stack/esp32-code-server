@@ -207,7 +207,7 @@ async function changePwd() {
   pwdBusy.value = true
   try {
     await api.put('/user/change-password', {
-      oldPassword: pwd.value.oldPassword,
+      password: pwd.value.oldPassword,
       newPassword: pwd.value.newPassword
     })
     toast('密码修改成功')

@@ -374,4 +374,11 @@ onMounted(load)
   .side-block { min-width: 240px; }
   .chat-main { min-height: 480px; }
 }
+
+/* ---------- 手机：侧列压扁成横条，主区占屏 ---------- */
+@media (max-width: 768px) {
+  .side-block { min-width: 200px; max-height: 220px; }
+  .chat-main { min-height: 62dvh; }
+  .msg-bubble { max-width: 86%; font-size: 13.5px; }
+}
 </style>

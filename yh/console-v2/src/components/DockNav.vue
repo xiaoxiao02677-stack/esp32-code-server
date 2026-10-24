@@ -46,14 +46,6 @@
           class="compact-btn" :title="compact ? '切换宽松' : '切换紧凑'" :aria-label="compact ? '切换宽松布局' : '切换紧凑布局'"
           :class="{ on: compact }" @click="toggleCompact"
         ><YhIcon name="rows-compact" :size="14" /></button>
-        <button
-          v-if="role === 'admin' || canSwitchToAdmin"
-          type="button"
-          class="dock-more" :title="role === 'admin' ? '切换到顾客端' : '切换到管理端'"
-          :aria-label="role === 'admin' ? '切换到顾客端' : '切换到管理端'" @click="toggle"
-        >
-          <YhIcon :name="role === 'admin' ? 'swap' : 'arrow-right'" :size="16" />
-        </button>
       </div>
     </nav>
     <!-- 浮层组件内部 Teleport 到 body（.dock 的 backdrop-filter 会成为 fixed 包含块，不能就地定位） -->
@@ -63,7 +55,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { hasAdminRole, isModuleVisible, userState } from '../lib/api'
 import WallpaperDispatch from './WallpaperDispatch.vue'
 import YhIcon from './YhIcon.vue'
@@ -72,7 +64,6 @@ const props = defineProps({ role: { type: String, default: 'customer' } })
 const emit = defineEmits(['toggle-compact'])
 
 const route = useRoute()
-const router = useRouter()
 
 // 导航自适应展开：收起/展开状态（key 'cc_dock_collapsed'），仅布局自适应，文字字号 13px 不变。
 // 类挂在 <html> 上：CSS 变量 --dock-w 只能向下继承，挂 <html> 才能同时联动 .app-shell 左 padding 与 dock 宽度。
@@ -131,7 +122,6 @@ const customerItems = [
 ]
 const adminItems = [
   { to: '/admin', icon: 'home', label: '概览' },
-  { to: '/admin/orders', icon: 'package', label: '订单管理' },
   { to: '/admin/agents', icon: 'bot', label: '智能体' },
   { to: '/admin/chat', icon: 'chat', label: '聊天' },
   { to: '/admin/memory', icon: 'memory', label: '记忆' },
@@ -142,6 +132,7 @@ const adminItems = [
   { to: '/admin/devices', icon: 'device', label: '设备' },
   { to: '/admin/params', icon: 'sliders', label: '参数' },
   { to: '/admin/users', icon: 'users', label: '用户' },
+  { to: '/admin/orders', icon: 'package', label: '订单管理' },
   { to: '/admin/roles', icon: 'badge', label: '角色' },
   { to: '/admin/audit', icon: 'scroll', label: '审计' },
   { to: '/admin/display', icon: 'eye', label: '展示配置' },
@@ -166,22 +157,11 @@ const items = computed(() => {
 function isActive(to) {
   return route.path === to
 }
-// 用户模块：普通用户（无 admin 系角色且非超管）在顾客端不显示「切换到管理端」按钮。
-// 切换按钮可见性：订阅响应式 userState（登录补全/老登录态异步修正后自动重算），
-// 不再裸调 getUserInfo()（读 localStorage 无响应式依赖，登录后写入 cc_user_info 不会触发重算）。
-// 未知状态（username 空且无角色数据）保守显示，向后兼容旧登录态；管理端角色照旧显示。
-const canSwitchToAdmin = computed(() => {
-  const u = userState.value
-  if (!u || (!u.username && !Array.isArray(u.roles))) return true
-  return hasAdminRole(u)
-})
-// 壁纸下发入口可见性：与「切换管理端」同一套判断（hasAdminRole 已含 superAdmin===1），
-// 额外要求当前处于管理端 role；userState 登录后异步补全，必须用 computed 实时重算。
-// 与切换按钮的「未知态保守显示」相反：此处 fail-closed，身份未知时不显示入口。
+// 用户模块：登录按角色自动分流（管理员→管理端、普通用户→顾客端），dock 不再提供切换入口。
+// 壁纸下发入口可见性：壁纸接口（/wallpaperMag/**）为超管专用且不在模块清单中，
+// 入口跟随接口权限用 hasAdminRole；额外要求当前处于管理端 role；
+// userState 登录后异步补全，必须用 computed 实时重算（fail-closed，身份未知时不显示入口）。
 const canManageWallpaper = computed(() => props.role === 'admin' && hasAdminRole(userState.value))
-function toggle() {
-  router.push(props.role === 'admin' ? '/customer' : '/admin')
-}
 </script>
 
 <style scoped>

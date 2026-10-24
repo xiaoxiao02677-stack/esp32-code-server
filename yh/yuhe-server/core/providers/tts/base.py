@@ -557,6 +557,25 @@ class TTSProviderBase(ABC):
                         enqueue_audio = []
                         enqueue_text = text
 
+                    if (
+                        sentence_type is SentenceType.FIRST
+                        and getattr(self, "_need_tts_start_before_next_first", False)
+                    ):
+                        # duplex 本地句子（音乐文件/兜底LLM多段合成）紧跟上文
+                        # LAST：设备已回 listening（固件状态机仅在 speaking 态
+                        # 收音频帧），必须先补 tts start 再发本句。标志由
+                        # aliyun_multimodal 置位；按队列顺序在此补发保证 wire
+                        # 顺序：上文帧→tts stop→tts start→sentence_start→帧。
+                        self._need_tts_start_before_next_first = False
+                        try:
+                            from core.handle.sendAudioHandle import send_tts_message
+
+                            asyncio.run_coroutine_threadsafe(
+                                send_tts_message(self.conn, "start"), self.conn.loop
+                            ).result(timeout=5)
+                        except Exception as e:
+                            logger.bind(tag=TAG).warning(f"duplex 句间 tts start 补发失败: {e}")
+
                 # 收集上报音频数据
                 if isinstance(audio_datas, bytes):
                     enqueue_audio.append(audio_datas)

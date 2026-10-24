@@ -6,6 +6,7 @@
         <p class="sub">绑定与查看你的设备</p>
       </div>
       <div class="head-actions">
+        <button class="btn btn-primary" :disabled="pick.loading" @click="openBind">{{ pick.loading ? '加载中…' : '＋ 绑定新设备' }}</button>
         <button class="btn btn-ghost" :disabled="loading" @click="load">{{ loading ? '加载中…' : '↻ 刷新' }}</button>
       </div>
     </div>
@@ -62,15 +63,45 @@
       <div v-if="devices.length === 0" class="empty-state">
         <div class="empty-icon"><YhIcon name="device" /></div>
         <strong>暂无设备</strong>
-        <p>还没有绑定任何设备，去创建智能体并绑定设备吧</p>
+        <p>点击右上角「绑定新设备」，输入设备屏幕显示的 6 位验证码即可绑定</p>
+        <button class="btn btn-primary" style="margin-top:14px" @click="openBind">＋ 绑定新设备</button>
       </div>
     </DataTable>
+
+    <!-- 选择智能体弹窗：绑定设备前需指定归属智能体 -->
+    <div v-if="pick.show" class="modal-mask" @click.self="pick.show = false">
+      <div class="modal">
+        <h3>选择要绑定到的智能体</h3>
+        <div v-if="pick.loading" style="color:var(--text-sub);font-size:13px;padding:8px 0">加载中…</div>
+        <template v-else-if="pick.list.length">
+          <div class="pick-list">
+            <button v-for="a in pick.list" :key="a.id" class="pick-item" @click="pickAgent(a)">
+              <span class="pick-name">{{ a.name }}</span>
+              <span class="pick-sub">{{ a.deviceCount ? a.deviceCount + ' 台设备' : '未绑定设备' }}</span>
+            </button>
+          </div>
+        </template>
+        <p v-else class="pick-empty">
+          还没有智能体。设备必须绑定到智能体才能对话，请先创建一个智能体。
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="pick.show = false">取消</button>
+          <button v-if="!pick.loading && pick.list.length === 0" class="btn btn-primary" @click="goCreateAgent">去创建智能体</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 绑定设备弹窗（六位码 / 手动 MAC / 解绑） -->
+    <BindDeviceModal v-model:show="bind.show" :agent-id="bind.agentId" :agent-name="bind.agentName" @bound="load" />
 
     <!-- 设备详情弹窗（契约字段 UserShowDeviceListVO） -->
     <div v-if="showDetail" class="modal-mask" @click.self="showDetail = null">
       <div class="modal">
         <h3>设备详情</h3>
-        <div class="form-row"><label>名称</label><input :value="showDetail.alias || '未命名设备'" readonly /></div>
+        <div class="form-row"><label>名称</label>
+          <input v-if="!editName.on" :value="showDetail.alias || '未命名设备'" readonly />
+          <input v-else v-model="editName.value" placeholder="设备别名" maxlength="64" />
+        </div>
         <div class="form-row"><label>MAC 地址</label><input :value="showDetail.macAddress || '—'" readonly /></div>
         <div class="form-row"><label>型号</label><input :value="showDetail.deviceType || '—'" readonly /></div>
         <div class="form-row"><label>板型</label><input :value="showDetail.board || '—'" readonly /></div>
@@ -79,6 +110,11 @@
         <div class="form-row"><label>绑定用户</label><input :value="showDetail.bindUserName || '—'" readonly /></div>
         <div class="modal-actions">
           <button class="btn btn-ghost" @click="showDetail = null">关闭</button>
+          <button v-if="!editName.on" class="btn btn-ghost" @click="startEditName">编辑名称</button>
+          <template v-else>
+            <button class="btn btn-ghost" @click="editName.on = false">取消</button>
+            <button class="btn btn-primary" :disabled="editName.saving" @click="saveName">保存</button>
+          </template>
         </div>
       </div>
     </div>
@@ -87,11 +123,14 @@
 
 <script setup>
 import YhIcon from '../../components/YhIcon.vue'
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
+import BindDeviceModal from '../../components/BindDeviceModal.vue'
 import { api, customerApi } from '../../lib/api'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const toast = inject('toast')
 const askConfirm = inject('askConfirm')
 
@@ -99,6 +138,9 @@ const devices = ref([])
 const loading = ref(false)
 const unbinding = ref(false)
 const showDetail = ref(null)
+// 绑定弹窗与智能体选择弹窗状态
+const bind = reactive({ show: false, agentId: '', agentName: '' })
+const pick = reactive({ show: false, loading: false, list: [] })
 let warned = false
 
 const boardCount = computed(() => new Set(devices.value.map(d => d.board).filter(Boolean)).size)
@@ -171,6 +213,73 @@ async function load() {
 
 function detail(d) {
   showDetail.value = d
+  editName.on = false
+}
+
+// 设备改名（PUT /device/update/{id}，body { alias }；属主/超管/共享用户均可）
+const editName = reactive({ on: false, saving: false, value: '' })
+function startEditName() {
+  editName.value = showDetail.value?.alias || ''
+  editName.on = true
+}
+async function saveName() {
+  const v = editName.value.trim()
+  if (!v) { toast('设备名称不能为空', 'error'); return }
+  editName.saving = true
+  try {
+    await api.put(`/device/update/${showDetail.value.id}`, { alias: v })
+    showDetail.value.alias = v
+    const row = devices.value.find(x => x.id === showDetail.value.id)
+    if (row) row.alias = v
+    toast('设备名称已更新')
+    editName.on = false
+  } catch (e) {
+    toast(e.msg || '保存失败', 'error')
+  } finally {
+    editName.saving = false
+  }
+}
+
+// 绑定新设备：先拉智能体列表——单智能体直达绑定弹窗；多智能体弹选择；零智能体给创建引导
+async function openBind() {
+  if (pick.loading) return
+  pick.loading = true
+  try {
+    const res = await customerApi.agentList()
+    const list = (res.data || []).map(a => ({
+      id: a.id || a.agentId,
+      name: a.agentName || a.name || '未命名',
+      deviceCount: a.deviceCount != null ? Number(a.deviceCount) : null
+    })).filter(a => a.id)
+    pick.list = list
+    if (list.length === 1) {
+      // 唯一智能体：跳过选择直接进绑定弹窗
+      bind.agentId = list[0].id
+      bind.agentName = list[0].name
+      bind.show = true
+    } else {
+      // 0 个走创建引导、多个走选择弹窗（弹窗内已按 list.length 分支渲染）
+      pick.show = true
+    }
+  } catch (e) {
+    pick.list = []
+    pick.show = true
+    if (!warned) { warned = true; toast(e.msg || '智能体列表加载失败', 'error') }
+  } finally {
+    pick.loading = false
+  }
+}
+
+function pickAgent(a) {
+  pick.show = false
+  bind.agentId = a.id
+  bind.agentName = a.name
+  bind.show = true
+}
+
+function goCreateAgent() {
+  pick.show = false
+  router.push('/customer')
 }
 
 function unbind(d) {
@@ -209,4 +318,15 @@ onMounted(load)
   font-size: 14px; outline: none; font-family: var(--font); background: #F7F9FC;
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+/* 智能体选择列表 */
+.pick-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.pick-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 16px;
+  background: #fff; cursor: pointer; transition: all .15s; font-family: var(--font); text-align: left;
+}
+.pick-item:hover { border-color: var(--primary); background: var(--primary-soft, #EEF2FF); }
+.pick-name { font-size: 14px; font-weight: 600; }
+.pick-sub { font-size: 12px; color: var(--text-sub); white-space: nowrap; }
+.pick-empty { font-size: 13.5px; color: var(--text-sub); line-height: 1.6; padding: 4px 0; }
 </style>

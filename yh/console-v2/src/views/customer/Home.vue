@@ -54,18 +54,25 @@
             <td style="color:var(--text-sub)">{{ a.lastActive }}</td>
             <td>
               <div class="row-actions">
+                <button class="link-btn" @click="openEdit(a)">编辑</button>
+                <button class="link-btn" @click="openBind(a)">绑定设备</button>
                 <button class="link-btn" @click="$router.push('/customer/devices')">查看设备</button>
+                <button class="link-btn danger" @click="remove(a)">删除</button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
-      <div v-if="agents.length === 0" class="empty-state">
-        <div class="empty-icon"><YhIcon name="bot" /></div>
-        <strong>暂无智能体</strong>
-        <p>点击右上角「新增智能体」创建第一个智能体</p>
-      </div>
+    <div v-if="agents.length === 0" class="empty-state">
+      <div class="empty-icon"><YhIcon name="bot" /></div>
+      <strong>暂无智能体</strong>
+      <p>点击右上角「新增智能体」创建第一个智能体</p>
+      <button class="btn btn-primary" style="margin-top:14px" @click="openCreateModal">＋ 立即创建</button>
+    </div>
     </DataTable>
+
+    <!-- 绑定设备弹窗（六位码 / 手动 MAC / 解绑） -->
+    <BindDeviceModal v-model:show="bind.show" :agent-id="bind.agentId" :agent-name="bind.agentName" @bound="onBoundRefresh" />
 
     <div v-if="showCreate" class="modal-mask" @click.self="showCreate = false">
       <div class="modal">
@@ -91,17 +98,47 @@
         </div>
       </div>
     </div>
+
+    <!-- 编辑弹窗（共享智能体视同自建，可编辑） -->
+    <div v-if="edit.show" class="modal-mask" @click.self="edit.show = false">
+      <div class="modal">
+        <h3>编辑智能体</h3>
+        <div v-if="edit.loading" class="edit-loading">加载中…</div>
+        <template v-else>
+          <div class="form-row"><label>智能体名称</label><input v-model="edit.name" placeholder="例如：小何" /></div>
+          <div class="form-row"><label>大脑（LLM 模型）</label>
+            <select v-if="llmModels.length > 0" v-model="edit.llmModelId">
+              <option v-for="m in llmModels" :key="m.id" :value="m.id">{{ m.modelName }}</option>
+            </select>
+            <div v-else class="inline-empty">
+              <div>
+                <strong>暂无可用模型</strong>
+                <p>保持原有模型不变，或前往「我的模型」添加自定义模型</p>
+              </div>
+              <button class="btn btn-ghost" style="padding:7px 16px;font-size:12.5px" @click="$router.push('/customer/my-models')">前往我的模型</button>
+            </div>
+          </div>
+          <div class="form-row"><label>角色提示词</label><textarea v-model="edit.prompt" rows="3" placeholder="描述智能体的性格与说话风格"></textarea></div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" @click="edit.show = false">取消</button>
+            <button class="btn btn-primary" :disabled="edit.saving || !edit.name" @click="saveEdit">保存</button>
+          </div>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import YhIcon from '../../components/YhIcon.vue'
-import { inject, onMounted, ref } from 'vue'
+import { inject, onMounted, reactive, ref } from 'vue'
 import StatCard from '../../components/StatCard.vue'
 import DataTable from '../../components/DataTable.vue'
+import BindDeviceModal from '../../components/BindDeviceModal.vue'
 import { customerApi, api } from '../../lib/api'
 
 const toast = inject('toast')
+const askConfirm = inject('askConfirm')
 
 const showCreate = ref(false)
 const draft = ref({ name: '', prompt: '' })
@@ -112,6 +149,10 @@ const deviceCount = ref(0)
 const voices = ref(0)
 // 模型为0规则：LLM 下拉数据源（平台启用+本人审核通过）
 const llmModels = ref([])
+// 绑定弹窗状态：{ show, agentId, agentName }
+const bind = reactive({ show: false, agentId: '', agentName: '' })
+// 编辑弹窗状态：共享/自建智能体统一可编辑（后端 PUT /agent/{id} 非空字段更新）
+const edit = reactive({ show: false, loading: false, saving: false, id: '', name: '', prompt: '', llmModelId: '' })
 let warned = false
 
 function fmtTime(s) {
@@ -179,9 +220,16 @@ async function createAgent() {
     const body = { agentName: draft.value.name.trim(), systemPrompt: draft.value.prompt }
     // LLM 模型（/user/resources 提供时）随创建一并提交
     if (draft.value.llmModelId) body.llmModelId = draft.value.llmModelId
-    await customerApi.createAgent(body)
+    const res = await customerApi.createAgent(body)
     toast(`智能体「${draft.value.name.trim()}」已创建`)
     showCreate.value = false
+    // 创建成功直接引导绑定设备（后端返回纯字符串 agentId）
+    const newId = typeof res.data === 'string' ? res.data : (res.data?.id || res.data)
+    if (newId) {
+      bind.agentId = newId
+      bind.agentName = draft.value.name.trim()
+      bind.show = true
+    }
     draft.value = { name: '', prompt: '', llmModelId: '' }
     load()
   } catch (e) {
@@ -189,6 +237,75 @@ async function createAgent() {
   } finally {
     creating.value = false
   }
+}
+
+function openBind(a) {
+  bind.agentId = a.id
+  bind.agentName = a.name
+  bind.show = true
+}
+
+// 编辑：agentDetail 回显（AgentInfoVO 继承 AgentEntity：agentName/systemPrompt/llmModelId）
+async function openEdit(a) {
+  edit.id = a.id
+  edit.name = a.name
+  edit.prompt = ''
+  edit.llmModelId = ''
+  edit.show = true
+  edit.loading = true
+  try {
+    const res = await customerApi.agentDetail(a.id)
+    const d = res.data || {}
+    edit.name = d.agentName || a.name
+    edit.prompt = d.systemPrompt || ''
+    edit.llmModelId = d.llmModelId || ''
+  } catch (e) {
+    // 详情拉取失败不阻塞：仍可改名保存（prompt/模型保持空=不更新）
+    toast(e.msg || '详情加载失败，仅可修改名称', 'error')
+  } finally {
+    edit.loading = false
+  }
+  if (!llmModels.value.length) loadLlmModels()
+}
+
+async function saveEdit() {
+  if (!edit.name.trim()) return
+  edit.saving = true
+  try {
+    // PUT /agent/{id} 只更新非空字段：prompt 留空表示不改
+    const body = { agentName: edit.name.trim() }
+    if (edit.prompt.trim()) body.systemPrompt = edit.prompt.trim()
+    if (edit.llmModelId) body.llmModelId = edit.llmModelId
+    await customerApi.updateAgent(edit.id, body)
+    toast(`智能体「${edit.name.trim()}」已更新`)
+    edit.show = false
+    load()
+  } catch (e) {
+    toast(e.msg || '保存失败', 'error')
+  } finally {
+    edit.saving = false
+  }
+}
+
+function remove(a) {
+  askConfirm({
+    title: '删除智能体',
+    message: `确定删除「${a.name}」吗？删除后绑定关系一并解除，且不可恢复。`,
+    danger: true,
+    onOk: async () => {
+      try {
+        await customerApi.deleteAgent(a.id)
+        toast('已删除')
+        load()
+      } catch (e) {
+        toast(e.msg || '删除失败', 'error')
+      }
+    }
+  })
+}
+
+function onBoundRefresh() {
+  load()
 }
 
 // 模型为0规则：拉取用户可用 LLM 列表（平台启用+本人审核通过的自定义模型）
@@ -233,4 +350,6 @@ onMounted(() => { load(); loadLlmModels() })
 }
 .inline-empty strong { font-size: 13.5px; }
 .inline-empty p { font-size: 12px; color: var(--text-sub); margin: 4px 0 0; line-height: 1.5; }
+.link-btn.danger { color: var(--danger); }
+.edit-loading { padding: 30px 0; text-align: center; color: var(--text-sub); font-size: 13.5px; }
 </style>

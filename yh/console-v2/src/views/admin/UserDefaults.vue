@@ -326,4 +326,10 @@ onMounted(() => {
   background: #fff; transition: left .2s; box-shadow: 0 2px 6px rgba(0,0,0,.2);
 }
 .switch.on .knob { left: 23px; }
+
+/* 移动端：下拉不固定最小宽；编辑栅格单列 */
+@media (max-width: 768px) {
+  select { min-width: 0 !important; max-width: 100%; }
+  .edit-grid { grid-template-columns: 1fr; }
+}
 </style>

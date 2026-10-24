@@ -17,7 +17,7 @@
 // "压扁→渐亮睁开"的 0.5s 睁眼接管开机首帧（无需独立出生动画模块）。
 //
 // 主题切换：Kconfig choice YH_UI_THEME（main/Kconfig.projbuild）
-//   · YH_UI_THEME_XIAOYOU（默认）—— 原主题（小智/小柚/琳琳）
+//   · YH_UI_THEME_XIAOYOU（默认）—— 原主题（品牌 splash「屿禾工坊」）
 //   · YH_UI_THEME_PIXELPET —— 像素宠物
 //   · YH_UI_THEME_EMOPET —— EMOpet 机器人眼（本类）
 // build.py --theme xiaoyou|pixel-pet|emopet 注入对应 sdkconfig 行。

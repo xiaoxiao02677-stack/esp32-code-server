@@ -54,6 +54,7 @@ import yuhe.common.utils.DateUtils;
 import yuhe.common.utils.JsonUtils;
 import yuhe.modules.agent.dao.AgentDao;
 import yuhe.modules.agent.entity.AgentEntity;
+import yuhe.modules.agent.service.AgentShareService;
 import yuhe.modules.device.dao.DeviceDao;
 import yuhe.modules.device.dto.DeviceManualAddDTO;
 import yuhe.modules.device.dto.DevicePageUserDTO;
@@ -76,6 +77,7 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
 
     private final DeviceDao deviceDao;
     private final AgentDao agentDao;
+    private final AgentShareService agentShareService;
     private final SysUserUtilService sysUserUtilService;
     private final SysParamsService sysParamsService;
     private final RedisUtils redisUtils;
@@ -289,8 +291,17 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     @Override
     public List<DeviceEntity> getUserDevices(Long userId, String agentId) {
         QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId);
         wrapper.eq("agent_id", agentId);
+        // 智能体归属主看自己名下；共享授权用户看智能体名下全部设备
+        // （设备 user_id 是绑定操作人，多人共享智能体时设备可能挂在别人名下）
+        AgentEntity agent = agentDao.selectById(agentId);
+        if (agent == null || !userId.equals(agent.getUserId())) {
+            if (agent != null && agentShareService.isSharedToUser(agentId, userId)) {
+                // 共享用户：按 agent_id 查该智能体全部设备（不再限 user_id）
+            } else {
+                wrapper.eq("user_id", userId);
+            }
+        }
         return baseDao.selectList(wrapper);
     }
 
@@ -332,11 +343,19 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     }
 
     @Override
-    public void unbindDevice(Long userId, String deviceId) {
+    public void unbindDevice(UserDetail user, String deviceId) {
         // 先查询设备信息，获取agentId和macAddress
         DeviceEntity device = baseDao.selectById(deviceId);
         if (device == null) {
             return;
+        }
+        boolean superAdmin = user != null && Integer.valueOf(1).equals(user.getSuperAdmin());
+        // 共享授权：智能体共享给当前用户 → 设备视为可操作（与自建一致）
+        boolean sharedAgent = StringUtils.isNotBlank(device.getAgentId())
+                && agentShareService.isSharedToUser(device.getAgentId(), user.getId());
+        if (!superAdmin && !sharedAgent && !user.getId().equals(device.getUserId())) {
+            // 非归属者且非管理员且无共享授权：明确报错而非假成功
+            throw new RenException(ErrorCode.NO_PERMISSION);
         }
         String macAddress = device.getMacAddress();
         if (StringUtils.isNotBlank(device.getAgentId())) {
@@ -345,8 +364,13 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         }
 
         UpdateWrapper<DeviceEntity> wrapper = new UpdateWrapper<>();
-        wrapper.eq("user_id", userId);
-        wrapper.eq("id", deviceId);
+        if (superAdmin || sharedAgent) {
+            // 管理端/共享授权：按设备 id 删（共享用户可解绑该智能体名下全部设备）
+            wrapper.eq("id", deviceId);
+        } else {
+            wrapper.eq("user_id", user.getId());
+            wrapper.eq("id", deviceId);
+        }
         baseDao.delete(wrapper);
 
         // 删除设备相关的通讯录权限记录
@@ -636,7 +660,24 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     }
 
     @Override
+    public boolean isAgentSharedToUser(String agentId, Long userId) {
+        return agentShareService.isSharedToUser(agentId, userId);
+    }
+
+    @Override
     public void manualAddDevice(Long userId, DeviceManualAddDTO dto) {
+        // 智能体权限校验：归属主/超管/共享授权用户才可往该智能体手动添加设备
+        // （此前无校验，任何登录用户可往任意 agentId 塞设备）
+        AgentEntity targetAgent = agentDao.selectById(dto.getAgentId());
+        if (targetAgent == null) {
+            throw new RenException(ErrorCode.AGENT_NOT_FOUND);
+        }
+        UserDetail current = SecurityUser.getUser();
+        boolean superAdmin = current != null && Integer.valueOf(1).equals(current.getSuperAdmin());
+        if (!superAdmin && !userId.equals(targetAgent.getUserId())
+                && !agentShareService.isSharedToUser(dto.getAgentId(), userId)) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         // 检查mac是否已存在
         QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("mac_address", dto.getMacAddress());

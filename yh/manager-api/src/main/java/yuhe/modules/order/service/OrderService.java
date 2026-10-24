@@ -7,7 +7,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import yuhe.common.page.PageData;
+import yuhe.common.user.UserDetail;
 import yuhe.modules.order.dao.OrderMapper;
+import yuhe.modules.security.user.SecurityUser;
+import yuhe.modules.sys.enums.SuperAdminEnum;
 
 @Service
 public class OrderService {
@@ -18,6 +21,21 @@ public class OrderService {
         this.orderMapper = orderMapper;
     }
 
+    /**
+     * 数据范围：超管返回 null（全量），普通用户返回本人 userId（强制过滤）。
+     * /order/* 无 /admin 前缀，Shiro 只保证已登录，读接口必须在这里收敛数据范围。
+     */
+    private Long scopeUserId() {
+        UserDetail user = SecurityUser.getUser();
+        if (user == null || user.getId() == null) {
+            return -1L;
+        }
+        if (user.getSuperAdmin() != null && user.getSuperAdmin() == SuperAdminEnum.YES.value()) {
+            return null;
+        }
+        return user.getId();
+    }
+
     public PageData page(int pageNum, int pageSize, String keyword) {
         if (pageNum < 1) {
             pageNum = 1;
@@ -26,13 +44,14 @@ public class OrderService {
             pageSize = 10;
         }
         int offset = (pageNum - 1) * pageSize;
-        List<Map<String, Object>> list = orderMapper.selectList(keyword, offset, pageSize);
-        int total = orderMapper.selectCount(keyword);
+        Long userId = scopeUserId();
+        List<Map<String, Object>> list = orderMapper.selectList(keyword, userId, offset, pageSize);
+        int total = orderMapper.selectCount(keyword, userId);
         return new PageData<>(list, total);
     }
 
     public Map<String, Object> getById(String id) {
-        return orderMapper.getById(id);
+        return orderMapper.getById(id, scopeUserId());
     }
 
     public void create(Map<String, Object> params) {
@@ -67,7 +86,7 @@ public class OrderService {
     }
 
     public List<Map<String, Object>> export(String keyword) {
-        return orderMapper.selectList(keyword, 0, 10000);
+        return orderMapper.selectList(keyword, scopeUserId(), 0, 10000);
     }
 
     /**

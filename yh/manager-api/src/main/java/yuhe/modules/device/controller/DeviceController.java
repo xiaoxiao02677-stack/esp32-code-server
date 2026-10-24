@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -113,7 +114,7 @@ public class DeviceController {
     @RequiresPermissions("sys:role:normal")
     public Result<Void> unbindDevice(@RequestBody DeviceUnBindDTO unDeviveBind) {
         UserDetail user = SecurityUser.getUser();
-        deviceService.unbindDevice(user.getId(), unDeviveBind.getDeviceId());
+        deviceService.unbindDevice(user, unDeviveBind.getDeviceId());
         return new Result<Void>();
     }
 
@@ -126,7 +127,11 @@ public class DeviceController {
             return new Result<Void>().error("设备不存在");
         }
         UserDetail user = SecurityUser.getUser();
-        if (!entity.getUserId().equals(user.getId())) {
+        // 属主 / 超管 / 智能体共享授权用户（共享用户看共享智能体如同自建，可改）
+        boolean allowed = entity.getUserId().equals(user.getId())
+                || (user.getSuperAdmin() != null && user.getSuperAdmin() == 1)
+                || (entity.getAgentId() != null && deviceService.isAgentSharedToUser(entity.getAgentId(), user.getId()));
+        if (!allowed) {
             return new Result<Void>().error("设备不存在");
         }
         BeanUtils.copyProperties(deviceUpdateDTO, entity);
@@ -147,7 +152,7 @@ public class DeviceController {
 
     @PutMapping("/ota-target/{id}")
     @Operation(summary = "设置设备 OTA 定向配置（单台指定固件 / 主题轨道）")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:devices"}, logical = Logical.OR)
     public Result<Void> setDeviceOtaTarget(@PathVariable String id,
             @Valid @RequestBody DeviceOtaTargetDTO dto) {
         DeviceEntity entity = deviceService.selectById(id);

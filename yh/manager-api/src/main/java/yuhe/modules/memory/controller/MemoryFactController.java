@@ -3,6 +3,7 @@ package yuhe.modules.memory.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,7 +52,7 @@ public class MemoryFactController {
 
     @PostMapping("/agents/{agentId}/summarize")
     @Operation(summary = "一键总结智能体近期会话并写入记忆条目")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:memory"}, logical = Logical.OR)
     public Result<String> summarizeAgentChats(
             @Parameter(name = "agentId", description = "智能体ID", required = true) @PathVariable("agentId") String agentId) {
         String summary = agentMemorySummarizeService.summarizeAgentChats(agentId, SecurityUser.getUserId());

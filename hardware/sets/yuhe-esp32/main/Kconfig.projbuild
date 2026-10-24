@@ -28,6 +28,19 @@ menu "YH Device Protocol"
 endmenu
 
 menu "YH Voice Interrupt Tuning"
+
+    config YH_REALTIME_INTERRUPT
+        bool "Enable realtime voice interrupt (device side)"
+        default n
+        help
+            实时打断总开关（设备侧）。n = 播报中彻底不做设备侧打断：
+            本地 VAD 人声打断与 Speaking 态唤醒词打断全部静默，播报
+            完整播完；用户想插话只能等播报结束（Idle 态唤醒词唤醒
+            不受影响，仍可正常发起对话）。
+            服务端 AEC 打断不受此开关影响（由服务端 interrupt_enabled
+            控制）。接入 Realtime API 时改为 y（或 sdkconfig_append
+            追加 CONFIG_YH_REALTIME_INTERRUPT=y）恢复设备侧实时打断。
+
     config YH_VAD_MODE
         int "AFE VAD 灵敏度档位 (0=最灵敏, 4=最迟钝)"
         range 0 4
@@ -95,7 +108,7 @@ choice YH_UI_THEME
     config YH_UI_THEME_XIAOYOU
         bool "Original (xiaoyou/linlin)"
         help
-            原主题：背景图 + emoji 表情 + 品牌 splash（琳琳 AI 陪伴助手）。
+            原主题：背景图 + emoji 表情 + 品牌 splash（屿禾工坊）。
 
     config YH_UI_THEME_PIXELPET
         bool "Pixel Pet"

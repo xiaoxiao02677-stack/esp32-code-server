@@ -304,4 +304,12 @@ public interface ErrorCode {
     int ADMIN_ROLE_HAS_USERS = 10234; // 角色下仍有用户，先解绑再删除
     int ADMIN_CUSTOM_NOT_EXIST = 10235; // 自定义模型/音色记录不存在
     int ADMIN_AUDIT_REMARK_REQUIRED = 10236; // 驳回时必须填写审核意见
+
+    // 用户管理补充（回收站同名占用：DB uk_username 全局唯一不看 deleted，软删用户仍占用户名）
+    int USER_USERNAME_IN_RECYCLE = 10237; // 用户名被回收站已删账号占用
+    int USER_NOT_IN_RECYCLE = 10238; // 只有回收站中的账号才能彻底删除
+
+    // 模块级权限护栏（admin:users 等模块码开放后的提权防护）
+    int ADMIN_MODULE_TARGET_SUPER_FORBIDDEN = 10239; // 非超级管理员不可操作超级管理员账号
+    int ADMIN_MODULE_ROLE_ASSIGN_FORBIDDEN = 10240; // 非超级管理员不可分配或修改角色绑定
 }

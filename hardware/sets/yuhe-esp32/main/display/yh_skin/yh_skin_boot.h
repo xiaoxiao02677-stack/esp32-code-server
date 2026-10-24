@@ -22,7 +22,7 @@
 namespace yh_skin {
 
 struct SplashInfo {
-    const char* brand = "琳琳";
+    const char* brand = "屿禾工坊";
     const char* subtitle = "";
     const char* version = "";  // 右下角小字
     // 开机底图：优先用户壁纸（WallpaperManager 已生效的那张）。
@@ -37,7 +37,7 @@ void BuildSplash(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFon
 
 // 开机画面是 assets 生效前建的，用的是编译进固件的 basic 字体（890 字）。
 // assets 的 common（5258 字）加载完之后必须调一次本函数重绑，否则品牌名/
-// 副标题里不在 basic 的字（例如「柚」）会一直是方框。
+// 副标题里不在 basic 的字（例如「屿」）会一直是方框。
 // 调用方必须已持有 LVGL 锁；splash 不存在时安全空转。
 void SetSplashFont(const lv_font_t* text_font);
 

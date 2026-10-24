@@ -3,7 +3,7 @@
   <div v-else class="app-shell" :class="[roleClass, { 'shell-compact': compact }]">
     <a href="#main-content" class="skip-link">跳到主内容</a>
     <main class="app-canvas" id="main-content">
-      <TopBar :role="role" @switch-role="switchRole" />
+      <TopBar :role="role" />
       <router-view />
       <DockNav :role="role" @toggle-compact="onToggleCompact" />
       <Toasts ref="toastsRef" />
@@ -19,22 +19,22 @@
           </div>
         </div>
       </div>
-      <!-- 强制改密弹窗：遮罩不可点关闭（无 click.self），期间锁定 body 滚动 -->
-      <div v-if="forcePwd.show" class="modal-mask force-mask">
-        <div class="modal">
-          <h3>🔑 请先修改初始密码</h3>
-          <p class="force-tip">管理员要求你修改初始密码后才能继续使用，修改成功后弹窗自动关闭。</p>
-          <div class="form-row"><label>旧密码</label><input type="password" v-model="forcePwd.oldPassword" placeholder="请输入当前密码" /></div>
-          <div class="form-row"><label>新密码</label><input type="password" v-model="forcePwd.newPassword" placeholder="需包含大写字母、小写字母和数字" /></div>
-          <div class="form-row"><label>确认新密码</label><input type="password" v-model="forcePwd.confirm" placeholder="再次输入新密码" @keyup.enter="submitForcePwd" /></div>
-          <div class="modal-actions">
-            <button class="btn btn-primary" :disabled="forcePwdBusy || !forcePwd.oldPassword || !forcePwd.newPassword || !forcePwd.confirm || forcePwd.newPassword !== forcePwd.confirm" @click="submitForcePwd">
-              {{ forcePwdBusy ? '提交中…' : '提交' }}
-            </button>
-          </div>
-        </div>
-      </div>
     </main>
+  </div>
+  <!-- 强制改密弹窗：提到双壳之外，商店独立页同样生效；遮罩不可点关闭，期间锁定 body 滚动 -->
+  <div v-if="!booting && forcePwd.show" class="modal-mask force-mask">
+    <div class="modal">
+      <h3>🔑 请先修改初始密码</h3>
+      <p class="force-tip">管理员要求你修改初始密码后才能继续使用，修改成功后弹窗自动关闭。</p>
+      <div class="form-row"><label>旧密码</label><input type="password" v-model="forcePwd.oldPassword" placeholder="请输入当前密码" /></div>
+      <div class="form-row"><label>新密码</label><input type="password" v-model="forcePwd.newPassword" placeholder="需包含大写字母、小写字母和数字" /></div>
+      <div class="form-row"><label>确认新密码</label><input type="password" v-model="forcePwd.confirm" placeholder="再次输入新密码" @keyup.enter="submitForcePwd" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" :disabled="forcePwdBusy || !forcePwd.oldPassword || !forcePwd.newPassword || !forcePwd.confirm || forcePwd.newPassword !== forcePwd.confirm" @click="submitForcePwd">
+          {{ forcePwdBusy ? '提交中…' : '提交' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -84,10 +84,6 @@ watch(() => confirm.show, async (v) => {
   if (v) { await nextTick(); confirmOkBtn.value?.focus() }
 })
 
-function switchRole(r) {
-  router.push(r === 'admin' ? '/admin' : '/customer')
-}
-
 function onToggleCompact(val) {
   compact.value = !!val
   localStorage.setItem('cc_compact', compact.value ? '1' : '0')
@@ -119,7 +115,7 @@ async function submitForcePwd() {
   forcePwdBusy.value = true
   try {
     await api.put('/user/change-password', {
-      oldPassword: forcePwd.oldPassword,
+      password: forcePwd.oldPassword,
       newPassword: forcePwd.newPassword
     })
     toast('密码修改成功')

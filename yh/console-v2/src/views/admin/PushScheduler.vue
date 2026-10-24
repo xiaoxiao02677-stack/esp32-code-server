@@ -460,4 +460,12 @@ onUnmounted(stopTimer)
 .empty { text-align: center; padding: 48px 20px; color: var(--text-sub); }
 .empty.err { color: #dc2626; }
 .empty-sub { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+
+/* 移动端：任务卡单列、表单单列、kv 紧凑 */
+@media (max-width: 768px) {
+  .tasks { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .kv { grid-template-columns: 84px 1fr; }
+  .modal { width: 94vw; }
+}
 </style>

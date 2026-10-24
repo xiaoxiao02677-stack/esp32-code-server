@@ -12,8 +12,11 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface OrderMapper {
 
-    @Select("SELECT * FROM order_table WHERE id = #{id}")
-    Map<String, Object> getById(@Param("id") String id);
+    @Select("<script>" +
+            "SELECT * FROM order_table WHERE id = #{id}" +
+            "<if test=\"ownerId != null\"> AND user_id = #{ownerId}</if>" +
+            "</script>")
+    Map<String, Object> getById(@Param("id") String id, @Param("ownerId") Long ownerId);
 
     /** 顾客端「我的订单」：按下单用户过滤（user_id 由 checkout 写入），状态倒序 */
     @Select("SELECT * FROM order_table" +
@@ -29,23 +32,27 @@ public interface OrderMapper {
             " AND (#{status} IS NULL OR #{status} = '' OR shipping_status = #{status})")
     int selectMyCount(@Param("userId") Long userId, @Param("status") String status);
 
+    /** 管理端列表：超管 userId 传 null 全量；普通用户强制按本人过滤（数据范围） */
     @Select("SELECT * FROM order_table" +
             " WHERE (shipping_status IS NULL OR shipping_status <> '3')" +
+            " AND (#{userId} IS NULL OR user_id = #{userId})" +
             " AND (#{keyword} IS NULL OR #{keyword} = ''" +
             " OR user_name LIKE CONCAT('%', #{keyword}, '%')" +
             " OR contact LIKE CONCAT('%', #{keyword}, '%')" +
             " OR product LIKE CONCAT('%', #{keyword}, '%'))" +
             " ORDER BY create_time DESC" +
             " LIMIT #{offset}, #{limit}")
-    List<Map<String, Object>> selectList(@Param("keyword") String keyword, @Param("offset") int offset, @Param("limit") int limit);
+    List<Map<String, Object>> selectList(@Param("keyword") String keyword, @Param("userId") Long userId,
+            @Param("offset") int offset, @Param("limit") int limit);
 
     @Select("SELECT COUNT(*) FROM order_table" +
             " WHERE (shipping_status IS NULL OR shipping_status <> '3')" +
+            " AND (#{userId} IS NULL OR user_id = #{userId})" +
             " AND (#{keyword} IS NULL OR #{keyword} = ''" +
             " OR user_name LIKE CONCAT('%', #{keyword}, '%')" +
             " OR contact LIKE CONCAT('%', #{keyword}, '%')" +
             " OR product LIKE CONCAT('%', #{keyword}, '%'))")
-    int selectCount(@Param("keyword") String keyword);
+    int selectCount(@Param("keyword") String keyword, @Param("userId") Long userId);
 
     @Insert("INSERT INTO order_table (id, user_id, user_name, contact, product, amount, pay_time, address, shipping_status, remark, create_time, update_time)" +
             " VALUES (#{id}, #{userId}, #{userName}, #{contact}, #{product}, #{amount}, #{paymentTime}, #{shippingAddress}, #{status}, #{remark}, NOW(), NOW())")

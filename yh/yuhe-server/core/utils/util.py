@@ -360,6 +360,16 @@ def pcm_to_data_stream(raw_data, is_opus=True, callback: Callable[[Any], Any] = 
     if is_opus and opus_encoder is None:
         encoder = opuslib_next.Encoder(sample_rate, 1, opuslib_next.APPLICATION_AUDIO)
         using_temp_encoder = True
+    elif is_opus:
+        # 外部传入的编码器是 TTS 流式下行（百炼 PCM→Opus）专用的，
+        # 但**音乐文件转码跑在 tts_priority 线程**，与 asyncio monitor
+        # 线程并发调用同一个编码器实例——libopus C 层非线程安全，
+        # 并发时 buffer 撕裂可产生异常帧 → silk/resampler.c 断言
+        # abort 整个进程（2026-10-23 17:54 崩溃实录）。这里对文件
+        # 转码一律改用独立临时编码器，隔离线程风险（性能损耗可忽略：
+        # 只多一次编码器初始化）。
+        encoder = opuslib_next.Encoder(sample_rate, 1, opuslib_next.APPLICATION_AUDIO)
+        using_temp_encoder = True
 
     # 编码参数
     frame_duration = 60  # 60ms per frame

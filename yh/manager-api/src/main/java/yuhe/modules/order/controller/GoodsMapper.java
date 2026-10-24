@@ -50,19 +50,22 @@ public interface GoodsMapper {
     @org.apache.ibatis.annotations.Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Map<String, Object> params);
 
-    @Update("<script>UPDATE shop_goods" +
-            " <set>" +
-            "  <if test='name != null'>name = #{name},</if>" +
-            "  <if test='cover != null'>cover = #{cover},</if>" +
-            "  <if test='price != null'>price = #{price},</if>" +
-            "  <if test='stock != null'>stock = #{stock},</if>" +
-            "  <if test='category != null'>category = #{category},</if>" +
-            "  <if test='status != null'>status = #{status},</if>" +
-            "  <if test='sort != null'>sort = #{sort},</if>" +
-            "  <if test='remark != null'>remark = #{remark},</if>" +
-            " </set>" +
-            " update_time = NOW() WHERE id = #{id}</script>")
+    @Update("UPDATE shop_goods SET" +
+            " name = #{name}," +
+            " cover = #{cover}," +
+            " price = #{price}," +
+            " stock = #{stock}," +
+            " category = #{category}," +
+            " status = #{status}," +
+            " sort = #{sort}," +
+            " remark = #{remark}," +
+            " update_time = NOW()" +
+            " WHERE id = #{id}")
     void update(Map<String, Object> params);
+
+    /** 上下架专用（只动 status，避免全字段 update 覆盖其他列） */
+    @Update("UPDATE shop_goods SET status = #{status}, update_time = NOW() WHERE id = #{id}")
+    void updateStatus(@Param("id") Long id, @Param("status") Integer status);
 
     @Update("UPDATE shop_goods SET stock = stock - #{qty}, update_time = NOW() WHERE id = #{id} AND stock >= #{qty}")
     int deductStock(@Param("id") Long id, @Param("qty") int qty);

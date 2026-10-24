@@ -2,6 +2,7 @@ package yuhe.modules.model.controller;
 
 import java.util.List;
 
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +34,7 @@ public class ModelProviderController {
 
     @GetMapping
     @Operation(summary = "获取模型供应器列表")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<PageData<ModelProviderDTO>> getListPage(ModelProviderDTO modelProviderDTO,
             @RequestParam(required = true, defaultValue = "0") String page,
             @RequestParam(required = true, defaultValue = "10") String limit) {
@@ -43,7 +44,7 @@ public class ModelProviderController {
 
     @PostMapping
     @Operation(summary = "新增模型供应器")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<ModelProviderDTO> add(@RequestBody @Validated ModelProviderDTO modelProviderDTO) {
         ModelProviderDTO resp = modelProviderService.add(modelProviderDTO);
         return new Result<ModelProviderDTO>().ok(resp);
@@ -51,7 +52,7 @@ public class ModelProviderController {
 
     @PutMapping
     @Operation(summary = "修改模型供应器")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     public Result<ModelProviderDTO> edit(@RequestBody @Validated(UpdateGroup.class) ModelProviderDTO modelProviderDTO) {
         ModelProviderDTO resp = modelProviderService.edit(modelProviderDTO);
         return new Result<ModelProviderDTO>().ok(resp);
@@ -59,7 +60,7 @@ public class ModelProviderController {
 
     @PostMapping("/delete")
     @Operation(summary = "删除模型供应器")
-    @RequiresPermissions("sys:role:superAdmin")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:models"}, logical = Logical.OR)
     @Parameter(name = "ids", description = "ID数组", required = true)
     public Result<Void> delete(@RequestBody List<String> ids) {
         modelProviderService.delete(ids);

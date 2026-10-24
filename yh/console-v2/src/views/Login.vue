@@ -143,8 +143,9 @@ onMounted(refreshCaptcha)
   color: var(--text-sub); border-radius: 8px;
 }
 .eye:hover { color: var(--primary); }
-.cap-row input { flex: 1; }
-.cap-img { height: 44px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border); }
+.cap-row input { flex: 1; min-width: 0; }
+/* 验证码图固定宽高比 150:40，禁止 flex 压缩裁剪；点击可刷新 */
+.cap-img { height: 44px; width: auto; flex-shrink: 0; border-radius: 10px; cursor: pointer; border: 1px solid var(--border); }
 .err { color: var(--danger); font-size: 12.5px; margin-bottom: 10px; }
 .login-toasts { position: relative; }
 .mini-toast {
@@ -157,5 +158,20 @@ onMounted(refreshCaptcha)
 @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .login-btn { width: 100%; justify-content: center; padding: 12px; font-size: 15px; }
 .tip { margin-top: 16px; color: var(--text-sub); font-size: 12px; text-align: center; }
-@media (max-width: 800px) { .login-wrap { grid-template-columns: 1fr; } .login-left { min-height: 200px; } }
+/* 窄屏：双列改单列，同步收紧内边距（否则 40+44px padding 吃掉小屏宽度，验证码行挤不下） */
+@media (max-width: 800px) {
+  .login-wrap { grid-template-columns: 1fr; padding: 16px 16px 24px; gap: 20px; min-height: 100dvh; align-items: start; }
+  .login-left { min-height: 150px; padding: 22px 26px; }
+  .login-left h1 { font-size: 26px; }
+  .login-card { padding: 28px 22px; }
+}
+/* 手机：进一步收紧，验证码图缩一号（height 40 → 宽 150，给输入框留足空间） */
+@media (max-width: 480px) {
+  .login-wrap { padding: 12px 12px 20px; gap: 14px; }
+  .login-left { min-height: 110px; padding: 18px 22px; }
+  .login-left h1 { font-size: 22px; }
+  .login-card { padding: 24px 16px; border-radius: 20px; }
+  .cap-img { height: 40px; }
+  .field input { padding: 10px 13px; }
+}
 </style>

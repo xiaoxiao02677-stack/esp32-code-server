@@ -3,6 +3,15 @@
 #include <cstdio>
 #include <cstring>
 
+// splash 专用小字体（286 码位，覆盖本卡片全部固定文案 + lang_config 状态串）：
+// 卡片出现得极早（扫描 Wi-Fi 在开机最早期，assets 的 common 档要到激活完成
+// 后 assets.Apply() 才加载），此时 fonts.text 还是 basic 档（890 字）——
+// 「密/码/页/面…」不在其中。文字一律走回落链：主题 text 字体 → 本字体。
+// ★ 绝不能用 fonts.large 渲染文字：它是 Material Symbols 图标字体
+//   （U+E000–F8FF 私用区），拿它渲染「配网模式」四个字 100% 全方框
+//   （与 yh_skin_boot.cc 品牌名字体是同一个坑，只是换了张卡片）。
+extern const lv_font_t font_splash_20_4;
+
 // 系统态卡片：把「配网 / 激活码 / 升级 / 错误」四类信息从 14px 状态栏搬到全屏浮层。
 //
 // 为什么是「一个容器 + 清空重建内容」而不是四套独立对象：
@@ -35,6 +44,47 @@ void Font(lv_obj_t* obj, const lv_font_t* font) {
     if (obj != nullptr && font != nullptr) {
         lv_obj_set_style_text_font(obj, font, 0);
     }
+}
+
+// 文字字体回落链：主题 text 字体（common 档）→ splash 专用字体（basic 阶段兜底）。
+// 主题字体在 assets 加载前是 basic 档（890 字），缺卡片文案里的多个常用字；
+// splash 字体编译进固件、开机即可用。
+const lv_font_t* TextFont() {
+    return g_fonts.text != nullptr ? g_fonts.text : &font_splash_20_4;
+}
+
+// 按文字内容选字体：主题 text 字体缺任何一个字形（basic 档场景）就整体回落
+// splash 字体。逐字符混排两种字体会导致行高/基线跳动，宁可整行同字体。
+// hint/标题等短文案逐字符探测成本可忽略（<100 码点）。
+const lv_font_t* TextFontFor(const char* text) {
+    const lv_font_t* primary = TextFont();
+    if (text == nullptr || primary == nullptr || primary == &font_splash_20_4) {
+        return primary;
+    }
+    lv_font_glyph_dsc_t dsc;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(text);
+    while (*p != '\0') {
+        uint32_t cp = 0;
+        int seq = 1;
+        if ((*p & 0x80u) == 0x00u) {
+            cp = *p;
+        } else if ((*p & 0xE0u) == 0xC0u) {
+            cp = *p & 0x1Fu; seq = 2;
+        } else if ((*p & 0xF0u) == 0xE0u) {
+            cp = *p & 0x0Fu; seq = 3;
+        } else if ((*p & 0xF8u) == 0xF0u) {
+            cp = *p & 0x07u; seq = 4;
+        }
+        for (int i = 1; i < seq && p[i] != '\0'; ++i) {
+            cp = (cp << 6) | (p[i] & 0x3Fu);
+        }
+        // ASCII 与中文都查；图标私用区（E000-F8FF）不会出现在文字文案里
+        if (!lv_font_get_glyph_dsc(primary, &dsc, cp, 0)) {
+            return &font_splash_20_4;  // 主题字体缺这个字 → 整行回落
+        }
+        p += seq;
+    }
+    return primary;
 }
 
 // 按 UTF-8 码点截断，绝不在多字节序列中间下刀（否则汉字变乱码方块）
@@ -130,7 +180,10 @@ void EnsureCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFont
 
     g_title = lv_label_create(g_card);
     lv_obj_set_style_text_color(g_title, lv_color_hex(kTextMain), 0);
-    Font(g_title, g_fonts.large != nullptr ? g_fonts.large : g_fonts.text);
+    // 标题是中文（配网模式/设备激活/正在升级/出错了）——必须走文字回落链，
+    // fonts.large 是图标字体（见文件头注释）。此处先给基准字体，ResetContent
+    // 设置标题文案时会按内容重新探测（basic 阶段自动落 splash 字体）。
+    Font(g_title, TextFont());
 
     g_body = lv_obj_create(g_card);
     lv_obj_remove_flag(g_body, LV_OBJ_FLAG_SCROLLABLE);
@@ -148,6 +201,8 @@ void EnsureCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFont
 void ResetContent(const char* title, uint32_t title_color) {
     if (g_title != nullptr) {
         lv_label_set_text(g_title, title != nullptr ? title : "");
+        // 标题按内容选字体：basic 阶段主题字体缺「了/出」等字，自动回落 splash
+        Font(g_title, TextFontFor(g_title == nullptr ? nullptr : lv_label_get_text(g_title)));
         lv_obj_set_style_text_color(g_title, lv_color_hex(title_color), 0);
     }
     if (g_body != nullptr) {
@@ -184,19 +239,19 @@ void ShowWifiCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinFo
     if (!info.ssid.empty()) {
         char buf[96];
         snprintf(buf, sizeof(buf), "热点：%s", info.ssid.c_str());
-        AddLine(buf, g_fonts.text, kTextMain, true);
+        AddLine(buf, TextFontFor(buf), kTextMain, true);
     }
     if (!info.password.empty()) {
         char buf[96];
         snprintf(buf, sizeof(buf), "密码：%s", info.password.c_str());
-        AddLine(buf, g_fonts.text, kTextMain, true);
+        AddLine(buf, TextFontFor(buf), kTextMain, true);
     }
     if (!info.hint.empty()) {
-        AddLine(info.hint.c_str(), g_fonts.text, kTextHint, true);
+        AddLine(info.hint.c_str(), TextFontFor(info.hint.c_str()), kTextHint, true);
     }
     if (info.ssid.empty() && info.password.empty() && info.hint.empty()) {
         // 没有具体参数时给一条可操作的兜底提示，而不是一张空卡
-        AddLine("请用手机连接设备热点后打开配网页面", g_fonts.text, kTextSub, true);
+        AddLine("请用手机连接设备热点后打开配网页面", TextFontFor("请用手机连接设备热点后打开配网页面"), kTextSub, true);
     }
 }
 
@@ -224,15 +279,16 @@ void ShowActivationCard(lv_obj_t* parent, const YhSkinProfile& profile, const Yh
             char digit[2] = {c, '\0'};
             lv_obj_t* d = lv_label_create(row);
             lv_label_set_text(d, digit);
-            Font(d, g_fonts.large != nullptr ? g_fonts.large : g_fonts.text);
+            // 激活码是数字但图标字体不含可读 ASCII 字形，同样走文字回落链
+            Font(d, TextFont());
             lv_obj_set_style_text_color(d, lv_color_hex(kPrimary), 0);
         }
     } else if (!code.empty()) {
-        AddLine(code.c_str(), g_fonts.text, kPrimary, true);
+        AddLine(code.c_str(), TextFontFor(code.c_str()), kPrimary, true);
     }
 
     if (!message.empty()) {
-        AddLine(message.c_str(), g_fonts.text, kTextSub, true);
+        AddLine(message.c_str(), TextFontFor(message.c_str()), kTextSub, true);
     }
 }
 
@@ -245,10 +301,10 @@ void ShowProgressCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSk
     ResetContent((title != nullptr && title[0] != '\0') ? title : "正在升级", kTextMain);
 
     if (detail != nullptr && detail[0] != '\0') {
-        AddLine(detail, g_fonts.text, kTextSub, true);
+        AddLine(detail, TextFontFor(detail), kTextSub, true);
     }
     if (percent < 0) {
-        AddLine("请稍候…", g_fonts.text, kTextHint, false);
+        AddLine("请稍候…", TextFontFor("请稍候…"), kTextHint, false);
         return;
     }
     if (percent > 100) {
@@ -256,7 +312,8 @@ void ShowProgressCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSk
     }
     char buf[16];
     snprintf(buf, sizeof(buf), "%d%%", percent);
-    AddLine(buf, g_fonts.large != nullptr ? g_fonts.large : g_fonts.text, kPrimary, false);
+    // 百分比数字同样不能走图标字体（文件头注释）
+    AddLine(buf, TextFont(), kPrimary, false);
 
     lv_obj_t* bar = lv_bar_create(g_body);
     lv_obj_set_size(bar, profile.short_side() * 6 / 10, profile.scaled(6));
@@ -278,7 +335,7 @@ void ShowErrorCard(lv_obj_t* parent, const YhSkinProfile& profile, const YhSkinF
     // 错误详情可能很长（HTTP 状态+URL），限 90 码点，超长补省略号
     std::string text = TruncateUtf8(detail, 90);
     if (!text.empty()) {
-        AddLine(text.c_str(), g_fonts.text, kTextSub, true);
+        AddLine(text.c_str(), TextFontFor(text.c_str()), kTextSub, true);
     }
 }
 
