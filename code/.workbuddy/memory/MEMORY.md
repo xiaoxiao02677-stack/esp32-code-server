@@ -42,6 +42,7 @@
 - ★测试服已重组(10-23)：Python → /root/yh/app/xiaozhi-server、Java → /root/yh/deploy/opt-xiaozhi/yuhe-esp32-api.jar(dev)；MySQL debian-sys-maint
 - ★★测试服前端部署真目录(10-25 踩坑)：nginx web根=/var/www/console-v2/admin/（`/` 与 `/admincc/` 两 URL 同指此目录，index.html 引 /admincc/assets/ 前缀但文件在 admin/assets/）；**app/ 与 admincc/ 目录不在任何 location，传了=死目录**（10-25 XDDPay 前端+manual-dismiss 两轮曾误传 admincc/，当晚发现已补传 admin/ 纠正）；部署口诀：dist-admin/*→admin/、dist/*→app/、传完 find 清旧 hash、md5 对比本地
 - ★生产前端两目录同批更新(app/根路径进管理页走它+admin/)；顺序 Java→Python→Web；Python三文件同批；验 inode；MySQL datetime UTC 早8h
+- ★★生产部署范式(10-26 全量推送验证)：**生产 Python 真路径 /root/xiaozhi-server/main/xiaozhi-server/**(旧布局多 main 层，与测试服 /root/yh/app/ 不同)；生产 config.yaml 环境专属(auth_key=生产secret)**绝不从测试服同步**，只同步 core/ 代码；生产 SSH 偶发断连(Connection closed by 198.18.0.70)，断连后重试前必查现场防重复备份；换 jar 先传 .new 校验 md5 再 mv 原子替换；公网 API 探活必须 curl -sk(自签证书)；生产 pay.xddpay.appId=19987 已入库，shop_goods/shop_payment 已建表+5商品种子；gitee 最新 44ac37bc
 - 测试：OTA/WS 8144明文；YH心跳8199；OTA带 Device-Id 头(冒号MAC)；全量切 /yuhe/；Liquibase 红线勿改已执行 changeset
 - 壁纸URL幂等只比version；下载URL由 sys_params.server.ota 推导
 - 测试登录：uuid→captcha→Redis读值→sm2→token UPDATE sys_user_token
