@@ -2,6 +2,8 @@ package yuhe.modules.sys.controller;
 
 import java.util.Map;
 
+import org.apache.shiro.authz.annotation.Logical;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,6 +28,12 @@ import yuhe.modules.sys.service.SysParamsService;
  * 背景：这些端点在 yuhe-server(Python:8003) 上，鉴权用 server secret；
  * 浏览器只持有用户 token，无法直连。本代理挂在 manager-api 下（Shiro oauth2 用户鉴权），
  * 转发时注入 server secret，让管理端页面可以统一用用户 token 访问。
+ *
+ * 权限（模块码由 Oauth2Realm 按展示配置发放）：
+ * - wake-word/devices：平台级在线设备 MAC 清单，管理端设备相关页共用
+ *   （概览/设备页数据源 /admin/device/all 需 admin:users；唤醒词页 admin:wake-word；推送调度页 admin:push-scheduler）
+ * - wake-word/push：唤醒词下发（前端已改走 /agent/wake-word/{agentId}，此代理无页面调用方，保留给管理动作）
+ * - push/**：随机推送调度（PushScheduler 页，admin:push-scheduler）
  */
 @RestController
 @RequestMapping("/api")
@@ -45,30 +53,36 @@ public class PythonApiProxyController {
 
     @GetMapping("/wake-word/devices")
     @Operation(summary = "在线设备列表（代理 Python）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:users", "admin:wake-word", "admin:push-scheduler"},
+            logical = Logical.OR)
     public ResponseEntity<String> wakeWordDevices() {
         return proxyGet("/api/wake-word/devices");
     }
 
     @PostMapping("/wake-word/push")
     @Operation(summary = "推送唤醒词（代理 Python）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:wake-word"}, logical = Logical.OR)
     public ResponseEntity<String> wakeWordPush(@RequestBody(required = false) Map<String, Object> body) {
         return proxyPost("/api/wake-word/push", body);
     }
 
     @GetMapping("/push/tasks")
     @Operation(summary = "推送任务列表（代理 Python）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:push-scheduler"}, logical = Logical.OR)
     public ResponseEntity<String> pushTasks() {
         return proxyGet("/api/push/tasks");
     }
 
     @GetMapping("/push/tasks/{pushId}")
     @Operation(summary = "推送任务详情（代理 Python）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:push-scheduler"}, logical = Logical.OR)
     public ResponseEntity<String> pushTaskDetail(@PathVariable String pushId) {
         return proxyGet("/api/push/tasks/" + pushId);
     }
 
     @PostMapping("/push/schedule")
     @Operation(summary = "创建推送任务（代理 Python）")
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:push-scheduler"}, logical = Logical.OR)
     public ResponseEntity<String> pushSchedule(@RequestBody(required = false) Map<String, Object> body) {
         return proxyPost("/api/push/schedule", body);
     }

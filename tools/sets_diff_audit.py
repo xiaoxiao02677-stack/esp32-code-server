@@ -102,7 +102,22 @@ WHITELIST: dict[str, dict] = {
     # ---- 协议修复 ----
     "protocols/websocket_protocol.cc": {
         "kinds": {"DIFF"},
-        "reason": "B 修复 URL 取 host：host.erase(0, scheme_pos + 3)，旧写法 erase(scheme_pos, 4) 在 wss:// 下残留前缀",
+        "reason": "B 修复 URL 取 host：host.erase(0, scheme_pos + 3)，旧写法 erase(scheme_pos, 4) 在 wss:// 下残留前缀；"
+                  "2026-10-25 追加 WS 兜底：OpenAudioChannel 主 URL 连接失败且 CONFIG_WEBSOCKET_FALLBACK_URL 非空时"
+                  "重建 websocket 连兜底地址（SetupWebsocket 统一头/回调），宏未配置时行为与旧固件一致",
+    },
+    "protocols/websocket_protocol.h": {
+        "kinds": {"DIFF"},
+        "reason": "2026-10-25 WS 兜底：新增私有声明 SetupWebsocket(const std::string&)（统一鉴权头与 OnData/OnDisconnected 绑定）",
+    },
+    "ota.cc": {
+        "kinds": {"DIFF"},
+        "reason": "2026-10-25 OTA 兜底：GetCheckVersionUrl() 支持连续失败切 CONFIG_OTA_FALLBACK_URL（kPrimaryFailThreshold=3，"
+                  "5xx/连接失败计数、4xx 不计），ReportPrimaryResult 成功恢复主 URL；宏未配置时空串短路，行为与旧固件一致",
+    },
+    "ota.h": {
+        "kinds": {"DIFF"},
+        "reason": "2026-10-25 OTA 兜底：新增 ReportPrimaryResult/IsFallbackActive 声明与 kPrimaryFailThreshold/primary_fail_count_/fallback_active_ 成员",
     },
     "protocols/protocol.h": {
         "kinds": {"DIFF"},

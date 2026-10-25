@@ -190,6 +190,7 @@ public class ShopPayService {
                 int rows = paymentMapper.markPaid(outTradeNo, tradeNo, params.get("buyer_id"),
                         params.get("gmt_payment"), JsonUtils.toJsonString(params));
                 if (rows == 1) {
+                    orderMapper.markPaidTime(String.valueOf(p.get("order_id")));
                     log.info("[alipay] 支付成功落账 outTradeNo={} orderId={} tradeNo={}",
                             outTradeNo, p.get("order_id"), tradeNo);
                 }
@@ -218,5 +219,11 @@ public class ShopPayService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** 支付渠道可用性（游客 /shop/pay/channels 用）：三键齐备即视为已配置 */
+    public boolean isAlipayConfigured() {
+        return param("pay.alipay.appId") != null && param("pay.alipay.privateKey") != null
+                && param("pay.alipay.gateway") != null;
     }
 }

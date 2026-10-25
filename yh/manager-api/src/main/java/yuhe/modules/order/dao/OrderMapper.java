@@ -73,4 +73,9 @@ public interface OrderMapper {
 
     @Update("UPDATE order_table SET shipping_status = '3', update_time = NOW() WHERE id = #{id}")
     void delete(@Param("id") String id);
+
+    /** 支付成功落账时间（异步通知验签通过后调用；pay_time 为 NULL 才写，避免覆盖管理员手工值） */
+    @Update("UPDATE order_table SET pay_time = NOW(), update_time = NOW()" +
+            " WHERE id = #{id} AND pay_time IS NULL")
+    int markPaidTime(@Param("id") String id);
 }

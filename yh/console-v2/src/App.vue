@@ -1,5 +1,10 @@
 <template>
   <div v-if="booting" class="boot-bar"><div class="boot-bar-fill"></div></div>
+  <!-- 独立商店（免登录）：无控制台壳，全屏渲染 -->
+  <div v-else-if="isShop" class="shop-full">
+    <router-view />
+    <Toasts ref="toastsRef" />
+  </div>
   <div v-else class="app-shell" :class="[roleClass, { 'shell-compact': compact }]">
     <a href="#main-content" class="skip-link">跳到主内容</a>
     <main class="app-canvas" id="main-content">
@@ -50,6 +55,8 @@ const route = useRoute()
 const router = useRouter()
 const role = computed(() => (route.path.startsWith('/admin') ? 'admin' : 'customer'))
 const roleClass = computed(() => 'role-' + role.value)
+// 独立商店（/shop 免登录）：脱离控制台壳
+const isShop = computed(() => route.path === '/shop' || route.path.startsWith('/shop/'))
 
 // A8 booting 初始化加载态（参照原控制台 App.vue:3-7、954）
 const booting = ref(true)

@@ -1,0 +1,376 @@
+diff --git a/hardware/sets/build.py b/hardware/sets/build.py
+index c2174317..3a12919d 100644
+--- a/hardware/sets/build.py
++++ b/hardware/sets/build.py
+@@ -112,12 +112,17 @@ OPTIONAL_DEFAULTS: dict[str, Any] = {
+ #
+ # 固件连哪台服务器由三处 CONFIG_* 决定（各版型 config.json 的
+ # sdkconfig_append 里已带生产值，环境行在合并时后写获胜、直接覆盖）：
+-#   CONFIG_OTA_URL         设备启动时拉服务器地址 + OTA（Java manager-api）
+-#   CONFIG_YH_SERVER_HOST  YH 侧信道 TCP（心跳 / SET_LED / 推送 COMMAND）
+-#   CONFIG_YH_SERVER_PORT  YH 侧信道端口
+-# 生产与测试同域名 sandyun.top（同机双 VM），区别只在端口：
+-#   生产（22222）: OTA 8002（明文直连）/ YH 12399
+-#   测试（22223）: OTA 8144（nginx 明文入口，8101 是 TLS 口明文连不上）/ YH 8199
++#   CONFIG_OTA_URL          设备启动时拉服务器地址 + OTA（Java manager-api）
++#   CONFIG_OTA_FALLBACK_URL 主 OTA 不可达时的兜底（空=禁用兜底）
++#   CONFIG_WEBSOCKET_FALLBACK_URL  OTA 下发 WS 连不上时的兜底 WS（空=禁用）
++#   CONFIG_YH_SERVER_HOST   YH 侧信道 TCP（心跳 / SET_LED / 推送 COMMAND）
++#   CONFIG_YH_SERVER_PORT   YH 侧信道端口
++# 2026-10-25 生产迁移：Web 主站迁 yuhe.pro（宝塔，HTTPS 443，http 80 自动
++# 跳 https）；sandyun.top 全套保留作为兜底（服务器A 配置不动）。YH 心跳
++# 留在服务器A（sandyun.top:12399，固件纯 TCP 无 TLS）。
++#   生产主： https://yuhe.pro/yuhe/ota/（TLS, crt_bundle）
++#   生产兜底：http://sandyun.top:8002/yuhe/ota/
++#   测试:    http://sandyun.top:8144/yuhe/ota/（测试 VM 不变）
+ # 测试环境 WebSocket 由 OTA 接口下发（sys_params server.websocket），
+ # UDP 心跳口在固件 websocket_protocol.cc:371 写死 8002，与测试 VM 的
+ # Python 8002（Java 反代目标）不冲突——那是 TCP，互不相干。
+@@ -125,10 +130,12 @@ OPTIONAL_DEFAULTS: dict[str, Any] = {
+ 
+ SERVER_ENVS: dict[str, dict[str, Any]] = {
+     "prod": {
+-        "label": "生产环境 (sandyun.top:8002 / YH 12399)",
+-        "host": "sandyun.top",
++        "label": "生产环境 (yuhe.pro 主 / sandyun.top 兜底 / YH 12399)",
++        "host": "yuhe.pro",
+         "sdkconfig": [
+-            'CONFIG_OTA_URL="http://sandyun.top:8002/yuhe/ota/"',
++            'CONFIG_OTA_URL="https://yuhe.pro/yuhe/ota/"',
++            'CONFIG_OTA_FALLBACK_URL="http://sandyun.top:8002/yuhe/ota/"',
++            'CONFIG_WEBSOCKET_FALLBACK_URL="ws://sandyun.top:8001/yuhe/v1/"',
+             'CONFIG_YH_SERVER_HOST="sandyun.top"',
+             "CONFIG_YH_SERVER_PORT=12399",
+         ],
+@@ -1577,11 +1584,15 @@ def warn_stale_build_dir(fw_root: Path, board: dict[str, Any], server_env: str =
+         None,
+     )
+     if prev_ota and want_ota and prev_ota.group(1) != want_ota.strip('"'):
+-        prev_env = "未知环境" if prev_ota.group(1) not in (
+-            "http://sandyun.top:8002/yuhe/ota/", "http://sandyun.top:8144/yuhe/ota/"
+-        ) else ("生产" if ":8002" in prev_ota.group(1) else "测试")
++        prev_url = prev_ota.group(1)
++        if "yuhe.pro" in prev_url:
++            prev_env = "生产(新主站 yuhe.pro)"
++        elif prev_url in ("http://sandyun.top:8002/yuhe/ota/", "http://sandyun.top:8144/yuhe/ota/"):
++            prev_env = "生产" if ":8002" in prev_url else "测试"
++        else:
++            prev_env = "未知环境"
+         say()
+-        notice_warn(f"build/ 里的旧产物连{prev_env}（{prev_ota.group(1)}），本次编译目标为 {server_env}")
++        notice_warn(f"build/ 里的旧产物连{prev_env}（{prev_url}），本次编译目标为 {server_env}")
+         say("        sdkconfig 会重新生成、地址必然更新；无需删 build 目录。")
+ 
+ 
+diff --git a/hardware/sets/yuhe-esp32/main/Kconfig.projbuild b/hardware/sets/yuhe-esp32/main/Kconfig.projbuild
+index becb94fb..e68d636b 100644
+--- a/hardware/sets/yuhe-esp32/main/Kconfig.projbuild
++++ b/hardware/sets/yuhe-esp32/main/Kconfig.projbuild
+@@ -6,6 +6,24 @@ config OTA_URL
+     help
+         The application will access this URL to check for new firmwares and server address.
+ 
++config OTA_FALLBACK_URL
++    string "Fallback OTA URL (used when the primary is unreachable)"
++    default ""
++    help
++        When the primary OTA URL (NVS wifi/ota_url or OTA_URL) fails several
++        times in a row, the device switches to this URL. Empty disables the
++        fallback. Used for the yuhe.pro primary / sandyun.top fallback
++        deployment: the new server is authoritative and the old production
++        server keeps serving devices when the new one is unreachable.
++
++config WEBSOCKET_FALLBACK_URL
++    string "Fallback WebSocket URL (used when the OTA-provisioned URL fails)"
++    default ""
++    help
++        When OpenAudioChannel fails to connect with the NVS-provisioned
++        websocket URL, the device retries once with this URL. Empty disables
++        the fallback.
++
+ menu "YH Device Protocol"
+     config YH_PROTOCOL_ENABLED
+         bool "Enable YH Device Protocol (YuHe Workshop server)"
+diff --git a/hardware/sets/yuhe-esp32/main/ota.cc b/hardware/sets/yuhe-esp32/main/ota.cc
+index 3646614e..e316fcef 100644
+--- a/hardware/sets/yuhe-esp32/main/ota.cc
++++ b/hardware/sets/yuhe-esp32/main/ota.cc
+@@ -26,6 +26,12 @@
+ 
+ #define TAG "Ota"
+ 
++// Kconfig 未配置兜底地址时（旧 sdkconfig / 语法检查桩环境），按空串处理，
++// 行为等价于「未启用兜底机制」，与改造前固件完全一致。
++#ifndef CONFIG_OTA_FALLBACK_URL
++#define CONFIG_OTA_FALLBACK_URL ""
++#endif
++
+ 
+ Ota::Ota() {
+ #ifdef ESP_EFUSE_BLOCK_USR_DATA
+@@ -51,9 +57,43 @@ std::string Ota::GetCheckVersionUrl() {
+     if (url.empty()) {
+         url = CONFIG_OTA_URL;
+     }
++    // 主服务器（NVS 下发或编译期主 URL）连续失败超阈值时切兜底 URL。
++    // 兜底 URL 为空（未配置）则永远用主 URL，行为与旧固件完全一致。
++    // 切换只影响本次及后续调用，直到某次成功后恢复主 URL。
++    if (fallback_active_) {
++        std::string fallback = CONFIG_OTA_FALLBACK_URL;
++        if (!fallback.empty()) {
++            return fallback;
++        }
++    }
+     return url;
+ }
+ 
++void Ota::ReportPrimaryResult(bool success) {
++    const std::string fallback = CONFIG_OTA_FALLBACK_URL;
++    if (fallback.empty()) {
++        return;  // 未配置兜底，保持旧行为
++    }
++    if (success) {
++        if (fallback_active_) {
++            ESP_LOGW(TAG, "OTA primary recovered, leaving fallback");
++        }
++        fallback_active_ = false;
++        primary_fail_count_ = 0;
++        return;
++    }
++    if (fallback_active_) {
++        return;  // 已在兜底模式，主/兜底失败都由上层重试循环处理
++    }
++    primary_fail_count_++;
++    ESP_LOGW(TAG, "OTA primary fail %d/%d", primary_fail_count_, kPrimaryFailThreshold);
++    if (primary_fail_count_ >= kPrimaryFailThreshold) {
++        fallback_active_ = true;
++        ESP_LOGW(TAG, "OTA primary unreachable x%d, switching to fallback: %s",
++                 kPrimaryFailThreshold, fallback.c_str());
++    }
++}
++
+ std::unique_ptr<Http> Ota::SetupHttp() {
+     auto& board = Board::GetInstance();
+     auto network = board.GetNetwork();
+@@ -98,22 +138,34 @@ NetworkResult<> Ota::CheckVersion() {
+ 
+     if (auto opened = http->Open(method, url); !opened) {
+         ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
++        ReportPrimaryResult(false);
+         return opened;
+     }
+ 
+     auto status_code = http->GetStatusCode();
+     if (!status_code) {
+         ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
++        ReportPrimaryResult(false);
+         return std::unexpected(status_code.error());
+     }
+     if (*status_code != 200) {
+         ESP_LOGE(TAG, "Failed to check version, status code: %d", *status_code);
++        http->Close();
++        // 5xx = 服务器侧故障（主服务器过载/维护），计失败；4xx = 请求侧
++        // 问题（设备未激活等），切兜底服务器也解决不了，不计数。
++        if (*status_code >= 500) {
++            ReportPrimaryResult(false);
++        }
+         return std::unexpected(NetworkError::HttpFailed(*status_code));
+     }
+ 
+     data = http->ReadAll();
+     http->Close();
+ 
++    // 兜底模式下成功应答：设备仍指向旧服务器，保持现状（旧服务器在
++    // 恢复期也能服务）。不主动切回主 URL，直到某次主 URL 成功。
++    ReportPrimaryResult(true);
++
+     // Response: { "firmware": { "version": "1.0.0", "url": "http://" } }
+     // Parse the JSON response and check if the version is newer
+     // If it is, set has_new_version_ to true and store the new version and URL
+diff --git a/hardware/sets/yuhe-esp32/main/ota.h b/hardware/sets/yuhe-esp32/main/ota.h
+index 885f0cce..d46472a5 100644
+--- a/hardware/sets/yuhe-esp32/main/ota.h
++++ b/hardware/sets/yuhe-esp32/main/ota.h
+@@ -34,6 +34,11 @@ public:
+     const std::string& GetActivationCode() const { return activation_code_; }
+     std::string GetCheckVersionUrl();
+ 
++    // 主 OTA URL 失败上报（供 CheckVersion 内部与外部调用方统计）：
++    // 连续 kPrimaryFailThreshold 次失败后 GetCheckVersionUrl 返回兜底 URL。
++    void ReportPrimaryResult(bool success);
++    bool IsFallbackActive() const { return fallback_active_; }
++
+     // 配置版本检查（与固件版本分离）
+     std::expected<std::string, std::string> CheckConfigVersion();
+     // 获取配置下载 URL
+@@ -62,6 +67,11 @@ private:
+     std::string config_download_url_;
+     std::string local_config_version_;
+ 
++    // 主/兜底 OTA URL 切换状态（yuhe.pro 主 / sandyun.top 兜底）
++    static constexpr int kPrimaryFailThreshold = 3;
++    int primary_fail_count_ = 0;
++    bool fallback_active_ = false;
++
+     std::function<void(int progress, size_t speed)> upgrade_callback_;
+     std::expected<std::vector<int>, std::string> ParseVersion(const std::string& version);
+     bool IsNewVersionAvailable(const std::string& currentVersion, const std::string& newVersion);
+diff --git a/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.cc b/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.cc
+index da84bc39..b66b8622 100644
+--- a/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.cc
++++ b/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.cc
+@@ -14,6 +14,12 @@
+ 
+ #define TAG "WS"
+ 
++// Kconfig 未配置 WS 兜底地址时（旧 sdkconfig / 语法检查桩环境），按空串处理，
++// OpenAudioChannel 的兜底分支自动失效，行为与旧固件一致。
++#ifndef CONFIG_WEBSOCKET_FALLBACK_URL
++#define CONFIG_WEBSOCKET_FALLBACK_URL ""
++#endif
++
+ WebsocketProtocol::WebsocketProtocol() { event_group_handle_ = xEventGroupCreate(); }
+ 
+ WebsocketProtocol::~WebsocketProtocol() { vEventGroupDelete(event_group_handle_); }
+@@ -98,31 +104,8 @@ void WebsocketProtocol::CloseAudioChannel(bool send_goodbye) {
+     websocket_.reset();
+ }
+ 
+-bool WebsocketProtocol::OpenAudioChannel() {
+-    const auto open_channel_start_time = std::chrono::steady_clock::now();
+-    Settings settings("websocket", false);
+-    std::string url = settings.GetString("url");
+-    server_url_ = url;
+-    std::string token = settings.GetString("token");
+-    int version = settings.GetInt("version");
+-    if (version != 0) {
+-        version_ = version;
+-    }
+-
+-    error_occurred_ = false;
+-
+-    auto network = Board::GetInstance().GetNetwork();
+-    websocket_ = network->CreateWebSocket(1);
+-    if (websocket_ == nullptr) {
+-        ESP_LOGE(TAG, "Failed to create websocket");
+-        return false;
+-    }
+-
++void WebsocketProtocol::SetupWebsocket(const std::string& token) {
+     if (!token.empty()) {
+-        // If token not has a space, add "Bearer " prefix
+-        if (token.find(" ") == std::string::npos) {
+-            token = "Bearer " + token;
+-        }
+         websocket_->SetHeader("Authorization", token.c_str());
+     }
+     websocket_->SetHeader("Protocol-Version", std::to_string(version_).c_str());
+@@ -207,13 +190,65 @@ bool WebsocketProtocol::OpenAudioChannel() {
+             on_audio_channel_closed_();
+         }
+     });
++}
++
++bool WebsocketProtocol::OpenAudioChannel() {
++    const auto open_channel_start_time = std::chrono::steady_clock::now();
++    Settings settings("websocket", false);
++    std::string url = settings.GetString("url");
++    server_url_ = url;
++    std::string token = settings.GetString("token");
++    int version = settings.GetInt("version");
++    if (version != 0) {
++        version_ = version;
++    }
++
++    error_occurred_ = false;
++
++    auto network = Board::GetInstance().GetNetwork();
++    websocket_ = network->CreateWebSocket(1);
++    if (websocket_ == nullptr) {
++        ESP_LOGE(TAG, "Failed to create websocket");
++        return false;
++    }
++
++    // 鉴权头 + 数据/断连回调（主/兜底两次连接共用同一套挂接）
++    if (!token.empty() && token.find(" ") == std::string::npos) {
++        token = "Bearer " + token;
++    }
++    SetupWebsocket(token);
+ 
+     ESP_LOGI(TAG, "Connecting to websocket server: %s with version: %d", url.c_str(), version_);
+     if (auto connected = websocket_->Connect(url.c_str()); !connected) {
+         ESP_LOGE(TAG, "Failed to connect to websocket server: %s",
+                  connected.error().ToString().c_str());
+-        SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
+-        return false;
++        // 主 URL（NVS 下发）连不上 → 试编译期兜底 URL。
++        // 新部署 yuhe.pro 为主服务器、sandyun.top 为兜底：新服务器故障
++        // 期间设备仍能连上旧服务器继续对话。兜底未配置（空串）时跳过，
++        // 行为与旧固件一致。
++        const std::string fallback = CONFIG_WEBSOCKET_FALLBACK_URL;
++        if (!fallback.empty() && url != fallback) {
++            ESP_LOGW(TAG, "Retrying with fallback websocket: %s", fallback.c_str());
++            websocket_.reset();
++            websocket_ = network->CreateWebSocket(1);
++            if (websocket_ == nullptr) {
++                SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
++                return false;
++            }
++            SetupWebsocket(token);
++            if (auto reconnected = websocket_->Connect(fallback.c_str()); !reconnected) {
++                ESP_LOGE(TAG, "Fallback websocket also unreachable: %s",
++                         reconnected.error().ToString().c_str());
++                SetError(Lang::Strings::SERVER_NOT_CONNECTED, fallback);
++                return false;
++            }
++            // 兜底连接成功：本会话后续重连优先用兜底（NVS 里仍是主 URL，
++            // 设备重启后自然恢复主优先）
++            server_url_ = fallback;
++        } else {
++            SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
++            return false;
++        }
+     }
+ 
+     // Send hello message to describe the client
+diff --git a/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.h b/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.h
+index b211e7eb..236abee3 100644
+--- a/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.h
++++ b/hardware/sets/yuhe-esp32/main/protocols/websocket_protocol.h
+@@ -44,6 +44,8 @@ private:
+     void ReportBinaryFrameRecovered();
+     bool SendText(const std::string& text) override;
+     std::string GetHelloMessage();
++    // 在 websocket_ 实例上设置鉴权头与数据/断连回调（主/兜底连接共用）
++    void SetupWebsocket(const std::string& token);
+ 
+     std::string server_url_;
+ };
+diff --git a/tools/sets_diff_audit.py b/tools/sets_diff_audit.py
+index 25fd256b..5598c211 100644
+--- a/tools/sets_diff_audit.py
++++ b/tools/sets_diff_audit.py
+@@ -102,7 +102,22 @@ WHITELIST: dict[str, dict] = {
+     # ---- 协议修复 ----
+     "protocols/websocket_protocol.cc": {
+         "kinds": {"DIFF"},
+-        "reason": "B 修复 URL 取 host：host.erase(0, scheme_pos + 3)，旧写法 erase(scheme_pos, 4) 在 wss:// 下残留前缀",
++        "reason": "B 修复 URL 取 host：host.erase(0, scheme_pos + 3)，旧写法 erase(scheme_pos, 4) 在 wss:// 下残留前缀；"
++                  "2026-10-25 追加 WS 兜底：OpenAudioChannel 主 URL 连接失败且 CONFIG_WEBSOCKET_FALLBACK_URL 非空时"
++                  "重建 websocket 连兜底地址（SetupWebsocket 统一头/回调），宏未配置时行为与旧固件一致",
++    },
++    "protocols/websocket_protocol.h": {
++        "kinds": {"DIFF"},
++        "reason": "2026-10-25 WS 兜底：新增私有声明 SetupWebsocket(const std::string&)（统一鉴权头与 OnData/OnDisconnected 绑定）",
++    },
++    "ota.cc": {
++        "kinds": {"DIFF"},
++        "reason": "2026-10-25 OTA 兜底：GetCheckVersionUrl() 支持连续失败切 CONFIG_OTA_FALLBACK_URL（kPrimaryFailThreshold=3，"
++                  "5xx/连接失败计数、4xx 不计），ReportPrimaryResult 成功恢复主 URL；宏未配置时空串短路，行为与旧固件一致",
++    },
++    "ota.h": {
++        "kinds": {"DIFF"},
++        "reason": "2026-10-25 OTA 兜底：新增 ReportPrimaryResult/IsFallbackActive 声明与 kPrimaryFailThreshold/primary_fail_count_/fallback_active_ 成员",
+     },
+     "protocols/protocol.h": {
+         "kinds": {"DIFF"},

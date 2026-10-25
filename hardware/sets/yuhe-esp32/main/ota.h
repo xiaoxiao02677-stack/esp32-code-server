@@ -34,6 +34,11 @@ public:
     const std::string& GetActivationCode() const { return activation_code_; }
     std::string GetCheckVersionUrl();
 
+    // 主 OTA URL 失败上报（供 CheckVersion 内部与外部调用方统计）：
+    // 连续 kPrimaryFailThreshold 次失败后 GetCheckVersionUrl 返回兜底 URL。
+    void ReportPrimaryResult(bool success);
+    bool IsFallbackActive() const { return fallback_active_; }
+
     // 配置版本检查（与固件版本分离）
     std::expected<std::string, std::string> CheckConfigVersion();
     // 获取配置下载 URL
@@ -61,6 +66,11 @@ private:
     std::string config_version_;
     std::string config_download_url_;
     std::string local_config_version_;
+
+    // 主/兜底 OTA URL 切换状态（sandyun.top 主 / yuhe.pro 兜底）
+    static constexpr int kPrimaryFailThreshold = 3;
+    int primary_fail_count_ = 0;
+    bool fallback_active_ = false;
 
     std::function<void(int progress, size_t speed)> upgrade_callback_;
     std::expected<std::vector<int>, std::string> ParseVersion(const std::string& version);

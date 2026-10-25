@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import org.apache.shiro.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -35,9 +36,14 @@ import yuhe.common.validator.group.AddGroup;
 import yuhe.common.validator.group.DefaultGroup;
 import yuhe.common.validator.group.UpdateGroup;
 import yuhe.modules.config.service.ConfigService;
+import yuhe.common.user.UserDetail;
 import yuhe.modules.sys.dto.SysParamsDTO;
+import yuhe.modules.sys.enums.SuperAdminEnum;
 import yuhe.modules.sys.service.SysParamsService;
 import yuhe.modules.sys.utils.WebSocketValidator;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * 参数管理
@@ -54,6 +60,53 @@ public class SysParamsController {
     private final ConfigService configService;
     private final RestTemplate restTemplate;
 
+    /**
+     * 敏感参数键：值含服务器间密钥 / 第三方 API 密钥 / 支付密钥等。
+     * 展示配置若给普通用户勾了 /admin/params（Oauth2Realm 会发 admin:params 码），
+     * 非超管仍可在注解层放行——这里做纵深防御：非超管读取时值一律掩码，
+     * 写操作（save/update/delete）非超管直接拒绝。密钥明文只对超管可见。
+     */
+    private static final Set<String> SENSITIVE_PREFIXES = Set.of(
+            "server.secret", "pay.", "sms.", "mail.", "smtp.");
+
+    private static boolean isSuperAdmin() {
+        Object principal = SecurityUtils.getSubject() != null ? SecurityUtils.getSubject().getPrincipal() : null;
+        return principal instanceof UserDetail u
+                && Integer.valueOf(SuperAdminEnum.YES.value()).equals(u.getSuperAdmin());
+    }
+
+    private static boolean isSensitive(String paramCode) {
+        if (paramCode == null) {
+            return false;
+        }
+        String code = paramCode.toLowerCase();
+        return SENSITIVE_PREFIXES.stream().anyMatch(code::startsWith)
+                || code.contains("secret") || code.contains("apikey") || code.contains("api_key")
+                || code.contains("appkey") || code.contains("accesskey") || code.contains("token");
+    }
+
+    /** 非超管：敏感参数值掩码（前4后4），短值全打码 */
+    private static String mask(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        if (value.length() <= 8) {
+            return "****";
+        }
+        return value.substring(0, 4) + "****" + value.substring(value.length() - 4);
+    }
+
+    private void maskSensitive(List<SysParamsDTO> list) {
+        if (isSuperAdmin()) {
+            return;
+        }
+        for (SysParamsDTO dto : list) {
+            if (isSensitive(dto.getParamCode())) {
+                dto.setParamValue(mask(dto.getParamValue()));
+            }
+        }
+    }
+
     @GetMapping("page")
     @Operation(summary = "分页")
     @Parameters({
@@ -66,7 +119,7 @@ public class SysParamsController {
     @RequiresPermissions(value = {"sys:role:superAdmin", "admin:params"}, logical = Logical.OR)
     public Result<PageData<SysParamsDTO>> page(@Parameter(hidden = true) @RequestParam Map<String, Object> params) {
         PageData<SysParamsDTO> page = sysParamsService.page(params);
-
+        maskSensitive(page.getList());
         return new Result<PageData<SysParamsDTO>>().ok(page);
     }
 
@@ -75,7 +128,9 @@ public class SysParamsController {
     @RequiresPermissions(value = {"sys:role:superAdmin", "admin:params"}, logical = Logical.OR)
     public Result<SysParamsDTO> get(@PathVariable("id") Long id) {
         SysParamsDTO data = sysParamsService.get(id);
-
+        if (data != null && !isSuperAdmin() && isSensitive(data.getParamCode())) {
+            data.setParamValue(mask(data.getParamValue()));
+        }
         return new Result<SysParamsDTO>().ok(data);
     }
 
@@ -84,6 +139,10 @@ public class SysParamsController {
     @LogOperation("保存")
     @RequiresPermissions(value = {"sys:role:superAdmin", "admin:params"}, logical = Logical.OR)
     public Result<Void> save(@RequestBody SysParamsDTO dto) {
+        // 参数写入影响全站服务行为，仅超管可操作（纵深防御：展示配置错配也不放权）
+        if (!isSuperAdmin()) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         // 效验数据
         ValidatorUtils.validateEntity(dto, AddGroup.class, DefaultGroup.class);
 
@@ -97,6 +156,10 @@ public class SysParamsController {
     @LogOperation("修改")
     @RequiresPermissions(value = {"sys:role:superAdmin", "admin:params"}, logical = Logical.OR)
     public Result<Void> update(@RequestBody SysParamsDTO dto) {
+        // 参数写入影响全站服务行为，仅超管可操作（纵深防御：展示配置错配也不放权）
+        if (!isSuperAdmin()) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         // 效验数据
         ValidatorUtils.validateEntity(dto, UpdateGroup.class, DefaultGroup.class);
 
@@ -164,6 +227,10 @@ public class SysParamsController {
     @LogOperation("删除")
     @RequiresPermissions(value = {"sys:role:superAdmin", "admin:params"}, logical = Logical.OR)
     public Result<Void> delete(@RequestBody String[] ids) {
+        // 参数删除影响全站服务行为，仅超管可操作（纵深防御）
+        if (!isSuperAdmin()) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         // 效验数据
         AssertUtils.isArrayEmpty(ids, "id");
 

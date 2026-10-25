@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灯语 Lumen · ESP32 AI 陪聊界面设计提案</title>
+<style>
+/* ============ 提案页面（非屏幕内容） ============ */
+:root{
+  --pg-bg:#0B0E1B; --pg-panel:#12172E; --pg-panel2:#151B36;
+  --pg-line:rgba(140,150,189,.18); --pg-txt:#E7EBF6; --pg-dim:#8C96BD;
+  --accent:#F7A65A; --accent-soft:rgba(247,166,90,.14);
+  /* —— 屏幕调色板：全部为 RGB565 量化后的实际显示色 —— */
+  --night:#080C19; --ink100:#101429; --ink200:#101C3A; --ink300:#192852;
+  --ember600:#5A3919; --ember500:#C57D3A; --ember400:#F7A65A; --ember300:#FFCA8C;
+  --core:#FFEBC5; --cream:#F7EFE6; --haze500:#8C96BD; --haze600:#5A658C;
+  --sage:#ADDBB5; --coral:#EF715A;
+  --paper:#F7EFE6; --d-ink:#EFDFCE; --d-text:#312819; --d-haze:#847963; --d-cream:#5A4D3A;
+  --mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1100px 500px at 15% -8%, rgba(247,166,90,.07), transparent 60%),
+    radial-gradient(900px 600px at 110% 15%, rgba(140,150,189,.06), transparent 55%),
+    var(--pg-bg);
+  color:var(--pg-txt);
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.stage{max-width:1180px;margin:0 auto;padding:56px 28px 90px}
+/* hero */
+.hero{margin-bottom:14px}
+.kicker{
+  font-family:var(--mono);font-size:12px;letter-spacing:.24em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:14px;
+}
+h1{font-size:clamp(30px,4.4vw,46px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+h1 em{font-style:normal;color:var(--accent)}
+.hero-p{max-width:640px;color:var(--pg-dim);margin-top:14px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{
+  font-family:var(--mono);font-size:12px;padding:5px 12px;border:1px solid var(--pg-line);
+  border-radius:6px;color:var(--pg-dim);background:rgba(18,23,46,.6);
+}
+.chip b{color:var(--cream);font-weight:500}
+/* section */
+.sec{margin-top:64px}
+.sec-title{
+  display:flex;align-items:baseline;gap:14px;font-size:20px;font-weight:600;
+  padding-bottom:12px;border-bottom:1px solid var(--pg-line);margin-bottom:6px;
+}
+.sec-title .no{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.14em}
+.sec-sub{color:var(--pg-dim);font-size:13.5px;margin:12px 0 26px;max-width:720px}
+/* rig */
+.rig{display:grid;grid-template-columns:264px minmax(0,1fr);gap:44px;align-items:start;margin-top:34px}
+@media (max-width:900px){.rig{grid-template-columns:1fr}}
+/* rail */
+.rail{display:flex;flex-direction:column;gap:10px;position:sticky;top:24px}
+@media (max-width:900px){.rail{position:static}}
+.rail-cap{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--pg-dim);
+  text-transform:uppercase;margin-bottom:4px;
+}
+.sw-btn{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;
+  border:1px solid var(--pg-line);background:var(--pg-panel);color:var(--pg-txt);
+  cursor:pointer;font-size:14px;font-weight:500;text-align:left;width:100%;
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.sw-btn:hover{border-color:rgba(247,166,90,.45);transform:translateX(2px)}
+.sw-btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.sw-btn .dot{width:8px;height:8px;border-radius:50%;flex:none;transition:background .3s,box-shadow .3s}
+.sw-btn .k{font-family:var(--mono);font-size:11px;color:var(--pg-dim);margin-left:auto}
+.rail-note{
+  margin-top:14px;padding:16px 16px 18px;border:1px solid var(--pg-line);border-radius:12px;
+  background:var(--pg-panel2);font-size:13px;color:var(--pg-dim);
+}
+.rail-note h4{font-size:13px;color:var(--cream);margin-bottom:8px;font-weight:600}
+.rail-note p{margin-bottom:10px}
+.rail-note .lv{font-family:var(--mono);font-size:11.5px;color:var(--accent);word-break:break-all;line-height:1.7}
+.rail-note .cost{
+  font-size:12px;color:var(--sage);border-top:1px dashed var(--pg-line);padding-top:10px;
+}
+/* device */
+.device-wrap{display:flex;justify-content:center}
+.device{
+  position:relative;padding:18px 18px 26px;border-radius:34px;
+  background:linear-gradient(160deg,#39406A 0%,#20264A 26%,#141936 70%,#232A52 100%);
+  box-shadow:
+    0 0 0 1px rgba(140,150,189,.25) inset,
+    0 34px 80px -20px rgba(0,0,0,.75),
+    0 0 120px -30px rgba(247,166,90,.16);
+}
+.device::after{ /* 电源灯 */
+  content:"";position:absolute;bottom:9px;left:50%;transform:translateX(-50%);
+  width:26px;height:3px;border-radius:2px;background:var(--ember500);opacity:.7;
+}
+.screen-slot{width:456px;height:608px;position:relative;border-radius:12px;overflow:hidden}
+@media (max-width:560px){
+  .screen-slot{width:300px;height:400px}
+  .device{padding:12px 12px 20px;border-radius:26px}
+}
+.screen{
+  position:absolute;top:0;left:0;width:240px;height:320px;
+  transform:scale(1.9);transform-origin:0 0;
+  background:var(--night);overflow:hidden;
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+}
+@media (max-width:560px){.screen{transform:scale(1.25)}}
+.screen::after{ /* 像素网格：暗示 240×320 物理点阵 */
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:60;
+  background-image:
+    linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:2px 2px;
+}
+.glass{ /* 屏幕玻璃反光 */
+  position:absolute;inset:0;z-index:59;pointer-events:none;
+  background:linear-gradient(118deg,rgba(255,255,255,.055) 0%,rgba(255,255,255,.014) 34%,transparent 46%);
+}
+/* ============ 场景通用 ============ */
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .4s ease,visibility .4s;background:var(--night)}
+.scene.active{opacity:1;visibility:visible}
+/* —— 光萤本体：4 层硬边同心圆（真机分层渲染，非连续渐变）—— */
+.orb-zone{position:absolute;top:44px;left:0;width:240px;height:150px;display:flex;align-items:center;justify-content:center}
+.lumen{
+  --o1:#FFF6E1; --o2:#FFEBC5; --o3:#FFCA8C; --o4:#C57D3A;
+  position:relative;width:96px;height:96px;display:flex;align-items:center;justify-content:center;
+}
+.lumen-core{position:relative;width:64px;height:64px}
+.lumen-core i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%}
+.lumen-core .l1{width:20px;height:20px;background:var(--o1)}
+.lumen-core .l2{width:36px;height:36px;background:var(--o2)}
+.lumen-core .l3{width:52px;height:52px;background:var(--o3)}
+.lumen-core .l4{width:64px;height:64px;background:var(--o4)}
+.scene.s-idle .lumen-core{animation:breathe 4.8s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.82}50%{transform:scale(1.26);opacity:1}}
+.orb-ring{
+  position:absolute;inset:-14px;border-radius:50%;
+  border:2px solid rgba(255,202,140,.38);
+  animation:ripple 6.4s cubic-bezier(.2,.5,.4,1) infinite;
+}
+.orb-ring.r2{animation-delay:3.2s}
+.s-think .orb-ring{animation-duration:9s}
+.s-think .orb-ring.r2{animation-delay:4.5s}
+@keyframes ripple{0%{transform:scale(.52);opacity:.55}100%{transform:scale(1.85);opacity:0}}
+/* —— idle 文案 —— */
+.name-tag{
+  position:absolute;top:206px;width:240px;text-align:center;
+  font-size:11px;letter-spacing:.42em;text-indent:.42em;color:var(--haze500);
+}
+.idle-word{
+  position:absolute;top:224px;width:240px;text-align:center;
+  font-size:20px;font-weight:600;color:var(--cream);letter-spacing:.06em;
+  transition:opacity .6s ease;
+}
+.idle-word.fade{opacity:0}
+.idle-sub{
+  position:absolute;bottom:22px;width:240px;text-align:center;
+  font-size:10px;color:var(--haze600);letter-spacing:.12em;
+}
+/* —— 聆听（青苔绿 4 层同心圆）—— */
+.s-listen .lumen{--o1:#F2FFF3; --o2:#DDF3DF; --o3:#ADDBB5; --o4:#5E8A66}
+.s-listen .lumen-core{animation:breathe 3.2s ease-in-out infinite}
+.s-listen .orb-ring{border-color:rgba(173,219,181,.42);animation-duration:2.9s}
+.s-listen .orb-ring.r2{animation-delay:1.45s}
+.s-listen .name-tag,.s-think .name-tag{top:212px}
+.status-line{
+  position:absolute;top:238px;width:240px;text-align:center;
+  font-size:15px;font-weight:600;color:var(--sage);letter-spacing:.08em;
+}
+/* —— 思考 —— */
+.s-think .lumen-core{animation:breathe 5.6s ease-in-out infinite}
+.think-dots{position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;gap:5px}
+.think-dots i{
+  width:7px;height:7px;border-radius:50%;background:var(--ember300);opacity:.45;
+  animation:tdot 1.44s ease-in-out infinite;
+}
+.think-dots i:nth-child(2){animation-delay:.24s}
+.think-dots i:nth-child(3){animation-delay:.48s}
+@keyframes tdot{0%,100%{opacity:.35;transform:translateY(0)}45%{opacity:1;transform:translateY(-4px)}}
+.think-word{
+  position:absolute;top:238px;width:240px;text-align:center;
+  font-size:15px;font-weight:600;color:var(--ember300);letter-spacing:.08em;
+}
+/* —— 对话（剧场字幕流） —— */
+.s-talk .vignette{position:absolute;top:0;left:0;width:240px;height:64px}
+.s-talk .vignette i{position:absolute;left:0;width:240px}
+.s-talk .vignette .v1{top:0;height:26px;background:rgba(247,166,90,.10)}
+.s-talk .vignette .v2{top:26px;height:20px;background:rgba(247,166,90,.05)}
+.s-talk .vignette .v3{top:46px;height:18px;background:rgba(247,166,90,.02)}
+.mini-orb{
+  position:absolute;top:14px;left:0;width:240px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+}
+.mini-orb .mo-core{
+  position:relative;width:26px;height:26px;
+}
+.mini-orb .mo-core i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%}
+.mini-orb .mo-core .m1{width:8px;height:8px;background:#FFF6E1}
+.mini-orb .mo-core .m2{width:16px;height:16px;background:#FFCA8C}
+.mini-orb .mo-core .m3{width:26px;height:26px;background:#C57D3A}
+.mini-orb .mo-core{animation:breathe 4.2s ease-in-out infinite}
+.mini-orb .mo-ring{
+  position:absolute;width:26px;height:26px;border-radius:50%;
+  border:1px solid rgba(255,202,140,.34);
+  animation:ripple 4.8s cubic-bezier(.2,.5,.4,1) infinite;
+}
+.flow{
+  position:absolute;top:66px;left:20px;right:20px;bottom:64px;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:12px;
+}
+.row{max-width:100%;font-size:14px;line-height:1.62;letter-spacing:.02em}
+.row .who{
+  display:block;font-size:9px;letter-spacing:.3em;margin-bottom:4px;
+  font-weight:600;
+}
+.row.you{align-self:flex-end;text-align:right;color:var(--ember400)}
+.row.you .who{color:var(--haze600)}
+.row.ai{align-self:flex-start;text-align:left;color:var(--cream)}
+.row.ai .who{color:var(--haze500)}
+.row.entering{animation:rowIn .34s cubic-bezier(.16,.84,.32,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.caret{
+  display:inline-block;width:7px;height:15px;margin-left:2px;vertical-align:-2px;
+  background:var(--ember300);animation:caret 1s step-end infinite;
+}
+@keyframes caret{0%,100%{opacity:1}50%{opacity:0}}
+.now-playing{
+  position:absolute;bottom:20px;left:0;width:240px;height:32px;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+}
+.eq{display:flex;align-items:flex-end;gap:3px;height:22px}
+.eq i{width:4px;border-radius:2px;background:var(--ember300);animation:eqb 1.15s ease-in-out infinite}
+.eq i:nth-child(1){animation-delay:0s}.eq i:nth-child(2){animation-delay:.16s}
+.eq i:nth-child(3){animation-delay:.32s}.eq i:nth-child(4){animation-delay:.48s}
+.eq i:nth-child(5){animation-delay:.64s}
+@keyframes eqb{0%,100%{height:7px}50%{height:21px}}
+.np-label{font-size:10px;letter-spacing:.2em;color:var(--haze500)}
+/* —— 晨间 —— */
+.s-dawn{background:var(--paper)}
+.s-dawn .d-time{
+  position:absolute;top:42px;width:240px;text-align:center;
+  font-size:44px;font-weight:700;letter-spacing:.02em;color:var(--d-text);
+  font-variant-numeric:tabular-nums;
+}
+.s-dawn .d-date{
+  position:absolute;top:96px;width:240px;text-align:center;
+  font-size:11px;letter-spacing:.28em;color:var(--d-haze);
+}
+.d-hello{
+  position:absolute;top:132px;left:24px;right:24px;
+  font-size:14px;line-height:1.7;color:var(--d-cream);text-align:center;
+}
+.d-chip{
+  position:absolute;top:212px;left:50%;transform:translateX(-50%);
+  font-size:11px;letter-spacing:.08em;color:var(--d-cream);
+  border:1px solid rgba(90,77,56,.45);border-radius:999px;padding:6px 14px;white-space:nowrap;
+}
+.s-dawn .d-orb{
+  position:absolute;bottom:24px;left:105px;width:30px;height:30px;
+}
+.s-dawn .d-orb i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%}
+.s-dawn .d-orb .d1{width:10px;height:10px;background:#FFF6E1}
+.s-dawn .d-orb .d2{width:20px;height:20px;background:#FFCA8C}
+.s-dawn .d-orb .d3{width:30px;height:30px;background:#C57D3A}
+.s-dawn .d-orb{animation:breathe 6s ease-in-out infinite}
+/* —— 断连（珊瑚红 4 层同心圆，半透明降饱和）—— */
+.s-error .lumen{--o1:#FFF1EC; --o2:#F9B8A8; --o3:#EF715A; --o4:#8E4636}
+.s-error .lumen-core{opacity:.55;animation:breathe 7.2s ease-in-out infinite}
+.s-error .orb-ring{border-color:rgba(239,113,90,.3);animation-duration:9s;animation-iteration-count:infinite}
+.err-word{
+  position:absolute;top:232px;width:240px;text-align:center;padding:0 26px;
+  font-size:14px;line-height:1.7;color:var(--cream);
+}
+.err-sub{
+  position:absolute;bottom:22px;width:240px;text-align:center;
+  font-size:10px;letter-spacing:.18em;color:var(--haze600);
+}
+/* ============ 表格与卡片 ============ */
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+th{
+  text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  color:var(--pg-dim);font-weight:500;padding:9px 12px;border-bottom:1px solid var(--pg-line);
+}
+td{padding:9px 12px;border-bottom:1px solid rgba(140,150,189,.09);vertical-align:middle}
+td .sw{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:9px;vertical-align:-2px;border:1px solid rgba(255,255,255,.14)}
+td code{font-family:var(--mono);font-size:11.5px;color:var(--accent)}
+.tbl-note{color:var(--pg-dim);font-size:12.5px;margin:10px 0 0;line-height:1.7}
+.tbl-note b{color:var(--cream);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.card{
+  border:1px solid var(--pg-line);border-radius:14px;padding:22px 22px 20px;
+  background:linear-gradient(170deg,var(--pg-panel2),var(--pg-panel));
+}
+.card h3{font-size:15px;margin-bottom:6px}
+.card .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;margin-bottom:14px}
+.card.ok .tag{color:var(--sage)}
+.card.low .tag{color:var(--coral)}
+.card ul{list-style:none;font-size:13px;color:var(--pg-dim)}
+.card li{padding:5px 0 5px 20px;position:relative}
+.card li::before{content:"";position:absolute;left:2px;top:13px;width:7px;height:2px;border-radius:1px;background:var(--accent)}
+.card li.cut::before{background:var(--coral)}
+.card li b{color:var(--cream);font-weight:600}
+.p3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:8px}
+@media (max-width:820px){.p3{grid-template-columns:1fr}}
+.p3 .card p{font-size:13px;color:var(--pg-dim);margin-top:8px}
+.p3 .card .n{font-family:var(--mono);font-size:22px;color:var(--accent);font-weight:700}
+.foot{
+  margin-top:70px;padding-top:22px;border-top:1px solid var(--pg-line);
+  color:var(--pg-dim);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+}
+.foot .mono{font-family:var(--mono);font-size:11px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="kicker">ESP32 · LVGL v9 · Voice-first Companion UI</div>
+    <h1>灯语 <em>Lumen</em> —— 一盏会说话的灯</h1>
+    <p class="hero-p">
+      为无触摸屏的 ESP32 陪聊设备设计的界面提案。屏幕不是对话工具，而是「她的存在本身」：
+      顶部一颗呼吸的光萤承载情绪，下方剧场字幕流承载语言。整套视觉在 RGB565 16bit 色深下逐色校准。
+    </p>
+    <div class="chips">
+      <span class="chip">屏幕 <b>240×320 竖屏</b></span>
+      <span class="chip">色深 <b>RGB565 · LV_COLOR_DEPTH=16</b></span>
+      <span class="chip">LVGL <b>v9.x</b>（v8 差异已标注）</span>
+      <span class="chip">输入 <b>无触摸 · 全语音 + 1 颗实体旋/按键</b></span>
+      <span class="chip">预览 <b>1.9× 缩放 · 逻辑分辨率 240×320</b></span>
+    </div>
+  </header>
+
+  <!-- ================= 概念 ================= -->
+  <section class="sec">
+    <div class="sec-title"><span class="no">01 / CONCEPT</span>创意概念</div>
+    <p class="sec-sub">
+      情绪关键词：<b style="color:var(--cream)">暖夜 · 呼吸 · 留白 · 剧场</b>。
+      它不像默认聊天软件的地方在于——聊天软件把对话做成左右分列的气泡战线，而灯语把屏幕做成一盏灯和一个舞台：
+      你说话时她在听（光变青），她说话时字幕逐字浮现，沉默时她依然亮着、在想你。
+    </p>
+    <div class="p3">
+      <div class="card"><div class="n">P1</div><h3>存在优先于信息</h3><p>任何时刻屏幕上必有一颗活着的光。信息可以没有，陪伴感不能断——待机不是黑屏，是「想着你」。</p></div>
+      <div class="card"><div class="n">P2</div><h3>一个时刻只说一件事</h3><p>聆听、思考、说话、休息四种状态互斥呈现，绝不同屏堆叠。320px 高度里出现两个视觉焦点就是失败。</p></div>
+      <div class="card"><div class="n">P3</div><h3>暖色是她的体温</h3><p>深夜墨蓝底 + 炭火橙光，唯一强调色系。青苔绿只属于「聆听」，珊瑚红只属于「异常」，绝不通用。</p></div>
+    </div>
+  </section>
+
+  <!-- ================= 模拟器 ================= -->
+  <section class="sec">
+    <div class="sec-title"><span class="no">02 / LIVE RENDER</span>真机渲染模拟 · 六状态</div>
+    <p class="sec-sub">左栏切换设备状态。屏幕中所有颜色均为 RGB565 量化后的实际显示色；所有动效均可映射到 LVGL v9 <span style="font-family:var(--mono);font-size:12px;color:var(--accent)">lv_anim</span>，映射路径与实现成本见左栏说明。</p>
+    <div class="rig">
+
+      <aside class="rail">
+        <div class="rail-cap">Render States</div>
+        <button class="sw-btn on" data-state="idle"><span class="dot" style="background:#FFCA8C;box-shadow:0 0 8px #C57D3A"></span>待机 · 想着你<span class="k">01</span></button>
+        <button class="sw-btn" data-state="listen"><span class="dot" style="background:#ADDBB5;box-shadow:0 0 8px #5E8A66"></span>聆听中<span class="k">02</span></button>
+        <button class="sw-btn" data-state="think"><span class="dot" style="background:#FFCA8C;box-shadow:0 0 6px #C57D3A"></span>思考中<span class="k">03</span></button>
+        <button class="sw-btn" data-state="talk"><span class="dot" style="background:#F7EFE6;box-shadow:0 0 8px #8C96BD"></span>对话 · 字幕流<span class="k">04</span></button>
+        <button class="sw-btn" data-state="dawn"><span class="dot" style="background:#F7EFE6;box-shadow:0 0 6px #847963"></span>晨间问候<span class="k">05</span></button>
+        <button class="sw-btn" data-state="error"><span class="dot" style="background:#EF715A;box-shadow:0 0 8px #8E4636"></span>断连安抚<span class="k">06</span></button>
+        <div class="rail-note">
+          <h4 id="note-title">待机 · 想着你</h4>
+          <p id="note-desc"></p>
+          <div class="lv" id="note-lv"></div>
+          <div class="cost" id="note-cost"></div>
+        </div>
+      </aside>
+
+      <div class="device-wrap">
+        <div class="device">
+          <div class="screen-slot">
+            <div class="screen">
+
+              <!-- 01 待机 -->
+              <div class="scene s-idle active" id="sc-idle">
+                <div class="orb-zone"><div class="lumen">
+                  <div class="lumen-core"><i class="l4"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i></div>
+                  <div class="orb-ring"></div><div class="orb-ring r2"></div>
+                </div></div>
+                <div class="name-tag">LUMEN</div>
+                <div class="idle-word" id="idle-word">想着你</div>
+                <div class="idle-sub">23:47 · 已陪伴 39 天</div>
+              </div>
+
+              <!-- 02 聆听 -->
+              <div class="scene s-listen" id="sc-listen">
+                <div class="orb-zone"><div class="lumen">
+                  <div class="lumen-core"><i class="l4"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i></div>
+                  <div class="orb-ring"></div><div class="orb-ring r2"></div>
+                </div></div>
+                <div class="name-tag">LISTENING</div>
+                <div class="status-line">在听，慢慢说</div>
+                <div class="idle-sub">说完停一拍，我就接话</div>
+              </div>
+
+              <!-- 03 思考 -->
+              <div class="scene s-think" id="sc-think">
+                <div class="orb-zone"><div class="lumen">
+                  <div class="think-dots"><i></i><i></i><i></i></div>
+                  <div class="orb-ring"></div><div class="orb-ring r2"></div>
+                </div></div>
+                <div class="name-tag">THINKING</div>
+                <div class="think-word" id="think-word">想想哦</div>
+                <div class="idle-sub">翻翻我们的记忆</div>
+              </div>
+
+              <!-- 04 对话 -->
+              <div class="scene s-talk" id="sc-talk">
+                <div class="vignette"><i class="v1"></i><i class="v2"></i><i class="v3"></i></div>
+                <div class="mini-orb"><div class="mo-ring"></div><div class="mo-core"><i class="m3"></i><i class="m2"></i><i class="m1"></i></div></div>
+                <div class="flow" id="flow">
+                  <div class="row you entering"><span class="who">你 · 23:46</span>今天开了一天会，头好晕</div>
+                  <div class="row ai entering"><span class="who">灯灯</span>「辛苦了。回来就好好歇着，灯一直给你留着。」</div>
+                  <div class="row you entering"><span class="who">你 · 23:47</span>嗯，看到你在就好多了</div>
+                  <div class="row ai entering" id="ai-final"><span class="who">灯灯</span><span class="txt" id="ai-txt"></span><span class="caret" id="ai-caret"></span></div>
+                </div>
+                <div class="now-playing">
+                  <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+                  <span class="np-label">灯灯正在说</span>
+                </div>
+              </div>
+
+              <!-- 05 晨间 -->
+              <div class="scene s-dawn" id="sc-dawn">
+                <div class="d-time">07:32</div>
+                <div class="d-date">十 月 二 十 六 · 星 期 一</div>
+                <div class="d-hello">早安，昨晚你十一点半就睡了，<br>比前天早了一小时，我很开心。</div>
+                <div class="d-chip">晴 24° · 有风，外套记得带</div>
+                <div class="d-orb"><i class="d3"></i><i class="d2"></i><i class="d1"></i></div>
+              </div>
+
+              <!-- 06 断连 -->
+              <div class="scene s-error" id="sc-error">
+                <div class="orb-zone"><div class="lumen">
+                  <div class="lumen-core"><i class="l4"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i></div>
+                  <div class="orb-ring"></div>
+                </div></div>
+                <div class="name-tag">SIGNAL LOST</div>
+                <div class="err-word">信号走丢了。<br>我在这儿等你，马上试着回来。</div>
+                <div class="err-sub">自动重连中 · 第 2 次</div>
+              </div>
+
+            </div>
+            <div class="glass"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= 设计系统 ================= -->
+  <section class="sec">
+    <div class="sec-title"><span class="no">03 / TOKENS</span>设计系统 · RGB565 校准</div>
+    <p class="sec-sub">所有色值先经 5bit-R / 6bit-G / 5bit-B 量化再回填——你在模拟器里看到的就是屏幕将显示的颜色。深浅主题用 <b style="color:var(--cream)">lv_style_t</b> 统一切换，不散落硬编码。</p>
+
+    <table>
+      <tr><th>Token</th><th>色样</th><th>RGB565</th><th>显示色</th><th>用途</th><th>对比度(对底)</th></tr>
+      <tr><td><code>night</code></td><td><span class="sw" style="background:#080C19"></span></td><td><code>0x0863</code></td><td>#080C19</td><td>夜幕底色（深色主题背景）</td><td>—</td></tr>
+      <tr><td><code>ink200</code></td><td><span class="sw" style="background:#101C3A"></span></td><td><code>0x10E7</code></td><td>#101C3A</td><td>字幕行悬底 / 弱分区</td><td>1.16</td></tr>
+      <tr><td><code>ember500</code></td><td><span class="sw" style="background:#C57D3A"></span></td><td><code>0xC3E7</code></td><td>#C57D3A</td><td>炭火橙 · 光萤中圈 / 晨间强调</td><td>5.91</td></tr>
+      <tr><td><code>ember400</code></td><td><span class="sw" style="background:#F7A65A"></span></td><td><code>0xF52B</code></td><td>#F7A65A</td><td>用户短句字色</td><td>9.80</td></tr>
+      <tr><td><code>ember300</code></td><td><span class="sw" style="background:#FFCA8C"></span></td><td><code>0xFE51</code></td><td>#FFCA8C</td><td>光萤外圈 / 思考态 / 光标</td><td>13.07</td></tr>
+      <tr><td><code>cream</code></td><td><span class="sw" style="background:#F7EFE6"></span></td><td><code>0xF77C</code></td><td>#F7EFE6</td><td>AI 字幕主字色（模拟烛光下的纸白）</td><td>17.13</td></tr>
+      <tr><td><code>haze500</code></td><td><span class="sw" style="background:#8C96BD"></span></td><td><code>0x8CB7</code></td><td>#8C96BD</td><td>时间 / 标签 / 次要信息</td><td>6.70</td></tr>
+      <tr><td><code>haze600</code></td><td><span class="sw" style="background:#5A658C"></span></td><td><code>0x5B31</code></td><td>#5A658C</td><td>页脚微字（不承载关键信息）</td><td>3.41</td></tr>
+      <tr><td><code>sage400</code></td><td><span class="sw" style="background:#ADDBB5"></span></td><td><code>0xAED6</code></td><td>#ADDBB5</td><td>聆听态专属色（唯一冷色）</td><td>12.61</td></tr>
+      <tr><td><code>coral</code></td><td><span class="sw" style="background:#EF715A"></span></td><td><code>0xEB8B</code></td><td>#EF715A</td><td>断连 / 异常专属色</td><td>6.67</td></tr>
+      <tr><td><code>paper</code></td><td><span class="sw" style="background:#F7EFE6"></span></td><td><code>0xF77C</code></td><td>#F7EFE6</td><td>晨间模式底色（浅色主题）</td><td>—</td></tr>
+      <tr><td><code>d-text</code></td><td><span class="sw" style="background:#312819"></span></td><td><code>0x3143</code></td><td>#312819</td><td>晨间时间大字</td><td>12.74</td></tr>
+    </table>
+    <p class="tbl-note"><b>16bit 渐变策略：</b>全案不做连续渐变面。光萤的「辉光感」由 3 层同心圆（opaque #FFEBC5 → #FFCA8C → #C57E3A）叠半透明边圈构成，RGB565 下每层都是精确颜色、零 banding；需要更柔的过渡时用 4 层而非渐变。半透明叠加全部限制在 ≤2 层，叠加后色值经预算：例如 ember300@opa180 落在 ink200 上 ≈ #C9A97C，仍在安全可读区。</p>
+
+    <div class="grid2" style="margin-top:26px">
+      <div>
+        <table>
+          <tr><th>字阶</th><th>字号/行高</th><th>字重</th><th>用途</th></tr>
+          <tr><td><code>T-44</code></td><td>44 / 50</td><td>Bold</td><td>晨间时钟</td></tr>
+          <tr><td><code>T-20</code></td><td>20 / 30</td><td>SemiBold</td><td>状态短句（想着你）</td></tr>
+          <tr><td><code>T-14</code></td><td>14 / 23</td><td>Regular</td><td>字幕流正文</td></tr>
+          <tr><td><code>T-10</code></td><td>10 / 16</td><td>Regular</td><td>标签 / 页脚 / 时间</td></tr>
+        </table>
+        <p class="tbl-note"><b>字体成本：</b>lv_font_conv 子集化，每档位独立 bitmap，不共享 glyph 数据。4 档 × 约 450 常用字 ≈ 210–260KB flash（20px 档占大头）。砍到 3 档（去 T-20）省约 60KB。同字号不同字重必须整套导出——中文字体没有「加粗渲染」，SemiBold 是独立字体文件。</p>
+      </div>
+      <div>
+        <table>
+          <tr><th>动效</th><th>时长/周期</th><th>曲线</th><th>属性</th></tr>
+          <tr><td>光萤呼吸</td><td>4.8s 循环</td><td>ease-in-out</td><td>zoom 256→322 + opa</td></tr>
+          <tr><td>涟漪扩散</td><td>6.4s · 双道 3.2s 错相</td><td>ease-out 类</td><td>size + opa→0</td></tr>
+          <tr><td>字幕入场</td><td>340ms 一次性</td><td>ease-out</td><td>y+10→0 · opa · scale</td></tr>
+          <tr><td>流式逐字</td><td>每 90–140ms/字</td><td>step</td><td>label 追加文本</td></tr>
+          <tr><td>EQ 声纹</td><td>1.15s 循环</td><td>ease-in-out</td><td>5×bar 高度</td></tr>
+          <tr><td>状态切换</td><td>300ms 交叉淡入</td><td>ease-in-out</td><td>两层 opa</td></tr>
+        </table>
+        <p class="tbl-note"><b>节奏体系：</b>存在类（呼吸/涟漪）≥3s 慢循环，感知类（EQ/逐字）≤1.2s，转场 300ms 一档。常驻动画仅呼吸 + 涟漪 + EQ（说话时）；全部在低功耗档可停。</p>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:26px">
+      <div class="card ok">
+        <div class="tag">TIER A · PSRAM ≥ 4MB（全帧缓冲）</div>
+        <h3>完整版</h3>
+        <ul>
+          <li><b>涟漪双道</b>错相扩散，光萤 4.8s 呼吸</li>
+          <li><b>五段 EQ</b> 声纹（lv_bar 高度动画 ×5）</li>
+          <li>字幕流保留 6 行历史 + 交叉淡入转场</li>
+          <li>估算：常驻动画 3 组，重绘区域 ≤ 屏 18%，30fps 稳态</li>
+        </ul>
+      </div>
+      <div class="card low">
+        <div class="tag">TIER B · 无 PSRAM（1/10 屏分块渲染）</div>
+        <h3>裁剪版</h3>
+        <ul>
+          <li class="cut">涟漪砍为单道、周期放慢至 9s</li>
+          <li class="cut">EQ 降为 3 根，仅说话时运行</li>
+          <li class="cut">历史行数 6 → 3，转场改硬切（无交叉淡入）</li>
+          <li>呼吸保留（重绘区仅 96×96px，永远便宜）</li>
+          <li>目标 15–20fps——动效都慢，掉帧不可感</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 落地 ================= -->
+  <section class="sec">
+    <div class="sec-title"><span class="no">04 / LVGL PATH</span>关键效果落地路径</div>
+    <p class="sec-sub">以下 API 均已在 LVGL v9 官方文档核对；v8.4 差异单独标注。片段为示意骨架，非完整工程代码。</p>
+
+    <div class="card" style="margin-bottom:22px">
+      <h3>① 光萤呼吸 + 涟漪（存在感的全部）</h3>
+      <p class="tbl-note" style="margin-bottom:14px">
+        光萤 = 3 层 <b>lv_obj 圆形</b>（radius = 宽度一半）叠同心圆，不用渐变；涟漪 = 独立圆环对象（border 1.5px、背景透明），动画驱动 size 与 opa。
+        呼吸用 zoom 而非宽高，避免每帧 relayout，只触发重绘。
+      </p>
+<pre style="font-family:var(--mono);font-size:12px;line-height:1.75;color:#C9D2EE;background:#0A0F24;border:1px solid var(--pg-line);border-radius:10px;padding:16px;overflow-x:auto">/* LVGL v9 —— 呼吸：zoom 256→322，opacity 209→255 */
+static void breathe_anim(lv_obj_t *core) {
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, core);
+    lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_style_transform_zoom);
+    lv_anim_set_values(&a, 256, 322);
+    lv_anim_set_duration(&a, 2400);            /* 半周期 2.4s */
+    lv_anim_set_reverse_duration(&a, 2400);    /* 来回 = 4.8s 呼吸 */
+    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+    lv_anim_start(&a);
+}
+/* 涟漪：size 50→178 + opa 140→0，双道用 lv_anim_set_delay 错相 3200ms */</pre>
+      <p class="tbl-note"><b>成本：</b>重绘区域以光萤为中心约 178×178px（屏 34%），但呼吸/涟漪都是慢动画，LVGL 按脏区刷新，实测类效果在 30fps 内稳定。低配档涟漪减为单道 9s。</p>
+    </div>
+
+    <div class="card" style="margin-bottom:22px">
+      <h3>② 字幕流式逐字（她的「开口说话」）</h3>
+      <p class="tbl-note" style="margin-bottom:14px">
+        核心：<b>一个 lv_label 持有一整句</b>，文本到达时用 <b>lv_label_ins_text</b> 按字符索引追加（LV_LABEL_POS_LAST），配 90–140ms 定时节流。
+        绝不每 token 建新 label、绝不每帧刷新——label 只在追加时 invalidate 自身行区域。光标是 label 尾部一个 7×15px 小对象，1s 步进闪烁。
+      </p>
+<pre style="font-family:var(--mono);font-size:12px;line-height:1.75;color:#C9D2EE;background:#0A0F24;border:1px solid var(--pg-line);border-radius:10px;padding:16px;overflow-x:auto">/* LVGL v9 —— 流式追加（在 lv_timer 回调里，120ms/字） */
+lv_label_ins_text(subtitle, LV_LABEL_POS_LAST, chunk);  /* 按字符索引，非字节 */
+lv_obj_scroll_to_y(flow, LV_COORD_MAX, LV_ANIM_OFF);    /* 行满后顺手上滚 */</pre>
+      <p class="tbl-note"><b>成本：</b>每次追加仅刷新 label 行区域（约 200×23px），120ms 一次完全无压力。这是全案唯一「高频」操作，也是最便宜的一个。</p>
+    </div>
+
+    <div class="card">
+      <h3>③ 复合入场时间线（v9 专属，v8 需手搓）</h3>
+      <p class="tbl-note" style="margin-bottom:14px">
+        字幕入场 = y 位移 + opa + 微缩放三线并发。<b>lv_anim_timeline 是 v9 新增</b>（v8.4 无此 API，需用多个 lv_anim_set_delay 手动编排），支持 set_reverse / set_progress——进度可 scrub，意味着「入场动画」可被倒放成「退场」。
+      </p>
+<pre style="font-family:var(--mono);font-size:12px;line-height:1.75;color:#C9D2EE;background:#0A0F24;border:1px solid var(--pg-line);border-radius:10px;padding:16px;overflow-x:auto">/* LVGL v9 —— 字幕入场时间线：340ms ease-out */
+lv_anim_timeline_t *tl = lv_anim_timeline_create();
+lv_anim_timeline_add(tl, 0,   &anim_y);     /* y +10 -> 0   */
+lv_anim_timeline_add(tl, 0,   &anim_opa);   /* 0 -> 255     */
+lv_anim_timeline_add(tl, 40,  &anim_zoom);  /* 245 -> 256   */
+lv_anim_timeline_start(tl);                 /* 总时长 340ms */</pre>
+      <p class="tbl-note"><b>红线自查：</b>本方案零实时模糊、零大面积半透明叠层、零每帧重建对象。唯一接近边界的操作是 EQ 五段 bar 高度动画——已标注低配降级为 3 根。</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>灯语 Lumen · ESP32 240×320 · LVGL v9 · 设计提案 v1.0</span>
+    <span class="mono">RGB565-CALIBRATED / VOICE-FIRST / NO-TOUCH</span>
+  </footer>
+</div>
+
+<script>
+/* ================= 状态机与说明数据 ================= */
+const NOTES = {
+  idle:{
+    t:"待机 · 想着你",
+    d:"黑不是死黑——一颗 64px 光萤缓慢呼吸（4.8s），两道涟漪错相扩散。下方轮播短句：「想着你 / 今晚风好安静 / 等你说晚安」。她是安静存在的，不是关机的。",
+    lv:"呼吸: lv_obj_set_style_transform_zoom 256→322\n涟漪: size+opa 动画 ×2, delay 错相 3200ms\n短句轮播: lv_label_set_text + lv_anim opa 交叉",
+    c:"常驻动画 2 组 · 重绘区 ≤ 屏 34% · 慢动画 30fps 内稳定 / 低配: 涟漪减单道"
+  },
+  listen:{
+    t:"聆听中",
+    d:"光萤整体转为青苔绿（全案唯一冷色时刻），呼吸加速到 3.2s，涟漪加速——光的变化就是「她竖起了耳朵」。底部提示：「在听，慢慢说」。",
+    lv:"变色: lv_obj_set_style_bg_color + opa 过渡 300ms\n呼吸提速: 换 anim duration (2400→1600ms)\n提示行: T-20 字阶 label",
+    c:"常驻动画 2 组 · 与待机同级开销 · 换色一次性 invalidate"
+  },
+  think:{
+    t:"思考中",
+    d:"光萤退为暗淡的暖点，内部三点跳动（1.44s 循环）。短词轮换：「想想哦 / 让我翻翻记忆 / 快好了」——把 LLM 延迟翻译成她的性格，而不是转圈。",
+    lv:"三点: 3×lv_obj 圆点 y 位移 + opa, 相位差 240ms\n轮词: lv_timer 2.2s 切换 label 文本",
+    c:"常驻动画 1 组(极轻) · 点位移重绘区 ~64×14px · 任意配置可跑"
+  },
+  talk:{
+    t:"对话 · 剧场字幕流",
+    d:"光萤缩为顶部 26px 小点持续呼吸；下方字幕流：用户行右对齐炭橙，AI 行左对齐纸白，行距 12px，无气泡框。最后一行正在逐字浮现（120ms/字），底部五段 EQ 表示她正在出声。",
+    lv:"逐字: lv_label_ins_text(LV_LABEL_POS_LAST) 120ms 节流\n入场: lv_anim_timeline (y+opa+zoom, 340ms)\nEQ: 5×lv_bar 高度动画, 相位差 160ms",
+    c:"EQ 常驻(说话时) · 逐字刷新区 ~200×23px/次 · 入场一次性 / 低配: EQ 减 3 根、历史 6→3 行"
+  },
+  dawn:{
+    t:"晨间问候",
+    d:"清晨亮屏的例外时刻：纸白底、44px 大时钟、一句带记忆的问候（「比前天早了一小时」）、天气胶囊。底部保留 30px 微光萤——换底色不换存在感。",
+    lv:"时钟: lv_label_bind_text 绑定时间 subject\n底色: 深浅主题 = 两套 lv_style_t 切换\n微光萤: 同呼吸 anim, 周期 6s",
+    c:"常驻动画 1 组(30px 级) · 全屏静态文本一次性渲染 · 最便宜的状态"
+  },
+  error:{
+    t:"断连安抚",
+    d:"网络断开不弹错误弹窗。光萤转为半透明珊瑚红、呼吸放缓到 7.2s，一句「信号走丢了。我在这儿等你」。错误态被设计成她的低落，而不是系统报错。",
+    lv:"变色: bg_color → coral 0xEB8B\n呼吸放缓: duration 3600ms 单程\n重连: lv_timer 轮询, 成功后 timeline 逆向退场",
+    c:"常驻动画 1 组 · 文案静态 · 与待机同级开销"
+  }
+};
+
+const btns = document.querySelectorAll(".sw-btn");
+const scenes = {
+  idle:document.getElementById("sc-idle"),
+  listen:document.getElementById("sc-listen"),
+  think:document.getElementById("sc-think"),
+  talk:document.getElementById("sc-talk"),
+  dawn:document.getElementById("sc-dawn"),
+  error:document.getElementById("sc-error"),
+};
+let cur = "idle";
+let idleTimer=null, thinkTimer=null, typeTimer=null;
+
+function stopAll(){
+  if(idleTimer){clearInterval(idleTimer);idleTimer=null}
+  if(thinkTimer){clearInterval(thinkTimer);thinkTimer=null}
+  if(typeTimer){clearInterval(typeTimer);typeTimer=null}
+}
+function startSceneLoops(id){
+  stopAll();
+  if(id==="idle"){
+    const words=["想着你","今晚风好安静","等你说晚安"];
+    let wi=0; const el=document.getElementById("idle-word");
+    idleTimer=setInterval(()=>{
+      el.classList.add("fade");
+      setTimeout(()=>{wi=(wi+1)%words.length;el.textContent=words[wi];el.classList.remove("fade")},600);
+    },4200);
+  }
+  if(id==="think"){
+    const words=["想想哦","让我翻翻记忆","快好了"];
+    let wi=0; const el=document.getElementById("think-word");
+    thinkTimer=setInterval(()=>{
+      el.style.opacity=0;
+      setTimeout(()=>{wi=(wi+1)%words.length;el.textContent=words[wi];el.style.transition="opacity .5s";el.style.opacity=1},500);
+    },2400);
+  }
+  if(id==="talk"){ replayRows(); runTyping(); }
+}
+function replayRows(){
+  const rows=document.querySelectorAll("#flow .row");
+  rows.forEach((r,idx)=>{
+    r.classList.remove("entering");
+    r.style.animation="none"; void r.offsetWidth; r.style.animation="";
+    r.style.animationDelay=(idx*0.09)+"s";
+  });
+}
+function runTyping(){
+  const el=document.getElementById("ai-txt");
+  const caret=document.getElementById("ai-caret");
+  const full="「那就好。我去给你放点白噪音？还是想听我讲讲今天看到的一句诗」";
+  el.textContent="";caret.style.display="inline-block";caret.style.animation="";caret.style.opacity="";
+  let i=0;
+  typeTimer=setInterval(()=>{
+    el.textContent=full.slice(0,++i);
+    if(i>=full.length){caret.style.animation="none";caret.style.opacity=.9;
+      clearInterval(typeTimer);typeTimer=null;
+      setTimeout(()=>{if(cur==="talk")runTyping()},2800);
+    }
+  },115);
+}
+function setState(id){
+  if(cur===id&&scenes[id].classList.contains("active")){startSceneLoops(id);return}
+  cur=id;
+  btns.forEach(b=>b.classList.toggle("on",b.dataset.state===id));
+  Object.entries(scenes).forEach(([k,s])=>s.classList.toggle("active",k===id));
+  const n=NOTES[id];
+  document.getElementById("note-title").textContent=n.t;
+  document.getElementById("note-desc").textContent=n.d;
+  document.getElementById("note-lv").textContent=n.lv;
+  document.getElementById("note-cost").textContent="成本 · "+n.c;
+  startSceneLoops(id);
+}
+btns.forEach(b=>b.addEventListener("click",()=>setState(b.dataset.state)));
+/* 初始 */
+(function(){
+  const n=NOTES.idle;
+  document.getElementById("note-desc").textContent=n.d;
+  document.getElementById("note-lv").textContent=n.lv;
+  document.getElementById("note-cost").textContent="成本 · "+n.c;
+  startSceneLoops("idle");
+})();
+</script>
+</body>
+</html>

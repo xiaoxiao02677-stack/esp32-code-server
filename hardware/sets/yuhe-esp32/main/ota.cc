@@ -26,6 +26,12 @@
 
 #define TAG "Ota"
 
+// Kconfig 未配置兜底地址时（旧 sdkconfig / 语法检查桩环境），按空串处理，
+// 行为等价于「未启用兜底机制」，与改造前固件完全一致。
+#ifndef CONFIG_OTA_FALLBACK_URL
+#define CONFIG_OTA_FALLBACK_URL ""
+#endif
+
 
 Ota::Ota() {
 #ifdef ESP_EFUSE_BLOCK_USR_DATA
@@ -51,7 +57,41 @@ std::string Ota::GetCheckVersionUrl() {
     if (url.empty()) {
         url = CONFIG_OTA_URL;
     }
+    // 主服务器（NVS 下发或编译期主 URL）连续失败超阈值时切兜底 URL。
+    // 兜底 URL 为空（未配置）则永远用主 URL，行为与旧固件完全一致。
+    // 切换只影响本次及后续调用，直到某次成功后恢复主 URL。
+    if (fallback_active_) {
+        std::string fallback = CONFIG_OTA_FALLBACK_URL;
+        if (!fallback.empty()) {
+            return fallback;
+        }
+    }
     return url;
+}
+
+void Ota::ReportPrimaryResult(bool success) {
+    const std::string fallback = CONFIG_OTA_FALLBACK_URL;
+    if (fallback.empty()) {
+        return;  // 未配置兜底，保持旧行为
+    }
+    if (success) {
+        if (fallback_active_) {
+            ESP_LOGW(TAG, "OTA primary recovered, leaving fallback");
+        }
+        fallback_active_ = false;
+        primary_fail_count_ = 0;
+        return;
+    }
+    if (fallback_active_) {
+        return;  // 已在兜底模式，主/兜底失败都由上层重试循环处理
+    }
+    primary_fail_count_++;
+    ESP_LOGW(TAG, "OTA primary fail %d/%d", primary_fail_count_, kPrimaryFailThreshold);
+    if (primary_fail_count_ >= kPrimaryFailThreshold) {
+        fallback_active_ = true;
+        ESP_LOGW(TAG, "OTA primary unreachable x%d, switching to fallback: %s",
+                 kPrimaryFailThreshold, fallback.c_str());
+    }
 }
 
 std::unique_ptr<Http> Ota::SetupHttp() {
@@ -98,21 +138,33 @@ NetworkResult<> Ota::CheckVersion() {
 
     if (auto opened = http->Open(method, url); !opened) {
         ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
+        ReportPrimaryResult(false);
         return opened;
     }
 
     auto status_code = http->GetStatusCode();
     if (!status_code) {
         ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
+        ReportPrimaryResult(false);
         return std::unexpected(status_code.error());
     }
     if (*status_code != 200) {
         ESP_LOGE(TAG, "Failed to check version, status code: %d", *status_code);
+        http->Close();
+        // 5xx = 服务器侧故障（主服务器过载/维护），计失败；4xx = 请求侧
+        // 问题（设备未激活等），切兜底服务器也解决不了，不计数。
+        if (*status_code >= 500) {
+            ReportPrimaryResult(false);
+        }
         return std::unexpected(NetworkError::HttpFailed(*status_code));
     }
 
     data = http->ReadAll();
     http->Close();
+
+    // 兜底模式下成功应答：设备仍指向旧服务器，保持现状（旧服务器在
+    // 恢复期也能服务）。不主动切回主 URL，直到某次主 URL 成功。
+    ReportPrimaryResult(true);
 
     // Response: { "firmware": { "version": "1.0.0", "url": "http://" } }
     // Parse the JSON response and check if the version is newer

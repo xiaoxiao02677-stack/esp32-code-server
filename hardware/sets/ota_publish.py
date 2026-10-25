@@ -44,6 +44,8 @@ CTX.verify_mode = ssl.CERT_NONE
 SETS_ROOT = Path(__file__).resolve().parent
 OUT_ROOT = SETS_ROOT / "out"
 
+# 主站 sandyun.top:8002（服务器A）；发布走明文 8002（与固件 CONFIG_OTA_URL 一致）。
+# 验证码从服务器A 的 Redis 读（sshpass）。
 DEFAULT_SERVER = "http://sandyun.top:8002/yuhe"
 DEFAULT_CAPTCHA_CMD = 'ssh -p 22222 root@sandyun.top "redis-cli -n 0 get sys:captcha:{uuid}"'
 

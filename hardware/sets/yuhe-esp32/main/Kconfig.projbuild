@@ -6,6 +6,25 @@ config OTA_URL
     help
         The application will access this URL to check for new firmwares and server address.
 
+config OTA_FALLBACK_URL
+    string "Fallback OTA URL (used when the primary is unreachable)"
+    default ""
+    help
+        When the primary OTA URL (NVS wifi/ota_url or OTA_URL) fails several
+        times in a row, the device switches to this URL. Empty disables the
+        fallback. Used for the sandyun.top primary / yuhe.pro fallback
+        deployment: the main production server is authoritative and the
+        redundant server (yuhe.pro) keeps serving devices when the primary
+        is unreachable.
+
+config WEBSOCKET_FALLBACK_URL
+    string "Fallback WebSocket URL (used when the OTA-provisioned URL fails)"
+    default ""
+    help
+        When OpenAudioChannel fails to connect with the NVS-provisioned
+        websocket URL, the device retries once with this URL. Empty disables
+        the fallback.
+
 menu "YH Device Protocol"
     config YH_PROTOCOL_ENABLED
         bool "Enable YH Device Protocol (YuHe Workshop server)"
@@ -101,8 +120,8 @@ choice YH_UI_THEME
     prompt "UI Theme (display skin)"
     default YH_UI_THEME_XIAOYOU
     help
-        编译期皮肤选择：三套皮肤共用同一显示骨架（壁纸双槽/字体退休池/
-        锁纪律/占位族），只换视觉层。build.py --theme xiaoyou|pixel-pet|emopet
+        编译期皮肤选择：四套皮肤共用同一显示骨架（壁纸双槽/字体退休池/
+        锁纪律/占位族），只换视觉层。build.py --theme xiaoyou|pixel-pet|emopet|dengyu
         注入对应 sdkconfig 行（后写获胜）。
 
     config YH_UI_THEME_XIAOYOU
@@ -123,6 +142,15 @@ choice YH_UI_THEME
             EMOpet 主题：机器人发光眼（15 态表情，形状/大小/辉光/倾角
             四维表达）、三层辉光模拟、眨眼/呼吸/说话跳动拟态、双击轮换
             眼睛配色。移植自 hardware/sets/theme/EMOpet。
+
+    config YH_UI_THEME_DENGYU
+        bool "DengYu lamp language (AI companion)"
+        help
+            灯语主题（AI 女友陪聊语境）：屏幕是一盏会说话的灯——光萤
+            承载情绪（呼吸/涟漪/轮换配色，双击轮换 + NVS 记忆），剧场
+            字幕流承载语言（角色分色 + 逐字打字机 + 说话态 EQ），
+            07:00 晨间卡片（大时钟 + 陪伴天数问候，天气预留）。
+            设计提案见 hardware/sets/theme/DengYu/docs/。
 endchoice
 
 choice

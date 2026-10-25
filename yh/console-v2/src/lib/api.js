@@ -570,6 +570,29 @@ export const adminApi = {
   orderUpdate: (body) => api.put('/order/update', body),
   orderDelete: (id) => api.del(`/order/delete/${id}`),
   orderExport: (params) => api.get('/order/export', params),
+
+  // ===== 商品管理（后端 /goods/*） =====
+  goodsPage: (params) => api.get('/goods/page', params),
+  goodsInfo: (id) => api.get(`/goods/info/${id}`),
+  goodsCreate: (body) => api.post('/goods/create', body),
+  goodsUpdate: (id, body) => api.put(`/goods/update/${id}`, body),
+  goodsDelete: (id) => api.del(`/goods/delete/${id}`),
+  goodsExportList: () => api.get('/goods/export'),
+  goodsToggle: (id, status) => api.put(`/goods/toggle/${id}`, { status }),
+  goodsOnSaleList: () => api.get('/goods/on-sale'),
+  goodsCategoryList: () => api.get('/goods/categories'),
+  // 商品封面上传（multipart：file）→ { url, fileName }；url 直接存 goods.cover 字段
+  goodsCoverUpload: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.upload('/goods/cover-upload', form)
+  },
+
+  // ===== 支付配置（管理端商品页「支付设置」，读写 sys_params 的 pay.* 键） =====
+  // GET → { xddpay:{appId,secret(掩码),notifyUrl,configured}, alipay:{appId,gateway,configured} }
+  payConfigGet: () => api.get('/goods/pay-config'),
+  // PUT body = { appId, secret, notifyUrl }（secret 传掩码=不变更；字段缺省=不动）
+  payConfigSave: (body) => api.put('/goods/pay-config', body)
 }
 
 // ---------- 壁纸下发（P1-4，独立端点组，不并入 adminApi） ----------
@@ -607,4 +630,43 @@ export const userApi = {
   customVoiceCreate: (b) => api.post('/user/custom-voices', b),
   customVoiceUpdate: (id, b) => api.put(`/user/custom-voices/${id}`, b),
   customVoiceDelete: (id) => api.del(`/user/custom-voices/${id}`)
+}
+
+// ---------- 商店（顾客端）：商城逻辑 1:1 复刻（yuhe.pro 商城 → console-v2 主题） ----------
+export const shopApi = {
+  // 商品：在售列表（含 cover/price/stock/category/sort）、分类
+  goodsOnSale: () => api.get('/goods/on-sale'),
+  goodsCategories: () => api.get('/goods/categories'),
+  // 购物车
+  cartList: () => api.get('/cart/list'),
+  cartAdd: (body) => api.post('/cart/add', body),           // { goodsId, qty }
+  cartChange: (id, delta) => api.put(`/cart/change/${id}`, { delta }),
+  cartSetQty: (id, qty) => api.put(`/cart/qty/${id}`, { qty }),
+  cartChecked: (id, checked) => api.put(`/cart/checked/${id}`, { checked }),
+  cartDelete: (id) => api.del(`/cart/delete/${id}`),
+  // 结算下单：{ userName, contact, shippingAddress, remark, cartIds? } → { orderId, amount, items }
+  checkout: (body) => api.post('/cart/checkout', body),
+  // 我的订单（status: '' 全部 / 0 待发货 1 已发货 2 已完成 3 已取消）
+  myOrders: (params) => api.get('/cart/orders', params),
+  myPoints: () => api.get('/points/mine'),
+  // 支付（支付宝网页支付；未配置时返回 errorCode=PAY_NOT_CONFIGURED）
+  payCreate: (orderId) => api.post('/pay/create', { orderId }),
+  payStatus: (orderId) => api.get(`/pay/status/${orderId}`)
+}
+
+// ---------- 独立商店（免登录游客通道 /shop）：浏览 /goods/on-sale、下单查单支付 /shop/** ----------
+export const guestApi = {
+  goodsOnSale: () => api.get('/goods/on-sale'),
+  goodsCategories: () => api.get('/goods/categories'),
+  // 游客直购下单：{ userName, contact, shippingAddress, remark, items:[{goodsId,qty}] } → { orderId, amount, items }
+  checkout: (body) => api.post('/shop/checkout', body),
+  // 凭订单号查单（返回 order 行 + payStatus 0待支付 1已支付）
+  order: (orderId) => api.get(`/shop/order/${orderId}`),
+  // 游客支付创建（返回结构同 /pay/create：payForm 或 errorCode=PAY_NOT_CONFIGURED）
+  payCreate: (orderId) => api.post('/shop/pay', { orderId }),
+  // XDDPay 小多支付：{ orderId, channel:'alipay'|'wechat' } → { gatewayUrl, orderNo, money, params:{...含sign} }
+  // 前端动态建表单 POST 到 gatewayUrl（1:1 商城中转页 submitPayForm 行为）
+  payCreateXddpay: (orderId, channel) => api.post('/shop/pay/xddpay', { orderId, channel }),
+  // 支付渠道可用性：{ xddpay:{alipay,wechat}, alipayDirect }（未配置渠道不渲染按钮）
+  payChannels: () => api.get('/shop/pay/channels')
 }

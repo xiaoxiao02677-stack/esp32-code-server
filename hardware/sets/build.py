@@ -110,25 +110,26 @@ OPTIONAL_DEFAULTS: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # 目标服务器环境（生产 / 测试）
 #
-# 固件连哪台服务器由三处 CONFIG_* 决定（各版型 config.json 的
-# sdkconfig_append 里已带生产值，环境行在合并时后写获胜、直接覆盖）：
-#   CONFIG_OTA_URL         设备启动时拉服务器地址 + OTA（Java manager-api）
-#   CONFIG_YH_SERVER_HOST  YH 侧信道 TCP（心跳 / SET_LED / 推送 COMMAND）
-#   CONFIG_YH_SERVER_PORT  YH 侧信道端口
-# 生产与测试同域名 sandyun.top（同机双 VM），区别只在端口：
-#   生产（22222）: OTA 8002（明文直连）/ YH 12399
-#   测试（22223）: OTA 8144（nginx 明文入口，8101 是 TLS 口明文连不上）/ YH 8199
-# 测试环境 WebSocket 由 OTA 接口下发（sys_params server.websocket），
-# UDP 心跳口在固件 websocket_protocol.cc:371 写死 8002，与测试 VM 的
-# Python 8002（Java 反代目标）不冲突——那是 TCP，互不相干。
+# 固件连哪台服务器由各版型 config.json 的 sdkconfig_append + 本环境行合并
+# （环境行后写获胜、直接覆盖）决定：
+#   CONFIG_OTA_URL                 设备启动时拉服务器地址 + OTA（Java manager-api）
+#   CONFIG_OTA_FALLBACK_URL        OTA 兜底：主地址连续失败切此地址（ota.cc）
+#   CONFIG_WEBSOCKET_FALLBACK_URL  WS 兜底：主 WS 连不上回退此地址（websocket_protocol.cc）
+#   CONFIG_YH_SERVER_HOST/PORT     YH 侧信道 TCP（心跳 / SET_LED / 推送 COMMAND）
+# 主站 sandyun.top（服务器A，稳定优先），兜底 yuhe.pro（服务器C 保持运行不动）：
+#   生产: OTA/心跳走 A 明文 8002/12399，WS 由 A 下发 ws://sandyun.top:8001/yuhe/v1/
+#         （sys_params）；A 挂了 OTA/WS 自动切 C
+#   测试: sandyun.top:8144 明文 / YH 8199（测试 VM 保持不动）
+# WS 主地址由 OTA 接口下发，固件只存兜底；UDP 心跳口在固件 websocket_protocol.cc 写死 8002。
 # ---------------------------------------------------------------------------
-
 SERVER_ENVS: dict[str, dict[str, Any]] = {
     "prod": {
-        "label": "生产环境 (sandyun.top:8002 / YH 12399)",
+        "label": "生产环境 (sandyun.top 主 / yuhe.pro 兜底 / YH 12399)",
         "host": "sandyun.top",
         "sdkconfig": [
             'CONFIG_OTA_URL="http://sandyun.top:8002/yuhe/ota/"',
+            'CONFIG_OTA_FALLBACK_URL="https://yuhe.pro/yuhe/ota/"',
+            'CONFIG_WEBSOCKET_FALLBACK_URL="wss://yuhe.pro/yuhe/v1/"',
             'CONFIG_YH_SERVER_HOST="sandyun.top"',
             "CONFIG_YH_SERVER_PORT=12399",
         ],
@@ -148,12 +149,15 @@ DEFAULT_SERVER_ENV = "prod"
 # ---------------------------------------------------------------------------
 # UI 主题（编译期皮肤切换）
 #
-# 三套皮肤共用同一显示骨架（壁纸双槽/字体退休池/锁纪律/占位族），只换视觉层：
+# 四套皮肤共用同一显示骨架（壁纸双槽/字体退休池/锁纪律/占位族），只换视觉层：
 #   xiaoyou   原主题（背景图 + emoji 表情 + 品牌 splash）
 #   pixel-pet 像素宠物（canvas 自绘宠物 + 3.8s 出生动画 + 五态表情 + 双击换肤）
 #   emopet    EMOpet（机器人发光眼 + 15 态表情 + 双击换眼色）
+#   dengyu    灯语（光萤呼吸/涟漪 + 剧场字幕流 + 逐字打字机 + 晨间卡片，
+#             AI 女友陪聊语境，双击轮换光萤配色，NVS 记忆）
 # Kconfig choice YH_UI_THEME（main/Kconfig.projbuild），CMakeLists 按
-# CONFIG_YH_UI_THEME_PIXELPET / CONFIG_YH_UI_THEME_EMOPET 条件编入源。
+# CONFIG_YH_UI_THEME_PIXELPET / CONFIG_YH_UI_THEME_EMOPET / CONFIG_YH_UI_THEME_DENGYU
+# 条件编入源。
 # ---------------------------------------------------------------------------
 
 THEMES: dict[str, dict[str, str]] = {
@@ -168,6 +172,10 @@ THEMES: dict[str, dict[str, str]] = {
     "emopet": {
         "label": "EMOpet（机器人发光眼 + 15 态表情 + 双击换眼色）",
         "sdkconfig": ["CONFIG_YH_UI_THEME_EMOPET=y"],
+    },
+    "dengyu": {
+        "label": "灯语（光萤情绪灯 + 剧场字幕流 + 打字机 + 晨间卡片，AI 女友陪聊）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_DENGYU=y"],
     },
 }
 DEFAULT_THEME = "xiaoyou"
@@ -561,7 +569,7 @@ def apply_server_env(board: dict[str, Any], server_env: str) -> list[str]:
 def choose_theme(cli_value: Optional[str]) -> Optional[str]:
     """确定 UI 主题：--theme 参数 > 交互选择 > 默认原主题。
 
-    返回主题 key（'xiaoyou' / 'pixel-pet' / 'emopet'），取消返回 None。
+    返回主题 key（'xiaoyou' / 'pixel-pet' / 'emopet' / 'dengyu'），取消返回 None。
     """
     if cli_value:
         if cli_value not in THEMES:
@@ -581,7 +589,7 @@ def choose_theme(cli_value: Optional[str]) -> Optional[str]:
         say(f" {marker} {index}) {bold(key):<10} {THEMES[key]['label']}")
     say(f"      （回车默认 {DEFAULT_THEME}，q 退出）")
     try:
-        answer = input(f"请选择 [1-{len(keys)}/xiaoyou/pixel-pet/emopet，回车={DEFAULT_THEME}]: ").strip().lower()
+        answer = input(f"请选择 [1-{len(keys)}/名称，回车={DEFAULT_THEME}]: ").strip().lower()
     except EOFError:
         say("")
         notice_bad("没有读到输入，已退出")
@@ -597,7 +605,7 @@ def choose_theme(cli_value: Optional[str]) -> Optional[str]:
             return keys[index - 1]
     if answer in THEMES:
         return answer
-    say(f"{red('[错误]')} 输入无效：{answer!r}，请输入编号或 xiaoyou / pixel-pet / emopet")
+    say(f"{red('[错误]')} 输入无效：{answer!r}，请输入编号或 {' / '.join(THEMES)}")
     return choose_theme(None)
 
 
@@ -750,7 +758,7 @@ def write_build_config(target: Path, board: dict[str, Any]) -> tuple[str, list[s
     if theme_lines:
         theme_keys = {line.split("=", 1)[0] for line in theme_lines}
         theme_keys |= {"CONFIG_YH_UI_THEME_XIAOYOU", "CONFIG_YH_UI_THEME_PIXELPET",
-                       "CONFIG_YH_UI_THEME_EMOPET"}
+                       "CONFIG_YH_UI_THEME_EMOPET", "CONFIG_YH_UI_THEME_DENGYU"}
         merged = [line for line in merged if line.split("=", 1)[0] not in theme_keys]
         merged.extend(theme_lines)
     for line in append:
@@ -1577,11 +1585,17 @@ def warn_stale_build_dir(fw_root: Path, board: dict[str, Any], server_env: str =
         None,
     )
     if prev_ota and want_ota and prev_ota.group(1) != want_ota.strip('"'):
-        prev_env = "未知环境" if prev_ota.group(1) not in (
-            "http://sandyun.top:8002/yuhe/ota/", "http://sandyun.top:8144/yuhe/ota/"
-        ) else ("生产" if ":8002" in prev_ota.group(1) else "测试")
+        _prev = prev_ota.group(1)
+        if _prev.startswith("http://sandyun.top:8002/"):
+            prev_env = "生产(A主)"
+        elif _prev.startswith("https://yuhe.pro/"):
+            prev_env = "生产(C主,已回退)"
+        elif _prev.startswith("http://sandyun.top:8144/"):
+            prev_env = "测试"
+        else:
+            prev_env = "未知环境"
         say()
-        notice_warn(f"build/ 里的旧产物连{prev_env}（{prev_ota.group(1)}），本次编译目标为 {server_env}")
+        notice_warn(f"build/ 里的旧产物连{prev_env}（{_prev}），本次编译目标为 {server_env}")
         say("        sdkconfig 会重新生成、地址必然更新；无需删 build 目录。")
 
 

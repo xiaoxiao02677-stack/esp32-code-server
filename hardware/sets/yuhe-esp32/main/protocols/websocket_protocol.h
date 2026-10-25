@@ -44,6 +44,8 @@ private:
     void ReportBinaryFrameRecovered();
     bool SendText(const std::string& text) override;
     std::string GetHelloMessage();
+    // 在 websocket_ 实例上设置鉴权头与数据/断连回调（主/兜底连接共用）
+    void SetupWebsocket(const std::string& token);
 
     std::string server_url_;
 };

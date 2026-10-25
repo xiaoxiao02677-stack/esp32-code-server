@@ -10,6 +10,8 @@
 #include "display/pet_skin/pet_skin_display.h"
 #elif CONFIG_YH_UI_THEME_EMOPET
 #include "display/emo_skin/emo_skin_display.h"
+#elif CONFIG_YH_UI_THEME_DENGYU
+#include "display/DengYu_skin/dengyu_skin_display.h"
 #endif
 
 #include <esp_log.h>
@@ -176,7 +178,8 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, true));
 
         // 皮肤按编译期主题选择（build.py --theme）：xiaoyou=原圆屏皮肤，
-        // pixel-pet=像素宠物，emopet=EMOpet 机器人眼（同一构造签名，240 圆屏布局自动换算）
+        // pixel-pet=像素宠物，emopet=EMOpet 机器人眼，dengyu=灯语光萤
+        //（同一构造签名，240 圆屏布局自动换算）
 #if CONFIG_YH_UI_THEME_PIXELPET
         display_ = new PetSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
@@ -184,6 +187,11 @@ private:
                                      YhSkinProfile::Round240(false));
 #elif CONFIG_YH_UI_THEME_EMOPET
         display_ = new EmoSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                     DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Round240(false));
+#elif CONFIG_YH_UI_THEME_DENGYU
+        display_ = new DengYuSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
                                      DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
                                      YhSkinProfile::Round240(false));

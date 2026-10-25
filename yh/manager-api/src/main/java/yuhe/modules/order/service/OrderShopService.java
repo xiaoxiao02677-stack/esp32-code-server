@@ -261,7 +261,6 @@ public class OrderShopService {
         order.put("contact", contact.trim());
         order.put("product", product.toString());
         order.put("amount", total.setScale(2, RoundingMode.HALF_UP));
-        order.put("paymentTime", new Date());
         order.put("shippingAddress", shippingAddress == null ? "" : shippingAddress.trim());
         order.put("status", "0");
         order.put("remark", remark == null ? "" : remark);
@@ -275,6 +274,110 @@ public class OrderShopService {
         result.put("amount", total.setScale(2, RoundingMode.HALF_UP));
         result.put("items", picked.size());
         return result;
+    }
+
+    // ==================== 游客直购（免登录，/shop 专用） ====================
+
+    /**
+     * 游客直购下单：body 由 Controller 传 items[{goodsId,qty}] + 收货四字段，不依赖登录态。
+     * 与登录版 checkout 共用同一套校验/扣库存/写单逻辑，user_id 写 NULL。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> guestCheckout(String userName, String contact, String shippingAddress,
+            String remark, List<Map<String, Object>> items) {
+        if (userName == null || userName.trim().isEmpty()) {
+            throw new IllegalArgumentException("收货人不能为空");
+        }
+        if (contact == null || contact.trim().isEmpty()) {
+            throw new IllegalArgumentException("联系方式不能为空");
+        }
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("请先选择要购买的商品");
+        }
+        // 逐行校验：存在、上架、数量合法
+        List<Long> goodsIds = new ArrayList<>();
+        List<Integer> qtys = new ArrayList<>();
+        for (Map<String, Object> it : items) {
+            Long goodsId = it.get("goodsId") == null ? null : Long.valueOf(String.valueOf(it.get("goodsId")));
+            int qty = it.get("qty") == null ? 1 : Integer.parseInt(String.valueOf(it.get("qty")));
+            if (goodsId == null) {
+                throw new IllegalArgumentException("商品ID不能为空");
+            }
+            Map<String, Object> g = goodsMapper.getById(goodsId);
+            if (g == null) {
+                throw new IllegalArgumentException("商品不存在");
+            }
+            if (g.get("status") == null || !"1".equals(String.valueOf(g.get("status")))) {
+                throw new IllegalArgumentException("商品「" + g.get("name") + "」已下架");
+            }
+            if (qty < 1) {
+                throw new IllegalArgumentException("商品「" + g.get("name") + "」数量非法");
+            }
+            if (goodsIds.contains(goodsId)) {
+                throw new IllegalArgumentException("商品「" + g.get("name") + "」重复提交");
+            }
+            goodsIds.add(goodsId);
+            qtys.add(qty);
+        }
+        // 二次校验库存（扣减在循环内条件更新，并发下不会超卖）
+        List<Map<String, Object>> picked = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = 0; i < goodsIds.size(); i++) {
+            Long goodsId = goodsIds.get(i);
+            int qtyN = qtys.get(i);
+            Map<String, Object> g = goodsMapper.getById(goodsId);
+            int stockN = g.get("stock") == null ? 0 : Integer.parseInt(String.valueOf(g.get("stock")));
+            if (stockN < qtyN) {
+                throw new IllegalArgumentException("商品「" + g.get("name") + "」库存不足（剩 " + stockN + "）");
+            }
+            // 条件更新扣库存（失败=并发买走）
+            if (goodsMapper.deductStock(goodsId, qtyN) == 0) {
+                stockN = Integer.parseInt(String.valueOf(goodsMapper.getById(goodsId).get("stock")));
+                throw new IllegalArgumentException("商品「" + g.get("name") + "」库存不足（剩 " + stockN + "）");
+            }
+            BigDecimal price = g.get("price") == null ? BigDecimal.ZERO
+                    : new BigDecimal(String.valueOf(g.get("price")));
+            total = total.add(price.multiply(BigDecimal.valueOf(qtyN)));
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("name", g.get("name"));
+            row.put("qty", qtyN);
+            row.put("price", price);
+            picked.add(row);
+        }
+        // 汇总商品描述
+        StringBuilder product = new StringBuilder();
+        for (int i = 0; i < picked.size(); i++) {
+            if (i > 0) {
+                product.append("、");
+            }
+            product.append(picked.get(i).get("name")).append(" x").append(picked.get(i).get("qty"));
+        }
+        String orderId = "OD" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+        Map<String, Object> order = new LinkedHashMap<>();
+        order.put("id", orderId);
+        order.put("userId", null);
+        order.put("userName", userName.trim());
+        order.put("contact", contact.trim());
+        order.put("product", product.toString());
+        order.put("amount", total.setScale(2, RoundingMode.HALF_UP));
+        order.put("shippingAddress", shippingAddress == null ? "" : shippingAddress.trim());
+        order.put("status", "0");
+        order.put("remark", remark == null ? "" : remark);
+        orderMapper.insert(order);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("orderId", orderId);
+        result.put("amount", total.setScale(2, RoundingMode.HALF_UP));
+        result.put("items", picked.size());
+        return result;
+    }
+
+    /** 游客订单查询（免登录，凭订单号读取） */
+    public Map<String, Object> guestOrder(String orderId) {
+        Map<String, Object> o = orderMapper.getById(orderId, null);
+        if (o == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        return o;
     }
 
     // ==================== 我的订单（顾客端） ====================

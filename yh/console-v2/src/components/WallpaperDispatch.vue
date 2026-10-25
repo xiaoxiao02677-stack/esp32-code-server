@@ -4,10 +4,12 @@
     - 必须 Teleport 到 body：.dock 有 backdrop-filter + overflow，会成为 fixed 定位的包含块，
       留在 <nav> 内会被裁成 56~140px 宽（需求 §5.3 / 风险 R1）。
     - 外层用 v-show 而非 v-if：组件不销毁，关闭浮层后 dispatching 轮询仍能跑到 done（需求 §5.3 / R5）。
+    - manual dismiss：无遮罩、无 click-outside 关闭，仅 ×/关闭按钮 + Esc（onKeydown）。
+      non-modal：.wp-layer pointer-events:none 放行底层点击与滚动，仅 .wp-modal 自身接管指针事件。
   -->
   <Teleport to="body">
-    <div v-show="open" class="wp-overlay" @click.self="requestClose">
-      <div class="wp-modal" role="dialog" aria-modal="true" aria-label="壁纸下发">
+    <div v-show="open" class="wp-layer">
+      <div class="wp-modal" role="dialog" aria-label="壁纸下发">
         <!-- 头部 -->
         <header class="wp-header">
           <div class="wp-title">
@@ -416,8 +418,8 @@
       </div>
     </div>
 
-    <!-- 大图预览（与壁纸浮层同级 Teleport，z-index 更高） -->
-    <div v-if="previewWallpaper" class="lb-overlay" @click.self="previewWallpaper = null">
+    <!-- 大图预览（与壁纸浮层同级 Teleport，z-index 更高；manual dismiss：仅 × / 点图选用 / Esc） -->
+    <div v-if="previewWallpaper" class="lb-layer">
       <div class="lb-card">
         <div class="lb-head">
           <strong>{{ previewWallpaper.name }}</strong>
@@ -1054,8 +1056,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 遮罩：z-index 140 —— 压住 dock(50)，放行 Toasts(200) 与全局确认框(150) */
-.wp-overlay {
+/* 定位层：z-index 140 —— 压住 dock(50)，放行 Toasts(200) 与全局确认框(150)。
+   non-modal：pointer-events:none 放行底层元素（点击/滚动不命中本层），仅 .wp-modal 接管指针事件 */
+.wp-layer {
   position: fixed;
   inset: 0;
   z-index: 140;
@@ -1064,10 +1067,11 @@ onUnmounted(() => {
   justify-content: center;
   padding: 16px;
   box-sizing: border-box;
-  background: rgba(15, 23, 42, .45);
+  pointer-events: none;
 }
-/* 居中 Modal：min(920px,94vw) / max-height 88vh / 双栏 320px 1fr */
+/* 居中面板：min(920px,94vw) / max-height 88vh / 双栏 320px 1fr */
 .wp-modal {
+  pointer-events: auto;
   width: min(920px, 94vw);
   max-height: 88vh;
   display: flex;
@@ -1266,13 +1270,15 @@ onUnmounted(() => {
 .wp-card.on:hover .tick { opacity: 0; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
 
-/* 大图预览 lightbox */
-.lb-overlay {
+/* 大图预览 lightbox（manual dismiss：仅 × / 点图选用 / Esc；non-modal 不拦底层指针） */
+.lb-layer {
   position: fixed; inset: 0; z-index: 180; /* 压过壁纸浮层(140)，低于 Toasts */
   display: flex; align-items: center; justify-content: center; padding: 20px;
-  background: rgba(15, 23, 42, .62); box-sizing: border-box;
+  box-sizing: border-box;
+  pointer-events: none;
 }
 .lb-card {
+  pointer-events: auto;
   max-width: min(420px, 92vw); background: var(--surface); border-radius: 14px;
   padding: 14px; box-shadow: 0 24px 64px rgba(15, 23, 42, .4);
 }

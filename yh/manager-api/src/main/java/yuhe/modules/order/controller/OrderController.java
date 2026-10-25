@@ -59,6 +59,8 @@ public class OrderController {
         return new Result<String>().ok(id);
     }
 
+    /** 订单导出：与 create/update/delete 同级的管理端能力（含收货人联系方式，普通用户不可全量导出） */
+    @RequiresPermissions(value = {"sys:role:superAdmin", "admin:orders"}, logical = Logical.OR)
     @GetMapping("/export")
     public Result<List<Map<String, Object>>> export(
             @RequestParam(required = false) String keyword) {

@@ -38,9 +38,17 @@ import AdminDisplayConfig from './views/admin/DisplayConfig.vue'
 import AdminUserDefaults from './views/admin/UserDefaults.vue'
 import AdminCustomReview from './views/admin/CustomReview.vue'
 import AdminOrders from './views/admin/Orders.vue'
+import AdminGoods from './views/admin/Goods.vue'
 // 用户模块新增页面（customer 端）
 import CustomerProfile from './views/customer/Profile.vue'
 import CustomerMyModels from './views/customer/MyModels.vue'
+// 独立商店（免登录 /shop）：Portal/GoodsDetail/Cart/Checkout/OrderResult，ShopShell 自带顶栏
+import ShopShell from './views/shop/ShopShell.vue'
+import ShopPortal from './views/shop/Portal.vue'
+import ShopGoodsDetail from './views/shop/GoodsDetail.vue'
+import ShopCart from './views/shop/Cart.vue'
+import ShopCheckout from './views/shop/Checkout.vue'
+import ShopOrderResult from './views/shop/OrderResult.vue'
 import Login from './views/Login.vue'
 import NotFound from './views/NotFound.vue'
 
@@ -58,6 +66,14 @@ const router = createRouter({
     { path: '/customer/points', component: CustomerPoints },
     { path: '/customer/profile', component: CustomerProfile },
     { path: '/customer/my-models', component: CustomerMyModels },
+    // 独立商店（免登录）：嵌套路由，ShopShell 提供品牌顶栏/页脚
+    { path: '/shop', component: ShopShell, children: [
+      { path: '', component: ShopPortal },
+      { path: 'goods/:id', component: ShopGoodsDetail },
+      { path: 'cart', component: ShopCart },
+      { path: 'checkout', component: ShopCheckout },
+      { path: 'orders', component: ShopOrderResult }
+    ] },
     { path: '/admin', component: AdminHome },
     { path: '/admin/agents', component: AdminAgents },
     { path: '/admin/voices', component: AdminVoices },
@@ -87,14 +103,16 @@ const router = createRouter({
     { path: '/admin/wechat-openclaw', component: AdminWeChatOpenClaw },
     { path: '/admin/wechat-claw', component: AdminWeChatClaw },
     { path: '/admin/orders', component: AdminOrders },
+    { path: '/admin/goods', component: AdminGoods },
     // 404 兜底：未知路径不再渲染空白页
     { path: '/:pathMatch(.*)*', component: NotFound }
   ]
 })
 
-// A7 路由守卫：无 token 一律跳登录；已登录不再回登录页
+// A7 路由守卫：无 token 一律跳登录；已登录不再回登录页；/shop 独立商店免登录
 router.beforeEach(async (to) => {
   const has = !!getToken()
+  if (to.path === '/shop' || to.path.startsWith('/shop/')) return true
   if (!has && to.path !== '/login') return '/login'
   if (has && to.path === '/login') return defaultRouteAfterLogin()
   if (has && to.path.startsWith('/admin')) {
@@ -111,9 +129,10 @@ router.beforeEach(async (to) => {
 
 createApp(App).use(router).mount('#app')
 
-// 启动token过期检查：每30秒检查一次，过期时自动跳转登录页
+// 启动token过期检查：每30秒检查一次，过期时自动跳转登录页（/shop 游客除外）
 startTokenCheck(() => {
-  // token过期，跳转
+  // token过期，跳转；独立商店免登录，游客无 token 不受影响
+  if (location.hash.startsWith('#/shop')) return
   if (!location.hash.startsWith('#/login')) {
     location.hash = '#/login'
   }

@@ -63,11 +63,12 @@ python hardware/sets/build.py --board yh-cam --server test --yes
 
 | 环境 | 参数 | OTA 地址 | YH 心跳端口 |
 |---|---|---|---|
-| 生产（默认） | `--server prod` | `http://sandyun.top:8002/yuhe/ota/` | 12399 |
+| 生产（默认） | `--server prod` | `http://sandyun.top:8002/yuhe/ota/`（主）/ `https://yuhe.pro/yuhe/ota/`（兜底） | 12399（sandyun.top） |
 | 测试 | `--server test` | `http://sandyun.top:8144/yuhe/ota/` | 8199 |
 
-> 测试环境 8101 是 TLS 端口、明文 HTTP 设备连不上，设备入口一律走 8144；
-> 测试 VM 的 YH 心跳口是 8199（`.config.yaml` 的 `heartbeat_port`），不是生产的 12399。
+> 生产主站是 sandyun.top（服务器A），yuhe.pro（服务器C）保持运行作兜底：
+> OTA 连续 3 次失败自动切兜底、成功自动恢复；WS 连接失败单次回退；YH 心跳固定走
+> sandyun.top:12399。WS 主地址由服务端下发（sys_params `server.websocket`）。
 > 烧录时 flash.py 会读 build 产物里的 `CONFIG_OTA_URL` 打印「产物环境」，测试
 > 固件会额外黄字提醒「勿刷到生产设备」。
 
@@ -81,7 +82,7 @@ python hardware/sets/build.py --board yh-cam --sync-only
 ### 全量构建（`--all`）
 
 把**所有版型 × 生产+测试环境 × 所有主题**一口气全部编译出来，适合发布前
-批量出产物。当前是 4 版型 × 2 环境 × 3 主题 = 24 个组合：
+批量出产物。当前是 4 版型 × 2 环境 × 4 主题 = 32 个组合：
 
 ```bat
 python hardware/sets/build.py --all
@@ -236,7 +237,7 @@ version = 2.5.2
 | `--all` | 全量构建：所有版型 × 生产+测试 × 所有主题（详见上文） |
 | `--all-no-clean` | `--all` 模式下不清理 `<FW>\build`（提速，风险自担） |
 | `--server <env>` | 目标服务器环境 `prod` / `test` |
-| `--theme <theme>` | UI 主题 `xiaoyou` / `pixel-pet` / `emopet` |
+| `--theme <theme>` | UI 主题 `xiaoyou` / `pixel-pet` / `emopet` / `dengyu`（灯语：光萤情绪灯 + 字幕流，AI 女友陪聊） |
 | `--list` | 只列出版型就退出 |
 | `--sync-only` | 只做同步与注册，不编译（无需 ESP-IDF） |
 | `-y` / `--yes` | 跳过所有确认，含引脚未验证警告；`--all` 模式下兼作「包含未验证版型」 |

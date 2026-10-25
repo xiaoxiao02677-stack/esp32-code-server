@@ -103,6 +103,13 @@ public class ShiroConfig {
         filterMap.put("/voiceClone/play/**", "anon");
         // 支付宝异步回调（Shiro anon：服务端应答纯文本 success/fail，无登录态）
         filterMap.put("/pay/alipay/**", "anon");
+        // 独立商店（免登录）：浏览走 /goods/on-sale|categories，下单/查单/支付走 /shop/**
+        filterMap.put("/goods/on-sale", "anon");
+        filterMap.put("/goods/categories", "anon");
+        // 商品封面下载（管理端经 /goods/cover-upload 上传，顾客端匿名展示；
+        // 文件名=md5+固定扩展，无目录穿越面。上传端点不在 anon 内，走默认 oauth2+权限注解）
+        filterMap.put("/goods/cover/*", "anon");
+        filterMap.put("/shop/**", "anon");
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
 

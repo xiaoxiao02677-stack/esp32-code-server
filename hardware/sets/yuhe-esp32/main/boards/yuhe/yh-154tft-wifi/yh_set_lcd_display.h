@@ -8,6 +8,8 @@
 #include "display/pet_skin/pet_skin_display.h"
 #elif CONFIG_YH_UI_THEME_EMOPET
 #include "display/emo_skin/emo_skin_display.h"
+#elif CONFIG_YH_UI_THEME_DENGYU
+#include "display/DengYu_skin/dengyu_skin_display.h"
 #endif
 
 #include <esp_lvgl_port.h>
@@ -20,7 +22,8 @@
 //
 // 主题条件编译：YhSetLcdDisplay 始终继承「当前主题的皮肤基类」——
 // xiaoyou（默认）= YhSkinDisplay，pixel-pet = PetSkinDisplay，
-// emopet = EmoSkinDisplay。高温弹窗等板级浮层对三套主题同样生效。
+// emopet = EmoSkinDisplay，dengyu = DengYuSkinDisplay。
+// 高温弹窗等板级浮层对四套主题同样生效。
 #if CONFIG_YH_UI_THEME_PIXELPET
 class YhSetLcdDisplay : public PetSkinDisplay {
 public:
@@ -31,6 +34,11 @@ class YhSetLcdDisplay : public EmoSkinDisplay {
 public:
     using EmoSkinDisplay::EmoSkinDisplay;
     using SkinBase = EmoSkinDisplay;
+#elif CONFIG_YH_UI_THEME_DENGYU
+class YhSetLcdDisplay : public DengYuSkinDisplay {
+public:
+    using DengYuSkinDisplay::DengYuSkinDisplay;
+    using SkinBase = DengYuSkinDisplay;
 #else
 class YhSetLcdDisplay : public YhSkinDisplay {
 public:

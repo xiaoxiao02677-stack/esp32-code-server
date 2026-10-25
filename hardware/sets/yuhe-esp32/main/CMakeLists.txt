@@ -68,6 +68,17 @@ if(CONFIG_YH_UI_THEME_EMOPET)
     )
 endif()
 
+# 灯语主题（--theme dengyu）：光萤情绪灯 + 剧场字幕流（AI 女友陪聊）。
+# font_dengyu_16_4.c 是固定文案专属字档（158 码位，gen_dengyu_font.py 生成）：
+# 组件 16_4 字档是限词表，连「灯/萤」都没有，固定文案必须走专属字档。
+if(CONFIG_YH_UI_THEME_DENGYU)
+    list(APPEND SOURCES
+        "display/DengYu_skin/dengyu_orb.c"
+        "display/DengYu_skin/dengyu_skin_display.cc"
+        "display/DengYu_skin/font_dengyu_16_4.c"
+    )
+endif()
+
 # YH Device Protocol (YuHe Workshop server side-channel)
 if(CONFIG_YH_PROTOCOL_ENABLED)
     list(APPEND SOURCES "yh/yh_protocol.cc" "yh/yh_ws2812_led.cc")
@@ -973,6 +984,8 @@ if(CONFIG_YH_UI_THEME_EMOPET)
     set(BOARD_TYPE "${BOARD_TYPE}-emopet")
 elseif(CONFIG_YH_UI_THEME_PIXELPET)
     set(BOARD_TYPE "${BOARD_TYPE}-pixel-pet")
+elseif(CONFIG_YH_UI_THEME_DENGYU)
+    set(BOARD_TYPE "${BOARD_TYPE}-dengyu")
 endif()
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION AND NOT BOARD_TYPE MATCHES "^[a-z0-9.-]+$")

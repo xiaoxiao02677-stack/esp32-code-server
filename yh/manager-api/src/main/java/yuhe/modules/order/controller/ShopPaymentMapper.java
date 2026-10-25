@@ -38,6 +38,12 @@ public interface ShopPaymentMapper {
             " WHERE order_id = #{orderId} AND status = 0")
     int closePendingByOrder(@Param("orderId") String orderId);
 
+    @Insert("INSERT INTO shop_payment (out_trade_no, order_id, user_id, amount, status, channel, notify_raw)" +
+            " VALUES (#{outTradeNo}, #{orderId}, #{userId}, #{amount}, 0, #{channel}, #{notifyRaw})")
+    void insertXddpay(@Param("outTradeNo") String outTradeNo, @Param("orderId") String orderId,
+            @Param("userId") Long userId, @Param("amount") java.math.BigDecimal amount,
+            @Param("channel") String channel, @Param("notifyRaw") String notifyRaw);
+
     @Select("SELECT * FROM shop_payment WHERE order_id = #{orderId} ORDER BY id DESC")
     List<Map<String, Object>> listByOrder(@Param("orderId") String orderId);
 }

@@ -101,6 +101,23 @@ python tools/yh_syntax_check.py main/boards/yuhe/yh-154tft-wifi/yh_set_154tft_wi
 | 长按 BOOT | 待机：静音切换提示；聆听：回到「我在呢」 |
 | 1s 节拍 | 彩蛋超时恢复；23:30「该睡啦，别熬夜」/ 07:00「早呀宝宝，今天也要加油」 |
 
+## 6a. 灯语主题（DengYu）状态映射
+
+灯语覆写渲染层但**复用全部骨架**（锁纪律/退休池/占位族/系统卡片），
+上表通用项之外差异如下（详见 `theme/DengYu/README.md`）：
+
+| 事件 | 灯语屏幕表现 |
+|---|---|
+| 设备态轮询（250ms） | 状态机真源：Listening→青苔绿光萤 / Speaking→迷你光萤+EQ / Connecting→思考三点 / FatalError→珊瑚红 / 其余→待机呼吸 |
+| `SetChatMessage(user/assistant)` | 剧场字幕流：你=右对齐暖橙、灯灯=左对齐纸白；AI 回复逐字打字机（90~140ms/字抖动） |
+| `SetChatMessage("system", …)` | 沿用基类（UA 过滤 / 激活码卡片），不入字幕流 |
+| `ShowNotification(断连关键词)` | 珊瑚红放缓呼吸 +「信号走丢了」；「已连接」→ 解除 +「回来啦」（3 秒） |
+| 短按 BOOT | 即时预置聆听光语（板级 ToggleChatState 主导） |
+| 双击 BOOT | 轮换光萤配色 4 盘（炭火/月光/紫暮/珊瑚），NVS `dengyu/palette` 记忆 |
+| 长按 BOOT | 静音状态短语（3 秒自动隐藏） |
+| 每天 07:00 | 纸白晨间卡片 30 秒：大时钟 + 陪伴天数问候（NVS `dengyu/days`） |
+| 字幕字体 | 动态文本跟随主题（basic→assets common）；固定文案用专属字档 `font_dengyu_16_4`（158 码位，`gen_dengyu_font.py` 生成——**组件 16_4 是限词表，固定文案直接绑会豆腐块**） |
+
 ## 7. 踩过的坑（改代码前必读）
 
 1. **基类占位对象必须创建**。`LcdDisplay::SetTheme` / `LvglDisplay::ShowNotification`

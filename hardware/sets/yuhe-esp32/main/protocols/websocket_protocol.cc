@@ -14,6 +14,12 @@
 
 #define TAG "WS"
 
+// Kconfig 未配置 WS 兜底地址时（旧 sdkconfig / 语法检查桩环境），按空串处理，
+// OpenAudioChannel 的兜底分支自动失效，行为与旧固件一致。
+#ifndef CONFIG_WEBSOCKET_FALLBACK_URL
+#define CONFIG_WEBSOCKET_FALLBACK_URL ""
+#endif
+
 WebsocketProtocol::WebsocketProtocol() { event_group_handle_ = xEventGroupCreate(); }
 
 WebsocketProtocol::~WebsocketProtocol() { vEventGroupDelete(event_group_handle_); }
@@ -98,31 +104,8 @@ void WebsocketProtocol::CloseAudioChannel(bool send_goodbye) {
     websocket_.reset();
 }
 
-bool WebsocketProtocol::OpenAudioChannel() {
-    const auto open_channel_start_time = std::chrono::steady_clock::now();
-    Settings settings("websocket", false);
-    std::string url = settings.GetString("url");
-    server_url_ = url;
-    std::string token = settings.GetString("token");
-    int version = settings.GetInt("version");
-    if (version != 0) {
-        version_ = version;
-    }
-
-    error_occurred_ = false;
-
-    auto network = Board::GetInstance().GetNetwork();
-    websocket_ = network->CreateWebSocket(1);
-    if (websocket_ == nullptr) {
-        ESP_LOGE(TAG, "Failed to create websocket");
-        return false;
-    }
-
+void WebsocketProtocol::SetupWebsocket(const std::string& token) {
     if (!token.empty()) {
-        // If token not has a space, add "Bearer " prefix
-        if (token.find(" ") == std::string::npos) {
-            token = "Bearer " + token;
-        }
         websocket_->SetHeader("Authorization", token.c_str());
     }
     websocket_->SetHeader("Protocol-Version", std::to_string(version_).c_str());
@@ -207,13 +190,65 @@ bool WebsocketProtocol::OpenAudioChannel() {
             on_audio_channel_closed_();
         }
     });
+}
+
+bool WebsocketProtocol::OpenAudioChannel() {
+    const auto open_channel_start_time = std::chrono::steady_clock::now();
+    Settings settings("websocket", false);
+    std::string url = settings.GetString("url");
+    server_url_ = url;
+    std::string token = settings.GetString("token");
+    int version = settings.GetInt("version");
+    if (version != 0) {
+        version_ = version;
+    }
+
+    error_occurred_ = false;
+
+    auto network = Board::GetInstance().GetNetwork();
+    websocket_ = network->CreateWebSocket(1);
+    if (websocket_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to create websocket");
+        return false;
+    }
+
+    // 鉴权头 + 数据/断连回调（主/兜底两次连接共用同一套挂接）
+    if (!token.empty() && token.find(" ") == std::string::npos) {
+        token = "Bearer " + token;
+    }
+    SetupWebsocket(token);
 
     ESP_LOGI(TAG, "Connecting to websocket server: %s with version: %d", url.c_str(), version_);
     if (auto connected = websocket_->Connect(url.c_str()); !connected) {
         ESP_LOGE(TAG, "Failed to connect to websocket server: %s",
                  connected.error().ToString().c_str());
-        SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
-        return false;
+        // 主 URL（NVS 下发）连不上 → 试编译期兜底 URL。
+        // 主服务器为 sandyun.top、yuhe.pro 为兜底（冗余部署）：主服务器
+        // 故障期间设备仍能连上兜底服务器继续对话。兜底未配置（空串）时跳过，
+        // 行为与旧固件一致。
+        const std::string fallback = CONFIG_WEBSOCKET_FALLBACK_URL;
+        if (!fallback.empty() && url != fallback) {
+            ESP_LOGW(TAG, "Retrying with fallback websocket: %s", fallback.c_str());
+            websocket_.reset();
+            websocket_ = network->CreateWebSocket(1);
+            if (websocket_ == nullptr) {
+                SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
+                return false;
+            }
+            SetupWebsocket(token);
+            if (auto reconnected = websocket_->Connect(fallback.c_str()); !reconnected) {
+                ESP_LOGE(TAG, "Fallback websocket also unreachable: %s",
+                         reconnected.error().ToString().c_str());
+                SetError(Lang::Strings::SERVER_NOT_CONNECTED, fallback);
+                return false;
+            }
+            // 兜底连接成功：本会话后续重连优先用兜底（NVS 里仍是主 URL，
+            // 设备重启后自然恢复主优先）
+            server_url_ = fallback;
+        } else {
+            SetError(Lang::Strings::SERVER_NOT_CONNECTED, url);
+            return false;
+        }
     }
 
     // Send hello message to describe the client

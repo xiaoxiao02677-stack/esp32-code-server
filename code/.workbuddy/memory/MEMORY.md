@@ -40,6 +40,7 @@
 ## 生产(sandyun.top:22222)/测试(22223)
 - 生产：Java /opt/xiaozhi/yuhe-esp32-api.jar(8002,systemd xiaozhi-manager-api,外置配置 application-dev.yml 只覆盖URL/Tomcat/AES)+Python /root/xiaozhi-server(8000WS/8003http)+前端 /var/www/console-v2/{app,admin}；**前端真实入口 https://sandyun.top:8001/**(443/5001 是端口跳转页)；MySQL root/123456(jar内置)
 - ★测试服已重组(10-23)：Python → /root/yh/app/xiaozhi-server、Java → /root/yh/deploy/opt-xiaozhi/yuhe-esp32-api.jar(dev)；MySQL debian-sys-maint
+- ★★测试服前端部署真目录(10-25 踩坑)：nginx web根=/var/www/console-v2/admin/（`/` 与 `/admincc/` 两 URL 同指此目录，index.html 引 /admincc/assets/ 前缀但文件在 admin/assets/）；**app/ 与 admincc/ 目录不在任何 location，传了=死目录**（10-25 XDDPay 前端+manual-dismiss 两轮曾误传 admincc/，当晚发现已补传 admin/ 纠正）；部署口诀：dist-admin/*→admin/、dist/*→app/、传完 find 清旧 hash、md5 对比本地
 - ★生产前端两目录同批更新(app/根路径进管理页走它+admin/)；顺序 Java→Python→Web；Python三文件同批；验 inode；MySQL datetime UTC 早8h
 - 测试：OTA/WS 8144明文；YH心跳8199；OTA带 Device-Id 头(冒号MAC)；全量切 /yuhe/；Liquibase 红线勿改已执行 changeset
 - 壁纸URL幂等只比version；下载URL由 sys_params.server.ota 推导

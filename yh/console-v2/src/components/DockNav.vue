@@ -133,6 +133,7 @@ const adminItems = [
   { to: '/admin/params', icon: 'sliders', label: '参数' },
   { to: '/admin/users', icon: 'users', label: '用户' },
   { to: '/admin/orders', icon: 'package', label: '订单管理' },
+  { to: '/admin/goods', icon: 'grid', label: '商品管理' },
   { to: '/admin/roles', icon: 'badge', label: '角色' },
   { to: '/admin/audit', icon: 'scroll', label: '审计' },
   { to: '/admin/display', icon: 'eye', label: '展示配置' },
