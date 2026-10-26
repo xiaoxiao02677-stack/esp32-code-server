@@ -117,3 +117,8 @@ yh/**/*.tar.gz
 # 运行时 SQLite 库（wechat_claw.db，本地生成）
 yh/**/*.db
 yh/manager-web/.webpack_cache/
+
+# ===== 根级临时工作区（2026-10-26 清理：一次性调试脚本不入库）=====
+code/tmp_mall/
+code/tmp_*.py
+code/tmp_*.sh

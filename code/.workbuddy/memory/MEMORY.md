@@ -62,5 +62,16 @@
 - ★改密契约(10-24 已推生产)：PUT /user/change-password body 字段是 **password**+newPassword（非 oldPassword！前端曾因字段名不匹配误报"密码不能为空"）；登录分流(10-24 已推生产)：defaultRouteAfterLogin=hasAdminRole→/admin 其余→/customer，TopBar/DockNav 切换按钮已删，demo 特例已删(demo 超管进管理端)；冒烟 UPDATE token 须同时顺延 expire_date
 - mvn：JAVA_HOME=/d/INSTALL/jdk21 + /d/INSTALL/maven/mvn/bin/mvn.cmd；测试服活跃超管=demo(非admin)；debian-sys-maint 可操作 MySQL（仅测试服；生产 MySQL=root/123456 jar内置）
 
+## 服务器C(qxlik) 小七星链(10-26 E2E 全通)
+- C=149.88.73.42(yuhe.pro 宝塔机)：Java /opt/yuhe:8002、MySQL root/a43fafe4e20126d9 xiaozhi_esp32_server、qxlik api /www/wwwroot/qxlik-clone/api:8010、web :8080(https)；**登录已改主站 SSO**（无本地账号层，需主站 proxys 角色组，登录即自动绑定）；主站测试号 qxtest/QxTest#2026(有 proxys)
+- ★本地代理 fake-IP(198.18.x.x) 抖动断连→**ProxyJump 跳板** `ssh -J root@sandyun.top:22222 root@149.88.73.42`（A→C 稳）；8010/8080 仅本机+宝塔放行，外网探活从 A 机 curl
+- ★BCrypt 双坑：bash "$2a$10$" $展开→乱码(43字符)；python bcrypt 默认 $2b$、**Java BCryptPasswordEncoder 认 $2a$**→gensalt(prefix=b'2a')
+- ★yuhe 桥(代理端子站)：qxlik app.py 内 /api/yuhe/link(SM2 C1C3C2+04前缀+ddddocr OCR 5位验证码, gmssl mode=1)+/api/yuhe/proxy(401 自动重登录=Fernet 解密密码重走登录链, A先C后)；Fernet key data/yuhe_secret.key；依赖 ddddocr+gmssl+cryptography
+- 前端 6 脚本：yuhe-api(chip+绑定弹窗)/yuhe-device(设备页14列+6位码绑定)/yuhe-agent(12项配置+音色级联)/yuhe-index(统计卡)/yuhe-memory(memory-long 接 /memory/facts **必带 agent_id**)/yuhe-chat(sessions+chat-history 弹窗)；22页已注入
+- ★★字体本地化(10-26)：25页曾直引 fonts.googleapis.com → 大陆白屏卡顿（服务器探活全绿但用户体验坏）；已本地化 css/local-fonts.css + css/fonts/ 4个woff2（login.html 根目录路径无 ../）；**大陆站点禁直引 Google/unpkg/jsdelivr CDN**
+- ★★SSO登录+角色门禁(10-26)：/api/auth/login=主站登录→/user/info查roles→无proxys拒403→影子用户+自动_link_save绑定+session；proxys组已存在(id=2112954911882924033)；改js必须升版本号破nginx 1h缓存(?v=20261026d)
+- 主站 normal 权限端点清单：/agent CRUD+sessions+chat-history、/device/bind三件套、/models/names+{id}/voices、/memory/facts(带agent_id)、/voiceClone(列表+updateName+audio→play 两段式)；voiceprint 页已接(yuhe-voiceprint.js+/api/yuhe/play/{uuid}音频桥)
+- ★★pydantic v2 null 422 坑(10-26)：`body: dict = None` 显式传 null 校验失败(422 dict_type)，必须 `Optional[dict] = None`；前端 GET 恒发 body:null → 全站代理一度 422；**E2E 要按前端真实序列化形态发请求**(curl 缺省字段测不出)；setting-account 改密入口已隐藏(SSO 无本地密码)；web 根=webroot/(api 在 api/ 勿混淆)
+
 ## 待办
-- 百炼音乐插件检查(用户)；天气prompt weather_info 二选一；OTA checkDeviceActive NPE；git提交积压；音色切换第二期；支付宝 sys_params pay.alipay.*(mvn OOM MAVEN_OPTS=-Xmx1024m)
+- 百炼音乐插件检查(用户)；天气prompt weather_info 二选一；OTA checkDeviceActive NPE；git提交积压(含 qxlik-clone 未入库)；音色切换第二期；支付宝 sys_params pay.alipay.*(mvn OOM MAVEN_OPTS=-Xmx1024m)；qxlik 浏览器 UI 人工过一遍(剩余：memory-summary 页无主站对应端点保留 demo)
