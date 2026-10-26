@@ -126,3 +126,8 @@ code/tmp_*.sh
 code/.workbuddy/_*
 code/.workbuddy/temp/
 code/.workbuddy/mm-relay/
+# 抓包/部署包/一次性字体产物
+code/.workbuddy/*.pcap
+code/.workbuddy/*.bin
+code/.workbuddy/*.tar.gz
+code/.workbuddy/font_splash_*.c
