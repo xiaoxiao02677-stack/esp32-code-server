@@ -79,6 +79,39 @@ if(CONFIG_YH_UI_THEME_DENGYU)
     )
 endif()
 
+# 极简脸主题（--theme face）：双发光眼 + 嘴，纯脸零文字（Square Face 原稿）。
+# 无字体依赖（脸上不落一字）；face_core.c 是纯 C 渲染循环（30fps 状态机）。
+if(CONFIG_YH_UI_THEME_FACE)
+    list(APPEND SOURCES
+        "display/face_skin/face_core.c"
+        "display/face_skin/face_skin_display.cc"
+    )
+endif()
+
+# 猫咪主题（--theme cat）：8 段表情动画 + 嘴形拟态的猫脸（esp32_cat_ui 移植）。
+# 帧素材经 DEFAULT_ASSETS_EXTRA_FILES（theme/cat/frames/）进 assets 分区，
+# 运行时 Assets::GetAssetData 按平铺名取（cat_a{N}_f{NN}.jpg / cat_m{N}.jpg）。
+if(CONFIG_YH_UI_THEME_CAT)
+    list(APPEND SOURCES
+        "display/cat_skin/cat_anim.cc"
+        "display/cat_skin/cat_skin_display.cc"
+    )
+    # 帧素材：theme/cat/frames/（video_to_frames.py 产物，平铺命名）。
+    # 缺帧直接报错并给出命令——assets 分区里没有猫帧时固件黑屏，
+    # 与其烧一个空主题不如在构建期拦下。
+    set(CAT_FRAMES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../theme/cat/frames")
+    if(NOT EXISTS "${CAT_FRAMES_DIR}/cat_a1_f00.jpg")
+        message(FATAL_ERROR
+            "Cat theme frames not found: ${CAT_FRAMES_DIR}/cat_a1_f00.jpg\n"
+            "Generate them first:\n"
+            "  python theme/cat/tools/video_to_frames.py\n"
+            "(requires opencv-python + numpy; see theme/cat/README.md)")
+    endif()
+    set(DEFAULT_ASSETS_EXTRA_FILES "${CAT_FRAMES_DIR}")
+    file(GLOB CAT_FRAME_FILES CONFIGURE_DEPENDS "${CAT_FRAMES_DIR}/cat_*.jpg")
+    set(DEFAULT_ASSETS_EXTRA_DEPS ${CAT_FRAME_FILES})
+endif()
+
 # YH Device Protocol (YuHe Workshop server side-channel)
 if(CONFIG_YH_PROTOCOL_ENABLED)
     list(APPEND SOURCES "yh/yh_protocol.cc" "yh/yh_ws2812_led.cc")
@@ -986,6 +1019,10 @@ elseif(CONFIG_YH_UI_THEME_PIXELPET)
     set(BOARD_TYPE "${BOARD_TYPE}-pixel-pet")
 elseif(CONFIG_YH_UI_THEME_DENGYU)
     set(BOARD_TYPE "${BOARD_TYPE}-dengyu")
+elseif(CONFIG_YH_UI_THEME_FACE)
+    set(BOARD_TYPE "${BOARD_TYPE}-face")
+elseif(CONFIG_YH_UI_THEME_CAT)
+    set(BOARD_TYPE "${BOARD_TYPE}-cat")
 endif()
 
 if(NOT CMAKE_BUILD_EARLY_EXPANSION AND NOT BOARD_TYPE MATCHES "^[a-z0-9.-]+$")
@@ -1409,6 +1446,7 @@ function(build_default_assets_bin)
     # Add default assets extra files if defined
     if(DEFAULT_ASSETS_EXTRA_FILES)
         list(APPEND BUILD_ARGS "--extra_files" "${DEFAULT_ASSETS_EXTRA_FILES}")
+        list(APPEND DEFAULT_ASSETS_DEPENDENCIES ${DEFAULT_ASSETS_EXTRA_DEPS})
     endif()
 
     list(APPEND BUILD_ARGS "--esp_sr_model_path" "${ESP_SR_MODEL_PATH}")

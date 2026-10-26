@@ -18,6 +18,7 @@ import shutil
 import sys
 import json
 import struct
+import time
 from datetime import datetime
 
 
@@ -821,7 +822,20 @@ def build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font
     try:
         # Clean and create directories
         if os.path.exists(temp_build_dir):
-            shutil.rmtree(temp_build_dir)
+            try:
+                shutil.rmtree(temp_build_dir)
+            except BaseException as clean_err:
+                # 清理失败：改名移走旧目录（rename 不触发删除钩子），
+                # 保证本轮构建从干净目录开始。注意钩子抛的 SystemExit
+                # 不在 Exception 继承链上，必须捕 BaseException，
+                # 否则残留目录会直接杀死本轮构建
+                stale = temp_build_dir + "_stale"
+                try:
+                    if os.path.exists(stale):
+                        os.rename(stale, stale + "_" + str(int(time.time())))
+                except Exception:
+                    pass
+                os.rename(temp_build_dir, stale)
         ensure_dir(temp_build_dir)
         ensure_dir(assets_dir)
         
@@ -878,8 +892,14 @@ def build_assets_integrated(wakenet_model_paths, multinet_model_paths, text_font
         return False
     finally:
         # Clean up temporary directory
-        if os.path.exists(temp_build_dir):
-            shutil.rmtree(temp_build_dir)
+        # （清理失败不致命：temp_build 是构建中间产物，留待下轮构建
+        #   开头覆盖；不让清理异常污染构建成功状态。注意钩子/中断抛的
+        #   SystemExit 不在 Exception 继承链上，须捕 BaseException）
+        try:
+            if os.path.exists(temp_build_dir):
+                shutil.rmtree(temp_build_dir)
+        except BaseException as cleanup_err:
+            print(f"Warning: temp_build cleanup skipped: {cleanup_err}")
 
 
 def main():

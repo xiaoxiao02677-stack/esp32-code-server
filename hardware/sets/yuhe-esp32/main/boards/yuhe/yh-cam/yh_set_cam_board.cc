@@ -8,6 +8,10 @@
 #include "display/emo_skin/emo_skin_display.h"
 #elif CONFIG_YH_UI_THEME_DENGYU
 #include "display/DengYu_skin/dengyu_skin_display.h"
+#elif CONFIG_YH_UI_THEME_FACE
+#include "display/face_skin/face_skin_display.h"
+#elif CONFIG_YH_UI_THEME_CAT
+#include "display/cat_skin/cat_skin_display.h"
 #endif
 #include "application.h"
 #include "button.h"
@@ -252,6 +256,16 @@ private:
                                          DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
                                          DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_FACE
+            display_ = new FaceSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                         DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_CAT
+            display_ = new CatSkinDisplay(panel_io, panel,
+                                          DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
+                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                          DISPLAY_SWAP_XY, YhSkinProfile::Wide320x240());
 #else
             display_ = new YhSkinDisplay(panel_io, panel,
                                          DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X,
@@ -279,6 +293,16 @@ private:
                                          DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
                                          DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
+#elif CONFIG_YH_UI_THEME_FACE
+            display_ = new FaceSkinDisplay(panel_io, panel,
+                                         DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
+                                         DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
+                                         DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
+#elif CONFIG_YH_UI_THEME_CAT
+            display_ = new CatSkinDisplay(panel_io, panel,
+                                          DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,
+                                          DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X_1, DISPLAY_MIRROR_Y_1,
+                                          DISPLAY_SWAP_XY_1, YhSkinProfile::Tall240x320());
 #else
             display_ = new YhSkinDisplay(panel_io, panel,
                                          DISPLAY_WIDTH_1, DISPLAY_HEIGHT_1, DISPLAY_OFFSET_X,

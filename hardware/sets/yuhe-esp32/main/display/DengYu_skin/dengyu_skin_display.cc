@@ -431,7 +431,10 @@ void DengYuSkinDisplay::TryEnterMorning() {
     morning_until_tick_ = tick_count_ + 30;  // 30 秒卡片
     UpdateMorningClock();
 
-    char greet[96];
+    // 128B：两行问候 + 陪伴天数变长数字的 snprintf 全展开上限
+    //（96B 会触发 -Werror=format-truncation：数字位宽不定，编译器按
+    // 最坏 98B 估算判截断）
+    char greet[128];
     if (companion_days_ > 0) {
         snprintf(greet, sizeof(greet),
                  "早安，今天是我们在一起的第 %ld 天。\n去把今天过好，我在家等你。",

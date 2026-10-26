@@ -149,15 +149,19 @@ DEFAULT_SERVER_ENV = "prod"
 # ---------------------------------------------------------------------------
 # UI 主题（编译期皮肤切换）
 #
-# 四套皮肤共用同一显示骨架（壁纸双槽/字体退休池/锁纪律/占位族），只换视觉层：
+# 六套皮肤共用同一显示骨架（壁纸双槽/字体退休池/锁纪律/占位族），只换视觉层：
 #   xiaoyou   原主题（背景图 + emoji 表情 + 品牌 splash）
 #   pixel-pet 像素宠物（canvas 自绘宠物 + 3.8s 出生动画 + 五态表情 + 双击换肤）
 #   emopet    EMOpet（机器人发光眼 + 15 态表情 + 双击换眼色）
 #   dengyu    灯语（光萤呼吸/涟漪 + 剧场字幕流 + 逐字打字机 + 晨间卡片，
 #             AI 女友陪聊语境，双击轮换光萤配色，NVS 记忆）
+#   face      极简脸（Square Face 原稿：双发光眼 + 嘴，纯脸零文字，
+#             8 态表情 + 眨眼/呼吸/游荡/说话拟态，双击傲娇回弹）
+#   cat       猫咪（esp32_cat_ui 移植：8 段 JPEG 表情动画 + 嘴形拟态 +
+#             待机随机循环，右上角彩色状态角标区分设备态，双击彩蛋）
 # Kconfig choice YH_UI_THEME（main/Kconfig.projbuild），CMakeLists 按
 # CONFIG_YH_UI_THEME_PIXELPET / CONFIG_YH_UI_THEME_EMOPET / CONFIG_YH_UI_THEME_DENGYU
-# 条件编入源。
+# / CONFIG_YH_UI_THEME_FACE / CONFIG_YH_UI_THEME_CAT 条件编入源。
 # ---------------------------------------------------------------------------
 
 THEMES: dict[str, dict[str, str]] = {
@@ -176,6 +180,14 @@ THEMES: dict[str, dict[str, str]] = {
     "dengyu": {
         "label": "灯语（光萤情绪灯 + 剧场字幕流 + 打字机 + 晨间卡片，AI 女友陪聊）",
         "sdkconfig": ["CONFIG_YH_UI_THEME_DENGYU=y"],
+    },
+    "face": {
+        "label": "极简脸（双发光眼 + 嘴，纯脸零文字，8 态表情 + 双击傲娇回弹）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_FACE=y"],
+    },
+    "cat": {
+        "label": "猫咪（8 段表情动画 + 嘴形拟态 + 状态角标，esp32_cat_ui 移植）",
+        "sdkconfig": ["CONFIG_YH_UI_THEME_CAT=y"],
     },
 }
 DEFAULT_THEME = "xiaoyou"
@@ -569,7 +581,7 @@ def apply_server_env(board: dict[str, Any], server_env: str) -> list[str]:
 def choose_theme(cli_value: Optional[str]) -> Optional[str]:
     """确定 UI 主题：--theme 参数 > 交互选择 > 默认原主题。
 
-    返回主题 key（'xiaoyou' / 'pixel-pet' / 'emopet' / 'dengyu'），取消返回 None。
+    返回主题 key（'xiaoyou' / 'pixel-pet' / 'emopet' / 'dengyu' / 'face' / 'cat'），取消返回 None。
     """
     if cli_value:
         if cli_value not in THEMES:
@@ -758,7 +770,8 @@ def write_build_config(target: Path, board: dict[str, Any]) -> tuple[str, list[s
     if theme_lines:
         theme_keys = {line.split("=", 1)[0] for line in theme_lines}
         theme_keys |= {"CONFIG_YH_UI_THEME_XIAOYOU", "CONFIG_YH_UI_THEME_PIXELPET",
-                       "CONFIG_YH_UI_THEME_EMOPET", "CONFIG_YH_UI_THEME_DENGYU"}
+                       "CONFIG_YH_UI_THEME_EMOPET", "CONFIG_YH_UI_THEME_DENGYU",
+                       "CONFIG_YH_UI_THEME_FACE", "CONFIG_YH_UI_THEME_CAT"}
         merged = [line for line in merged if line.split("=", 1)[0] not in theme_keys]
         merged.extend(theme_lines)
     for line in append:
@@ -1930,6 +1943,7 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
             "  python hardware/sets/build.py --board yh-cam --server test  # 固件连测试环境\n"
             "  python hardware/sets/build.py --board yh-cam --theme pixel-pet  # 像素宠物主题\n"
             "  python hardware/sets/build.py --board yh-cam --theme emopet     # EMOpet 主题\n"
+            "  python hardware/sets/build.py --board yh-cam --theme cat        # 猫咪主题\n"
             "  python hardware/sets/build.py --board yh-cam --yes --sync-only  # 只同步+注册\n"
             "  python hardware/sets/build.py --board yh-cam --no-archive       # 编译但不归档\n"
             "  python hardware/sets/build.py --all                          # 全量：所有版型 × 生产+测试 × 所有主题\n"
@@ -1963,7 +1977,8 @@ def parse_args(argv: Optional[list[str]]) -> argparse.Namespace:
     parser.add_argument(
         "--theme", metavar="THEME", choices=sorted(THEMES),
         help=f"UI 主题（{'/'.join(sorted(THEMES))}）：xiaoyou=原主题（默认），"
-             "pixel-pet=像素宠物，emopet=EMOpet 机器人眼；不指定时交互选择",
+             "pixel-pet=像素宠物，emopet=EMOpet 机器人眼，dengyu=灯语，face=极简脸；"
+             "不指定时交互选择",
     )
     parser.add_argument("--list", action="store_true", help="只列出可用版型，不编译")
     parser.add_argument("--sync-only", action="store_true", help="只做同步与注册，不编译")

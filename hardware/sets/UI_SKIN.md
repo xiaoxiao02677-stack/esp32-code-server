@@ -118,6 +118,49 @@ python tools/yh_syntax_check.py main/boards/yuhe/yh-154tft-wifi/yh_set_154tft_wi
 | 每天 07:00 | 纸白晨间卡片 30 秒：大时钟 + 陪伴天数问候（NVS `dengyu/days`） |
 | 字幕字体 | 动态文本跟随主题（basic→assets common）；固定文案用专属字档 `font_dengyu_16_4`（158 码位，`gen_dengyu_font.py` 生成——**组件 16_4 是限词表，固定文案直接绑会豆腐块**） |
 
+## 6b. 极简脸主题（face）状态映射
+
+face 是纯脸零文字主题：双发光眼（3 层同心圆）+ 嘴，脸上不落一字，
+无字体依赖。上表通用项之外差异如下（详见 `theme/face/README.md`）：
+
+| 事件 | face 屏幕表现 |
+|---|---|
+| 设备态轮询（250ms） | 状态机真源：Speaking→talking（点头+嘴拟态）/ Connecting→think / FatalError→angry / Listening→happy 注视 / 其余→情绪记忆；**同步驱动状态辉光**（见下） |
+| **状态辉光**（眼睛第二通道） | idle=淡蓝 / listening=**青绿** / speaking=**暖橙** / connecting=**琥珀慢闪** / fatal=**珊瑚红**——零文字下按 BOOT 后不用猜状态；换色 250ms 渐入 |
+| `SetEmotion(…)` | 映射 8 态表情（happy/shy/think/sleepy/surprise/angry…），说话中只记不切，TTS 结束自然回落（「说完还在笑」余韵） |
+| `SetChatMessage(assistant, …)` | 只落「笑意」情绪（不显文字）；system 沿用基类（UA 过滤 / 激活码卡片） |
+| `SetWallpaper` / `ClearWallpaper` | 无壁纸时隐藏 bg_image_ 露纯黑底（忠实原稿）；用户壁纸下发后恢复显示 |
+| 短按 BOOT | 微笑注视预置（板级 ToggleChatState 主导） |
+| 双击 BOOT | 傲娇回弹 520ms（0→+16%→0）+ 随机小表情 1.8s（happy/shy/surprise），轮询与 SetEmotion 让路 |
+| 长按 BOOT | 静音=困倦蔫脸 / 开声=笑脸；聆听中=眨眼示意 |
+| 常驻动效 | 眨眼 160ms（~4.8s 一次）/ 呼吸 ±2.5%（idle 1.1s / sleepy 1.6s）/ 游荡 ±4px（仅 idle，lerp 5%/帧） |
+| 帧预算 | 30fps 单 timer（33ms）+ 说话态隔帧降 15fps；渲染层纯 C（`face_core.c` 显式状态机，不用 lv_anim） |
+
+
+## 6c. 猫咪主题（cat）状态映射
+
+cat 是 JPEG 帧序列主题（esp32_cat_ui 移植，v2 对齐原项目观感）：
+8 段表情动画（idle×3 / cry / angry / happy / sad / shy，15fps × 4s × 60 帧，
+全视频均匀采样）+ 说话嘴形**全帧轮换**（small/big/wide/oshape 按 muzzle
+对齐裁成 320×240，90ms 一换，说话期间表情帧推进暂停）+ 待机随机循环
+（60% idle / 30% happy+shy / 10% 情绪）。上表通用项之外差异如下
+（详见 `theme/cat/README.md`）：
+
+| 事件 | cat 屏幕表现 |
+|---|---|
+| 设备态轮询（250ms） | 角标通道为主：Speaking→暖橙+嘴形轮换 / Listening→**idle1 定格注视帧**（动画骤停 = 与待机的可辨差异）/ Connecting/配网/升级/激活→琥珀慢闪 / FatalError→angry 锁定 / 其余→淡蓝 + 随机循环继续（**不强切动画**——序列主题每 250ms 强切会把随机循环打回情绪动画） |
+| **状态角标**（右上圆点第二通道） | idle=淡蓝 / listening=**青绿** / speaking=**暖橙** / connecting=**琥珀慢闪 1.6s** / fatal=**珊瑚红** / 静音=灰短显 2s——色表与 face 辉光完全一致，跨主题视觉统一 |
+| **屏幕适配（v2）** | 素材 320×240（4:3 原生比例）contain-fit：320×240 板全出血 / 240×240 与 240×320 板缩 240×180 居中留黑（320→240 是 3:4 整数比，最近邻无锯齿）/ 角标锚素材 (0.85W, 0.10H)，圆屏验证落在内切圆内——**不写死 240×240** |
+| `SetEmotion(…)` | 映射 8 段动画（happy→a6 / sad→a7 / angry→a5 / cry→a4 / shy→a8 / 中性→idle），说话中只记不切，TTS 结束轮询播一次（「说完还在笑」余韵）；**情绪指令路径走 300ms 交叉淡入** |
+| `SetChatMessage(assistant, …)` | 只落 happy 情绪（不显文字）；system 沿用基类（UA 过滤 / 激活码卡片） |
+| 短按 BOOT | idle1 定格 + 青绿角标**即时**亮（不等轮询；face 主题教训：反馈必须即时） |
+| 双击 BOOT | 彩蛋动画（cry/angry/sad 随机），播完自动回随机循环 |
+| 长按 BOOT | 板级静音切换，灰角标短显 2s |
+| 常驻动效 | 段内 15fps 帧推进 + 段播完随机挑下段**硬切衔接**（原项目 animLoop「无缝衔接不渐变」——淡入只留给情绪指令）；说话时嘴形全帧顶替显示、表情帧解码暂停 |
+| 帧预算 | 15fps 单 timer（66ms，与素材帧率一致）不分频；**无帧缓存**逐帧按需解码（~10ms/帧，总 PSRAM ~615KB = canvas 154K + 淡入快照 2×154K + 嘴形单缓冲 154K——整段缓存会挤爆开机期语音模型加载，v1 实机崩溃教训） |
+| 素材依赖 | `theme/cat/frames/`（`tools/video_to_frames.py` 生成，484 帧 ≈3.3MB：8 段×60 表情 + 4 嘴形）经 `DEFAULT_ASSETS_EXTRA_FILES` 进 assets 分区；缺帧 CMake FATAL_ERROR 拦截 |
+
+
 ## 7. 踩过的坑（改代码前必读）
 
 1. **基类占位对象必须创建**。`LcdDisplay::SetTheme` / `LvglDisplay::ShowNotification`

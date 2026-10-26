@@ -12,6 +12,10 @@
 #include "display/emo_skin/emo_skin_display.h"
 #elif CONFIG_YH_UI_THEME_DENGYU
 #include "display/DengYu_skin/dengyu_skin_display.h"
+#elif CONFIG_YH_UI_THEME_FACE
+#include "display/face_skin/face_skin_display.h"
+#elif CONFIG_YH_UI_THEME_CAT
+#include "display/cat_skin/cat_skin_display.h"
 #endif
 
 #include <esp_log.h>
@@ -195,6 +199,16 @@ private:
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
                                      DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
                                      YhSkinProfile::Round240(false));
+#elif CONFIG_YH_UI_THEME_FACE
+        display_ = new FaceSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                     DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Round240(false));
+#elif CONFIG_YH_UI_THEME_CAT
+        display_ = new CatSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                      DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                      YhSkinProfile::Round240(false));
 #else
         display_ = new YhSkinDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,

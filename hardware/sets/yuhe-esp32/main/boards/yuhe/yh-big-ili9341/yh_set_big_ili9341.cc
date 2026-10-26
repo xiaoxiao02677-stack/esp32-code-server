@@ -20,6 +20,10 @@
 #include "display/emo_skin/emo_skin_display.h"
 #elif CONFIG_YH_UI_THEME_DENGYU
 #include "display/DengYu_skin/dengyu_skin_display.h"
+#elif CONFIG_YH_UI_THEME_FACE
+#include "display/face_skin/face_skin_display.h"
+#elif CONFIG_YH_UI_THEME_CAT
+#include "display/cat_skin/cat_skin_display.h"
 #endif
 #include "application.h"
 #include "button.h"
@@ -136,7 +140,7 @@ private:
         ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY));
         ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
 
-        // 皮肤按编译期主题选择（build.py --theme）：320x240 横屏四套都支持
+        // 皮肤按编译期主题选择（build.py --theme）：320x240 横屏六套都支持
 #if CONFIG_YH_UI_THEME_PIXELPET
         display_ = new PetSkinDisplay(panel_io, panel,
                                      DISPLAY_WIDTH, DISPLAY_HEIGHT,
@@ -158,6 +162,20 @@ private:
                                      DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
                                      DISPLAY_SWAP_XY,
                                      YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_FACE
+        display_ = new FaceSkinDisplay(panel_io, panel,
+                                     DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                     DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
+                                     DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                     DISPLAY_SWAP_XY,
+                                     YhSkinProfile::Wide320x240());
+#elif CONFIG_YH_UI_THEME_CAT
+        display_ = new CatSkinDisplay(panel_io, panel,
+                                      DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                      DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
+                                      DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y,
+                                      DISPLAY_SWAP_XY,
+                                      YhSkinProfile::Wide320x240());
 #else
         display_ = new YhSkinDisplay(panel_io, panel,
                                      DISPLAY_WIDTH, DISPLAY_HEIGHT,

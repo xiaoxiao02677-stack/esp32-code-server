@@ -82,7 +82,7 @@ python hardware/sets/build.py --board yh-cam --sync-only
 ### 全量构建（`--all`）
 
 把**所有版型 × 生产+测试环境 × 所有主题**一口气全部编译出来，适合发布前
-批量出产物。当前是 4 版型 × 2 环境 × 4 主题 = 32 个组合：
+批量出产物。当前是 4 版型 × 2 环境 × 6 主题 = 48 个组合：
 
 ```bat
 python hardware/sets/build.py --all
@@ -237,7 +237,7 @@ version = 2.5.2
 | `--all` | 全量构建：所有版型 × 生产+测试 × 所有主题（详见上文） |
 | `--all-no-clean` | `--all` 模式下不清理 `<FW>\build`（提速，风险自担） |
 | `--server <env>` | 目标服务器环境 `prod` / `test` |
-| `--theme <theme>` | UI 主题 `xiaoyou` / `pixel-pet` / `emopet` / `dengyu`（灯语：光萤情绪灯 + 字幕流，AI 女友陪聊） |
+| `--theme <theme>` | UI 主题 `xiaoyou` / `pixel-pet` / `emopet` / `dengyu`（灯语：光萤情绪灯 + 字幕流，AI 女友陪聊）/ `face`（极简脸：双发光眼 + 嘴，纯脸零文字）/ `cat`（猫咪：8 段表情动画 + 嘴形拟态 + 状态角标，esp32_cat_ui 移植） |
 | `--list` | 只列出版型就退出 |
 | `--sync-only` | 只做同步与注册，不编译（无需 ESP-IDF） |
 | `-y` / `--yes` | 跳过所有确认，含引脚未验证警告；`--all` 模式下兼作「包含未验证版型」 |

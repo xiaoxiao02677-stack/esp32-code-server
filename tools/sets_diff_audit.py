@@ -165,6 +165,21 @@ WHITELIST: dict[str, dict] = {
         "reason": "EMOpet 主题（--theme emopet）：机器人发光眼（15 态表情）+ 直写 buffer 渲染，"
                   "继承 YhSkinDisplay 骨架只换视觉层（2026-10-19 移植自 theme/EMOpet）；A 侧无该目录",
     },
+    "display/DengYu_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "灯语主题（--theme dengyu）：光萤呼吸/涟漪 + 剧场字幕流 + 逐字打字机 + 晨间卡片，"
+                  "AI 女友陪聊语境，双击轮换光萤配色（NVS 记忆）；A 侧无该目录",
+    },
+    "display/face_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "极简脸主题（--theme face）：Square Face 原稿双发光眼 + 嘴，纯脸零文字，"
+                  "8 态表情 + 眨眼/呼吸/游荡/说话拟态（face_core.c 纯 C 30fps 渲染循环）；A 侧无该目录",
+    },
+    "display/cat_skin/**": {
+        "kinds": {"B_ONLY"},
+        "reason": "猫咪主题（--theme cat）：esp32_cat_ui 移植，8 段 JPEG 表情动画 + 嘴形拟态 + "
+                  "状态角标，帧素材经 assets 分区（theme/cat/frames/）；A 侧无该目录",
+    },
     # ---- B 领先：NVS / 唤醒词健壮性修复 ----
     "settings.cc": {
         "kinds": {"DIFF"},
@@ -489,14 +504,16 @@ def check_q7() -> Q7Result:
         result.notes.append("未找到 DeviceServiceImpl.java / OtaServiceImpl.java，Q7 无法核查")
         return result
 
-    # 任务F force 修复后变量名 type→trackType（轨道目标 type 或上报 type），
-    # 匹配语义不变：ai_ota.type == 轨道/上报 type 精确相等
-    latest_ok = "otaService.getLatestOta(trackType)" in device_src
+    # 2026-10 OTA 语义重构：自动升级（getLatestOta 轨道跟随）已停用，
+    # 唯一升级路径 = 管理端 pin device.target_ota_id 单台指定（buildFirmwareInfo）
+    pin_ok = "otaService.selectById(device.getTargetOtaId())" in device_src
+    force_ok = "compareVersions(ota.getVersion(), currentVersion) > 0" in device_src
     eq_ok = 'eq("type", type)' in ota_src
     upsert_ok = "same" if 'eq("type", entity.getType())' in ota_src else ""
 
     for name, path, token in (
-        ("DeviceServiceImpl.java", DEVICE_IMPL, "otaService.getLatestOta(trackType)"),
+        ("DeviceServiceImpl.java", DEVICE_IMPL, "otaService.selectById(device.getTargetOtaId())"),
+        ("DeviceServiceImpl.java", DEVICE_IMPL, "compareVersions(ota.getVersion(), currentVersion) > 0"),
         ("OtaServiceImpl.java", OTA_IMPL, 'eq("type", type)'),
     ):
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -505,10 +522,11 @@ def check_q7() -> Q7Result:
                 result.evidence.append(f"{name}:{lineno}: {line.strip()}")
                 break
 
-    result.ok = latest_ok and eq_ok
+    result.ok = pin_ok and force_ok and eq_ok
     result.notes.append(
-        "匹配语义：ai_ota 表按 type 精确字符串相等过滤（eq），再按 update_date 倒序取 1 条；"
-        "不做前缀/别名/厂商模糊匹配"
+        "匹配语义（2026-10 重构后）：自动升级已停用（原 getLatestOta 轨道跟随删除），"
+        "唯一升级路径 = 管理端 pin device.target_ota_id 指定具体 ai_ota 记录；"
+        "版本更新或 type 未收敛（跨主题切换）才 forceDownload 下发"
     )
     if upsert_ok:
         result.notes.append("写入语义：save() 按 type upsert，同 type 仅保留一行")
@@ -516,8 +534,8 @@ def check_q7() -> Q7Result:
         "board.type 由板型 config.json 的 type 字段生成 BOARD_TYPE 宏，随 OTA 请求体 board.type 上报"
     )
     result.notes.append(
-        "结论：OTA 确实按 ai_ota.type == board.type 精确匹配；B 侧把 zhengchen-* 改名为 yuhe-* 并新增 yh-* 后，"
-        "ai_ota 中必须存在同名 type 行，否则 getLatestOta 返回 null，接口回落为设备当前版本 + INVALID_FIRMWARE_URL（不升级）"
+        "结论：pin 的固件 type 无需与设备当前 type 相同（跨主题切换实现路径）；"
+        "已升级到位（版本一致且 type 收敛）自动清 pin 自愈；pin 失效（记录被删）也清 pin 不卡死"
     )
     return result
 
