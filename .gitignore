@@ -123,6 +123,6 @@ code/tmp_mall/
 code/tmp_*.py
 code/tmp_*.sh
 # .workbuddy 下划线临时脚本/截图/修复区（只保留 memory/ 与长期脚本，docs/ 除外）
-code/.workbuddy/_*/
+code/.workbuddy/_*
 code/.workbuddy/temp/
 code/.workbuddy/mm-relay/
