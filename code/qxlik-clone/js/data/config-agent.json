@@ -2,64 +2,9 @@
   "code": 200,
   "message": "success",
   "data": {
-    "total": 6,
+    "total": 0,
     "pageNum": 1,
     "pageSize": 10,
-    "list": [
-      {
-        "id": 1,
-        "agentName": "小智同学",
-        "agentId": "7345778194084",
-        "platform": "Coze",
-        "description": "默认通用助手，支持闲聊、问答与设备控制",
-        "isDefault": true,
-        "publishTime": "2026-08-15 10:23:45"
-      },
-      {
-        "id": 2,
-        "agentName": "温柔姐姐",
-        "agentId": "7345778194085",
-        "platform": "Coze",
-        "description": "睡前故事与安抚陪伴场景",
-        "isDefault": false,
-        "publishTime": "2026-08-20 16:45:12"
-      },
-      {
-        "id": 3,
-        "agentName": "故事大王",
-        "agentId": "7345778194086",
-        "platform": "Coze",
-        "description": "儿童讲故事专用，支持交互式剧情",
-        "isDefault": false,
-        "publishTime": "2026-09-02 09:12:08"
-      },
-      {
-        "id": 4,
-        "agentName": "极客管家",
-        "agentId": "7345778194087",
-        "platform": "Coze",
-        "description": "智能家居控制中枢，联动全屋设备",
-        "isDefault": false,
-        "publishTime": "2026-09-18 14:30:56"
-      },
-      {
-        "id": 5,
-        "agentName": "迎宾小妹",
-        "agentId": "7345778194088",
-        "platform": "Coze",
-        "description": "店铺迎宾与常见问题引导",
-        "isDefault": false,
-        "publishTime": "2026-09-25 11:08:34"
-      },
-      {
-        "id": 6,
-        "agentName": "英文外教",
-        "agentId": "7345778194089",
-        "platform": "Coze",
-        "description": "英语口语陪练，支持发音纠正",
-        "isDefault": false,
-        "publishTime": "2026-10-08 15:52:41"
-      }
-    ]
+    "list": []
   }
 }

@@ -80,25 +80,15 @@
   /* ---------- 分页器 ---------- */
   var PAG_TEMPLATE = null;
 
-  function ensurePagination(total, pageSize) {
-    var existing = document.querySelector('.ant-table-pagination');
-    if (existing) {
-      var tt = existing.querySelector('.ant-pagination-total-text');
-      if (tt) tt.textContent = '共 ' + total + ' 条';
-      return;
-    }
-    // 无分页器（原站空表不渲染）→ 用捕获模板插入
-    if (!PAG_TEMPLATE) return;
-    var html = PAG_TEMPLATE
-      .replace('{TOTAL}', String(total))
-      .replace(/css-97cec0/g, currentHash());
-    var host = document.createElement('div');
-    host.innerHTML = html;
-    var pag = host.firstChild;
-    // 插到表格容器后（.ant-table-wrapper 的父 spin-container 末尾）
-    var wrapper = document.querySelector('.ant-table-wrapper');
-    if (wrapper && wrapper.parentElement) {
-      wrapper.parentElement.appendChild(pag);
+  function ensurePagination(total, pageNum, pageSize) {
+    if (window.QXCrud) {
+      QXCrud.renderPagination(document, total, pageNum, pageSize);
+    } else if (PAG_TEMPLATE) {
+      var html = PAG_TEMPLATE.replace('{TOTAL}', String(total)).replace(/css-97cec0/g, currentHash());
+      var host = document.createElement('div');
+      host.innerHTML = html;
+      var wrapper = document.querySelector('.ant-table-wrapper');
+      if (wrapper && wrapper.parentElement) wrapper.parentElement.appendChild(host.firstChild);
     }
   }
 
@@ -114,6 +104,16 @@
     if (!tbody) return;
     var measure = tbody.querySelector('.ant-table-measure-row');
     tbody.innerHTML = (measure ? measure.outerHTML : '') + rowsHtml;
+    if (!rowsHtml) {
+      // 空列表：保留/恢复"暂无数据"占位（渲染函数已删过，补回来）
+      var tbl = document.querySelector('.ant-table-container table');
+      if (tbl && !document.querySelector('.ant-table-placeholder')) {
+        var ph = document.createElement('tr');
+        ph.className = 'ant-table-placeholder';
+        ph.innerHTML = '<td colspan="20" class="ant-table-cell" style="text-align:center;padding:28px;color:#71717A;">暂无数据</td>';
+        tbody.appendChild(ph);
+      }
+    }
   }
 
   /* ---------- 设备页 ---------- */
@@ -133,6 +133,12 @@
         textCell(d.version) +
         tdCenter(ellipsisSpan(esc(d.lastActiveTime), 'color:var(--ant-color-text-secondary);')) +
         tdCenter(ellipsisSpan(esc(d.createTime), 'color:var(--ant-color-text-secondary);')) +
+        tdCenter(d.source === 'shop'
+          ? '<span class="ant-tag ' + currentHash() + '" style="background:rgba(82,196,26,.12);border-color:rgba(82,196,26,.45);color:#52C41A;">电商</span>'
+          : '<span class="ant-tag ' + currentHash() + '" style="background:rgba(148,163,184,.10);border:1px dashed rgba(148,163,184,.4);color:var(--ant-color-text-secondary);">手动</span>') +
+        tdCenter(d.orderNo
+          ? '<span style="font-family:monospace;font-size:12px;">' + esc(d.orderNo) + '</span>'
+          : '<span style="color:var(--ant-color-text-quaternary);">—</span>') +
         opsCell([{ key: 'edit', label: '编辑' }, { key: 'delete', label: '删除', danger: true }]) +
         '</tr>';
     }).join('');
@@ -146,7 +152,7 @@
         tbody.innerHTML = rows;
       }
     }
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 首页 (最近设备列表 + 统计卡片) ---------- */
@@ -167,9 +173,9 @@
     var stats = (resp && resp.data && resp.data.stats) || null;
     var values = document.querySelectorAll('.ant-statistic-content-value-int');
     if (values.length >= 3) {
-      values[0].textContent = String(stats ? stats.chatTotal : 186);
-      values[1].textContent = String(stats ? stats.deviceTotal : 8);   // 设备总数
-      values[2].textContent = String(stats ? stats.agentTotal : 6);    // 智能体总数
+      values[0].textContent = String(stats ? stats.chatTotal : 0);
+      values[1].textContent = String(stats ? stats.deviceTotal : 0);   // 设备总数
+      values[2].textContent = String(stats ? stats.agentTotal : 0);    // 智能体总数
     }
   }
 
@@ -201,7 +207,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 记忆-聊天记录 ---------- */
@@ -235,7 +241,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 记忆-长期记忆 ---------- */
@@ -263,7 +269,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 记忆-对话摘要 ---------- */
@@ -280,7 +286,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 声纹 ---------- */
@@ -298,7 +304,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 智能体管理 ---------- */
@@ -324,7 +330,7 @@
     }).join('');
     clearPlaceholder();
     fillTbody(rows);
-    ensurePagination(total, (resp.data && resp.data.pageSize) || 10);
+    ensurePagination(total, (resp.data && resp.data.pageNum) || 1, (resp.data && resp.data.pageSize) || 10);
   }
 
   /* ---------- 数据加载器：真实 API 优先，本地 demo JSON 兜底 ---------- */
@@ -340,11 +346,23 @@
     'config-agent': '/api/agent/list'
   };
 
-  function loadFromApi(path, cb, fallback) {
+  // 页面 key → QXCrud 模块 key（一致，直接透传）
+  function loadFromApi(path, page, cb, fallback) {
     if (!window.QXAuth || !QXAuth.getToken()) { fallback(); return; }
+    // 追加分页/搜索状态
+    var st = window.QXCrud ? QXCrud.state(page) : null;
+    if (st) {
+      path += '?pageNum=' + st.pageNum + '&pageSize=' + st.pageSize;
+      if (st.keyword) path += '&keyword=' + encodeURIComponent(st.keyword);
+    } else {
+      path += '?pageNum=1&pageSize=10';
+    }
     QXAuth.api(path)
       .then(function (j) {
-        if (j && j.code === 200 && j.data) { cb(j); }
+        if (j && j.code === 200 && j.data) {
+          if (window.QXCrud) QXCrud.setRows(page, j.data.list || []);
+          cb(j);
+        }
         else { fallback(); }
       })
       .catch(function () { fallback(); });
@@ -354,12 +372,18 @@
     var fallback = function () {
       fetch('../js/data/' + page + '.json')
         .then(function (r) { return r.json(); })
-        .then(cb)
+        .then(function (j) {
+          if (window.QXCrud) QXCrud.setRows(page, (j.data && j.data.list) || []);
+          cb(j);
+        })
         .catch(function (e) { console.warn('[demo-data] ' + page + ' 数据加载失败:', e); });
     };
     var apiPath = API_ROUTES[page];
-    if (apiPath) { loadFromApi(apiPath, cb, fallback); }
-    else { fallback(); }
+    if (apiPath) {
+      loadFromApi(apiPath, page, cb, fallback);
+      // 注册刷新函数（CRUD 操作后回调用）
+      if (window.QXCrud) QXCrud.register(page, function () { loadFromApi(apiPath, page, cb, fallback); });
+    } else { fallback(); }
   }
 
   /* ---------- 初始化 ---------- */

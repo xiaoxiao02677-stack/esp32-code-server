@@ -100,6 +100,13 @@
       return el ? el.value.trim() : '';
     }
 
+    // SSO 模式：登录走主站账号，本地密码无意义 → 隐藏密码/确认密码两项
+    ['form_item_password', 'form_item_confirmPassword'].forEach(function (fid) {
+      var label = form.querySelector('label[for="' + fid + '"]');
+      var item = label ? label.closest('.ant-form-item') : null;
+      if (item) item.style.display = 'none';
+    });
+
     // 表单回填（GET /api/user/profile）
     QXAuth.api('/api/user/profile')
       .then(function (j) {
@@ -113,7 +120,7 @@
       })
       .catch(function () {});
 
-    // 保存（POST /api/user/profile）
+    // 保存（POST /api/user/profile，SSO 模式不再发送密码字段）
     var btn = null;
     form.querySelectorAll('button').forEach(function (b) {
       if (b.textContent.replace(/\s/g, '') === '保存') btn = b;
@@ -124,9 +131,7 @@
       var body = {
         nickname: fieldVal('form_item_name'),
         tel: fieldVal('form_item_tel'),
-        email: fieldVal('form_item_email'),
-        password: document.getElementById('form_item_password') ? document.getElementById('form_item_password').value : '',
-        confirmPassword: document.getElementById('form_item_confirmPassword') ? document.getElementById('form_item_confirmPassword').value : ''
+        email: fieldVal('form_item_email')
       };
       btn.disabled = true;
       QXAuth.api('/api/user/profile', {

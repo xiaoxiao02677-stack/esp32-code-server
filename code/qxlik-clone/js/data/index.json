@@ -2,52 +2,9 @@
   "code": 200,
   "message": "success",
   "data": {
-    "total": 6,
+    "total": 0,
     "pageNum": 1,
     "pageSize": 10,
-    "list": [
-      {
-        "id": 1,
-        "deviceName": "客厅小智音箱",
-        "roleName": "小智同学",
-        "online": true,
-        "lastActiveTime": "2026-10-22 14:32:08"
-      },
-      {
-        "id": 2,
-        "deviceName": "卧室语音助手",
-        "roleName": "温柔姐姐",
-        "online": true,
-        "lastActiveTime": "2026-10-22 13:18:52"
-      },
-      {
-        "id": 3,
-        "deviceName": "门口迎宾屏",
-        "roleName": "迎宾小妹",
-        "online": true,
-        "lastActiveTime": "2026-10-22 12:55:40"
-      },
-      {
-        "id": 4,
-        "deviceName": "阳台浇花器",
-        "roleName": "极客管家",
-        "online": true,
-        "lastActiveTime": "2026-10-22 09:14:27"
-      },
-      {
-        "id": 5,
-        "deviceName": "儿童故事机",
-        "roleName": "故事大王",
-        "online": false,
-        "lastActiveTime": "2026-10-20 19:26:59"
-      },
-      {
-        "id": 6,
-        "deviceName": "书房墨水屏",
-        "roleName": "温柔姐姐",
-        "online": false,
-        "lastActiveTime": "2026-10-18 21:37:12"
-      }
-    ]
+    "list": []
   }
 }

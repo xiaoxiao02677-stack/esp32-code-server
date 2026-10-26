@@ -2,58 +2,9 @@
   "code": 200,
   "message": "success",
   "data": {
-    "total": 6,
+    "total": 0,
     "pageNum": 1,
     "pageSize": 10,
-    "list": [
-      {
-        "id": 1,
-        "time": "2026-10-22 09:00:00",
-        "content": "用户喜欢在睡前听轻音乐，音量偏好 30%",
-        "source": "对话总结",
-        "importance": "high",
-        "createTime": "2026-10-22 09:00:00"
-      },
-      {
-        "id": 2,
-        "time": "2026-10-20 20:00:00",
-        "content": "用户家里有 3 台设备：客厅音箱、卧室助手、书桌台灯",
-        "source": "对话总结",
-        "importance": "high",
-        "createTime": "2026-10-20 20:00:00"
-      },
-      {
-        "id": 3,
-        "time": "2026-10-18 15:30:00",
-        "content": "用户咖啡偏好：美式，不加糖",
-        "source": "对话总结",
-        "importance": "medium",
-        "createTime": "2026-10-18 15:30:00"
-      },
-      {
-        "id": 4,
-        "time": "2026-10-15 21:10:00",
-        "content": "用户女儿今年 5 岁，喜欢听小狐狸的故事",
-        "source": "手动添加",
-        "importance": "medium",
-        "createTime": "2026-10-15 21:10:00"
-      },
-      {
-        "id": 5,
-        "time": "2026-10-12 08:00:00",
-        "content": "用户工作日 9 点出门，喜欢收听新闻简报",
-        "source": "对话总结",
-        "importance": "low",
-        "createTime": "2026-10-12 08:00:00"
-      },
-      {
-        "id": 6,
-        "time": "2026-10-10 12:00:00",
-        "content": "用户对花粉过敏，春季注意提醒减少开窗",
-        "source": "手动添加",
-        "importance": "high",
-        "createTime": "2026-10-10 12:00:00"
-      }
-    ]
+    "list": []
   }
 }

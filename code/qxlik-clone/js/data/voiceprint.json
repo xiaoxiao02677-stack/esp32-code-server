@@ -2,50 +2,9 @@
   "code": 200,
   "message": "success",
   "data": {
-    "total": 5,
+    "total": 0,
     "pageNum": 1,
     "pageSize": 10,
-    "list": [
-      {
-        "id": 1,
-        "speakerId": "spk_owner",
-        "name": "男主人",
-        "description": "高频使用，声音样本 12 段，唤醒准确率 98.6%",
-        "status": 1,
-        "createTime": "2026-08-15 10:23:45"
-      },
-      {
-        "id": 2,
-        "speakerId": "spk_mom",
-        "name": "女主人",
-        "description": "声音样本 8 段，睡前故事场景使用",
-        "status": 1,
-        "createTime": "2026-08-20 16:45:12"
-      },
-      {
-        "id": 3,
-        "speakerId": "spk_child",
-        "name": "女儿",
-        "description": "童声样本 5 段，已开启家长模式过滤",
-        "status": 1,
-        "createTime": "2026-09-02 09:12:08"
-      },
-      {
-        "id": 4,
-        "speakerId": "spk_guest",
-        "name": "访客",
-        "description": "临时授权样本 2 段，仅允许基础问答",
-        "status": 0,
-        "createTime": "2026-09-18 14:30:56"
-      },
-      {
-        "id": 5,
-        "speakerId": "spk_test",
-        "name": "测试样本",
-        "description": "开发调试用，勿用于正式声纹比对",
-        "status": 0,
-        "createTime": "2026-10-01 08:45:23"
-      }
-    ]
+    "list": []
   }
 }
