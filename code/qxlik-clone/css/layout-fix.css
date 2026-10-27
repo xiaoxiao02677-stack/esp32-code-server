@@ -70,3 +70,54 @@
     max-height: 4.5em;
   }
 }
+
+/* ==========================================================================
+   设计升级补丁 (2026-10-27 · 遵循 redesign-existing-projects 审查)
+   仅在既有设计层上做定向增强，不改组件结构与功能：
+   1. 移动端视口 100vh → 100dvh（修 iOS Safari 地址栏导致的布局跳动/裁切）
+   2. 平滑滚动
+   3. 键盘焦点可见环（a11y）
+   4. 按压反馈（按钮/菜单按下轻微回弹，界面更有生命感）
+   5. 面板阴影着色（冷调，替代纯黑低透明，层次更自然）
+   ========================================================================== */
+
+/* ---- 1. 视口高度：dvh 修正（覆盖 global.css / 编译产物里的 100vh） ----
+   不支持 dvh 的旧浏览器会忽略此条，回退到前面的 100vh，安全。 */
+html, body { min-height: 100dvh; }
+#app { min-height: 100dvh; }
+.bento-layout-wrapper,
+.bento-container { min-height: 100dvh; }
+.login-page { min-height: 100dvh; }
+
+/* ---- 2. 平滑滚动 ---- */
+html { scroll-behavior: smooth; }
+
+/* ---- 3. 焦点可见环（仅补齐非 antd 原生控件；antd 组件保留自身焦点态） ---- */
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:not(.ant-btn):focus-visible,
+[tabindex]:not(.ant-btn):focus-visible {
+  outline: 2px solid #4f8ef7;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---- 4. 按压反馈（非 antd 自定义按钮 / 菜单项） ---- */
+button:not(.ant-btn):not(:disabled):active,
+.icon-btn:active,
+.header-btn:active,
+.social-btn:active,
+.menu-item:active,
+.submenu-title:active {
+  transform: scale(0.97);
+  transition: transform .08s ease;
+}
+
+/* ---- 5. 面板阴影着色（冷调 rgba(17,24,39)，替代 #00000005 纯黑低透明） ---- */
+.bento-sidebar-panel,
+.bento-header-panel,
+.bento-content-panel {
+  box-shadow: 0 4px 24px rgba(17, 24, 39, 0.06);
+}

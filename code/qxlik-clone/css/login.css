@@ -223,7 +223,7 @@
   cursor: pointer;
   background: var(--ant-color-primary);
   color: var(--ant-color-text-inverse);
-  box-shadow: 0 2px 8px #1677ff33;
+  box-shadow: 0 2px 8px #1A56DB33;
   transition: all .3s ease;
   font-family: inherit;
   margin-top: 12px;
@@ -231,7 +231,7 @@
 
 .submit-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px #1677ff4d;
+  box-shadow: 0 6px 20px #1A56DB4d;
   background: var(--ant-color-primary-hover);
 }
 
